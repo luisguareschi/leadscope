@@ -8,7 +8,7 @@ Custom WhatsApp inbound agent for **Altamira Group** (real-estate developer, Par
 
 ## What we are building (MVP)
 
-Pilot: **Altavida Norte** paid Meta forms (Facebook / Instagram) → WhatsApp. Organic WhatsApp is also handled so those chats are not dropped.
+Channels: paid Meta forms (Facebook / Instagram) → WhatsApp for **all current projects**, plus organic WhatsApp so those chats are not dropped. Projects: Ycuá Satí (no units), Surubi’i, Altavida Luque, Altavida Norte, Veralta Los Laureles, Alzara Plaza, Parque Alcántara.
 
 1. **Almira on WhatsApp** — master prompt + FAQ. Ask live vs invest, detect project, reply short (2–3 facts + price-from + site + Calendly). One follow-up at 10 minutes. Hand off after 3 detailed questions or requests for plans / exact expenses / custom financing. Rentals only: Altavida Luque, Surubi’i (delivered towers), Alzara Plaza.
 2. **HubSpot** — create/update contact; write project, status, origin/campaign, sale vs rent, budget, typology, goal, and a conversation summary. Statuses Almira may set: `Almira activada`, `Solicita asesor`, `Visita agendada`, `Inválido`, `Perdido`.
@@ -31,7 +31,7 @@ Other inbound channels (web, mailing, TikTok, etc.), Instagram DM / Messenger, G
 
 ## Docs (source of truth)
 
-- `docs/Propuesta-comercial-Almira-IA.md` — current scope and budget (sendable).
+- `docs/Propuesta-comercial-Almira-IA.html` — scope and budget source (sendable). Edit this file when the proposal changes. Open in a browser and use “Imprimir / guardar PDF” to send.
 - `docs/resources/primera-reunion.md` — first meeting notes.
 - `docs/resources/ALMIRA IA (Comportamiento) - Prompt maestro estructurado 12.01.pdf` — agent behavior + project sheets + Calendly URLs.
 - `docs/resources/PREGUNTAS FRECUENTES ALMIRA.docx` — knowledge base.
@@ -44,4 +44,4 @@ Other inbound channels (web, mailing, TikTok, etc.), Instagram DM / Messenger, G
 - Respond to Luis in English. Client-facing documents stay in Spanish.
 - Prefer the proposal as the build contract. Use `docs/resources/` for behavior, copy, and CRM fields.
 - Do not start implementation unless Luis asks. Next real step after a signed proposal: kickoff + WhatsApp/HubSpot access.
-- **Keep this file current.** After any change to scope, price, timeline, status, people, channels, product rules, integrations, or other project detail, update `AGENTS.md` in the same turn. If the sendable proposal is affected, update `docs/Propuesta-comercial-Almira-IA.md` as well. Do not leave this file stale.
+- **Keep this file current.** After any change to scope, price, timeline, status, people, channels, product rules, integrations, or other project detail, update `AGENTS.md` in the same turn. If the sendable proposal is affected, update `docs/Propuesta-comercial-Almira-IA.html`. Do not leave this file stale.

@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Propuesta comercial — Almira IA · Altamira Group</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,620;1,9..144,500&family=Karla:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --paper: #f4efe6;
+      --card: #fffdf8;
+      --ink: #1c1814;
+      --muted: #6d655c;
+      --line: #d8cfc2;
+      --bronze: #9a6b3c;
+      --bronze-soft: #efe3d2;
+      --forest: #1f3832;
+      --forest-deep: #162722;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: Karla, "Segoe UI", sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.55;
+      font-size: 16.5px;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.07;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 36px 28px 80px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 18px;
+    }
+
+    .toolbar button {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--forest);
+      background: transparent;
+      border: 1px solid var(--line);
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+
+    .toolbar button:hover { background: var(--bronze-soft); }
+
+    header.cover {
+      background: var(--forest);
+      color: var(--paper);
+      padding: 48px 44px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header.cover::after {
+      content: "";
+      position: absolute;
+      right: -40px;
+      top: -40px;
+      width: 220px;
+      height: 220px;
+      border: 1px solid rgba(244, 239, 230, 0.12);
+      transform: rotate(18deg);
+    }
+
+    .kicker {
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #d4b48a;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-family: Fraunces, Georgia, serif;
+      font-weight: 620;
+      font-size: clamp(34px, 5vw, 48px);
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      max-width: 14ch;
+    }
+
+    .lede {
+      margin-top: 22px;
+      max-width: 46ch;
+      color: #d8d2c8;
+      font-size: 17px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 22px 36px;
+      margin-top: 36px;
+      padding-top: 22px;
+      border-top: 1px solid rgba(244, 239, 230, 0.16);
+      font-size: 13.5px;
+    }
+
+    .meta dt {
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 11px;
+      color: #d4b48a;
+      margin-bottom: 4px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-top: none;
+    }
+
+    .stat {
+      padding: 22px 20px 20px;
+      border-right: 1px solid var(--line);
+    }
+
+    .stat:last-child { border-right: none; }
+
+    .stat .label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .stat .value {
+      font-family: Fraunces, Georgia, serif;
+      font-size: 22px;
+      font-weight: 620;
+      line-height: 1.15;
+    }
+
+    .stat .hint {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .stat.highlight .value { color: var(--bronze); }
+
+    section {
+      margin-top: 56px;
+    }
+
+    h2 {
+      font-family: Fraunces, Georgia, serif;
+      font-size: 28px;
+      font-weight: 620;
+      letter-spacing: -0.02em;
+      margin-bottom: 22px;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    h2 span {
+      font-family: Karla, sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      color: var(--bronze);
+    }
+
+    .scope {
+      display: grid;
+      gap: 14px;
+    }
+
+    article {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 22px 24px 20px;
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 16px;
+    }
+
+    .num {
+      font-family: Fraunces, Georgia, serif;
+      font-size: 28px;
+      color: var(--bronze);
+      line-height: 1;
+    }
+
+    article h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    article p, article li {
+      color: #3d3731;
+      font-size: 15.5px;
+    }
+
+    article ul {
+      margin-top: 10px;
+      padding-left: 18px;
+    }
+
+    article li + li { margin-top: 4px; }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .pill {
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--bronze-soft);
+      color: var(--forest);
+      padding: 4px 9px;
+      border-radius: 99px;
+    }
+
+    .out {
+      background: var(--card);
+      border-left: 3px solid var(--bronze);
+      padding: 18px 22px;
+      color: #3d3731;
+    }
+
+    .timeline {
+      border-top: 1px solid var(--line);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 20px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+      align-items: baseline;
+    }
+
+    .row .when {
+      font-family: Fraunces, Georgia, serif;
+      font-weight: 620;
+      color: var(--forest);
+    }
+
+    .need {
+      margin-top: 16px;
+      font-size: 14.5px;
+      color: var(--muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      font-size: 15.5px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+      background: #efe8dc;
+    }
+
+    td:nth-child(2), td:nth-child(3),
+    th:nth-child(2), th:nth-child(3) { text-align: right; }
+
+    tfoot td {
+      font-family: Fraunces, Georgia, serif;
+      font-size: 20px;
+      font-weight: 620;
+      border-bottom: none;
+      padding-top: 16px;
+    }
+
+    .payments {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .pay {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 18px 16px;
+    }
+
+    .pay strong {
+      display: block;
+      font-family: Fraunces, Georgia, serif;
+      font-size: 26px;
+      margin: 6px 0 4px;
+    }
+
+    .pay .pct {
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--bronze);
+      font-weight: 700;
+    }
+
+    .pay p { font-size: 13.5px; color: var(--muted); }
+
+    .note {
+      margin-top: 14px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    ol.accept {
+      list-style: none;
+      counter-reset: acc;
+    }
+
+    ol.accept li {
+      counter-increment: acc;
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 12px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    ol.accept li::before {
+      content: counter(acc, decimal-leading-zero);
+      font-family: Fraunces, Georgia, serif;
+      color: var(--bronze);
+      font-weight: 620;
+    }
+
+    .next {
+      background: var(--forest-deep);
+      color: var(--paper);
+      padding: 36px 40px;
+      margin-top: 56px;
+    }
+
+    .next h2 { color: var(--paper); margin-bottom: 10px; }
+    .next h2 span { color: #d4b48a; }
+    .next p { color: #d8d2c8; max-width: 48ch; }
+
+    footer {
+      margin-top: 28px;
+      font-size: 12.5px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    @media (max-width: 720px) {
+      header.cover, .next { padding: 32px 22px; }
+      .stats, .payments { grid-template-columns: 1fr 1fr; }
+      .stat:nth-child(2) { border-right: none; }
+      .stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--line); }
+      article { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; gap: 4px; }
+      footer { flex-direction: column; }
+    }
+
+    @media print {
+      body { background: white; font-size: 12.5px; }
+      body::before, .toolbar { display: none; }
+      .page { max-width: none; padding: 0; }
+      header.cover, .next { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      article, .row, .pay, table { break-inside: avoid; }
+      section { margin-top: 28px; }
+    }
+
+    @page { margin: 14mm; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="toolbar">
+      <button type="button" onclick="window.print()">Imprimir / guardar PDF</button>
+    </div>
+
+    <header class="cover">
+      <p class="kicker">Propuesta comercial · Primera fase</p>
+      <h1>Almira IA + panel de control</h1>
+      <p class="lede">Agente de WhatsApp que atiende el lead, lo preclasifica y lo deriva a visita o asesor. No reemplaza al equipo comercial.</p>
+      <dl class="meta">
+        <div>
+          <dt>Cliente</dt>
+          <dd>Altamira Group</dd>
+        </div>
+        <div>
+          <dt>Proveedor</dt>
+          <dd>Luis Guareschi</dd>
+        </div>
+        <div>
+          <dt>Fecha</dt>
+          <dd>22 de agosto de 2026</dd>
+        </div>
+        <div>
+          <dt>Validez</dt>
+          <dd>20 días</dd>
+        </div>
+      </dl>
+    </header>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="label">Alcance</div>
+        <div class="value">MVP</div>
+        <div class="hint">WhatsApp, HubSpot, Calendly y panel</div>
+      </div>
+      <div class="stat">
+        <div class="label">Canales</div>
+        <div class="value">Todos</div>
+        <div class="hint">Formularios Meta + WhatsApp orgánico</div>
+      </div>
+      <div class="stat">
+        <div class="label">Plazo</div>
+        <div class="value">7–8 sem.</div>
+        <div class="hint">Desde kickoff con accesos</div>
+      </div>
+      <div class="stat highlight">
+        <div class="label">Inversión</div>
+        <div class="value">USD 24.000</div>
+        <div class="hint">200 h × USD 120</div>
+      </div>
+    </div>
+
+    <section>
+      <h2><span>01</span> Qué incluye</h2>
+      <div class="scope">
+        <article>
+          <div class="num">01</div>
+          <div>
+            <h3>Agente Almira (WhatsApp)</h3>
+            <p>Usa el prompt maestro y las FAQ ya existentes.</p>
+            <ul>
+              <li>Se presenta, pregunta vivir / invertir y detecta el proyecto.</li>
+              <li>Responde corto: 2–3 datos + precio desde + web + Calendly.</li>
+              <li>Deriva a asesor si piden detalle o a la 3ª consulta fina.</li>
+              <li>Un follow-up a los 10 minutos si no responden.</li>
+              <li>Alquiler solo en Luque, Surubi’i (torres entregadas) y Alzara.</li>
+              <li>No agenda ni modifica turnos en Calendly.</li>
+            </ul>
+          </div>
+        </article>
+        <article>
+          <div class="num">02</div>
+          <div>
+            <h3>Canales</h3>
+            <p>Formularios pagos de Facebook / Instagram de todos los proyectos vigentes: alta del lead, plantilla de primer contacto y conversación. WhatsApp orgánico también queda cubierto. Proyectos: Ycuá Satí, Surubi’i, Altavida Luque, Altavida Norte, Veralta Los Laureles, Alzara Plaza y Parque Alcántara. El resto de canales (web, mailing, TikTok, etc.) queda para una fase siguiente.</p>
+          </div>
+        </article>
+        <article>
+          <div class="num">03</div>
+          <div>
+            <h3>HubSpot</h3>
+            <p>Crea o actualiza el contacto y escribe nombre, teléfono, email, proyecto, estado, origen/campaña, venta/alquiler, presupuesto, tipología, objetivo y un resumen del chat. El resto de estados sigue en el equipo humano.</p>
+            <div class="pills">
+              <span class="pill">Almira activada</span>
+              <span class="pill">Solicita asesor</span>
+              <span class="pill">Visita agendada</span>
+              <span class="pill">Inválido</span>
+              <span class="pill">Perdido</span>
+            </div>
+          </div>
+        </article>
+        <article>
+          <div class="num">04</div>
+          <div>
+            <h3>Calendly</h3>
+            <p>Comparte el link correcto de cada proyecto. No se integra la API para crear o cambiar reservas.</p>
+          </div>
+        </article>
+        <article>
+          <div class="num">05</div>
+          <div>
+            <h3>Panel de control</h3>
+            <p>Bandeja con búsqueda y filtros (estado, proyecto, canal, fecha). Detalle del hilo + ficha HubSpot. Toma humana (pausar / reactivar Almira). Configuración de precios, Calendly y plantillas sin deploy. Login con roles admin y operador.</p>
+            <p style="margin-top:10px">Si el mock-up llega a tiempo se usa de referencia; si no, se entrega una UI funcional y se ajusta en UAT.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2><span>02</span> Fuera de alcance</h2>
+      <p class="out">GHL → BUZZ, otros canales inbound, Messenger / Instagram DM, agendamiento nativo en Calendly, reportes de marketing, app mobile, limpieza histórica de HubSpot y soporte 24/7. WhatsApp, HubSpot, IA y hosting los paga Altamira.</p>
+    </section>
+
+    <section>
+      <h2><span>03</span> Plazo</h2>
+      <div class="timeline">
+        <div class="row"><div class="when">Semana 1</div><div>Kickoff, accesos, arquitectura</div></div>
+        <div class="row"><div class="when">Semanas 2–3</div><div>Almira + WhatsApp + plantillas Meta</div></div>
+        <div class="row"><div class="when">Semana 4</div><div>HubSpot + Calendly</div></div>
+        <div class="row"><div class="when">Semanas 5–6</div><div>Panel de control</div></div>
+        <div class="row"><div class="when">Semana 7</div><div>UAT con inbound</div></div>
+        <div class="row"><div class="when">Semana 8</div><div>Ajustes, producción y capacitación</div></div>
+      </div>
+      <p class="need">Para empezar: WhatsApp Business, acceso HubSpot, usuarios del panel, precios y Calendly vigentes, y 8–10 chats de prueba.</p>
+    </section>
+
+    <section>
+      <h2><span>04</span> Inversión</h2>
+      <p class="need" style="margin-top:0;margin-bottom:14px">Precio cerrado sobre este alcance. Montos en USD, sin impuestos ni costos de terceros.</p>
+      <table>
+        <thead>
+          <tr><th>Ítem</th><th>Horas</th><th>USD</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Kickoff y arquitectura</td><td>26</td><td>3.120</td></tr>
+          <tr><td>WhatsApp + Almira + formularios Meta</td><td>58</td><td>6.960</td></tr>
+          <tr><td>HubSpot + Calendly</td><td>30</td><td>3.600</td></tr>
+          <tr><td>Panel de control</td><td>40</td><td>4.800</td></tr>
+          <tr><td>UAT, go-live y coordinación</td><td>46</td><td>5.520</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>Total</td><td>200</td><td>24.000</td></tr>
+        </tfoot>
+      </table>
+
+      <div class="payments">
+        <div class="pay">
+          <div class="pct">40% · Inicio</div>
+          <strong>9.600</strong>
+          <p>Al firmar, con accesos mínimos</p>
+        </div>
+        <div class="pay">
+          <div class="pct">40% · UAT</div>
+          <strong>9.600</strong>
+          <p>Agente y panel en prueba</p>
+        </div>
+        <div class="pay">
+          <div class="pct">20% · Go-live</div>
+          <strong>4.800</strong>
+          <p>Salida a producción</p>
+        </div>
+      </div>
+      <p class="note">Mantenimiento opcional desde la 3ª semana post go-live: 8 h/mes USD 960, o 12 h/mes USD 1.440. Las 2 primeras semanas de estabilización ya van en el MVP.</p>
+    </section>
+
+    <section>
+      <h2><span>05</span> Criterio de aceptación</h2>
+      <p class="need" style="margin-top:0;margin-bottom:8px">En cualquiera de los proyectos vigentes se da por entregado cuando:</p>
+      <ol class="accept">
+        <li>El lead de Meta recibe la plantilla y Almira continúa el chat.</li>
+        <li>HubSpot queda con ficha, estado y resumen.</li>
+        <li>Se envía el Calendly correcto.</li>
+        <li>Un caso de detalle pasa a Solicita asesor y Almira se detiene.</li>
+        <li>Inbound ve el hilo en el panel y abre el contacto en HubSpot.</li>
+        <li>Un admin actualiza precio o Calendly sin tocar código.</li>
+      </ol>
+    </section>
+
+    <section class="next">
+      <h2><span>06</span> Siguiente paso</h2>
+      <p>Reunión corta para confirmar accesos y fecha de kickoff. Con eso se puede empezar la semana siguiente.</p>
+    </section>
+
+    <footer>
+      <span>Luis Guareschi · Propuesta Almira IA</span>
+      <span>Confidencial · Altamira Group</span>
+    </footer>
+  </div>
+</body>
+</html>
