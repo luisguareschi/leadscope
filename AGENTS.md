@@ -10,7 +10,7 @@ Custom WhatsApp inbound agent for **Altamira Group** (real-estate developer, Par
 
 Channels: paid Meta forms (Facebook / Instagram) → WhatsApp for **all current projects**, plus organic WhatsApp so those chats are not dropped. Projects: Ycuá Satí (no units), Surubi’i, Altavida Luque, Altavida Norte, Veralta Los Laureles, Alzara Plaza, Parque Alcántara.
 
-1. **Almira on WhatsApp** — master prompt + FAQ. Ask live vs invest, detect project, reply short (2–3 facts + price-from + site + Calendly). One follow-up at 10 minutes. Hand off after 3 detailed questions or requests for plans / exact expenses / custom financing. Rentals only: Altavida Luque, Surubi’i (delivered towers), Alzara Plaza.
+1. **Almira on WhatsApp** — master prompt + FAQ. Ask live vs invest, detect project, reply concisely (2–3 facts + price-from + site + Calendly). One follow-up at 10 minutes. Hand off after 3 detailed questions or requests for plans / exact expenses / custom financing. Rentals only: Altavida Luque, Surubi’i (delivered towers), Alzara Plaza.
 2. **HubSpot** — create/update contact; write project, status, origin/campaign, sale vs rent, budget, typology, goal, and a conversation summary. Statuses Almira may set: `Almira activada`, `Solicita asesor`, `Visita agendada`, `Inválido`, `Perdido`.
 3. **Calendly** — send the correct project link only. No Calendly API booking.
 4. **Admin panel** — inbox, full thread, HubSpot card, filters, human takeover (pause/resume Almira), config for prices / Calendly / templates. Roles: admin and inbound operator.
