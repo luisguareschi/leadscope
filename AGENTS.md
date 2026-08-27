@@ -32,7 +32,8 @@ Other inbound channels (web, mailing, TikTok, etc.), Instagram DM / Messenger, G
 
 ## Docs (source of truth)
 
-- `docs/Propuesta-comercial-Almira-IA.html` — scope and budget source (sendable). Edit this file when the proposal changes. Open in a browser and use “Imprimir / guardar PDF” to send.
+- `docs/Propuesta-comercial-Almira-IA.html` — scope and budget source. Edit this file when the proposal changes.
+- `docs/Propuesta-comercial-Almira-IA.pdf` — sendable PDF. Regenerate from the HTML after any proposal change.
 - `docs/resources/primera-reunion.md` — first meeting notes.
 - `docs/resources/ALMIRA IA (Comportamiento) - Prompt maestro estructurado 12.01.pdf` — agent behavior + project sheets + Calendly URLs.
 - `docs/resources/PREGUNTAS FRECUENTES ALMIRA.docx` — knowledge base.
@@ -45,4 +46,4 @@ Other inbound channels (web, mailing, TikTok, etc.), Instagram DM / Messenger, G
 - Respond to Luis in English. Client-facing documents stay in Spanish.
 - Prefer the proposal as the build contract. Use `docs/resources/` for behavior, copy, and CRM fields.
 - Do not start implementation unless Luis asks. Next real step after a signed proposal: kickoff + WhatsApp/HubSpot access.
-- **Keep this file current.** After any change to scope, price, timeline, status, people, channels, product rules, integrations, or other project detail, update `AGENTS.md` in the same turn. If the sendable proposal is affected, update `docs/Propuesta-comercial-Almira-IA.html`. Do not leave this file stale.
+- **Keep this file current.** After any change to scope, price, timeline, status, people, channels, product rules, integrations, or other project detail, update `AGENTS.md` in the same turn. If the sendable proposal is affected, update `docs/Propuesta-comercial-Almira-IA.html` and regenerate `docs/Propuesta-comercial-Almira-IA.pdf`. Do not leave this file stale.
