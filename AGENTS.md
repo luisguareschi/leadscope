@@ -4,7 +4,8 @@ Custom WhatsApp inbound agent for **Altamira Group** (real-estate developer, Par
 
 **Owner:** Luis Guareschi (freelancer, USD 120/h). WhatsApp: +34 695 40 3932. LinkedIn: https://www.linkedin.com/in/luis-guareschi-29a68b1a0/  
 **Client lead:** Florencia Ozuna (`fozuna@altamiragroup.com.py`).  
-**Status (Aug 2026):** proposal / scoping. Repo is empty except `docs/`. Implementation has not started. Proposal is not signed yet.
+**Status (Aug 2026):** proposal / scoping. Repo is empty except `docs/`. Implementation has not started. Proposal is not signed yet.  
+**Competitor (Integrative AI Inc., Nov 2025):** canned WhatsApp + HubSpot assistant. Setup **USD 1,850**, then **USD 1,650/month** (3-month minimum). No custom admin panel. They book appointments in HubSpot. Placeholder “[Client Name]” still in the deck. Year-1 TCO ≈ USD 20–22k if they stay 12 months; they do not own the stack.
 
 ## What we are building (MVP)
 
@@ -15,11 +16,11 @@ Channels: paid Meta forms (Facebook / Instagram) → WhatsApp for **all current 
 3. **Calendly** — send the correct project link only. No Calendly API booking.
 4. **Admin panel** — inbox, full thread, HubSpot card, filters, human takeover (pause/resume Almira), config for prices / Calendly / templates. Roles: admin and inbound operator.
 
-Commercial quote (if asked): **USD 24,000**, 200h, 7–8 weeks, paid 40/40/20. Optional retainer after go-live: USD 960 (8h) or 1,440 (12h) / month. Third-party costs (WhatsApp, HubSpot, LLM, hosting) are paid by Altamira.
+Commercial quote (if asked): **USD 2,500** setup + **USD 1,000/month** from week 9, 3-month minimum. Timeline: 8 weeks — weeks 1–3 design/prototype, weeks 3–6 HubSpot/panel, weeks 6–8 UAT/go-live, week 9 onward support. The timeline may extend depending on admin-panel complexity. Monthly includes agent hosting, LLM, optimization, and support. Altamira still pays Meta/WhatsApp conversation fees and the HubSpot license.
 
 ## Out of scope (MVP)
 
-Other inbound channels (web, mailing, TikTok, etc.), Instagram DM / Messenger, GHL → BUZZ migration, native Calendly booking, marketing dashboards, mobile app, HubSpot history cleanup, 24/7 support.
+Other inbound channels (web, mailing, TikTok, etc.), Instagram DM / Messenger, GHL → BUZZ migration, native Calendly booking, marketing dashboards, mobile app, HubSpot history cleanup.
 
 ## Product rules (Almira)
 
