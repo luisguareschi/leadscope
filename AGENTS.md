@@ -2,7 +2,7 @@
 
 Custom WhatsApp inbound agent for **Altamira Group** (real-estate developer, Paraguay). The agent is **Almira**. It qualifies leads and hands them to a human or a Calendly link. It does not replace advisors and does not book visits itself.
 
-**Owner:** Luis Guareschi (freelancer, USD 120/h).  
+**Owner:** Luis Guareschi (freelancer, USD 120/h). WhatsApp: +34 695 40 3932. LinkedIn: https://www.linkedin.com/in/luis-guareschi-29a68b1a0/  
 **Client lead:** Florencia Ozuna (`fozuna@altamiragroup.com.py`).  
 **Status (Aug 2026):** proposal / scoping. Repo is empty except `docs/`. Implementation has not started. Proposal is not signed yet.
 
