@@ -207,20 +207,17 @@
       gap: 14px;
     }
 
+    .intro {
+      font-size: 17px;
+      color: #3d3731;
+      max-width: 54ch;
+      margin: 0 0 18px;
+    }
+
     article {
       background: var(--card);
       border: 1px solid var(--line);
       padding: 22px 24px 20px;
-      display: grid;
-      grid-template-columns: 52px 1fr;
-      gap: 16px;
-    }
-
-    .num {
-      font-family: Fraunces, Georgia, serif;
-      font-size: 28px;
-      color: var(--bronze);
-      line-height: 1;
     }
 
     article h3 {
@@ -404,7 +401,6 @@
       .stats, .payments { grid-template-columns: 1fr 1fr; }
       .stat:nth-child(2) { border-right: none; }
       .stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--line); }
-      article { grid-template-columns: 1fr; }
       .row { grid-template-columns: 1fr; gap: 4px; }
       footer { flex-direction: column; }
     }
@@ -450,7 +446,7 @@
         </div>
         <div>
           <dt>Fecha</dt>
-          <dd>22 de agosto de 2026</dd>
+          <dd>27 de agosto de 2026</dd>
         </div>
         <div>
           <dt>Validez</dt>
@@ -484,49 +480,37 @@
 
     <section>
       <h2><span>01</span> Qué incluye</h2>
+      <p class="intro">El lead entra por WhatsApp. Almira lo atiende, actualiza HubSpot y envía el Calendly. El equipo ve la conversación en el panel.</p>
       <div class="scope">
         <article>
-          <div class="num">01</div>
-          <div>
-            <h3>Agente Almira (WhatsApp)</h3>
-            <p>Usa el prompt maestro y las FAQ ya existentes.</p>
+          <h3>Almira en WhatsApp</h3>
+          <p>Agente que responde al lead, lo preclasifica y lo deriva a una visita o a un asesor. Usa el prompt maestro y las FAQ que ya tiene Altamira. No reemplaza al equipo comercial.</p>
+        </article>
+        <article>
+          <h3>De dónde entran los leads</h3>
+          <p>Formularios pagos de Facebook e Instagram, y WhatsApp orgánico (quien escribe sin haber llenado un formulario).</p>
+          <p style="margin-top:8px">Proyectos: Ycuá Satí, Surubi’i, Altavida Luque, Altavida Norte, Veralta Los Laureles, Alzara Plaza y Parque Alcántara.</p>
+        </article>
+        <article>
+          <h3>HubSpot</h3>
+          <p>Crea o actualiza el contacto con los datos de la conversación: nombre, teléfono, email, proyecto, origen, venta o alquiler, presupuesto, tipología y un resumen del chat.</p>
+          <p style="margin-top:8px">Estados que puede mover Almira:</p>
+          <div class="pills">
+            <span class="pill">Almira activada</span>
+            <span class="pill">Solicita asesor</span>
+            <span class="pill">Visita agendada</span>
+            <span class="pill">Inválido</span>
+            <span class="pill">Perdido</span>
           </div>
         </article>
         <article>
-          <div class="num">02</div>
-          <div>
-            <h3>Canales</h3>
-            <p>Formularios pagos de Facebook / Instagram de todos los proyectos vigentes: alta del lead, plantilla de primer contacto y conversación. WhatsApp orgánico también queda cubierto. Proyectos: Ycuá Satí, Surubi’i, Altavida Luque, Altavida Norte, Veralta Los Laureles, Alzara Plaza y Parque Alcántara. El resto de canales (web, mailing, TikTok, etc.) queda para una fase siguiente.</p>
-          </div>
+          <h3>Calendly</h3>
+          <p>Almira envía el link de visita del proyecto correcto. El cliente agenda solo. No reserva ni cambia turnos.</p>
         </article>
         <article>
-          <div class="num">03</div>
-          <div>
-            <h3>HubSpot</h3>
-            <p>Crea o actualiza el contacto y escribe nombre, teléfono, email, proyecto, estado, origen/campaña, venta/alquiler, presupuesto, tipología, objetivo y un resumen del chat. El resto de estados sigue en el equipo humano.</p>
-            <div class="pills">
-              <span class="pill">Almira activada</span>
-              <span class="pill">Solicita asesor</span>
-              <span class="pill">Visita agendada</span>
-              <span class="pill">Inválido</span>
-              <span class="pill">Perdido</span>
-            </div>
-          </div>
-        </article>
-        <article>
-          <div class="num">04</div>
-          <div>
-            <h3>Calendly</h3>
-            <p>Comparte el link correcto de cada proyecto. No se integra la API para crear o cambiar reservas.</p>
-          </div>
-        </article>
-        <article>
-          <div class="num">05</div>
-          <div>
-            <h3>Panel de control</h3>
-            <p>Bandeja con búsqueda y filtros (estado, proyecto, canal, fecha). Detalle del hilo + ficha HubSpot. Toma humana (pausar / reactivar Almira). Configuración de precios, Calendly y plantillas sin deploy. Login con roles admin y operador.</p>
-            <p style="margin-top:10px">Si el mock-up llega a tiempo se usa de referencia; si no, se entrega una UI funcional y se ajusta en UAT.</p>
-          </div>
+          <h3>Panel de control</h3>
+          <p>Bandeja para inbound y comercial. Ahí se ve el hilo completo, la ficha de HubSpot, se pausa o se reactiva Almira, y se actualizan precios, Calendly y plantillas sin tocar código. Acceso con rol admin u operador.</p>
+          <p style="margin-top:8px">Si Altamira envía un mock-up a tiempo, se usa de referencia. Si no, se entrega una interfaz funcional y se ajusta en las pruebas.</p>
         </article>
       </div>
     </section>
@@ -536,7 +520,7 @@
       <div class="timeline">
         <div class="row"><div class="when">Semanas 1–3</div><div>Diseño, Almira, WhatsApp y prototipo para revisión</div></div>
         <div class="row"><div class="when">Semanas 3–6</div><div>HubSpot, Calendly y panel de control</div></div>
-        <div class="row"><div class="when">Semanas 6–8</div><div>Pruebas, UAT y salida a producción</div></div>
+        <div class="row"><div class="when">Semanas 6–8</div><div>Pruebas con el equipo y salida a producción</div></div>
         <div class="row"><div class="when">Semana 9 en adelante</div><div>Monitoreo, ajustes de comportamiento y soporte</div></div>
       </div>
       <p class="out" style="margin-top:18px">El plazo puede extenderse según la complejidad del panel de control.</p>
@@ -552,20 +536,20 @@
         </thead>
         <tbody>
           <tr><td>Implementación inicial — diseño, configuración, pruebas y lanzamiento (semanas 1–8)</td><td>2.500</td></tr>
-          <tr><td>Suscripción mensual — hosting del agente, IA, optimización y soporte (desde la semana 9)</td><td>950 / mes</td></tr>
+          <tr><td>Suscripción mensual — hosting del agente, IA, optimización y soporte (al terminar las 8 semanas)</td><td>950 / mes</td></tr>
         </tbody>
       </table>
 
       <div class="payments">
         <div class="pay">
-          <div class="pct">Setup</div>
+          <div class="pct">Inicio</div>
           <strong>2.500</strong>
           <p>Al aprobar la propuesta</p>
         </div>
         <div class="pay">
           <div class="pct">Mensual</div>
           <strong>950</strong>
-          <p>El día 1 de cada mes, desde la semana 9</p>
+          <p>El día 1 de cada mes, al terminar las 8 semanas</p>
         </div>
         <div class="pay">
           <div class="pct">Mínimo</div>
@@ -578,20 +562,20 @@
 
     <section>
       <h2><span>04</span> Criterio de aceptación</h2>
-      <p class="need" style="margin-top:0;margin-bottom:8px">En cualquiera de los proyectos vigentes se da por entregado cuando:</p>
+      <p class="need" style="margin-top:0;margin-bottom:8px">Se da por entregado cuando, en un proyecto vigente:</p>
       <ol class="accept">
-        <li>El lead de Meta recibe la plantilla y Almira continúa el chat.</li>
-        <li>HubSpot queda con ficha, estado y resumen.</li>
-        <li>Se envía el Calendly correcto.</li>
-        <li>Un caso de detalle pasa a Solicita asesor y Almira se detiene.</li>
+        <li>Un lead de formulario Meta recibe el primer mensaje y Almira continúa el chat.</li>
+        <li>El contacto en HubSpot queda con ficha, estado y resumen.</li>
+        <li>Almira envía el Calendly del proyecto correcto.</li>
+        <li>Un caso de detalle pasa a Solicita asesor y Almira deja de responder.</li>
         <li>Inbound ve el hilo en el panel y abre el contacto en HubSpot.</li>
-        <li>Un admin actualiza precio o Calendly sin tocar código.</li>
+        <li>Un admin actualiza precio o Calendly desde el panel, sin tocar código.</li>
       </ol>
     </section>
 
     <section class="next">
       <h2><span>05</span> Siguiente paso</h2>
-      <p>Reunión corta para confirmar accesos y fecha de kickoff.</p>
+      <p>Reunión corta para confirmar accesos y fecha de inicio.</p>
     </section>
 
     <footer>
