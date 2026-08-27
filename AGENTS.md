@@ -16,7 +16,7 @@ Channels: paid Meta forms (Facebook / Instagram) → WhatsApp for **all current 
 3. **Calendly** — send the correct project link only. No Calendly API booking.
 4. **Admin panel** — inbox, full thread, HubSpot card, filters, human takeover (pause/resume Almira), config for prices / Calendly / templates. Roles: admin and inbound operator.
 
-Commercial quote (if asked): **USD 2,500** setup + **USD 1,000/month** from week 9, 3-month minimum. Timeline: 8 weeks — weeks 1–3 design/prototype, weeks 3–6 HubSpot/panel, weeks 6–8 UAT/go-live, week 9 onward support. The timeline may extend depending on admin-panel complexity. Monthly includes agent hosting, LLM, optimization, and support. Altamira still pays Meta/WhatsApp conversation fees and the HubSpot license.
+Commercial quote (if asked): **USD 2,500** setup + **USD 950/month** from week 9, 3-month minimum. Timeline: 8 weeks — weeks 1–3 design/prototype, weeks 3–6 HubSpot/panel, weeks 6–8 UAT/go-live, week 9 onward support. The timeline may extend depending on admin-panel complexity. Monthly includes agent hosting, LLM, optimization, and support. Altamira still pays Meta/WhatsApp conversation fees and the HubSpot license.
 
 ## Out of scope (MVP)
 
