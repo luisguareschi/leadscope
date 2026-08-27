@@ -20,7 +20,7 @@ Commercial quote (if asked): **USD 2,500** setup + **USD 950/month** from week 9
 
 ## Out of scope (MVP)
 
-Other inbound channels (web, mailing, TikTok, etc.), Instagram DM / Messenger, GHL → BUZZ migration, native Calendly booking, marketing dashboards, mobile app, HubSpot history cleanup.
+Not listed in the sendable proposal. Internally: other inbound channels (web, mailing, TikTok, etc.), Instagram DM / Messenger, GHL → BUZZ migration, native Calendly booking, marketing dashboards, mobile app, HubSpot history cleanup.
 
 ## Product rules (Almira)
 
