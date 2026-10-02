@@ -1,49 +1,46 @@
-# Altamira — Almira IA
+# Altamira Uruguay — WhatsApp assistant (v1)
 
-Custom WhatsApp inbound agent for **Altamira Group** (real-estate developer, Paraguay). The agent is **Almira**. It qualifies leads and hands them to a human or a Calendly link. It does not replace advisors and does not book visits itself.
+WhatsApp assistant for **Altamira**, a real-estate developer in **Uruguay** (not Altamira Group Paraguay). Version 1 qualifies leads and hands them to a human advisor. It does not replace the sales team, does not book site visits, and does not quote future rental yields.
 
 **Owner:** Luis Guareschi (freelancer, USD 120/h). WhatsApp: +34 695 40 3932. LinkedIn: https://www.linkedin.com/in/luis-guareschi-29a68b1a0/  
-**Client lead:** Florencia Ozuna (`fozuna@altamiragroup.com.py`).  
-**Status (Aug 2026):** proposal / scoping. Repo is empty except `docs/`. Implementation has not started. Proposal is not signed yet.  
-**Competitor (Integrative AI Inc., Nov 2025):** canned WhatsApp + HubSpot assistant. Setup **USD 1,850**, then **USD 1,650/month** (3-month minimum). No custom admin panel. They book appointments in HubSpot. Placeholder “[Client Name]” still in the deck. Year-1 TCO ≈ USD 20–22k if they stay 12 months; they do not own the stack.
+**Client side:** Fabio Tombion (Uruguay operations). José Daniel Guzmán (HubSpot / marketing consulting, biweekly). Luis’s father was on the 30 Sep 2026 call.  
+**Status (Oct 2026):** proposal for v1, not signed. Repo has no implementation. Kickoff only after they accept the proposal.
 
-## What we are building (MVP)
+**Paraguay (closed):** Altamira Group (Florencia Ozuna) went with another provider. Do not use that scope, projects, Calendly links, HubSpot statuses, or GHL notes as the current build. Those files stay in `docs/resources/` as archive only.
 
-Channels: paid Meta forms (Facebook / Instagram) → WhatsApp for **all current projects**, plus organic WhatsApp so those chats are not dropped. Projects: Ycuá Satí (no units), Surubi’i, Altavida Luque, Altavida Norte, Veralta Los Laureles, Alzara Plaza, Parque Alcántara.
+## What we are building (v1)
 
-1. **Almira on WhatsApp** — master prompt + FAQ. Ask live vs invest, detect project, reply concisely (2–3 facts + price-from + site + Calendly). One follow-up at 10 minutes. Hand off after 3 detailed questions or requests for plans / exact expenses / custom financing. Rentals only: Altavida Luque, Surubi’i (delivered towers), Alzara Plaza.
-2. **HubSpot** — create/update contact; write project, status, origin/campaign, sale vs rent, budget, typology, goal, and a conversation summary. Statuses Almira may set: `Almira activada`, `Solicita asesor`, `Visita agendada`, `Inválido`, `Perdido`.
-3. **Calendly** — send the correct project link only. No Calendly API booking.
-4. **Admin panel** — inbox, full thread, HubSpot card, filters, human takeover (pause/resume Almira), config for prices / Calendly / templates. Roles: admin and inbound operator.
+Volume they reported: about **15–20 leads/day** and **~60 conversations/day**. About 70% of leads interact outside office hours.
 
-Commercial quote (if asked): **USD 2,500** setup + **USD 950/month** from week 9, 3-month minimum. Timeline: 8 weeks — weeks 1–3 design/prototype, weeks 3–6 HubSpot/panel, weeks 6–8 UAT/go-live, week 9 onward support. The timeline may extend depending on admin-panel complexity. Monthly includes agent hosting, LLM, optimization, and support. Altamira still pays Meta/WhatsApp conversation fees and the HubSpot license.
+1. **WhatsApp assistant** on the official API number (marketing/cloud number). Greeting, three questions (interest, budget, whether they know the projects), answers to repeated questions (price-from, typology, delivery date, orientation). A lead who writes gets the greeting; a lead who arrives from a form gets one welcome. Junk leads stop there. No future rental-yield or “guaranteed rent” answers. No project-presentation file in v1.
+2. **Knowledge** from a private Google Drive project sheet Altamira keeps current. Not the public website. Do not dump full inventory or unit-level availability in chat.
+3. **HubSpot Sales Pro** (already live ~2 months). On handoff or close, create/update the contact and store the transcript as a long text property. Do not use HubSpot’s native AI (José estimated that route at about USD 1,800/month at this volume). How the connection is built is decided at kickoff.
+4. **Handoff:** if the lead qualifies, ask when an advisor can call, then leave the case for the team. Advisors keep their own WhatsApp numbers. The bot does not live on those phones.
+5. **Small panel:** thread list and the ability to pause the assistant when a human takes over.
 
-## Out of scope (MVP)
+Commercial quote (if asked): **USD 2,000** setup + **USD 950/month** from go-live, 6-month minimum, then month to month. Timeline: about 6 weeks, with no week-by-week breakdown in the proposal, aiming to test from **mid-November 2026**. If kickoff slips, launch moves to **early February 2027** (do not go live into year-end holidays). The monthly fee covers running the assistant, bug fixes, and small adjustments. Future versions are quoted separately. Altamira pays Anthropic usage on their own account, Meta/WhatsApp fees, and the HubSpot license. José estimated WhatsApp platform cost around USD 120–250/month, separate from this quote. From 1 Oct 2026 Meta charges about USD 0.085/send in most of LatAm, with 1,000 free messages and a 72-hour window. Proposal dated 2 Oct 2026, valid for 1 week.
 
-Not listed in the sendable proposal. Internally: other inbound channels (web, mailing, TikTok, etc.), Instagram DM / Messenger, GHL → BUZZ migration, native Calendly booking, marketing dashboards, mobile app, HubSpot history cleanup.
+## Out of scope (v1)
 
-## Product rules (Almira)
+Not in the sendable proposal. Internally: Instagram DM, Messenger, email-to-WhatsApp, landing-form automation beyond the one welcome, mass email/remarketing, a second country (Costa Rica / “Erika”), native HubSpot AI, Calendly, full CRM rebuild, and the replicable product José might later sell to other developers. Uruguay is the first proof, not that product. Anything new after v1 is a separate quote.
 
-- WhatsApp tone: one message per turn, one question, no emojis, no opening `¿`/`¡`.
-- Knowledge: only these projects — Ycuá Satí (no units), Surubi’i, Altavida Luque, Altavida Norte, Veralta Los Laureles, Alzara Plaza, Parque Alcántara.
-- Prices in the master prompt are outdated; Altamira must supply current prices before real-lead tests.
-- HubSpot stays the CRM of record. Do not invent a parallel customer database.
-- They currently use GoHighLevel and mentioned moving to BUZZ later. Do not assume GHL is gone. Avoid duplicate outbound messages if GHL is still live.
+## Product rules
+
+- Model: Anthropic, a consistent smaller model is enough. Behavior will need live tuning; tests alone will not catch bad answers.
+- Never answer future rental yield or guaranteed returns.
+- Price-from and typology are allowed. Full availability stays with the advisor.
+- Knowledge changes often (units, prices, quotas). The Drive sheet is the source, not a prompt frozen at kickoff.
+- Two WhatsApp worlds: API number for the bot, personal numbers for advisors. Do not merge them in v1.
 
 ## Docs (source of truth)
 
-- `docs/Propuesta-comercial-Almira-IA.html` — scope and budget source. Edit this file when the proposal changes.
+- `docs/Propuesta-comercial-Almira-IA.html` — current Uruguay v1 proposal. Edit this when the proposal changes. Visual style follows grupoaltamira.uy: Montserrat, teal `#00374d`, gold `#bd995c`, cream page, uppercase labels.
 - `docs/Propuesta-comercial-Almira-IA.pdf` — sendable PDF. Regenerate from the HTML after any proposal change.
-- `docs/resources/primera-reunion.md` — first meeting notes.
-- `docs/resources/ALMIRA IA (Comportamiento) - Prompt maestro estructurado 12.01.pdf` — agent behavior + project sheets + Calendly URLs.
-- `docs/resources/PREGUNTAS FRECUENTES ALMIRA.docx` — knowledge base.
-- `docs/resources/MVP - Implementación Altamira 06.07.docx` — channels, lead statuses, HubSpot contact fields.
-- `docs/resources/Implementación de canales Inbound 06.07.xlsx` — first-touch templates per channel.
-- `docs/resources/correos.pdf` — email thread with Florencia (docs delivered 21 Aug 2026). Still missing from her list: platform-flow diagram, GHL–HubSpot/Supabase sync model, certification prototype, panel mockup, conversation-volume metrics.
+- `docs/resources/reunion-2026-09-30.md` — 30 Sep 2026 meeting summary (Fabio, José Daniel, Luis).
+- `docs/resources/` PDFs, docx, and xlsx — **Paraguay archive**. Do not treat them as Uruguay requirements.
 
 ## How to work in this repo
 
 - Respond to Luis in English. Client-facing documents stay in Spanish.
-- Prefer the proposal as the build contract. Use `docs/resources/` for behavior, copy, and CRM fields.
-- Do not start implementation unless Luis asks. Next real step after a signed proposal: kickoff + WhatsApp/HubSpot access.
-- **Keep this file current.** After any change to scope, price, timeline, status, people, channels, product rules, integrations, or other project detail, update `AGENTS.md` in the same turn. If the sendable proposal is affected, update `docs/Propuesta-comercial-Almira-IA.html` and regenerate `docs/Propuesta-comercial-Almira-IA.pdf`. Do not leave this file stale.
+- The HTML proposal is the build contract. Do not start implementation unless Luis asks.
+- **Keep this file current.** After any change to scope, price, timeline, status, people, channels, product rules, integrations, or other project detail, update `AGENTS.md` in the same turn. If the sendable proposal is affected, update the HTML and regenerate the PDF. Do not leave this file stale.

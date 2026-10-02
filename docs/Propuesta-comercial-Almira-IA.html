@@ -3,434 +3,444 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Propuesta comercial — Almira IA · Altamira Group</title>
+  <title>Propuesta comercial — Asistente de WhatsApp · Altamira Uruguay</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,620;1,9..144,500&family=Karla:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --paper: #f4efe6;
-      --card: #fffdf8;
-      --ink: #1c1814;
-      --muted: #6d655c;
-      --line: #d8cfc2;
-      --bronze: #9a6b3c;
-      --bronze-soft: #efe3d2;
-      --forest: #1f3832;
-      --forest-deep: #162722;
+      --paper: #f7f6f2;
+      --white: #fffffb;
+      --ink: #1c1c1c;
+      --muted: #6d6d6d;
+      --line: #d7d4cc;
+      --teal: #00374d;
+      --gold: #bd995c;
+      --footer: #e4e4e4;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html { scroll-behavior: smooth; }
-
     body {
-      font-family: Karla, "Segoe UI", sans-serif;
+      font-family: Montserrat, "Segoe UI", sans-serif;
       background: var(--paper);
       color: var(--ink);
       line-height: 1.55;
-      font-size: 16.5px;
-    }
-
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.07;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      z-index: 0;
+      font-size: 15px;
     }
 
     .page {
-      position: relative;
-      z-index: 1;
-      max-width: 860px;
+      max-width: 980px;
       margin: 0 auto;
-      padding: 36px 28px 80px;
+      background: var(--white);
+      min-height: 100vh;
     }
 
-    .toolbar {
+    .topbar {
       display: flex;
-      justify-content: flex-end;
-      margin-bottom: 18px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 40px 18px;
+      background: var(--white);
     }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+      color: #111;
+    }
+
+    .brand small {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .brand strong {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .topnav {
+      display: flex;
+      gap: 28px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #3a3a3a;
+    }
+
+    .topnav .on { color: var(--gold); }
+
+    .toolbar { padding: 0 40px 8px; }
 
     .toolbar button {
       font-family: inherit;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 600;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: var(--forest);
-      background: transparent;
-      border: 1px solid var(--line);
-      padding: 8px 14px;
+      color: var(--white);
+      background: var(--teal);
+      border: none;
+      padding: 12px 22px;
       cursor: pointer;
     }
 
-    .toolbar button:hover { background: var(--bronze-soft); }
+    .toolbar button:hover { background: #002838; }
 
-    header.cover {
-      background: var(--forest);
-      color: var(--paper);
-      padding: 48px 44px 40px;
-      position: relative;
-      overflow: hidden;
+    .hero {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 48px;
+      padding: 18px 40px 8px;
+      align-items: stretch;
     }
 
-    header.cover::after {
-      content: "";
-      position: absolute;
-      right: -40px;
-      top: -40px;
-      width: 220px;
-      height: 220px;
-      border: 1px solid rgba(244, 239, 230, 0.12);
-      transform: rotate(18deg);
+    .hero-panel {
+      background: var(--teal);
+      color: var(--white);
+      padding: 42px 36px 36px;
     }
 
     .kicker {
-      font-size: 12px;
-      letter-spacing: 0.18em;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: #d4b48a;
-      margin-bottom: 18px;
+      color: var(--gold);
+      margin-bottom: 22px;
     }
 
     h1 {
-      font-family: Fraunces, Georgia, serif;
-      font-weight: 620;
-      font-size: clamp(34px, 5vw, 48px);
-      line-height: 1.08;
-      letter-spacing: -0.02em;
-      max-width: 14ch;
+      font-weight: 500;
+      font-size: 34px;
+      line-height: 1.15;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
     }
 
     .lede {
       margin-top: 22px;
-      max-width: 46ch;
-      color: #d8d2c8;
-      font-size: 17px;
+      max-width: 34ch;
+      color: rgba(255, 255, 251, 0.82);
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: 0.01em;
     }
 
     .meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 22px 36px;
-      margin-top: 36px;
-      padding-top: 22px;
-      border-top: 1px solid rgba(244, 239, 230, 0.16);
-      font-size: 13.5px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 26px 28px;
+      align-content: center;
+      padding: 8px 4px 8px 0;
     }
+
+    .meta div { border-bottom: 1px solid var(--line); padding-bottom: 10px; }
 
     .meta dt {
-      letter-spacing: 0.12em;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      font-size: 11px;
-      color: #d4b48a;
-      margin-bottom: 4px;
+      color: #8a8a8a;
+      margin-bottom: 8px;
     }
 
-    header.cover a {
-      color: inherit;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-      text-decoration-color: rgba(212, 180, 138, 0.55);
-    }
+    .meta dd { font-size: 14px; font-weight: 500; color: var(--ink); }
 
-    header.cover a:hover { text-decoration-color: #d4b48a; }
+    a {
+      color: var(--teal);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(0, 55, 77, 0.35);
+    }
 
     .stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-top: none;
+      margin: 28px 40px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
     }
 
-    .stat {
-      padding: 22px 20px 20px;
-      border-right: 1px solid var(--line);
-    }
-
-    .stat:last-child { border-right: none; }
+    .stat { padding: 18px 16px 16px 0; }
 
     .stat .label {
-      font-size: 11px;
-      letter-spacing: 0.12em;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: var(--muted);
+      color: var(--gold);
       margin-bottom: 8px;
     }
 
     .stat .value {
-      font-family: Fraunces, Georgia, serif;
-      font-size: 22px;
-      font-weight: 620;
-      line-height: 1.15;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--teal);
+      letter-spacing: 0.02em;
     }
 
     .stat .hint {
-      margin-top: 6px;
-      font-size: 13px;
+      margin-top: 4px;
+      font-size: 12.5px;
       color: var(--muted);
     }
 
-    .stat.highlight .value { color: var(--bronze); }
-
-    section {
-      margin-top: 56px;
-    }
+    section { padding: 42px 40px 0; }
 
     h2 {
-      font-family: Fraunces, Georgia, serif;
-      font-size: 28px;
-      font-weight: 620;
-      letter-spacing: -0.02em;
-      margin-bottom: 22px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 18px;
       display: flex;
       align-items: baseline;
-      gap: 12px;
-    }
-
-    h2 span {
-      font-family: Karla, sans-serif;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.14em;
-      color: var(--bronze);
-    }
-
-    .scope {
-      display: grid;
       gap: 14px;
     }
 
+    h2 span {
+      color: var(--gold);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+    }
+
     .intro {
-      font-size: 17px;
-      color: #3d3731;
-      max-width: 54ch;
-      margin: 0 0 18px;
+      font-size: 15px;
+      color: #333;
+      max-width: 62ch;
+      margin-bottom: 8px;
     }
 
     article {
-      background: var(--card);
-      border: 1px solid var(--line);
-      padding: 22px 24px 20px;
+      padding: 16px 0 14px;
+      border-bottom: 1px solid var(--line);
     }
 
     article h3 {
-      font-size: 17px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--teal);
       margin-bottom: 6px;
     }
 
-    article p, article li {
-      color: #3d3731;
-      font-size: 15.5px;
-    }
+    article p { color: #333; font-size: 14.5px; }
 
-    article ul {
-      margin-top: 10px;
-      padding-left: 18px;
-    }
-
-    article li + li { margin-top: 4px; }
-
-    .pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 12px;
-    }
-
-    .pill {
-      font-size: 12px;
-      font-weight: 600;
-      background: var(--bronze-soft);
-      color: var(--forest);
-      padding: 4px 9px;
-      border-radius: 99px;
-    }
-
-    .out {
-      background: var(--card);
-      border-left: 3px solid var(--bronze);
-      padding: 18px 22px;
-      color: #3d3731;
-    }
-
-    .timeline {
-      border-top: 1px solid var(--line);
-    }
+    .timeline { border-top: 1px solid var(--line); }
 
     .row {
       display: grid;
-      grid-template-columns: 150px 1fr;
+      grid-template-columns: 160px 1fr;
       gap: 20px;
-      padding: 16px 0;
+      padding: 14px 0;
       border-bottom: 1px solid var(--line);
       align-items: baseline;
     }
 
     .row .when {
-      font-family: Fraunces, Georgia, serif;
-      font-weight: 620;
-      color: var(--forest);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--teal);
+    }
+
+    .out {
+      margin-top: 18px;
+      padding-top: 14px;
+      color: #333;
+      font-size: 14.5px;
     }
 
     .need {
-      margin-top: 16px;
-      font-size: 14.5px;
+      margin-top: 10px;
+      font-size: 13px;
       color: var(--muted);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      background: var(--card);
-      font-size: 15.5px;
+      font-size: 14.5px;
     }
 
     th, td {
       text-align: left;
-      padding: 12px 16px;
+      padding: 14px 0;
       border-bottom: 1px solid var(--line);
+      vertical-align: baseline;
     }
 
     th {
-      font-size: 11px;
-      letter-spacing: 0.12em;
+      font-size: 10px;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: var(--muted);
+      color: var(--gold);
       font-weight: 600;
-      background: #efe8dc;
     }
 
     td:nth-child(2),
-    th:nth-child(2) { text-align: right; }
-
-    tfoot td {
-      font-family: Fraunces, Georgia, serif;
-      font-size: 20px;
-      font-weight: 620;
-      border-bottom: none;
-      padding-top: 16px;
+    th:nth-child(2) {
+      text-align: right;
+      color: var(--teal);
+      font-weight: 600;
+      white-space: nowrap;
+      padding-left: 16px;
     }
+
+    th:nth-child(2) { font-weight: 600; }
 
     .payments {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-top: 22px;
+      gap: 28px;
+      margin-top: 26px;
     }
 
-    .pay {
-      background: var(--card);
-      border: 1px solid var(--line);
-      padding: 18px 16px;
+    .pay { border-top: 2px solid var(--teal); padding-top: 12px; }
+
+    .pay .pct {
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 600;
     }
 
     .pay strong {
       display: block;
-      font-family: Fraunces, Georgia, serif;
-      font-size: 26px;
       margin: 6px 0 4px;
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--teal);
+      letter-spacing: 0.02em;
     }
 
-    .pay .pct {
-      font-size: 12px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--bronze);
-      font-weight: 700;
-    }
-
-    .pay p { font-size: 13.5px; color: var(--muted); }
+    .pay p { font-size: 13px; color: var(--muted); }
 
     .note {
-      margin-top: 14px;
-      font-size: 14px;
+      margin-top: 16px;
+      font-size: 13px;
       color: var(--muted);
+      max-width: 78ch;
     }
 
     ol.accept {
       list-style: none;
       counter-reset: acc;
+      border-top: 1px solid var(--line);
     }
 
     ol.accept li {
       counter-increment: acc;
       display: grid;
-      grid-template-columns: 32px 1fr;
-      gap: 12px;
-      padding: 11px 0;
+      grid-template-columns: 36px 1fr;
+      gap: 8px;
+      padding: 13px 0;
       border-bottom: 1px solid var(--line);
+      font-size: 14.5px;
     }
 
     ol.accept li::before {
       content: counter(acc, decimal-leading-zero);
-      font-family: Fraunces, Georgia, serif;
-      color: var(--bronze);
-      font-weight: 620;
+      color: var(--gold);
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      font-size: 12px;
+      padding-top: 2px;
     }
 
     .next {
-      background: var(--forest-deep);
-      color: var(--paper);
-      padding: 36px 40px;
-      margin-top: 56px;
+      margin: 42px 40px 0;
+      background: var(--teal);
+      color: var(--white);
+      padding: 36px 36px 32px;
     }
 
-    .next h2 { color: var(--paper); margin-bottom: 10px; }
-    .next h2 span { color: #d4b48a; }
-    .next p { color: #d8d2c8; max-width: 48ch; }
+    .next h2 { color: var(--white); margin-bottom: 12px; }
+    .next h2 span { color: var(--gold); }
+    .next p { color: rgba(255, 255, 251, 0.88); max-width: 46ch; font-size: 15px; }
 
     footer {
-      margin-top: 28px;
-      font-size: 12.5px;
-      color: var(--muted);
+      margin-top: 36px;
+      background: var(--footer);
+      color: #4a4a4a;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       display: flex;
       justify-content: space-between;
       gap: 16px;
+      padding: 16px 40px;
     }
 
-    @media (max-width: 720px) {
-      header.cover, .next { padding: 32px 22px; }
-      .stats, .payments { grid-template-columns: 1fr 1fr; }
-      .stat:nth-child(2) { border-right: none; }
-      .stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--line); }
+    @media (max-width: 800px) {
+      .topbar, .toolbar, section, footer { padding-left: 22px; padding-right: 22px; }
+      .hero { grid-template-columns: 1fr; gap: 28px; padding: 12px 22px 0; }
+      .stats { margin-left: 22px; margin-right: 22px; grid-template-columns: 1fr 1fr; }
+      .next { margin-left: 22px; margin-right: 22px; }
+      .payments { grid-template-columns: 1fr; }
       .row { grid-template-columns: 1fr; gap: 4px; }
       footer { flex-direction: column; }
+      h1 { font-size: 28px; }
     }
 
     @media print {
-      body { background: white; font-size: 12.5px; }
-      body::before, .toolbar { display: none; }
-      .page { max-width: none; padding: 0; }
-      header.cover, .next { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      article, .row, .pay, table { break-inside: avoid; }
-      section { margin-top: 28px; }
+      body { background: white; font-size: 12px; }
+      .page { max-width: none; }
+      .toolbar { display: none; }
+      .topbar { padding: 0 0 12px; }
+      .hero { padding: 0; gap: 28px; break-inside: avoid; }
+      .stats { margin: 16px 0 0; }
+      section { padding: 22px 0 0; }
+      .next { margin: 22px 0 0; break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .hero-panel, .next, footer, .pay { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      article, .row, .pay, .note, table, .criteria { break-inside: avoid; }
+      footer { margin-top: 22px; }
     }
 
-    @page { margin: 14mm; }
+    @page { margin: 12mm; }
   </style>
 </head>
 <body>
   <div class="page">
+    <header class="topbar">
+      <div class="brand">
+        <small>Grupo</small>
+        <strong>Altamira</strong>
+      </div>
+      <nav class="topnav">
+        <span class="on">Propuesta</span>
+        <span>Versión 1</span>
+      </nav>
+    </header>
+
     <div class="toolbar">
-      <button type="button" onclick="window.print()">Imprimir / guardar PDF</button>
+      <button type="button" onclick="window.print()">Guardar PDF</button>
     </div>
 
-    <header class="cover">
-      <p class="kicker">Propuesta comercial · Primera fase</p>
-      <h1>Almira IA + panel de control</h1>
-      <p class="lede">Agente de WhatsApp que atiende el lead, lo preclasifica y lo deriva a visita o asesor. No reemplaza al equipo comercial.</p>
+    <div class="hero">
+      <div class="hero-panel">
+        <p class="kicker">Propuesta comercial · Versión 1</p>
+        <h1>Asistente de<br />WhatsApp</h1>
+        <p class="lede">Saluda, hace las preguntas básicas, filtra el interés y pasa el caso a un asesor. No reemplaza al equipo de ventas.</p>
+      </div>
       <dl class="meta">
         <div>
           <dt>Cliente</dt>
-          <dd>Altamira Group</dd>
+          <dd>Altamira Uruguay</dd>
         </div>
         <div>
           <dt>Proveedor</dt>
@@ -446,141 +456,126 @@
         </div>
         <div>
           <dt>Fecha</dt>
-          <dd>27 de agosto de 2026</dd>
+          <dd>2 de octubre de 2026</dd>
         </div>
         <div>
           <dt>Validez</dt>
-          <dd>20 días</dd>
+          <dd>1 semana</dd>
         </div>
       </dl>
-    </header>
+    </div>
 
     <div class="stats">
       <div class="stat">
         <div class="label">Alcance</div>
-        <div class="value">MVP</div>
-        <div class="hint">WhatsApp, HubSpot, Calendly y panel</div>
+        <div class="value">Versión 1</div>
+        <div class="hint">WhatsApp, filtro y HubSpot</div>
       </div>
       <div class="stat">
-        <div class="label">Canales</div>
-        <div class="value">Todos</div>
-        <div class="hint">Formularios Meta + WhatsApp orgánico</div>
+        <div class="label">Canal</div>
+        <div class="value">WhatsApp</div>
+        <div class="hint">Quien escribe o recibe el saludo</div>
       </div>
       <div class="stat">
         <div class="label">Plazo</div>
-        <div class="value">8 sem.</div>
-        <div class="hint">Luego soporte mensual</div>
+        <div class="value">~6 sem.</div>
+        <div class="hint">Prueba desde mediados de noviembre</div>
       </div>
-      <div class="stat highlight">
+      <div class="stat">
         <div class="label">Inversión</div>
-        <div class="value">USD 2.500</div>
+        <div class="value">USD 2.000</div>
         <div class="hint">+ USD 950 / mes</div>
       </div>
     </div>
 
     <section>
       <h2><span>01</span> Qué incluye</h2>
-      <p class="intro">El lead entra por WhatsApp. Almira lo atiende, actualiza HubSpot y envía el Calendly. El equipo ve la conversación en el panel.</p>
+      <p class="intro">El lead escribe por WhatsApp, o recibe el saludo. El asistente hace tres preguntas, responde lo esencial y, si hay interés, coordina la llamada con un asesor. El resumen queda en HubSpot.</p>
       <div class="scope">
         <article>
-          <h3>Almira en WhatsApp</h3>
-          <p>Agente que responde al lead, lo preclasifica y lo deriva a una visita o a un asesor. Usa el prompt maestro y las FAQ que ya tiene Altamira. No reemplaza al equipo comercial.</p>
+          <h3>Asistente en WhatsApp</h3>
+          <p>Saludo, tres preguntas (qué le interesa, presupuesto, si conoce los proyectos) y respuesta a las consultas que se repiten: precio desde, tipología, fecha de entrega y orientación. Si no hay interés, el caso se cierra sin ocupar al asesor.</p>
+          <p style="margin-top:8px">No responde porcentajes de renta futura ni promete rentabilidad.</p>
         </article>
         <article>
-          <h3>De dónde entran los leads</h3>
-          <p>Formularios pagos de Facebook e Instagram, y WhatsApp orgánico (quien escribe sin haber llenado un formulario).</p>
-          <p style="margin-top:8px">Proyectos: Ycuá Satí, Surubi’i, Altavida Luque, Altavida Norte, Veralta Los Laureles, Alzara Plaza y Parque Alcántara.</p>
+          <h3>Información del proyecto</h3>
+          <p>Sale de una ficha en una carpeta privada de Drive que Altamira mantiene al día (precios desde, tipologías, fechas). El inventario completo y la disponibilidad se ven con el asesor, no en el chat.</p>
         </article>
         <article>
           <h3>HubSpot</h3>
-          <p>Crea o actualiza el contacto con los datos de la conversación: nombre, teléfono, email, proyecto, origen, venta o alquiler, presupuesto, tipología y un resumen del chat.</p>
-          <p style="margin-top:8px">Estados que puede mover Almira:</p>
-          <div class="pills">
-            <span class="pill">Almira activada</span>
-            <span class="pill">Solicita asesor</span>
-            <span class="pill">Visita agendada</span>
-            <span class="pill">Inválido</span>
-            <span class="pill">Perdido</span>
-          </div>
+          <p>Al derivar o cerrar, crea o actualiza el contacto y guarda el historial como texto: teléfono, correo, presupuesto, interés y la conversación. No usa el módulo de inteligencia artificial de HubSpot.</p>
         </article>
         <article>
-          <h3>Calendly</h3>
-          <p>Almira envía el link de visita del proyecto correcto. El cliente agenda solo. No reserva ni cambia turnos.</p>
+          <h3>Derivación al asesor</h3>
+          <p>Si el lead califica, el asistente pregunta cuándo puede llamarlo un asesor y deja el caso listo para el equipo. El asistente vive en el número de WhatsApp de la API. Cada asesor sigue con su propio número.</p>
         </article>
         <article>
-          <h3>Panel de control</h3>
-          <p>Bandeja para inbound y comercial. Ahí se ve el hilo completo, la ficha de HubSpot, se pausa o se reactiva Almira, y se actualizan precios, Calendly y plantillas sin tocar código. Acceso con rol admin u operador.</p>
-          <p style="margin-top:8px">Si Altamira envía un mock-up a tiempo, se usa de referencia. Si no, se entrega una interfaz funcional y se ajusta en las pruebas.</p>
+          <h3>Panel</h3>
+          <p>Bandeja para ver el hilo completo y pausar el asistente cuando una persona toma el caso.</p>
         </article>
       </div>
     </section>
 
     <section>
       <h2><span>02</span> Plazo</h2>
-      <div class="timeline">
-        <div class="row"><div class="when">Semanas 1–3</div><div>Diseño, Almira, WhatsApp y prototipo para revisión</div></div>
-        <div class="row"><div class="when">Semanas 3–6</div><div>HubSpot, Calendly y panel de control</div></div>
-        <div class="row"><div class="when">Semanas 6–8</div><div>Pruebas con el equipo y salida a producción</div></div>
-        <div class="row"><div class="when">Semana 9 en adelante</div><div>Monitoreo, ajustes de comportamiento y soporte</div></div>
-      </div>
-      <p class="out" style="margin-top:18px">El plazo puede extenderse según la complejidad del panel de control.</p>
-      <p class="need">Para empezar: WhatsApp Business, acceso HubSpot, usuarios del panel, precios y Calendly vigentes, y 8–10 chats de prueba.</p>
+      <p class="intro">El desarrollo lleva aproximadamente 6 semanas.</p>
+      <p class="out">La meta es tenerlo en prueba desde mediados de noviembre de 2026. Si el inicio se atrasa, el lanzamiento pasa a principios de febrero de 2027, para no cruzar las vacaciones.</p>
+      <p class="need">Para empezar: número de WhatsApp en la API, acceso a HubSpot, la ficha del proyecto y ejemplos de conversaciones reales.</p>
     </section>
 
     <section>
       <h2><span>03</span> Inversión</h2>
-      <p class="need" style="margin-top:0;margin-bottom:14px">Montos en USD, sin impuestos. Compromiso mínimo de 3 meses.</p>
+      <p class="need" style="margin-top:0;margin-bottom:8px">Montos en USD, sin impuestos. Compromiso mínimo de 6 meses.</p>
       <table>
         <thead>
           <tr><th>Componente</th><th>USD</th></tr>
         </thead>
         <tbody>
-          <tr><td>Implementación inicial — diseño, configuración, pruebas y lanzamiento (semanas 1–8)</td><td>2.500</td></tr>
-          <tr><td>Suscripción mensual — hosting del agente, IA, optimización y soporte (al terminar las 8 semanas)</td><td>950 / mes</td></tr>
+          <tr><td>Implementación inicial — diseño, configuración, pruebas y lanzamiento (aproximadamente 6 semanas)</td><td>2.000</td></tr>
+          <tr><td>Suscripción mensual — hosting, ajustes y soporte (desde la salida en vivo)</td><td>950 / mes</td></tr>
         </tbody>
       </table>
 
       <div class="payments">
         <div class="pay">
           <div class="pct">Inicio</div>
-          <strong>2.500</strong>
+          <strong>2.000</strong>
           <p>Al aprobar la propuesta</p>
         </div>
         <div class="pay">
           <div class="pct">Mensual</div>
           <strong>950</strong>
-          <p>El día 1 de cada mes, al terminar las 8 semanas</p>
+          <p>El día 1 de cada mes, desde la salida en vivo</p>
         </div>
         <div class="pay">
           <div class="pct">Mínimo</div>
-          <strong>3 meses</strong>
+          <strong>6 meses</strong>
           <p>Después, se renueva mes a mes</p>
         </div>
       </div>
-      <p class="note">No incluye cargos de Meta / WhatsApp ni la licencia de HubSpot. Transferencias internacionales y comisiones bancarias van por cuenta de Altamira.</p>
+      <p class="note">No incluye el uso de la IA (Anthropic), los cargos de Meta por WhatsApp ni la licencia de HubSpot. La suscripción cubre el funcionamiento, errores y los ajustes menores. Las futuras versiones se cotizan aparte.</p>
     </section>
 
-    <section>
+    <section class="criteria">
       <h2><span>04</span> Criterio de aceptación</h2>
-      <p class="need" style="margin-top:0;margin-bottom:8px">Se da por entregado cuando, en un proyecto vigente:</p>
+      <p class="need" style="margin-top:0;margin-bottom:8px">Se da por entregada la versión 1 cuando:</p>
       <ol class="accept">
-        <li>Un lead de formulario Meta recibe el primer mensaje y Almira continúa el chat.</li>
-        <li>El contacto en HubSpot queda con ficha, estado y resumen.</li>
-        <li>Almira envía el Calendly del proyecto correcto.</li>
-        <li>Un caso de detalle pasa a Solicita asesor y Almira deja de responder.</li>
-        <li>Inbound ve el hilo en el panel y abre el contacto en HubSpot.</li>
-        <li>Un admin actualiza precio o Calendly desde el panel, sin tocar código.</li>
+        <li>Un lead que escribe, o que llega desde un formulario, recibe el saludo y las tres preguntas.</li>
+        <li>Responde precio desde, tipología o fecha de entrega sin inventar rentabilidad.</li>
+        <li>Un lead con interés queda en HubSpot con el resumen y un horario de llamada.</li>
+        <li>Un lead sin interés no se asigna al asesor.</li>
+        <li>El equipo ve el hilo en el panel y puede pausar el asistente.</li>
       </ol>
     </section>
 
     <section class="next">
       <h2><span>05</span> Siguiente paso</h2>
-      <p>Reunión corta para confirmar accesos y fecha de inicio.</p>
+      <p>Revisión de esta versión 1. Si cierra, se confirman accesos y fecha de inicio.</p>
     </section>
 
     <footer>
-      <span>Luis Guareschi · Propuesta Almira IA</span>
-      <span>Confidencial · Altamira Group</span>
+      <span>Luis Guareschi · Propuesta Altamira Uruguay</span>
+      <span>Confidencial · Altamira</span>
     </footer>
   </div>
 </body>
