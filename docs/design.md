@@ -27,7 +27,7 @@ The backoffice calls the backend over HTTP. It does not talk to Postgres. Shared
 | Layer | Choice | Why |
 | --- | --- | --- |
 | Language | TypeScript | Same language in both apps. |
-| Backend | Express on Node | Familiar HTTP server; always-on process for the webhook. |
+| Backend | Express on Node, deployed as a Docker image | Familiar HTTP server. A small always-on container so the webhook and LLM call are not cut off. |
 | Backoffice | Next.js + shadcn + Tailwind + React Query, client-first | UI and routing only. No SSR requirement: pages are client components, data via React Query against the backend. |
 | Database | Supabase Postgres | Managed Postgres. |
 | ORM | Prisma | Schema and all queries from the backend. Use the Supabase Postgres connection string; use the direct URL for migrations. |
@@ -168,7 +168,7 @@ Visual style can follow Altamira’s teal / cream later; shadcn defaults are fin
 ## Hosting and secrets
 
 - **Backoffice:** Vercel.
-- **Backend:** always-on Node process (Fly.io, Railway, or similar). The WhatsApp webhook must not be a short-lived serverless function that times out mid-LLM call.
+- **Backend:** Docker image of the Express app, running as one always-on container (Fly.io, Railway, Render, or similar). Supabase Edge Functions are not the app runtime. Supabase stays Postgres and Auth. The container talks to Postgres through Prisma.
 - **Secrets (env only, never committed):** Meta app credentials, Anthropic API key (Altamira’s account), HubSpot private app token, Google service account for Drive, Supabase URL + anon + service role as needed, Prisma `DATABASE_URL` and direct URL, webhook verify token.
 
 ## Out of scope (v1)

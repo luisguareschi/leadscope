@@ -34,7 +34,7 @@ Not in the sendable proposal. Internally: Instagram DM, Messenger, email-to-What
 
 ## Stack (v1)
 
-One repo, two apps: `backend/` (Express + Prisma + Anthropic + WhatsApp + HubSpot) and `backoffice/` (client-side Next.js, shadcn, Tailwind, React Query). Supabase provides Postgres and Auth; Prisma owns the schema and all DB access from the backend. Knowledge is synced from the Drive sheet and allowlisted site pages into Postgres, then injected into the Anthropic prompt (no RAG). Details: `docs/design.md`.
+One repo, two apps: `backend/` (Express + Prisma + Anthropic + WhatsApp + HubSpot, deployed as a Docker container) and `backoffice/` (client-side Next.js, shadcn, Tailwind, React Query). Supabase provides Postgres and Auth; Prisma owns the schema and all DB access from the backend. Knowledge is synced from the Drive sheet and allowlisted site pages into Postgres, then injected into the Anthropic prompt (no RAG). Details: `docs/design.md`.
 
 ## Docs (source of truth)
 
