@@ -6,15 +6,15 @@ WhatsApp assistant for **Altamira**, a real-estate developer in **Uruguay** (not
 **Client side:** Fabio Tombion (Uruguay operations). José Daniel Guzmán (HubSpot / marketing consulting, biweekly). Luis’s father was on the 30 Sep 2026 call.  
 **Status (Oct 2026):** proposal for v1, not signed. Repo has no implementation. Kickoff only after they accept the proposal.
 
-**Paraguay (closed):** Altamira Group (Florencia Ozuna) went with another provider. Do not use that scope, projects, Calendly links, HubSpot statuses, or GHL notes as the current build. Those files stay in `docs/resources/` as archive only.
+**Paraguay (closed):** Altamira Group (Florencia Ozuna) went with another provider. Their files were removed from this repo. Do not recover that scope, projects, Calendly links, HubSpot statuses, or GHL notes as the current build.
 
 ## What we are building (v1)
 
 Volume they reported: about **15–20 leads/day** and **~60 conversations/day**. About 70% of leads interact outside office hours.
 
 1. **WhatsApp assistant** on the official API number (marketing/cloud number). Greeting, three questions (interest, budget, whether they know the projects), answers to repeated questions (price-from, typology, delivery date, orientation). A lead who writes gets the greeting; a lead who arrives from a form gets one welcome. Junk leads stop there. No future rental-yield or “guaranteed rent” answers. No project-presentation file in v1.
-2. **Knowledge** from a private Google Drive project sheet Altamira keeps current. Not the public website. Do not dump full inventory or unit-level availability in chat.
-3. **HubSpot Sales Pro** (already live ~2 months). On handoff or close, create/update the contact and store the transcript as a long text property. Do not use HubSpot’s native AI (José estimated that route at about USD 1,800/month at this volume). How the connection is built is decided at kickoff.
+2. **Knowledge** from a private Google Drive project sheet Altamira keeps current (price-from, typology, delivery, orientation). Allowlisted public site pages may supply stable facts only (address, amenities). No RAG and no live browsing during a chat. The sheet wins on commercial facts. Do not dump full inventory or unit-level availability in chat.
+3. **HubSpot Sales Pro** (already live ~2 months). On handoff or close, create/update the contact and store the transcript as a long text property via the HubSpot API. Do not use HubSpot’s native AI (José estimated that route at about USD 1,800/month at this volume).
 4. **Handoff:** if the lead qualifies, ask when an advisor can call, then leave the case for the team. Advisors keep their own WhatsApp numbers. The bot does not live on those phones.
 5. **Small panel:** thread list and the ability to pause the assistant when a human takes over.
 
@@ -26,23 +26,27 @@ Not in the sendable proposal. Internally: Instagram DM, Messenger, email-to-What
 
 ## Product rules
 
-- Model: Anthropic, a consistent smaller model is enough. Behavior will need live tuning; tests alone will not catch bad answers.
+- Model: Anthropic (current small model). Behavior will need live tuning; tests alone will not catch bad answers.
 - Never answer future rental yield or guaranteed returns.
 - Price-from and typology are allowed. Full availability stays with the advisor.
-- Knowledge changes often (units, prices, quotas). The Drive sheet is the source, not a prompt frozen at kickoff.
+- Knowledge changes often (units, prices, quotas). The Drive sheet is the commercial source, not a prompt frozen at kickoff. Public site notes are for stable facts only.
 - Two WhatsApp worlds: API number for the bot, personal numbers for advisors. Do not merge them in v1.
+
+## Stack (v1)
+
+One repo, two apps: `backend/` (Express + Prisma + Anthropic + WhatsApp + HubSpot) and `backoffice/` (client-side Next.js, shadcn, Tailwind, React Query). Supabase provides Postgres and Auth; Prisma owns the schema and all DB access from the backend. Knowledge is synced from the Drive sheet and allowlisted site pages into Postgres, then injected into the Anthropic prompt (no RAG). Details: `docs/design.md`.
 
 ## Docs (source of truth)
 
+- `docs/design.md` — how we build v1 (stack, knowledge, conversation, data model, build order). Update when architecture decisions change.
 - `docs/Propuesta-comercial-Almira-IA.html` — current Uruguay v1 proposal, with prices. Edit this when the proposal changes. Visual style follows grupoaltamira.uy: Montserrat, teal `#00374d`, gold `#bd995c`, cream page, uppercase labels.
 - `docs/Propuesta-comercial-Almira-IA.pdf` — sendable PDF with prices. Regenerate from the HTML after any proposal change.
 - `docs/Propuesta-comercial-Almira-IA-sin-precios.html` — same proposal with no fees, for them to name a price first. Keep it in sync with the priced HTML except money and the closing line.
 - `docs/Propuesta-comercial-Almira-IA-sin-precios.pdf` — sendable PDF of that copy.
 - `docs/resources/reunion-2026-09-30.md` — 30 Sep 2026 meeting summary (Fabio, José Daniel, Luis).
-- `docs/resources/` PDFs, docx, and xlsx — **Paraguay archive**. Do not treat them as Uruguay requirements.
 
 ## How to work in this repo
 
 - Respond to Luis in English. Client-facing documents stay in Spanish.
-- The HTML proposal is the build contract. Do not start implementation unless Luis asks.
-- **Keep this file current.** After any change to scope, price, timeline, status, people, channels, product rules, integrations, or other project detail, update `AGENTS.md` in the same turn. If the sendable proposal is affected, update the HTML and regenerate the PDF. Do not leave this file stale.
+- The HTML proposal is the commercial contract. `docs/design.md` is the build plan. Do not start implementation unless Luis asks.
+- **Keep this file current.** After any change to scope, price, timeline, status, people, channels, product rules, integrations, stack, or other project detail, update `AGENTS.md` in the same turn. If the design is affected, update `docs/design.md`. If the sendable proposal is affected, update the HTML and regenerate the PDF. Do not leave this file stale.
