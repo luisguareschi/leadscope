@@ -34,8 +34,10 @@ Not in the sendable proposal. Internally: Instagram DM, Messenger, email-to-What
 
 ## Docs (source of truth)
 
-- `docs/Propuesta-comercial-Almira-IA.html` — current Uruguay v1 proposal. Edit this when the proposal changes. Visual style follows grupoaltamira.uy: Montserrat, teal `#00374d`, gold `#bd995c`, cream page, uppercase labels.
-- `docs/Propuesta-comercial-Almira-IA.pdf` — sendable PDF. Regenerate from the HTML after any proposal change.
+- `docs/Propuesta-comercial-Almira-IA.html` — current Uruguay v1 proposal, with prices. Edit this when the proposal changes. Visual style follows grupoaltamira.uy: Montserrat, teal `#00374d`, gold `#bd995c`, cream page, uppercase labels.
+- `docs/Propuesta-comercial-Almira-IA.pdf` — sendable PDF with prices. Regenerate from the HTML after any proposal change.
+- `docs/Propuesta-comercial-Almira-IA-sin-precios.html` — same proposal with no fees, for them to name a price first. Keep it in sync with the priced HTML except money and the closing line.
+- `docs/Propuesta-comercial-Almira-IA-sin-precios.pdf` — sendable PDF of that copy.
 - `docs/resources/reunion-2026-09-30.md` — 30 Sep 2026 meeting summary (Fabio, José Daniel, Luis).
 - `docs/resources/` PDFs, docx, and xlsx — **Paraguay archive**. Do not treat them as Uruguay requirements.
 
