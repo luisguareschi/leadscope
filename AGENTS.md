@@ -6,6 +6,8 @@ WhatsApp assistant for **Altamira**, a real-estate developer in **Uruguay** (not
 **Client side:** Fabio Tombion (Uruguay operations). José Daniel Guzmán (HubSpot / marketing consulting, biweekly). Luis’s father was on the 30 Sep 2026 call.  
 **Status (Oct 2026):** proposal for v1, not signed. Repo has no implementation. Kickoff only after they accept the proposal.
 
+**Product goal:** Altamira is the first client. The system is built as a multi-company product (one shared deployment, every row scoped by company, company-specific behavior in config) so it can be sold to other developers later. Version 1 still ships only Altamira’s scope; no resale features (signup, billing, company admin) yet. Software ownership must be settled in Altamira’s signed contract before resale.
+
 **Paraguay (closed):** Altamira Group (Florencia Ozuna) went with another provider. Their files were removed from this repo. Do not recover that scope, projects, Calendly links, HubSpot statuses, or GHL notes as the current build.
 
 ## What we are building (v1)
@@ -22,7 +24,7 @@ Commercial quote (if asked): **USD 2,000** setup + **USD 950/month** from go-liv
 
 ## Out of scope (v1)
 
-Not in the sendable proposal. Internally: Instagram DM, Messenger, email-to-WhatsApp, landing-form automation beyond the one welcome, mass email/remarketing, a second country (Costa Rica / “Erika”), native HubSpot AI, Calendly, full CRM rebuild, and the replicable product José might later sell to other developers. Uruguay is the first proof, not that product. Anything new after v1 is a separate quote.
+Not in the sendable proposal. Internally: Instagram DM, Messenger, email-to-WhatsApp, landing-form automation beyond the one welcome, mass email/remarketing, a second country (Costa Rica / “Erika”), native HubSpot AI, Calendly, full CRM rebuild, follow-ups outside WhatsApp’s 24-hour window, and resale features (signup, billing, company admin). Anything new after v1 is a separate quote.
 
 ## Product rules
 
@@ -31,10 +33,12 @@ Not in the sendable proposal. Internally: Instagram DM, Messenger, email-to-What
 - Price-from and typology are allowed. Full availability stays with the advisor.
 - Knowledge changes often (units, prices, quotas). The Drive sheet is the commercial source, not a prompt frozen at kickoff. Public site notes are for stable facts only.
 - Two WhatsApp worlds: API number for the bot, personal numbers for advisors. Do not merge them in v1.
+- The model returns structured fields (reply, extracted lead data, intent); the engine owns the conversation state.
+- Nothing Altamira-specific is hardcoded: tone, questions, forbidden topics, knowledge sources, and CRM settings live in company config.
 
 ## Stack (v1)
 
-One repo, two apps: `backend/` (Express + Prisma + Anthropic + WhatsApp + HubSpot, deployed as a Docker container) and `backoffice/` (client-side Next.js, shadcn, Tailwind, React Query). Supabase provides Postgres and Auth; Prisma owns the schema and all DB access from the backend. Knowledge is synced from the Drive sheet and allowlisted site pages into Postgres, then injected into the Anthropic prompt (no RAG). Details: `docs/design.md`.
+One repo, two apps: `backend/` (Express + Prisma + Anthropic + WhatsApp + HubSpot, deployed as a Docker container) and `backoffice/` (client-side Next.js, shadcn, Tailwind, React Query). Supabase provides Postgres and Auth; Prisma owns the schema and all DB access from the backend. One shared deployment for all companies; the same image can be deployed separately if a client needs isolation. Knowledge is synced from the Drive sheet and allowlisted site pages into Postgres, then injected into the Anthropic prompt (no RAG). Details: `docs/design.md`.
 
 ## Docs (source of truth)
 
