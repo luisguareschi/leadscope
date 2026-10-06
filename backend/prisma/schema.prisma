@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// One row per client. Altamira is seed data, not a code branch.
+model Company {
+  id                    String     @id @default(cuid())
+  name                  String
+  config                Json
+  encryptedSecrets      String?
+  whatsappPhoneNumberId String?    @unique
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+  operators             Operator[]
+  projects              Project[]
+  threads               Thread[]
+  messages              Message[]
+  llmUsages             LlmUsage[]
+}
+
+model Operator {
+  id             String   @id @default(cuid())
+  companyId      String
+  supabaseUserId String   @unique
+  email          String
+  createdAt      DateTime @default(now())
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+}
+
+model Project {
+  id           String    @id @default(cuid())
+  companyId    String
+  slug         String
+  name         String
+  priceFrom    String?
+  typologies   String?
+  deliveryDate String?
+  orientation  String?
+  notes        String?
+  siteNotes    String?   @db.Text
+  syncedAt     DateTime?
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, slug])
+  @@index([companyId])
+}
+
+enum ThreadState {
+  Greeting
+  Qualify
+  Answer
+  Handoff
+  Closed
+}
+
+model Thread {
+  id            String      @id @default(cuid())
+  companyId     String
+  phone         String
+  state         ThreadState @default(Greeting)
+  paused        Boolean     @default(false)
+  needsHuman    Boolean     @default(false)
+  interest      String?
+  budget        String?
+  knowsProjects Boolean?
+  callTime      String?
+  /// From a form payload only. The assistant does not ask for email.
+  email         String?
+  crmContactId  String?
+  lastInboundAt DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  company       Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  messages      Message[]
+  llmUsages     LlmUsage[]
+
+  @@unique([companyId, phone])
+  @@index([companyId, updatedAt])
+}
+
+enum MessageDirection {
+  inbound
+  outbound
+}
+
+model Message {
+  id                String           @id @default(cuid())
+  companyId         String
+  threadId          String
+  direction         MessageDirection
+  body              String           @db.Text
+  /// text, or a non-text WhatsApp type (image, audio, sticker, ...). Template sends use "template".
+  contentType       String           @default("text")
+  whatsappMessageId String?          @unique
+  createdAt         DateTime         @default(now())
+  company           Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  thread            Thread           @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([companyId])
+}
+
+model LlmUsage {
+  id           String   @id @default(cuid())
+  companyId    String
+  threadId     String?
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  createdAt    DateTime @default(now())
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  thread       Thread?  @relation(fields: [threadId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+}

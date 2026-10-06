@@ -1,0 +1,33 @@
+{
+  "name": "qualify then refuse",
+  "steps": [
+    {
+      "event": {
+        "kind": "inbound_text",
+        "model": {
+          "reply": "Hola, ¿qué estás buscando?",
+          "interest": null,
+          "budget": null,
+          "knowsProjects": null,
+          "callTime": null,
+          "intent": "continue"
+        }
+      },
+      "expect": { "state": "Qualify", "needsHuman": false, "crm": "none" }
+    },
+    {
+      "event": {
+        "kind": "inbound_text",
+        "model": {
+          "reply": "Gracias por avisar.",
+          "interest": null,
+          "budget": null,
+          "knowsProjects": null,
+          "callTime": null,
+          "intent": "not_interested"
+        }
+      },
+      "expect": { "state": "Closed", "crm": "close" }
+    }
+  ]
+}

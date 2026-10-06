@@ -2,7 +2,7 @@
 
 Internal design for Luis. The commercial contract with Altamira is the HTML proposal. This file is how we build it.
 
-**Status:** design only. No application code until kickoff after Altamira accepts the proposal.
+**Status:** Altamira accepted. Kickoff is on and implementation has started. Live HubSpot, the sheet, production WhatsApp, and their Anthropic key are still week-1 access; until then the apps run on env examples and fakes.
 
 ## Goal
 
@@ -102,7 +102,7 @@ One shared deployment for all companies. Every company-owned row has a `companyI
 
 ### Secrets per company
 
-Anthropic key, HubSpot token, Meta access token, and Google access are per company. Store them encrypted in the database (or a secrets manager) keyed by company. Only shared platform secrets (database URL, encryption key, Supabase keys) live in environment variables.
+Anthropic key, HubSpot token, Meta access token, and Google access are per company. They are encrypted on the Company row with AES-256-GCM. The encryption key lives only in the server environment. Platform secrets (database URLs, encryption key, Supabase URL and keys, Meta app secret, webhook verify token) stay in environment variables. No Vault in v1.
 
 ### Not in v1
 
@@ -182,7 +182,8 @@ The engine moves the state from those fields. The model never sets the state dir
 - A lead who writes on the API number gets the greeting.
 - A lead who fills a form gets one approved welcome template, then the same flow. A HubSpot workflow calls `POST /hooks/crm/form-lead` with the contact’s phone; the backend sends the template. The company pays Meta for that send.
 - WhatsApp only allows free-form replies within 24 hours of the lead’s last message. Outside that window, only approved templates can be sent. v1 does not send follow-ups after that window.
-- A lead who writes again after **Closed** or **Handoff** reopens the same thread in **Answer**. The thread keeps its history.
+- Leave **Qualify** only after `interest`, `budget`, and `knowsProjects` are stored. `knowsProjects` may be false. There is no numeric budget minimum in code. `intent` `not_interested` closes the thread even if a question is still open. `intent` `qualified` without the three stored answers does not leave Qualify.
+- A lead who writes again after **Closed** or **Handoff** reopens the same thread in **Answer**. The thread keeps its history. If that same turn is the one that first completes the three answers and `callTime`, it still finishes the handoff and writes the CRM.
 - Advisors keep their own personal WhatsApp numbers. The bot never lives on those phones.
 
 ### Guardrails
@@ -208,8 +209,8 @@ Names can move when the schema is created. Every table below except `Company` ha
 - **Company** — name, config (JSON), encrypted secrets, WhatsApp phone number id, createdAt.
 - **Operator** — Supabase Auth user id, companyId, email. Maps a login to a company.
 - **Project** — sheet fields + `siteNotes` + `syncedAt`.
-- **Thread** — lead phone (E.164), state, `paused`, extracted fields (interest, budget, knowsProjects, callTime), CRM contact id, last inbound at (for the 24-hour window), created/updated. Unique on (companyId, phone).
-- **Message** — thread id, direction (`in` / `out`), body, WhatsApp message id (unique, nullable for outbound until sent), createdAt.
+- **Thread** — lead phone (E.164), state, `paused`, `needsHuman`, extracted fields (interest, budget, knowsProjects, callTime), optional email from a form, CRM contact id, last inbound at (for the 24-hour window), created/updated. Unique on (companyId, phone).
+- **Message** — thread id, direction (`in` / `out`), body, content type (`text` or the WhatsApp type), WhatsApp message id (unique, nullable for outbound until sent), createdAt.
 - **LlmUsage** — thread id, model, input/output tokens, createdAt. Used to see cost per company.
 
 ## Backend surface
@@ -235,7 +236,7 @@ Pages:
 
 1. Login (Supabase email). No public signup.
 2. Thread list (newest activity first). Show phone, state, paused, last message preview.
-3. Thread detail — full messages, pause / resume.
+3. Thread detail — full messages, pause / resume. If the bot set `needsHuman`, the operator can clear that flag. The panel still does not send WhatsApp.
 4. Knowledge — button to trigger a sheet sync; show last sync time.
 
 The panel does not send messages. Advisors answer from their own WhatsApp.
@@ -248,8 +249,9 @@ Shadcn defaults are fine to ship first. Per-company branding is not in v1.
 
 ## Hosting, environments, and operations
 
+- **Region:** Supabase (Postgres and Auth) and the backend host are **us-east-1** (N. Virginia). Change this only if Altamira’s contract requires LatAm hosting. Do not create the Supabase project in another region.
 - **Backoffice:** Vercel.
-- **Backend:** Docker image of the Express app, running as one always-on container (Fly.io, Railway, Render, or similar). Supabase Edge Functions are not the app runtime. Supabase stays Postgres and Auth.
+- **Backend:** Docker image of the Express app, running as one always-on container (Fly.io, Railway, Render, or similar). Supabase Edge Functions are not the app runtime. Supabase stays Postgres and Auth. The host account is still open; the image is the artifact.
 - **Single instance:** scheduled jobs run inside the container (sheet sync, site notes). Keep one instance until jobs move to a proper queue.
 - **Environments:** staging and production, each with its own database and a test WhatsApp number in staging. Prompt changes go to staging first.
 - **Platform secrets (env only, never committed):** database URLs (pooled + direct), Supabase URL and keys, secrets encryption key, Meta app secret and webhook verify token, Google service account if shared.
@@ -292,4 +294,3 @@ Also not in v1: resale features (self-signup, billing, company admin, onboarding
 - Hosting account for the backend.
 - Software ownership with Altamira in the signed contract (needed for resale).
 - Partnership terms with José Daniel and Luis’s father, if the product is sold together.
-- Repo name: `altamira-chatbot-backend` will hold both apps and a product; a neutral name fits better.

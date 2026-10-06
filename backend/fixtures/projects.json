@@ -1,0 +1,20 @@
+[
+  {
+    "slug": "ejemplo-norte",
+    "name": "Ejemplo Norte (fixture)",
+    "priceFrom": "USD 120.000",
+    "typologies": "1 y 2 dormitorios",
+    "deliveryDate": "2027",
+    "orientation": "Norte",
+    "notes": "Dato de prueba. No es inventario real."
+  },
+  {
+    "slug": "ejemplo-costa",
+    "name": "Ejemplo Costa (fixture)",
+    "priceFrom": "USD 180.000",
+    "typologies": "2 y 3 dormitorios",
+    "deliveryDate": "2028",
+    "orientation": "Este",
+    "notes": "Dato de prueba. No es inventario real."
+  }
+]
