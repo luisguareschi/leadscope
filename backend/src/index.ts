@@ -1,4 +1,5 @@
 import { createApp, burstsFor } from "./app";
+import { seedDemoThreads } from "./companies/demo-threads";
 import { seedAltamira } from "./companies/seed";
 import { assertProductionEnv, loadEnv } from "./env";
 import { decodeEncryptionKey } from "./crypto/secrets";
@@ -29,8 +30,12 @@ async function main(): Promise<void> {
       email: env.SEED_OPERATOR_EMAIL,
       supabaseUserId: env.SEED_OPERATOR_SUPABASE_USER_ID,
     });
+    const demoThreads = await seedDemoThreads(memory);
     store = memory;
-    log.warn("DATABASE_URL is empty; using an in-memory store that forgets data on exit");
+    log.warn(
+      { demoThreads },
+      "DATABASE_URL is empty; using an in-memory store with sample threads. They are not inserted when DATABASE_URL is set",
+    );
   }
 
   const channel = new RoutingChannel();
