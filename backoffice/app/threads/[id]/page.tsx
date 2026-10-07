@@ -42,7 +42,7 @@ function Detail() {
   const thread = query.data?.thread;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 px-4 lg:px-6">
       <Link href="/threads" className="text-sm text-muted-foreground hover:text-foreground">
         Volver
       </Link>

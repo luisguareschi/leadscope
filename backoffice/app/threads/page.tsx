@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { SectionCards } from "@/components/section-cards";
 import { Shell } from "@/components/shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,18 +36,14 @@ function ThreadList() {
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.label}>
-            <CardHeader>
-              <CardDescription>{stat.label}</CardDescription>
-              <CardTitle className="text-2xl font-semibold tabular-nums">{query.data ? stat.value : "—"}</CardTitle>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
-      <Card>
+    <>
+      <SectionCards
+        qualifying={query.data ? stats[0].value : null}
+        handedOff={query.data ? stats[1].value : null}
+        paused={query.data ? stats[2].value : null}
+        needsAdvisor={query.data ? stats[3].value : null}
+      />
+      <Card className="mx-4 lg:mx-6">
         <CardHeader>
           <CardTitle>Conversaciones</CardTitle>
           <CardDescription>La lista se actualiza sola.</CardDescription>
@@ -78,6 +75,6 @@ function ThreadList() {
           </ul>
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }

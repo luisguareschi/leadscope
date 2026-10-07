@@ -33,7 +33,7 @@ function Knowledge() {
   });
 
   return (
-    <Card>
+    <Card className="mx-4 lg:mx-6">
       <CardHeader>
         <CardTitle>Planilla</CardTitle>
         <CardDescription>
