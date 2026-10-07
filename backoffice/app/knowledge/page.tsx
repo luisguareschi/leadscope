@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Shell } from "@/components/shell";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -36,9 +36,9 @@ function Knowledge() {
     <Card>
       <CardHeader>
         <CardTitle>Planilla</CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <CardDescription>
           Sincroniza la ficha comercial. En local, sin una planilla real, carga el fixture de prueba.
-        </p>
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm">

@@ -1,21 +1,37 @@
+import { PrismaClient } from "@prisma/client";
+import { encryptSecrets } from "../crypto/secrets";
+import { syncSheetForCompany } from "../services/knowledge.service";
 import { altamiraConfig, altamiraDevSecrets } from "./altamira";
-import { syncSheet } from "../integrations/knowledge/sync";
-import { Store } from "../store/types";
+import { readCompany } from "./load";
 
 export async function seedAltamira(
-  store: Store,
+  db: PrismaClient,
+  key: Buffer,
   operator: { email: string; supabaseUserId: string },
 ): Promise<void> {
-  const company = await store.upsertCompany({
-    name: "Altamira",
-    config: altamiraConfig(),
-    secrets: altamiraDevSecrets(),
-    whatsappPhoneNumberId: altamiraConfig().whatsapp.phoneNumberId,
+  const config = altamiraConfig();
+  const company = await db.company.upsert({
+    where: { whatsappPhoneNumberId: config.whatsapp.phoneNumberId },
+    create: {
+      name: "Altamira",
+      config,
+      encryptedSecrets: encryptSecrets(altamiraDevSecrets(), key),
+      whatsappPhoneNumberId: config.whatsapp.phoneNumberId,
+    },
+    update: {
+      name: "Altamira",
+      config,
+      encryptedSecrets: encryptSecrets(altamiraDevSecrets(), key),
+    },
   });
-  await store.upsertOperator({
-    companyId: company.id,
-    email: operator.email,
-    supabaseUserId: operator.supabaseUserId,
+  await db.operator.upsert({
+    where: { supabaseUserId: operator.supabaseUserId },
+    create: {
+      companyId: company.id,
+      email: operator.email,
+      supabaseUserId: operator.supabaseUserId,
+    },
+    update: { email: operator.email, companyId: company.id },
   });
-  await syncSheet(company, store, "");
+  await syncSheetForCompany(db, readCompany(company, key), "");
 }

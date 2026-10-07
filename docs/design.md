@@ -18,7 +18,7 @@ One repo, two apps. No Turborepo.
 
 ```
 backend/      TypeScript HTTP service (Express). WhatsApp webhook, conversation engine, CRM, knowledge sync.
-backoffice/   Next.js (client-side), shadcn, Tailwind, React Query. Thread list and pause.
+backoffice/   Next.js (client-side), shadcn new-york, Tailwind, React Query. Thread list and pause.
 docs/         Proposal, meeting notes, this design.
 ```
 
@@ -29,14 +29,15 @@ Backend source layout:
 ```
 backend/src/
   engine/                     conversation states, prompt building, guardrails
+  controllers/                one Express router per resource (webhook, form lead, threads, knowledge)
+  services/                   one service per resource; each takes a Prisma client and queries directly
   integrations/
     whatsapp/                 Meta Cloud API: webhook parsing, send text, send template
     crm/hubspot/              first CRM adapter
-    knowledge/google-sheet/   first knowledge adapter
-    knowledge/website/        allowlisted page fetcher
+    knowledge/                sheet fetch and allowlisted page fetcher
   llm/                        complete() wrapper around Anthropic
-  companies/                  loads a company's config and secrets
-  routes/                     Express routes
+  companies/                  company config, secrets, and the development seed
+  routes/                     operator auth
   jobs/                       scheduled syncs
 ```
 

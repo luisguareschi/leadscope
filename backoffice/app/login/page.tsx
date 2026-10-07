@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 
@@ -26,11 +26,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md items-center px-4">
+    <div className="mx-auto flex min-h-svh max-w-md items-center px-4">
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Entrar</CardTitle>
-          <p className="text-sm text-muted-foreground">El alta de usuarios está cerrada.</p>
+          <CardTitle>LeadScope</CardTitle>
+          <CardDescription>El alta de usuarios está cerrada.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={onSubmit}>

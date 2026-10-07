@@ -1,9 +1,16 @@
 import { NextFunction, Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { Env } from "../env";
-import { OperatorRecord, Store } from "../store/types";
 
-export type AuthedRequest = Request & { operator?: OperatorRecord };
+export type OperatorSession = {
+  id: string;
+  companyId: string;
+  supabaseUserId: string;
+  email: string;
+};
+
+export type AuthedRequest = Request & { operator?: OperatorSession };
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
@@ -20,7 +27,7 @@ async function supabaseUserId(token: string, env: Env): Promise<string> {
   return payload.sub;
 }
 
-export function requireOperator(store: Store, env: Env) {
+export function requireOperator(db: PrismaClient, env: Env) {
   return async (req: AuthedRequest, res: Response, next: NextFunction): Promise<void> => {
     const header = req.header("authorization") ?? "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : "";
@@ -38,7 +45,7 @@ export function requireOperator(store: Store, env: Env) {
           res.status(401).json({ error: "unauthorized" });
           return;
         }
-        const operator = await store.operatorByEmail(token.slice(5));
+        const operator = await db.operator.findFirst({ where: { email: token.slice(5) } });
         if (!operator) {
           res.status(401).json({ error: "unauthorized" });
           return;
@@ -48,7 +55,7 @@ export function requireOperator(store: Store, env: Env) {
         return;
       }
       const userId = await supabaseUserId(token, env);
-      const operator = await store.operatorBySupabaseUser(userId);
+      const operator = await db.operator.findUnique({ where: { supabaseUserId: userId } });
       if (!operator) {
         res.status(403).json({ error: "no operator for this login" });
         return;

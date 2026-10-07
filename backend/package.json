@@ -3,10 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch --env-file=.env src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "test": "tsx --test test/*.test.ts",
+    "test": "prisma migrate deploy && tsx --test --test-concurrency=1 test/*.test.ts",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

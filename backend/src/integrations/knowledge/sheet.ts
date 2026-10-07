@@ -2,7 +2,16 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { importPKCS8, SignJWT } from "jose";
 import { CompanyConfig } from "../../companies/config";
-import { ProjectDraft } from "../../store/types";
+
+export type ProjectDraft = {
+  slug: string;
+  name: string;
+  priceFrom: string | null;
+  typologies: string | null;
+  deliveryDate: string | null;
+  orientation: string | null;
+  notes: string | null;
+};
 
 export type ColumnMapping = CompanyConfig["knowledge"]["columnMapping"];
 

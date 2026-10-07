@@ -1,6 +1,6 @@
-import { ALTAMIRA_PHONE_NUMBER_ID } from "./altamira";
-import { Store } from "../store/types";
+import { PrismaClient } from "@prisma/client";
 import { ThreadState } from "../engine/types";
+import { ALTAMIRA_PHONE_NUMBER_ID } from "./altamira";
 
 type DemoMessage = {
   id: string;
@@ -174,39 +174,48 @@ const DEMO_THREADS: DemoThread[] = [
   },
 ];
 
-/** Inserts sample threads once per phone. A second call in the same store does not duplicate. */
-export async function seedDemoThreads(store: Store): Promise<number> {
-  const company = await store.companyByPhoneNumberId(ALTAMIRA_PHONE_NUMBER_ID);
+/**
+ * Inserts the five sample threads only when the database has no threads.
+ * A second call, or any call after real conversations exist, inserts nothing.
+ */
+export async function seedDemoThreads(db: PrismaClient): Promise<number> {
+  const existing = await db.thread.count();
+  if (existing > 0) return 0;
+  const company = await db.company.findUnique({ where: { whatsappPhoneNumberId: ALTAMIRA_PHONE_NUMBER_ID } });
   if (!company) return 0;
+
+  const started = Date.now();
+  let tick = 0;
   let inserted = 0;
   for (const demo of DEMO_THREADS) {
-    const existing = await store.threadByPhone(company.id, demo.phone);
-    if (existing) continue;
-    const thread = await store.createThread({
-      companyId: company.id,
-      phone: demo.phone,
-      state: demo.state,
+    const thread = await db.thread.create({
+      data: {
+        companyId: company.id,
+        phone: demo.phone,
+        state: demo.state,
+        paused: demo.paused,
+        needsHuman: demo.needsHuman,
+        interest: demo.interest,
+        budget: demo.budget,
+        knowsProjects: demo.knowsProjects,
+        callTime: demo.callTime,
+        lastInboundAt: new Date(started),
+      },
     });
     for (const message of demo.messages) {
-      await store.addMessage({
-        companyId: company.id,
-        threadId: thread.id,
-        direction: message.direction,
-        body: message.body,
-        contentType: "text",
-        whatsappMessageId: message.id,
+      tick += 1;
+      await db.message.create({
+        data: {
+          companyId: company.id,
+          threadId: thread.id,
+          direction: message.direction === "in" ? "inbound" : "outbound",
+          body: message.body,
+          contentType: "text",
+          whatsappMessageId: message.id,
+          createdAt: new Date(started + tick),
+        },
       });
     }
-    await store.saveThread(company.id, thread.id, {
-      state: demo.state,
-      paused: demo.paused,
-      needsHuman: demo.needsHuman,
-      interest: demo.interest,
-      budget: demo.budget,
-      knowsProjects: demo.knowsProjects,
-      callTime: demo.callTime,
-      lastInboundAt: new Date().toISOString(),
-    });
     inserted += 1;
   }
   return inserted;

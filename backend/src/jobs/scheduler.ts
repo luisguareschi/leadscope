@@ -1,9 +1,9 @@
-import { syncSheet, syncSiteNotes } from "../integrations/knowledge/sync";
-import { log } from "../logger";
-import { Store } from "../store/types";
+import { PrismaClient } from "@prisma/client";
+import { syncAllCompanies } from "../services/knowledge.service";
 
 export function startJobs(input: {
-  store: Store;
+  db: PrismaClient;
+  key: Buffer | null;
   sheetIntervalMs: number;
   siteIntervalMs: number;
   platformServiceAccountJson: string;
@@ -14,7 +14,7 @@ export function startJobs(input: {
   const sheetTimer = setInterval(() => {
     if (sheetRunning) return;
     sheetRunning = true;
-    void runSheets().finally(() => {
+    void syncAllCompanies(input.db, input.key, input.platformServiceAccountJson, "sheet").finally(() => {
       sheetRunning = false;
     });
   }, input.sheetIntervalMs);
@@ -22,32 +22,10 @@ export function startJobs(input: {
   const siteTimer = setInterval(() => {
     if (siteRunning) return;
     siteRunning = true;
-    void runSites().finally(() => {
+    void syncAllCompanies(input.db, input.key, input.platformServiceAccountJson, "site").finally(() => {
       siteRunning = false;
     });
   }, input.siteIntervalMs);
-
-  async function runSheets(): Promise<void> {
-    const companies = await input.store.listCompanies();
-    for (const company of companies) {
-      try {
-        await syncSheet(company, input.store, input.platformServiceAccountJson);
-      } catch (err) {
-        log.error({ err, companyId: company.id }, "scheduled sheet sync failed");
-      }
-    }
-  }
-
-  async function runSites(): Promise<void> {
-    const companies = await input.store.listCompanies();
-    for (const company of companies) {
-      try {
-        await syncSiteNotes(company, input.store);
-      } catch (err) {
-        log.error({ err, companyId: company.id }, "scheduled site notes failed");
-      }
-    }
-  }
 
   return () => {
     clearInterval(sheetTimer);
