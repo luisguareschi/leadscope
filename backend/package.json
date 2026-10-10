@@ -1,0 +1,59 @@
+{
+  "name": "leadscope-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "postinstall": "prisma generate",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "chat": "tsx scripts/chat.ts",
+    "webhook:send": "tsx scripts/send-test-webhook.ts",
+    "company:secret": "tsx scripts/set-company-secret.ts",
+    "operator:add": "tsx scripts/add-operator.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "@sentry/node": "^11.6.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.7",
+    "express": "^5.3.0",
+    "jose": "^6.2.12",
+    "jszip": "^3.10.2",
+    "libphonenumber-js": "^1.13.15",
+    "mammoth": "^1.13.0",
+    "multer": "^2.4.0",
+    "pg": "^8.23.1",
+    "pino": "^10.4.0",
+    "prisma": "7.10.0",
+    "unpdf": "^1.8.1",
+    "word-extractor": "^1.0.4",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^22.18.6",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
+    "supertest": "^7.3.1",
+    "tsx": "^4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "^5.0.3"
+  }
+}
