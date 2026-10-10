@@ -74,7 +74,7 @@ Still placeholders in `backend/prisma/seed-data/altamira.ts`: the welcome templa
 ## Tests
 
 ```bash
-cd backend && npm test          # 140+ tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
+cd backend && npm test          # 135 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
 cd backoffice && npm run lint && npm run typecheck && npm run build
 ```
 
