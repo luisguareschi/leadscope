@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { recordInboundMessage } from "../../src/conversation/inbound.js";
 import { processThread } from "../../src/conversation/process-thread.js";
 import { sweepOnce } from "../../src/conversation/sweeper.js";
@@ -26,6 +26,8 @@ beforeEach(async () => {
   pnid = company.whatsappPhoneNumberId!;
   ctx = createTestContext();
 });
+
+afterEach(() => ctx.replies.drain());
 
 describe("inbound messages", () => {
   it("stores a new lead with an E.164 phone and their WhatsApp name", async () => {

@@ -1,5 +1,5 @@
 import request from "supertest";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../../src/app.js";
 import { signWebhookBody } from "../../src/integrations/whatsapp/signature.js";
 import { createCompany, createTestContext, resetDb, testDb, type TestContext } from "../support/harness.js";
@@ -15,6 +15,9 @@ beforeEach(async () => {
   ctx = createTestContext();
   app = createApp(ctx);
 });
+
+// Replies run in the background after the 200; finish them before the next test truncates the tables.
+afterEach(() => ctx.replies.drain());
 
 function whatsappPayload(text: string, id = `wamid.${Date.now()}`) {
   return JSON.stringify({
