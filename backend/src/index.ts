@@ -1,11 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { seedDemoThreads } from "./companies/demo-threads";
+import { ensureSampleKnowledge } from "./companies/sample-knowledge";
 import { seedAltamira } from "./companies/seed";
 import { assertProductionEnv, loadEnv } from "./env";
 import { decodeEncryptionKey } from "./crypto/secrets";
 import { RoutingCrm } from "./integrations/crm/hubspot";
 import { RoutingChannel } from "./integrations/whatsapp/client";
-import { startJobs } from "./jobs/scheduler";
 import { complete } from "./llm/complete";
 import { initSentry, log } from "./logger";
 import { burstsFor, createApp } from "./app";
@@ -29,6 +29,10 @@ async function main(): Promise<void> {
       });
       log.info("seeded the Altamira company into the empty development database");
     }
+    const sampleFiles = await ensureSampleKnowledge(db);
+    if (sampleFiles > 0) {
+      log.info({ sampleFiles }, "seeded a sample knowledge file where a company had none");
+    }
     const demoThreads = await seedDemoThreads(db);
     if (demoThreads > 0) {
       log.info({ demoThreads }, "seeded sample threads into the empty development database");
@@ -43,16 +47,6 @@ async function main(): Promise<void> {
   const processor = { db, key, channel, crm, complete, model: env.ANTHROPIC_MODEL };
   const bursts = burstsFor(processor, env.BURST_WAIT_MS);
   const app = createApp({ ...processor, env, bursts });
-
-  if (env.NODE_ENV !== "test") {
-    startJobs({
-      db,
-      key,
-      sheetIntervalMs: env.SHEET_SYNC_INTERVAL_MS,
-      siteIntervalMs: env.SITE_NOTES_INTERVAL_MS,
-      platformServiceAccountJson: env.GOOGLE_SERVICE_ACCOUNT_JSON,
-    });
-  }
 
   app.listen(env.PORT, () => {
     log.info({ port: env.PORT }, "backend listening");

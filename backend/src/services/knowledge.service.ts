@@ -1,118 +1,131 @@
 import { PrismaClient } from "@prisma/client";
-import { CompanyView, readCompany } from "../companies/load";
-import { fetchSheetValues, loadFixtureProjects, ProjectDraft, rowsFromSheetValues } from "../integrations/knowledge/sheet";
-import { fetchPageText } from "../integrations/knowledge/website";
-import { log } from "../logger";
+import { CompanyView } from "../companies/load";
+import { extractText, KnowledgeError, safeFilename } from "../integrations/knowledge/extract";
 
-export async function knowledgeStatus(db: PrismaClient, companyId: string) {
-  const projects = await db.project.findMany({ where: { companyId } });
-  const lastSyncedAt = projects.reduce<string | null>((latest, project) => {
-    if (!project.syncedAt) return latest;
-    const iso = project.syncedAt.toISOString();
-    if (!latest || iso > latest) return iso;
-    return latest;
-  }, null);
-  return { projectCount: projects.length, lastSyncedAt };
-}
+export { KnowledgeError };
 
-export async function listProjectFacts(db: PrismaClient, companyId: string) {
-  const rows = await db.project.findMany({ where: { companyId }, orderBy: { name: "asc" } });
-  return rows.map((row) => ({
-    slug: row.slug,
-    name: row.name,
-    priceFrom: row.priceFrom,
-    typologies: row.typologies,
-    deliveryDate: row.deliveryDate,
-    orientation: row.orientation,
-    notes: row.notes,
-    siteNotes: row.siteNotes,
-  }));
-}
+export type KnowledgeFileView = {
+  id: string;
+  filename: string;
+  format: string;
+  byteSize: number;
+  extractedBytes: number;
+  createdAt: string;
+  updatedAt: string;
+};
 
-async function upsertProjects(db: PrismaClient, companyId: string, rows: ProjectDraft[]): Promise<number> {
-  const now = new Date();
-  for (const row of rows) {
-    await db.project.upsert({
-      where: { companyId_slug: { companyId, slug: row.slug } },
-      create: { companyId, ...row, syncedAt: now },
-      update: {
-        name: row.name,
-        priceFrom: row.priceFrom,
-        typologies: row.typologies,
-        deliveryDate: row.deliveryDate,
-        orientation: row.orientation,
-        notes: row.notes,
-        syncedAt: now,
-      },
-    });
-  }
-  return rows.length;
-}
+export type PromptKnowledge = {
+  filename: string;
+  text: string;
+};
 
-export async function syncSheetForCompany(
-  db: PrismaClient,
-  company: CompanyView,
-  platformServiceAccountJson: string,
-): Promise<number> {
-  const knowledge = company.config.knowledge;
-  if (knowledge.source === "fixture") {
-    return upsertProjects(db, company.id, await loadFixtureProjects(knowledge.fixturePath));
-  }
-  const serviceAccount = company.secrets.googleAccessJson || platformServiceAccountJson;
-  if (!knowledge.sheetId || !serviceAccount) {
-    throw new Error("Google sheet sync is not configured for this company");
-  }
-  const values = await fetchSheetValues({
-    sheetId: knowledge.sheetId,
-    range: knowledge.sheetRange,
-    serviceAccountJson: serviceAccount,
+export async function listKnowledgeFiles(db: PrismaClient, companyId: string): Promise<KnowledgeFileView[]> {
+  const rows = await db.knowledgeFile.findMany({
+    where: { companyId },
+    orderBy: { filename: "asc" },
   });
-  return upsertProjects(db, company.id, rowsFromSheetValues(values, knowledge.columnMapping));
+  return rows.map(toView);
 }
 
-export async function syncSiteNotesForCompany(
+export async function knowledgeForPrompt(db: PrismaClient, companyId: string): Promise<PromptKnowledge[]> {
+  const rows = await db.knowledgeFile.findMany({
+    where: { companyId },
+    orderBy: { filename: "asc" },
+    select: { filename: true, extractedText: true },
+  });
+  return rows.map((row) => ({ filename: row.filename, text: row.extractedText }));
+}
+
+export async function uploadKnowledgeFile(
   db: PrismaClient,
   company: CompanyView,
-  fetchImpl: typeof fetch = fetch,
-): Promise<number> {
-  let updated = 0;
-  for (const page of company.config.knowledge.allowlistedUrls) {
-    const text = await fetchPageText(page.url, fetchImpl);
-    await db.project.updateMany({
-      where: { companyId: company.id, slug: page.projectSlug },
-      data: { siteNotes: text, syncedAt: new Date() },
+  file: { filename: string; bytes: Buffer },
+): Promise<KnowledgeFileView> {
+  const filename = safeFilename(file.filename);
+  const existing = await db.knowledgeFile.findUnique({
+    where: { companyId_filename: { companyId: company.id, filename } },
+  });
+  return saveKnowledgeFile(db, company, { filename, bytes: file.bytes, replacingId: existing?.id });
+}
+
+export async function replaceKnowledgeFile(
+  db: PrismaClient,
+  company: CompanyView,
+  id: string,
+  file: { filename: string; bytes: Buffer },
+): Promise<KnowledgeFileView> {
+  const current = await db.knowledgeFile.findFirst({ where: { id, companyId: company.id } });
+  if (!current) throw new KnowledgeError(404, "No se encontró el archivo.");
+  const filename = safeFilename(file.filename);
+  if (filename !== current.filename) {
+    const clash = await db.knowledgeFile.findUnique({
+      where: { companyId_filename: { companyId: company.id, filename } },
     });
-    updated += 1;
+    if (clash) throw new KnowledgeError(409, "Ya hay un archivo con ese nombre.");
   }
-  return updated;
+  return saveKnowledgeFile(db, company, { filename, bytes: file.bytes, replacingId: current.id });
 }
 
-export async function syncKnowledge(
+export async function deleteKnowledgeFile(db: PrismaClient, companyId: string, id: string): Promise<void> {
+  const result = await db.knowledgeFile.deleteMany({ where: { id, companyId } });
+  if (result.count === 0) throw new KnowledgeError(404, "No se encontró el archivo.");
+}
+
+async function saveKnowledgeFile(
   db: PrismaClient,
   company: CompanyView,
-  platformServiceAccountJson: string,
-  siteNotes: boolean,
-): Promise<{ upserted: number; siteNotes: number; lastSyncedAt: string | null }> {
-  const upserted = await syncSheetForCompany(db, company, platformServiceAccountJson);
-  const notes = siteNotes ? await syncSiteNotesForCompany(db, company) : 0;
-  const status = await knowledgeStatus(db, company.id);
-  return { upserted, siteNotes: notes, lastSyncedAt: status.lastSyncedAt };
+  input: { filename: string; bytes: Buffer; replacingId?: string },
+): Promise<KnowledgeFileView> {
+  const extracted = await extractText(input.filename, input.bytes);
+  const extractedBytes = Buffer.byteLength(extracted.text, "utf8");
+  const { maxFileBytes, maxCompanyBytes } = company.config.knowledge;
+  if (extractedBytes > maxFileBytes) {
+    throw new KnowledgeError(413, `El texto extraído supera el límite de ${kb(maxFileBytes)} por archivo.`);
+  }
+  const rows = await db.knowledgeFile.findMany({
+    where: { companyId: company.id },
+    select: { id: true, extractedText: true },
+  });
+  const others = rows
+    .filter((row) => row.id !== input.replacingId)
+    .reduce((sum, row) => sum + Buffer.byteLength(row.extractedText, "utf8"), 0);
+  if (others + extractedBytes > maxCompanyBytes) {
+    throw new KnowledgeError(413, `El texto de la empresa superaría el límite de ${kb(maxCompanyBytes)}.`);
+  }
+
+  const data = {
+    filename: input.filename,
+    format: extracted.format,
+    extractedText: extracted.text,
+    byteSize: input.bytes.length,
+  };
+  const row = input.replacingId
+    ? await db.knowledgeFile.update({ where: { id: input.replacingId }, data })
+    : await db.knowledgeFile.create({ data: { companyId: company.id, ...data } });
+  return toView(row);
 }
 
-export async function syncAllCompanies(
-  db: PrismaClient,
-  key: Buffer | null,
-  platformServiceAccountJson: string,
-  which: "sheet" | "site",
-): Promise<void> {
-  const rows = await db.company.findMany();
-  for (const row of rows) {
-    const company = readCompany(row, key);
-    try {
-      if (which === "sheet") await syncSheetForCompany(db, company, platformServiceAccountJson);
-      else await syncSiteNotesForCompany(db, company);
-    } catch (err) {
-      log.error({ err, companyId: company.id }, which === "sheet" ? "scheduled sheet sync failed" : "scheduled site notes failed");
-    }
-  }
+function toView(row: {
+  id: string;
+  filename: string;
+  format: string;
+  byteSize: number;
+  extractedText: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): KnowledgeFileView {
+  return {
+    id: row.id,
+    filename: row.filename,
+    format: row.format,
+    byteSize: row.byteSize,
+    extractedBytes: Buffer.byteLength(row.extractedText, "utf8"),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function kb(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  return `${Math.round(bytes / 1024)} KB`;
 }

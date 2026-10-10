@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { KNOWLEDGE_MAX_COMPANY_BYTES, KNOWLEDGE_MAX_FILE_BYTES } from "./knowledge-limits";
 
 export const companyConfigSchema = z.object({
   displayName: z.string().min(1),
@@ -16,22 +17,11 @@ export const companyConfigSchema = z.object({
     })
     .default({}),
   knowledge: z.object({
-    source: z.enum(["fixture", "google-sheet"]),
-    fixturePath: z.string().optional(),
-    sheetId: z.string().default(""),
-    sheetRange: z.string().default("Sheet1!A:G"),
-    columnMapping: z.object({
-      slug: z.string(),
-      name: z.string(),
-      priceFrom: z.string(),
-      typologies: z.string(),
-      deliveryDate: z.string(),
-      orientation: z.string(),
-      notes: z.string(),
-    }),
-    allowlistedUrls: z
-      .array(z.object({ projectSlug: z.string(), url: z.string().url() }))
-      .default([]),
+    /** Extracted text of one file. Defaults keep a company prompt small. */
+    maxFileBytes: z.number().int().positive().default(KNOWLEDGE_MAX_FILE_BYTES),
+    maxCompanyBytes: z.number().int().positive().default(KNOWLEDGE_MAX_COMPANY_BYTES),
+    /** Optional public pages. Secondary to uploaded files. Not fetched in v1. */
+    allowlistedUrls: z.array(z.string().url()).default([]),
   }),
   crm: z.object({
     adapter: z.literal("hubspot"),

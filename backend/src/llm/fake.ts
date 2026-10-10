@@ -75,12 +75,21 @@ function forbiddenTopics(system: string): string[] {
     .filter((part) => part && part !== "(none)");
 }
 
+function labeled(block: string, labels: string[]): string | undefined {
+  for (const label of labels) {
+    const match = new RegExp(`${label}:\\s*(.+)`, "i").exec(block);
+    const value = match?.[1]?.trim();
+    if (value) return value;
+  }
+  return undefined;
+}
+
 function firstFact(system: string, text: string): string {
   const block = system.split("Knowledge block:")[1] ?? "";
-  const price = /Price from:\s*(.+)/.exec(block)?.[1]?.trim();
-  const typology = /Typologies:\s*(.+)/.exec(block)?.[1]?.trim();
-  const delivery = /Delivery:\s*(.+)/.exec(block)?.[1]?.trim();
-  const orientation = /Orientation:\s*(.+)/.exec(block)?.[1]?.trim();
+  const price = labeled(block, ["Precio desde", "Price from"]);
+  const typology = labeled(block, ["Tipologías", "Tipologias", "Typologies"]);
+  const delivery = labeled(block, ["Entrega", "Delivery"]);
+  const orientation = labeled(block, ["Orientación", "Orientacion", "Orientation"]);
   if (/precio/i.test(text) && price) return `Los precios arrancan en ${price}.`;
   if (/tipolog/i.test(text) && typology) return `Las tipologías son ${typology}.`;
   if (/entrega/i.test(text) && delivery) return `La entrega está prevista para ${delivery}.`;

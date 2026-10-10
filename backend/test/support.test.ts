@@ -3,7 +3,6 @@ import test from "node:test";
 import { BurstQueue } from "../src/conversation/burst";
 import { decodeEncryptionKey, decryptSecrets, encryptSecrets, safeEqual } from "../src/crypto/secrets";
 import { htmlToText } from "../src/integrations/knowledge/website";
-import { rowsFromSheetValues } from "../src/integrations/knowledge/sheet";
 import { signBody, verifyMetaSignature } from "../src/integrations/whatsapp/signature";
 import { parseInbound } from "../src/integrations/whatsapp/parse";
 import { toE164 } from "../src/phone";
@@ -70,35 +69,17 @@ test("phone and session window", () => {
   assert.equal(withinSessionWindow(null, now), false);
 });
 
-test("sheet rows use the column mapping and html is stripped", () => {
-  const rows = rowsFromSheetValues(
-    [
-      ["slug", "name", "price_from", "typologies", "delivery", "orientation", "notes"],
-      ["norte", "Norte", "USD 1", "1 dorm", "2027", "Norte", "nota"],
-      ["", "sin slug", "USD 2", "", "", "", ""],
-    ],
-    altamiraConfig().knowledge.columnMapping,
-  );
-  assert.equal(rows.length, 1);
-  assert.equal(rows[0].priceFrom, "USD 1");
+test("html is stripped to text", () => {
   assert.equal(htmlToText("<style>x</style><p>Rambla &amp; amenities</p>"), "Rambla & amenities");
 });
 
-test("system prompt is company config plus the sheet block", () => {
+test("system prompt includes the uploaded file text", () => {
   const prompt = buildSystemPrompt(altamiraConfig(), [
-    {
-      slug: "norte",
-      name: "Norte",
-      priceFrom: "USD 120.000",
-      typologies: "1 dorm",
-      deliveryDate: "2027",
-      orientation: "Norte",
-      notes: "nota",
-      siteNotes: "rambla",
-    },
+    { filename: "ficha.txt", text: "Precio desde: USD 120.000" },
   ]);
+  assert.match(prompt, /ficha\.txt/);
   assert.match(prompt, /USD 120\.000/);
-  assert.match(prompt, /sheet wins/i);
+  assert.match(prompt, /Uploaded files win/i);
   assert.doesNotMatch(prompt, /if \(company/);
 });
 

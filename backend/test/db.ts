@@ -24,7 +24,7 @@ export async function resetDb(): Promise<void> {
   await db.llmUsage.deleteMany();
   await db.message.deleteMany();
   await db.thread.deleteMany();
-  await db.project.deleteMany();
+  await db.knowledgeFile.deleteMany();
   await db.operator.deleteMany();
   await db.company.deleteMany();
 }

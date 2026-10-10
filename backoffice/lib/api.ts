@@ -24,20 +24,21 @@ export type ChatMessage = {
 const backend = () => process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
 export async function api<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+  const isForm = typeof FormData !== "undefined" && init?.body instanceof FormData;
+  const headers = new Headers(init?.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+  if (!isForm && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   const response = await fetch(`${backend()}${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers || {}),
-    },
+    headers,
   });
   if (response.status === 401) {
     sessionStorage.removeItem("leadscope.token");
     throw new Error("unauthorized");
   }
   if (!response.ok) {
-    throw new Error(`request failed (${response.status})`);
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error || `request failed (${response.status})`);
   }
   return (await response.json()) as T;
 }

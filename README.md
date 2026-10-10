@@ -17,9 +17,9 @@ npm run dev
 
 The API listens on port 3001. Prisma reads `backend/.env` for migrate and seed. `npm run dev` loads that same file.
 
-On a development start, an empty database gets the Altamira company, the operator, the fixture sheet, and five sample threads (fake numbers `+59899000001`–`+59899000005`). If any thread already exists, those samples are not inserted again. Production does not insert them. Nothing here is a real lead.
+On a development start, an empty database gets the Altamira company, the operator, one sample knowledge file (`ficha-de-prueba.txt`, not inventory), and five sample threads (fake numbers `+59899000001`–`+59899000005`). If any thread already exists, those samples are not inserted again. A company that already has knowledge files does not get the sample file. Production startup does not insert them. Nothing here is a real lead.
 
-`npm run db:seed` writes the company, the operator, and the fixture projects without the sample threads. Use it when you want that data without waiting for the development startup. Secrets in that seed are placeholders (`fake`), encrypted with `SECRETS_ENCRYPTION_KEY`. Generate a new key before any shared environment:
+`npm run db:seed` writes the company, the operator, and the sample knowledge file when that company has no files yet. It does not write the sample threads. Use it when you want that data without waiting for the development startup. Secrets in that seed are placeholders (`fake`), encrypted with `SECRETS_ENCRYPTION_KEY`. Generate a new key before any shared environment:
 
 ```bash
 openssl rand -base64 32
@@ -44,7 +44,9 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 (use `localhost`, not `127.0.0.1`, so the browser origin matches `BACKOFFICE_ORIGIN`). Sign in as `operador@example.com` (no password in fake mode). There is no signup. The list should show the five sample threads within one poll (12 seconds). The panel does not send WhatsApp. It can pause and resume a thread, clear the advisor-wait flag, and run a sheet sync.
+Open http://localhost:3000 (use `localhost`, not `127.0.0.1`, so the browser origin matches `BACKOFFICE_ORIGIN`). Sign in as `operador@example.com` (no password in fake mode). There is no signup. The list should show the five sample threads within one poll (12 seconds). The panel does not send WhatsApp. It can pause and resume a thread, clear the advisor-wait flag, and on Conocimiento upload, replace, or delete a knowledge file.
+
+To try an upload: sign in, open Conocimiento, and choose a PDF, DOCX, PPTX, ODT, XLSX, CSV, Markdown, or plain-text file. Uploading the same filename again replaces that file. The extracted text is what the assistant sees. Limits are 80 KB of extracted text per file, 200 KB per company, and 1 MB for the original file.
 
 Set `NEXT_PUBLIC_AUTH_MODE=supabase` only after the us-east-1 project exists. Public signup stays off; create the operator in Supabase Auth and set `SEED_OPERATOR_SUPABASE_USER_ID` to that user id before seeding.
 
@@ -87,8 +89,8 @@ That returns `{"ok":true}` immediately. About three seconds later the fake model
 - Anthropic: a company key of `fake` uses `backend/src/llm/fake.ts`. It walks the three questions. It is not the live model.
 - HubSpot: a token of `fake` stores the contact in memory for that process. The transcript property name is blank on purpose. The adapter writes that property only when `crm.transcriptProperty` is set. It does not assign an owner or create a task.
 - WhatsApp: a Meta token of `fake` records sends in that process. The webhook still checks `META_APP_SECRET`. The welcome template name `welcome_placeholder` is not an approved template.
-- Sheet: Altamira’s seed uses `knowledge.source: "fixture"` and `backend/fixtures/projects.json`. Those rows are sample data, not inventory. A real sheet is used only when the source is `google-sheet` and a service account is configured.
-- Site notes: the allowlist is empty, so the scheduled fetch does nothing.
+- Knowledge: operators upload files in the panel. A development database with no files gets `ficha-de-prueba.txt` (sample copy, not inventory). There is no Google sheet sync in v1.
+- Site notes: the allowlist stays empty. Fetching those pages is not wired yet.
 - Business hours text is empty in the seed.
 - Sentry stays off until `SENTRY_DSN` is set. Errors still go to structured logs. Logs do not include message bodies or phone numbers.
 

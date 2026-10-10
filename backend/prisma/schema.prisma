@@ -18,7 +18,7 @@ model Company {
   createdAt             DateTime   @default(now())
   updatedAt             DateTime   @updatedAt
   operators             Operator[]
-  projects              Project[]
+  knowledgeFiles        KnowledgeFile[]
   threads               Thread[]
   messages              Message[]
   llmUsages             LlmUsage[]
@@ -35,21 +35,19 @@ model Operator {
   @@index([companyId])
 }
 
-model Project {
-  id           String    @id @default(cuid())
-  companyId    String
-  slug         String
-  name         String
-  priceFrom    String?
-  typologies   String?
-  deliveryDate String?
-  orientation  String?
-  notes        String?
-  siteNotes    String?   @db.Text
-  syncedAt     DateTime?
-  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+/// Extracted text from a file an operator uploaded. Re-upload of the same filename replaces this row.
+model KnowledgeFile {
+  id            String   @id @default(cuid())
+  companyId     String
+  filename      String
+  format        String
+  extractedText String   @db.Text
+  byteSize      Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@unique([companyId, slug])
+  @@unique([companyId, filename])
   @@index([companyId])
 }
 

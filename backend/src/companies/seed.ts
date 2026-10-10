@@ -1,8 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { encryptSecrets } from "../crypto/secrets";
-import { syncSheetForCompany } from "../services/knowledge.service";
 import { altamiraConfig, altamiraDevSecrets } from "./altamira";
-import { readCompany } from "./load";
+import { ensureSampleKnowledge } from "./sample-knowledge";
 
 export async function seedAltamira(
   db: PrismaClient,
@@ -33,5 +32,5 @@ export async function seedAltamira(
     },
     update: { email: operator.email, companyId: company.id },
   });
-  await syncSheetForCompany(db, readCompany(company, key), "");
+  await ensureSampleKnowledge(db);
 }

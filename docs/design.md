@@ -95,7 +95,7 @@ One shared deployment for all companies. Every company-owned row has a `companyI
 - Language and tone (for Altamira: Uruguayan Spanish with “vos”).
 - The qualifying questions.
 - Forbidden topics (for Altamira: future rental yield, guaranteed returns).
-- Knowledge: files uploaded for that company. Optional allowlisted URLs for secondary site notes. Per-file and per-company size limits (numbers still to set, so the extracted text fits the prompt).
+- Knowledge: files uploaded for that company. Optional allowlisted URLs for secondary site notes. Size limits: 80 KB of extracted text per file and 200 KB per company, plus a 1 MB cap on the original upload.
 - CRM adapter type and property names.
 - WhatsApp phone number id and template names.
 - Business hours, used when offering a call time.
@@ -114,7 +114,7 @@ No RAG. No embeddings. No live website browsing during a chat. The v1 source is 
 
 Supported formats: PDF, DOCX, Markdown, plain text, CSV, and the other usual office formats (XLSX, etc.).
 
-A per-file size limit and a per-company size limit are required so the extracted text fits the prompt. Those numbers are still to set; none is chosen yet.
+Extracted text is capped so it fits the prompt. The defaults, stored on the company config, are **80 KB per file** (`knowledge.maxFileBytes` = 81920) and **200 KB per company** (`knowledge.maxCompanyBytes` = 204800). The original upload is capped at **1 MB** (`KNOWLEDGE_MAX_UPLOAD_BYTES` = 1048576) before extraction.
 
 ### How facts reach the chatbot
 
@@ -213,7 +213,7 @@ Names can move when the schema is created. Every table below except `Company` ha
 
 - **Company** — name, config (JSON), encrypted secrets, WhatsApp phone number id, createdAt.
 - **Operator** — Supabase Auth user id, companyId, email. Maps a login to a company.
-- **KnowledgeFile** — companyId, filename, format, extracted text, size, created and replaced timestamps. Re-uploading a file replaces its previous version. Commercial facts (price-from, typology, delivery, orientation) live in that text. Per-file and per-company size limits are to be set so the text fits the prompt. Optional site notes from an allowlist stay secondary and are not this table.
+- **KnowledgeFile** — companyId, filename, format, extracted text, size, created and replaced timestamps. Re-uploading a file replaces its previous version. Commercial facts (price-from, typology, delivery, orientation) live in that text. Extracted text is limited to 80 KB per file and 200 KB per company. Optional site notes from an allowlist stay secondary and are not this table.
 - **Thread** — lead phone (E.164), state, `paused`, `needsHuman`, extracted fields (interest, budget, knowsProjects, callTime), optional email from a form, CRM contact id, last inbound at (for the 24-hour window), created/updated. Unique on (companyId, phone).
 - **Message** — thread id, direction (`in` / `out`), body, content type (`text` or the WhatsApp type), WhatsApp message id (unique, nullable for outbound until sent), createdAt.
 - **LlmUsage** — thread id, model, input/output tokens, createdAt. Used to see cost per company.
@@ -293,7 +293,7 @@ Google Drive / Sheets sync and a Connect Google OAuth flow are later, not v1. MC
 
 ## Open at kickoff
 
-- Per-file and per-company knowledge size limits, so extracted text fits the prompt. Google sheet columns are later.
+- Google sheet columns are later. Knowledge size limits are set: 80 KB of extracted text per file, 200 KB per company, 1 MB original upload.
 - HubSpot property names, and how advisors are notified (owner, task, or both).
 - HubSpot workflow for the form-lead trigger.
 - WhatsApp number, Meta Business access and verification, welcome template approval.

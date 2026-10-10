@@ -2,15 +2,9 @@ import { CompanyConfig } from "../companies/config";
 import { ThreadSnapshot } from "./types";
 import { stateForPrompt, storedText } from "./transition";
 
-export type ProjectFact = {
-  slug: string;
-  name: string;
-  priceFrom: string | null;
-  typologies: string | null;
-  deliveryDate: string | null;
-  orientation: string | null;
-  notes: string | null;
-  siteNotes: string | null;
+export type PromptKnowledge = {
+  filename: string;
+  text: string;
 };
 
 const BASE_PROMPT = [
@@ -21,7 +15,7 @@ const BASE_PROMPT = [
   "Never invent rental yield, guaranteed rent, or investment returns.",
   "Never list full unit inventory or unit-level availability.",
   "Price from, typology, delivery date, and orientation may be answered when they are in the block.",
-  "Sheet facts win over site notes for price, typology, delivery, orientation, and availability.",
+  "Uploaded files win over site notes for price, typology, delivery, orientation, and availability.",
   "The engine owns the conversation state. You only return the reply and extracted fields.",
   "Set intent to not_interested when the lead refuses or says they are not interested.",
   "Set intent to needs_human when they ask about a forbidden topic or you cannot answer safely.",
@@ -33,25 +27,12 @@ const BASE_PROMPT = [
   "callTime is the phrase they give for when an advisor can call. There is no slot picker.",
 ].join(" ");
 
-export function formatKnowledge(projects: ProjectFact[]): string {
-  if (projects.length === 0) return "(no projects synced)";
-  return projects
-    .map((project) => {
-      const lines = [
-        `Project: ${project.name} (${project.slug})`,
-        `Price from: ${project.priceFrom ?? "(unknown)"}`,
-        `Typologies: ${project.typologies ?? "(unknown)"}`,
-        `Delivery: ${project.deliveryDate ?? "(unknown)"}`,
-        `Orientation: ${project.orientation ?? "(unknown)"}`,
-        `Notes: ${project.notes ?? ""}`,
-        `Site notes (stable facts only; the sheet wins on commercial facts): ${project.siteNotes ?? ""}`,
-      ];
-      return lines.join("\n");
-    })
-    .join("\n\n");
+export function formatKnowledge(files: PromptKnowledge[]): string {
+  if (files.length === 0) return "(no knowledge files uploaded)";
+  return files.map((file) => `File: ${file.filename}\n${file.text}`).join("\n\n");
 }
 
-export function buildSystemPrompt(config: CompanyConfig, projects: ProjectFact[]): string {
+export function buildSystemPrompt(config: CompanyConfig, files: PromptKnowledge[]): string {
   return [
     BASE_PROMPT,
     `Company: ${config.displayName}`,
@@ -62,7 +43,7 @@ export function buildSystemPrompt(config: CompanyConfig, projects: ProjectFact[]
     `Forbidden topics, never answer these: ${config.forbiddenTopics.join("; ") || "(none)"}`,
     `Business hours to mention when asking for a call: ${config.businessHours || "(not configured)"}`,
     "Knowledge block:",
-    formatKnowledge(projects),
+    formatKnowledge(files),
   ].join("\n\n");
 }
 

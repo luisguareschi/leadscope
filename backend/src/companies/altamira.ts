@@ -1,5 +1,6 @@
 import { CompanyConfig } from "./config";
 import { CompanySecrets } from "../crypto/secrets";
+import { KNOWLEDGE_MAX_COMPANY_BYTES, KNOWLEDGE_MAX_FILE_BYTES } from "./knowledge-limits";
 
 /** Seed config only. The engine does not import this file. */
 export const ALTAMIRA_PHONE_NUMBER_ID = "FAKE_PHONE_NUMBER_ID";
@@ -30,18 +31,8 @@ export function altamiraConfig(): CompanyConfig {
       maxReplyChars: 500,
     },
     knowledge: {
-      source: "fixture",
-      sheetId: "",
-      sheetRange: "Sheet1!A:G",
-      columnMapping: {
-        slug: "slug",
-        name: "name",
-        priceFrom: "price_from",
-        typologies: "typologies",
-        deliveryDate: "delivery",
-        orientation: "orientation",
-        notes: "notes",
-      },
+      maxFileBytes: KNOWLEDGE_MAX_FILE_BYTES,
+      maxCompanyBytes: KNOWLEDGE_MAX_COMPANY_BYTES,
       allowlistedUrls: [],
     },
     crm: {

@@ -71,9 +71,10 @@ test("webhook rejects a bad signature and accepts a signed greeting", async () =
         body: raw,
       });
       assert.equal(ok.status, 200);
-      await waitFor(async () => (await db.thread.findFirst({ where: { phone: "+59899123456" } })) != null);
-      await bursts.flush();
-      assert.equal(channel.sent.length, 1);
+      await waitFor(async () => {
+        await bursts.flush();
+        return channel.sent.length === 1;
+      });
 
       const verify = await fetch(
         `http://127.0.0.1:${port}/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=dev-verify-token&hub.challenge=abc`,
@@ -94,13 +95,11 @@ test("internal routes require the operator and stay inside the company", async (
       const headers = { Authorization: "Bearer fake:operador@example.com" };
       const list = await fetch(`http://127.0.0.1:${port}/internal/threads`, { headers });
       assert.equal(list.status, 200);
-      const sync = await fetch(`http://127.0.0.1:${port}/internal/knowledge/sync`, { method: "POST", headers });
-      assert.equal(sync.status, 200);
-      const body = (await sync.json()) as { upserted: number };
-      assert.equal(body.upserted, 2);
-      const projects = await db.project.findMany({ orderBy: { name: "asc" } });
-      assert.equal(projects.length, 2);
-      assert.match(projects[0].name, /fixture/i);
+      const knowledge = await fetch(`http://127.0.0.1:${port}/internal/knowledge/files`, { headers });
+      assert.equal(knowledge.status, 200);
+      const body = (await knowledge.json()) as { files: { filename: string }[] };
+      assert.equal(body.files.length, 1);
+      assert.equal(body.files[0].filename, "ficha-de-prueba.txt");
     } finally {
       server.close();
     }

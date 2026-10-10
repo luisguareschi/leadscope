@@ -13,7 +13,7 @@ import { CompleteFn } from "../llm/types";
 import { log } from "../logger";
 import { toE164 } from "../phone";
 import { withinSessionWindow } from "../session-window";
-import { listProjectFacts } from "./knowledge.service";
+import { knowledgeForPrompt } from "./knowledge.service";
 
 export type WhatsAppDeps = {
   db: PrismaClient;
@@ -109,12 +109,12 @@ export async function processThread(deps: WhatsAppDeps, threadId: string): Promi
     decision = applyTurn(snapshot(thread), { kind: "non_text" }, turnOptions);
   } else {
     try {
-      const projects = await listProjectFacts(deps.db, company.id);
+      const knowledge = await knowledgeForPrompt(deps.db, company.id);
       const history = await listMessages(deps.db, company.id, thread.id);
       const result = await deps.complete({
         apiKey: company.secrets.anthropicApiKey,
         model: deps.model,
-        system: buildSystemPrompt(company.config, projects),
+        system: buildSystemPrompt(company.config, knowledge),
         state: buildStateBlock(snapshot(thread)),
         messages: toAnthropicMessages(history),
       });
