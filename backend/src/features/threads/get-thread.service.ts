@@ -9,7 +9,7 @@ export async function getThread(ctx: AppContext, companyId: string, threadId: st
   if (!thread) throw notFound("Conversación no encontrada");
   const messages = await ctx.db.message.findMany({
     where: { threadId },
-    orderBy: { sentAt: "desc" },
+    orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
     take: MAX_MESSAGES,
     select: { id: true, direction: true, type: true, body: true, status: true, sentAt: true },
   });

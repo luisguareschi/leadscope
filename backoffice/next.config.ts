@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
+// The panel is client-side only: pages fetch from the Express backend with React Query.
+// Cache Components and partial prefetching only matter for server-rendered data, so they stay off.
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
   turbopack: {
     rules: {
       "*.css": {

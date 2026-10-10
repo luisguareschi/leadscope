@@ -45,8 +45,8 @@ const MAX_ATTEMPTS_ON_INVALID_OUTPUT = 2;
 
 export class InvalidModelOutputError extends Error {}
 
-export function createAnthropicClient(apiKey: string): LlmClient {
-  const client = new Anthropic({ apiKey, maxRetries: 2 });
+export function createAnthropicClient(apiKey: string, options: { fetch?: typeof fetch; maxRetries?: number } = {}): LlmClient {
+  const client = new Anthropic({ apiKey, maxRetries: options.maxRetries ?? 2, fetch: options.fetch });
 
   async function callOnce(input: CompleteInput): Promise<CompleteResult> {
     const started = Date.now();

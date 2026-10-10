@@ -21,7 +21,7 @@ export async function syncThreadToCrm(ctx: AppContext, threadId: string): Promis
     const company = loadCompany(thread.company, ctx.encryptionKey);
     const messages = await ctx.db.message.findMany({
       where: { threadId },
-      orderBy: { sentAt: "asc" },
+      orderBy: [{ sentAt: "asc" }, { createdAt: "asc" }],
       select: { direction: true, type: true, body: true, sentAt: true },
     });
     const summary = buildCrmSummary({ action, thread, messages, config: company.config, now: ctx.now() });

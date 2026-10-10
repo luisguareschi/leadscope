@@ -21,7 +21,7 @@ export default function ThreadPage() {
   const query = useThread(id);
 
   const back = (
-    <Button variant="ghost" size="sm" className="w-fit" render={<Link href="/threads" />}>
+    <Button variant="ghost" size="sm" className="w-fit" nativeButton={false} render={<Link href="/threads" />}>
       <ArrowLeftIcon />
       Conversaciones
     </Button>

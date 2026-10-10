@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
-import { formatDateTime, formatTime } from "@/lib/format";
+import { formatDateTime, formatDayLabel, formatTime } from "@/lib/format";
 import { useDeleteThread } from "@/lib/queries";
 import type { Thread } from "@/lib/types";
 import { crmLabel } from "./crm-indicator";
@@ -34,7 +34,10 @@ function Detail({ label, value }: { label: string; value: React.ReactNode }) {
 
 function replyWindowText(closesAt: string | null): string {
   if (!closesAt) return "Cerrada (el lead no escribió todavía)";
-  return new Date(closesAt) > new Date() ? `Abierta hasta las ${formatTime(closesAt)}` : "Cerrada";
+  if (new Date(closesAt) <= new Date()) return "Cerrada";
+  const day = formatDayLabel(closesAt);
+  const when = day === "Hoy" ? "hoy" : day === "Ayer" ? "ayer" : "mañana";
+  return `Abierta hasta ${when} a las ${formatTime(closesAt)}`;
 }
 
 export function LeadDetails({ thread }: { thread: Thread }) {

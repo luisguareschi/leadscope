@@ -18,7 +18,7 @@ export function createApp(ctx: AppContext): Express {
     const started = Date.now();
     res.on("finish", () => {
       ctx.logger.info(
-        { method: req.method, path: req.path, status: res.statusCode, ms: Date.now() - started },
+        { method: req.method, path: req.originalUrl.split("?")[0], status: res.statusCode, ms: Date.now() - started },
         "request",
       );
     });

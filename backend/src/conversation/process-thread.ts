@@ -47,7 +47,7 @@ async function askModel(
       loadKnowledge(ctx, company.id),
       ctx.db.message.findMany({
         where: { threadId: thread.id },
-        orderBy: { sentAt: "desc" },
+        orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
         take: config.llm.historyLimit,
         select: { direction: true, type: true, body: true },
       }),

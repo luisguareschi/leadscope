@@ -68,6 +68,9 @@ async function main() {
   if (withDemoData && (await db.thread.count({ where: { companyId: company.id } })) === 0) {
     const now = Date.now();
     const at = (minutesAgo: number) => new Date(now - minutesAgo * 60_000);
+    // The bot answers a few seconds after the lead, never at the same instant.
+    const sentAt = (message: { from: "lead" | "bot"; minutesAgo: number }) =>
+      new Date(at(message.minutesAgo).getTime() + (message.from === "bot" ? 20_000 : 0));
     for (const demo of DEMO_THREADS) {
       const last = demo.messages.at(-1)!;
       const lastInbound = [...demo.messages].reverse().find((message) => message.from === "lead");
@@ -90,8 +93,9 @@ async function main() {
           knowsProjects: demo.knowsProjects,
           callTime: demo.callTime,
           lastInboundAt: lastInbound ? at(lastInbound.minutesAgo) : null,
-          lastMessageAt: at(last.minutesAgo),
+          lastMessageAt: sentAt(last),
           lastMessagePreview: messagePreview(last.type ?? "text", last.text),
+          createdAt: sentAt(demo.messages[0]!),
           crmContactId: crm?.synced ? `demo-${demo.phone.slice(-3)}` : null,
           crmSyncedAt: crm?.synced ? at(last.minutesAgo) : null,
           crmPendingAction: crm && !crm.synced ? (crm.action ?? "handoff") : null,
@@ -106,7 +110,7 @@ async function main() {
               waMessageId: `wamid.demo.${demo.phone.slice(-3)}.${index}`,
               status: message.from === "bot" ? "read" : null,
               handledAt: message.from === "lead" ? at(message.minutesAgo) : null,
-              sentAt: at(message.minutesAgo),
+              sentAt: sentAt(message),
             })),
           },
         },

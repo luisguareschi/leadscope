@@ -2,8 +2,15 @@ const LOCALE = "es-UY";
 
 const relative = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
 const numberFormat = new Intl.NumberFormat(LOCALE);
-const timeFormat = new Intl.DateTimeFormat(LOCALE, { hour: "2-digit", minute: "2-digit" });
-const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, { dateStyle: "short", timeStyle: "short" });
+const timeFormat = new Intl.DateTimeFormat(LOCALE, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
 const shortDateFormat = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short" });
 const longDateFormat = new Intl.DateTimeFormat(LOCALE, { weekday: "long", day: "numeric", month: "long" });
 
