@@ -1,0 +1,16 @@
+# Local Postgres for development and tests. Production uses Supabase (us-east-1).
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: leadscope
+      POSTGRES_PASSWORD: leadscope
+      POSTGRES_DB: leadscope
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/create-test-database.sql:/docker-entrypoint-initdb.d/create-test-database.sql:ro
+
+volumes:
+  postgres-data:
