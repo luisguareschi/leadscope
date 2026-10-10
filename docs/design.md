@@ -2,7 +2,7 @@
 
 Internal design for Luis. The commercial contract with Altamira is the HTML proposal. This file is how we build it.
 
-**Status:** Altamira accepted. Kickoff is on and implementation has started. Live HubSpot, production WhatsApp, and their Anthropic key are still week-1 access; until then the apps run on env examples and fakes. v1 knowledge is files operators upload in the backoffice. Google Drive / Sheets sync is later.
+**Status:** Altamira accepted. Kickoff is on and the v1 build exists (backend, backoffice, tests, Docker image, CI). Live HubSpot, production WhatsApp, and their Anthropic key are still week-1 access; until then a company with no key for an integration runs on an in-process fake (development only). v1 knowledge is files operators upload in the backoffice. Google Drive / Sheets sync is later.
 
 ## Goal
 
@@ -18,8 +18,9 @@ One repo, two apps. No Turborepo.
 
 ```
 backend/      TypeScript HTTP service (Express). WhatsApp webhook, conversation engine, CRM, knowledge uploads.
-backoffice/   Next.js (client-side), shadcn new-york, Tailwind, React Query. Thread list and pause.
+backoffice/   Next.js (client-side), shadcn (preset b1Z5bafVA), Tailwind, React Query. Threads, pause, knowledge files.
 docs/         Proposal, meeting notes, this design.
+docker-compose.yml   Local Postgres (plus a test database).
 ```
 
 The backoffice calls the backend over HTTP. It does not talk to Postgres. Shared types can live in a small `shared/` folder later if duplication becomes painful; do not add that on day one.
@@ -28,35 +29,39 @@ Backend source layout:
 
 ```
 backend/src/
-  engine/                     conversation states, prompt building, guardrails
-  controllers/                one Express router per resource (webhook, form lead, threads, knowledge)
-  services/                   one service per resource; each takes a Prisma client and queries directly
+  features/<resource>/        one controller + one service per endpoint, plus a routes file per resource
+                              (threads, knowledge, me, whatsapp-webhook, form-leads). Services call Prisma directly.
+  engine/                     pure: turn decisions (states, qualify gate), prompt building, history, guardrails
+  conversation/               the pipeline: record inbound, reply scheduler, one bot turn, CRM sync, sweeper, lease
   integrations/
-    whatsapp/                 Meta Cloud API: webhook parsing, send text, send template
-    crm/hubspot/              first CRM adapter
-    knowledge/                text extraction from uploaded files; optional allowlisted page fetcher
-  llm/                        complete() wrapper around Anthropic
-  companies/                  company config, secrets, and the development seed
-  routes/                     operator auth
-  jobs/                       scheduled jobs (optional site-note fetch)
+    whatsapp/                 Meta Cloud API: webhook parsing, signature, send text/template, fake channel
+    crm/                      Crm interface, HubSpot adapter, fake CRM
+    knowledge/                text extraction from uploaded files
+    registry.ts               picks the real adapter or the fake per company
+  llm/                        complete() around Anthropic (tool use), and the local fake
+  companies/                  company config schema, encrypted secrets, loading a company
+  http/                       operator auth, input validation, error handler
+  lib/                        env-free helpers: Prisma client, logger, crypto, phone numbers
+backend/prisma/               schema, migrations, development seed (Altamira's config lives in seed-data/)
+backend/scripts/              terminal chat, signed test webhook, set a company secret, add an operator
 ```
 
-The engine never imports HubSpot, Google, or Meta directly. It talks to small interfaces (`Crm`, `KnowledgeSource`, `Channel`). Adding a second CRM means a new adapter folder, not a rewrite.
+The engine never imports HubSpot, Google, or Meta directly. It talks to small interfaces (`Crm`, `Channel`, `LlmClient`). Adding a second CRM means a new adapter folder, not a rewrite.
 
 ## Stack
 
 | Layer | Choice | Why |
 | --- | --- | --- |
 | Language | TypeScript | Same language in both apps. |
-| Backend | Express on Node, deployed as a Docker image | Familiar HTTP server. A small always-on container so the webhook and LLM call are not cut off. |
-| Backoffice | Next.js + shadcn + Tailwind + React Query, client-first | UI and routing only. No SSR requirement: pages are client components, data via React Query against the backend. |
+| Backend | Express 5 on Node 22, deployed as a Docker image | Familiar HTTP server. A small always-on container so the webhook and LLM call are not cut off. The container applies migrations on start. |
+| Backoffice | Next.js 16 + shadcn (preset `b1Z5bafVA`: base-vega style on Base UI, blue theme) + Tailwind 4 + React Query, client-first | UI and routing only. Pages are client components, data via React Query against the backend. Cache Components are off. Layout from the shadcn `dashboard-01` block. |
 | Database | Supabase Postgres | Managed Postgres. |
-| ORM | Prisma | Schema and all queries from the backend. Runtime uses the Supabase pooled connection; migrations use the direct connection. |
+| ORM | Prisma 7 with the `pg` driver adapter | Schema and all queries from the backend. Runtime uses the Supabase pooled connection; migrations use the direct connection (`prisma.config.ts`). |
 | Auth | Supabase Auth (browser client in the backoffice) | Email login for operators. Public signup off; Luis creates accounts. The backoffice sends the Supabase JWT to the backend; the backend verifies it and resolves the operator’s company. |
 | LLM | Anthropic (`claude-haiku-4-5` to start) | Already agreed with Altamira. Each company uses its own API key. One `complete()` wrapper so a later provider swap is one file. No fine-tune. No multi-provider framework. |
 | WhatsApp | Meta Cloud API | Official API number per company. |
 | CRM | HubSpot API (first adapter) | Direct API. No Zapier / Make / n8n. No HubSpot native AI. |
-| Knowledge | Files operators upload in the backoffice | PDF, DOCX, Markdown, plain text, CSV, and the other usual office formats (XLSX, etc.). Text is extracted on upload, stored per company, and injected into the prompt. Optional allowlisted public pages for stable facts only. No RAG. Google Drive / Sheets is later. |
+| Knowledge | Files operators upload in the backoffice | PDF, Word (DOCX, DOC), Excel (XLSX, XLS), OpenDocument (ODT, ODS), PowerPoint (PPTX), CSV/TSV, plain text, Markdown, HTML, JSON. Text is extracted on upload, stored per company, and injected into the prompt. No RAG. Google Drive / Sheets is later. |
 
 ## Architecture
 
@@ -95,7 +100,7 @@ One shared deployment for all companies. Every company-owned row has a `companyI
 - Language and tone (for Altamira: Uruguayan Spanish with “vos”).
 - The qualifying questions.
 - Forbidden topics (for Altamira: future rental yield, guaranteed returns).
-- Knowledge: files uploaded for that company. Optional allowlisted URLs for secondary site notes. Size limits: 80 KB of extracted text per file and 200 KB per company, plus a 1 MB cap on the original upload.
+- Knowledge limits (`knowledge.*`): 60,000 characters of extracted text per file, 150,000 per company (about 40k tokens of prompt), and 15 MB per original upload. Brochure PDFs are large because of their images, so the upload cap is generous and the text caps do the real work.
 - CRM adapter type and property names.
 - WhatsApp phone number id and template names.
 - Business hours, used when offering a call time.
@@ -112,9 +117,13 @@ Self-signup, billing, a company admin screen, and onboarding wizards. Luis sets 
 
 No RAG. No embeddings. No live website browsing during a chat. The v1 source is files operators upload in the backoffice, per company. Text is extracted on upload, stored in Postgres, and pasted into the LLM prompt when the bot answers.
 
-Supported formats: PDF, DOCX, Markdown, plain text, CSV, and the other usual office formats (XLSX, etc.).
+Supported formats: PDF, Word (DOCX, DOC), Excel (XLSX, XLSM, XLS), OpenDocument (ODT, ODS), PowerPoint (PPTX), CSV/TSV, plain text, Markdown, HTML, and JSON. Spreadsheets become one CSV block per sheet. Plain-text files saved as Windows-1252 or UTF-16 (common from Excel and Notepad) are decoded correctly.
 
-Extracted text is capped so it fits the prompt. The defaults, stored on the company config, are **80 KB per file** (`knowledge.maxFileBytes` = 81920) and **200 KB per company** (`knowledge.maxCompanyBytes` = 204800). The original upload is capped at **1 MB** (`KNOWLEDGE_MAX_UPLOAD_BYTES` = 1048576) before extraction.
+Extracted text is capped so it fits the prompt. The defaults live on the company config: **60,000 characters per file** (`knowledge.maxCharsPerFile`), **150,000 per company** (`knowledge.maxCharsTotal`), and **15 MB per upload** (`knowledge.maxFileBytes`). An upload over a cap is rejected with a message that says by how much; it is never silently truncated, because a cut could drop a price.
+
+Uploads are checked before parsing: the extension must be supported and the first bytes must match it. A PDF with no text layer (a scan) is rejected and the operator is told to upload a version with text. Only the extracted text and metadata are stored, not the original file. Uploading a file with the same name (any case) replaces it; "Reemplazar" on a row swaps a file for one with another name. Operators can preview the extracted text, so a badly exported file is caught before the bot quotes from it.
+
+Allowlisted public pages (`siteNotes`) are not built in the MVP; uploads cover the same facts. They stay optional for later.
 
 ### How facts reach the chatbot
 
@@ -167,7 +176,9 @@ Every model call returns, through Anthropic tool use:
 - `callTime` — when the lead agrees to a call.
 - `intent` — one of `continue`, `qualified`, `not_interested`, `needs_human`.
 
-The engine moves the state from those fields. The model never sets the state directly.
+The engine moves the state from those fields. The model never sets the state directly. `qualified` is accepted but moves nothing on its own: the stored answers are the gate.
+
+The system prompt has two blocks. The first (base rules, company config, all knowledge documents) is identical across turns, so it carries Anthropic's cache breakpoint. The second is per turn: the lead's local time, business hours, what is already known, and the next step the engine wants (for example, "ask the next missing question: …"). History is the last 40 messages. The call has a 25-second timeout; an invalid tool call is retried once before it counts as a model failure.
 
 ### States
 
@@ -188,50 +199,77 @@ The engine moves the state from those fields. The model never sets the state dir
 - A lead who fills a form gets one approved welcome template, then the same flow. A HubSpot workflow calls `POST /hooks/crm/form-lead` with the contact’s phone; the backend sends the template. The company pays Meta for that send.
 - WhatsApp only allows free-form replies within 24 hours of the lead’s last message. Outside that window, only approved templates can be sent. v1 does not send follow-ups after that window.
 - Leave **Qualify** only after `interest`, `budget`, and `knowsProjects` are stored. `knowsProjects` may be false. There is no numeric budget minimum in code. `intent` `not_interested` closes the thread even if a question is still open. `intent` `qualified` without the three stored answers does not leave Qualify.
-- A lead who writes again after **Closed** or **Handoff** reopens the same thread in **Answer**. The thread keeps its history. If that same turn is the one that first completes the three answers and `callTime`, it still finishes the handoff and writes the CRM.
+- Once the three answers are stored the thread is in **Handoff** and the bot asks for a call time. The turn that stores the call time (with the three answers) writes the CRM, once.
+- A lead who writes again after **Closed** or **Handoff** reopens the same thread in **Answer**. The thread keeps its history. If that same turn is the one that first completes the three answers and `callTime`, it still finishes the handoff and writes the CRM. A later message does not write the CRM again.
+- A new answer replaces the stored one (a lead may correct their budget); an empty field never erases one.
+- Messages that arrive while the thread is paused or waiting for a person are stored and marked handled. Resuming does not make the bot answer them; it answers from the next message.
 - Advisors keep their own personal WhatsApp numbers. The bot never lives on those phones.
+
+### When the bot stops itself (`needsHuman`)
+
+The bot sets `needsHuman`, sends one fixed line from company config, writes the CRM (so the advisor sees the lead in HubSpot, not only in the panel), and stays quiet until an operator clears the flag:
+
+| Cause | Line sent |
+| --- | --- |
+| The model returns `needs_human` (a forbidden topic, a complaint or existing purchase, or a lead who refuses to answer and insists on a person) | `messages.needsHuman` |
+| The reply mentions a forbidden topic | `messages.fallback` |
+| Anthropic fails, times out, or returns an empty or invalid turn | `messages.fallback` |
+| WhatsApp refuses the reply (it is stored as a failed message) | none; the panel shows why |
+
+A lead who just asks for a person is not stopped: the bot says an advisor will contact them and keeps collecting the answers and the call time, so the advisor calls prepared.
+
+### Processing
+
+- The webhook verifies Meta's signature, stores the messages (and delivery receipts), and only then answers 200. If the database is down, Meta retries instead of the message being lost.
+- Replies wait 3.5 s after the lead's last message (at most 15 s from the first) so a burst gets one answer. One turn per thread at a time; a message that arrives mid-turn gets its own turn right after.
+- A database lease on the thread stops two containers (for example during a deploy) from answering the same lead.
+- A sweeper runs on start and every 30 s: it schedules messages no turn has handled (after a restart) and retries CRM writes that are due.
 
 ### Guardrails
 
-- A final check on every reply before sending: if it mentions a forbidden topic (for Altamira, rental yield or guaranteed returns), replace it with a safe fixed message and offer the advisor.
+- A final check on every reply before sending: if it mentions a forbidden topic (for Altamira, rental yield or guaranteed returns), replace it with a safe fixed message and offer the advisor. The topics are regular expressions in company config (`forbiddenTopics.patterns`), matched case- and accent-insensitively. The model also gets a plain-language list (`forbiddenTopics.describe`).
 - If Anthropic fails or times out, send a short fixed message (“te va a contactar un asesor”) and mark the thread `needs_human`.
-- Cap reply length. WhatsApp messages stay short.
+- Cap reply length (`maxReplyChars`, 600 for Altamira), cutting at the last full sentence. WhatsApp messages stay short.
 
 ## CRM (HubSpot first)
 
-On handoff or close:
+On handoff, close, or when the bot stops itself (`needsHuman`):
 
-1. Upsert the contact by phone, normalized to E.164 so a form contact and a WhatsApp contact match.
-2. Write a long text property with: interest, budget, whether they know the projects, agreed call time (if any), and the full transcript.
+1. Upsert the contact by phone, normalized to E.164 so a form contact and a WhatsApp contact match. A contact id from the form payload is used directly. Otherwise search `phone`, `mobilephone`, and `hs_searchable_calculated_phone_number`; create the contact if none matches. A new contact gets the phone, the WhatsApp first name, and the form email. An existing contact's name and email are never overwritten. If HubSpot rejects a create because the email exists, the contact it names is updated instead.
+2. Write a long text property (`crm.transcriptProperty`) with: status, interest, budget, whether they know the projects, agreed call time (if any), email, and the full transcript. Over 65k characters, the header and the latest part of the conversation are kept. With no property configured, only the contact is upserted.
 3. Do not use HubSpot’s native AI module.
+
+CRM writes go through an outbox on the thread (`crmPendingAction`). A failed write is retried with backoff (1 min, doubling, up to 1 h, 12 attempts), the panel shows the error, and an operator can retry it on demand.
 
 How the advisor is notified (owner, task, or both) and the exact property names are decided at kickoff once Luis has HubSpot access.
 
-## Data model (Prisma sketch)
+## Data model (Prisma)
 
-Names can move when the schema is created. Every table below except `Company` has `companyId`.
+Every table below except `Company` has `companyId`. The schema is `backend/prisma/schema.prisma`.
 
-- **Company** — name, config (JSON), encrypted secrets, WhatsApp phone number id, createdAt.
-- **Operator** — Supabase Auth user id, companyId, email. Maps a login to a company.
-- **KnowledgeFile** — companyId, filename, format, extracted text, size, created and replaced timestamps. Re-uploading a file replaces its previous version. Commercial facts (price-from, typology, delivery, orientation) live in that text. Extracted text is limited to 80 KB per file and 200 KB per company. Optional site notes from an allowlist stay secondary and are not this table.
-- **Thread** — lead phone (E.164), state, `paused`, `needsHuman`, extracted fields (interest, budget, knowsProjects, callTime), optional email from a form, CRM contact id, last inbound at (for the 24-hour window), created/updated. Unique on (companyId, phone).
-- **Message** — thread id, direction (`in` / `out`), body, content type (`text` or the WhatsApp type), WhatsApp message id (unique, nullable for outbound until sent), createdAt.
-- **LlmUsage** — thread id, model, input/output tokens, createdAt. Used to see cost per company.
+- **Company** — slug, name, config (JSON, validated by `companyConfigSchema`), encrypted secrets, WhatsApp phone number id.
+- **Operator** — email, Supabase Auth user id (linked on first login), companyId. Maps a login to a company.
+- **KnowledgeFile** — name, lower-cased name (unique per company, so the same name replaces), format, MIME type, size, SHA-256, extracted text, character count, uploaded by.
+- **Thread** — lead phone (E.164) and WhatsApp id, WhatsApp name, form email, source (`whatsapp` / `form`), state, `paused`, `needsHuman` + reason, the four lead fields, last inbound at (24-hour window), last message at + preview (for the list), processing lease, CRM contact id and outbox (`crmPendingAction`, attempts, next attempt, last error, synced at). Unique on (companyId, phone).
+- **Message** — thread id, direction, WhatsApp type, body (or caption), WhatsApp message id (unique), delivery status from Meta's receipts, `handledAt` (inbound: when a turn took it), sent at.
+- **LlmUsage** — thread id, model, input/output and cache read/write tokens, latency. Used to see cost per company.
 
 ## Backend surface
 
-Rough routes (names can change):
-
 - `GET/POST /webhooks/whatsapp` — Meta verification and inbound events. Company resolved from `phone_number_id`. Verified with Meta’s signature.
-- `POST /hooks/crm/form-lead` — form-lead trigger from the company’s CRM workflow. Verified with a per-company shared secret.
-- `GET/POST /internal/knowledge/files`, replace, and delete — list, upload, replace, and delete knowledge files for the operator’s company. Upload extracts text and stores it. Replace swaps that file’s previous version.
-- `GET /internal/threads` — list the operator’s company threads.
+- `POST /hooks/crm/form-lead/:companySlug` — form-lead trigger from the company’s CRM workflow. Secret in `X-LeadScope-Secret` (or `Authorization: Bearer`). Accepts HubSpot's "Send a webhook" body as is (`phone` / `mobilephone`, `email`, `firstname`, `lastname`, `hs_object_id`). Sends the welcome template only to a thread with no messages yet.
+- `GET /internal/me` — the operator and their company.
+- `GET /internal/threads?status=&search=&cursor=` — the operator's company threads, newest activity first, 50 per page.
+- `GET /internal/threads/summary` — counts per status (they add up to the total).
 - `GET /internal/threads/:id` — thread + messages.
-- `POST /internal/threads/:id/pause` and `.../resume`.
+- `POST /internal/threads/:id/pause`, `.../resume`, `.../clear-needs-human`, `.../crm-sync` (retry a failed CRM write).
+- `DELETE /internal/threads/:id` — delete a lead's thread and messages on request.
+- `GET /internal/knowledge/files` (with usage and limits), `GET /internal/knowledge/files/:id` (with the text), `POST /internal/knowledge/files` (upload; same name replaces), `PUT /internal/knowledge/files/:id` (replace), `DELETE /internal/knowledge/files/:id`.
+- `GET /health`.
 
-Auth: Supabase JWT on `/internal/*`, mapped to `Operator.companyId`. CORS allows only the backoffice origin.
+Auth: Supabase JWT on `/internal/*` (JWKS, or the legacy HS256 secret), mapped to `Operator.companyId`; an operator row created by email is linked to its Supabase user on first login. `AUTH_MODE=dev` accepts `dev:<email>` and is refused in production. CORS allows only the backoffice origin. Every query filters by the operator's company, and another company's id is a 404.
 
-LLM: one module, `backend/src/llm/complete.ts`, that takes system + messages + the output schema and returns the parsed fields. Prompt building lives in `engine/`, not inside the model call.
+LLM: one module, `backend/src/llm/anthropic.ts`, that takes the two system blocks + messages and returns the parsed fields. Prompt building lives in `engine/`, not inside the model call.
 
 ## Backoffice (v1)
 
@@ -239,25 +277,26 @@ Client-side Next.js. Use the App Router for file-based routing and shadcn setup,
 
 Pages:
 
-1. Login (Supabase email). No public signup.
-2. Thread list (newest activity first). Show phone, state, paused, last message preview.
-3. Thread detail — full messages, pause / resume. If the bot set `needsHuman`, the operator can clear that flag. The panel still does not send WhatsApp.
-4. Conocimiento — upload, list, replace, and delete files for the operator’s company. Not a “sync sheet now” button.
+1. Login (Supabase email + password, "forgot password"). No public signup. Invitation and reset emails land on `/auth/set-password`.
+2. Conversaciones — four count cards (en curso, derivadas, requieren asesor, pausadas) that also filter, status tabs, search by name or phone, and the list (newest activity first) with status, last message, and HubSpot status. The sidebar shows how many threads need an advisor.
+3. Thread detail — the full conversation with delivery ticks, the lead's answers, HubSpot status, and the 24-hour window. Alerts say why the bot stopped and offer the fix: mark as attended (clears `needsHuman`), resume, or retry HubSpot. Pause / resume and delete. The panel still does not send WhatsApp.
+4. Conocimiento — upload (drag and drop), list, preview the extracted text, replace, and delete files for the operator’s company, with a meter of the space used. Not a “sync sheet now” button.
 
 The panel does not send messages. Advisors answer from their own WhatsApp.
 
 One shared backoffice for all companies: one Vercel app, one URL. The operator’s company comes from their login (`Operator.companyId`), and the backend filters every request by it. No per-company subdomain, branding, or company switcher in v1. Later options on the same app: a subdomain per client, per-company branding, and a platform admin role for Luis to view all companies.
 
-React Query with polling (for example every 10–15 seconds on the list) is enough at this volume. No realtime subscription in v1.
+React Query with polling (every 10 seconds on lists, 5 on an open conversation) is enough at this volume. No realtime subscription in v1.
 
-Shadcn defaults are fine to ship first. Per-company branding is not in v1.
+Shadcn with Luis's preset `b1Z5bafVA` and the `dashboard-01` layout. Per-company branding is not in v1.
 
 ## Hosting, environments, and operations
 
 - **Region:** Supabase (Postgres and Auth) and the backend host are **us-east-1** (N. Virginia). Change this only if Altamira’s contract requires LatAm hosting. Do not create the Supabase project in another region.
 - **Backoffice:** Vercel.
 - **Backend:** Docker image of the Express app, running as one always-on container (Fly.io, Railway, Render, or similar). Supabase Edge Functions are not the app runtime. Supabase stays Postgres and Auth. The host account is still open; the image is the artifact.
-- **Single instance:** scheduled jobs run inside the container (optional site-note fetch only). Sheet sync is not a v1 job. Keep one instance until jobs move to a proper queue.
+- **Single instance:** the sweeper runs inside the container. Keep one instance until work moves to a proper queue; the thread lease covers the short overlap during a deploy.
+- **Setup scripts** (`backend/scripts`): `company:secret` stores a company's API key encrypted, `operator:add` creates an operator (optionally sending a Supabase invitation), `chat` talks to the assistant from the terminal, and `webhook:send` posts a signed test webhook. Company config is applied by the seed from `prisma/seed-data/`.
 - **Environments:** staging and production, each with its own database and a test WhatsApp number in staging. Prompt changes go to staging first.
 - **Platform secrets (env only, never committed):** database URLs (pooled + direct), Supabase URL and keys, secrets encryption key, Meta app secret and webhook verify token. A Google service account is later, with Drive / Sheets, not v1.
 - **Monitoring:** structured logs, error alerts (Sentry or similar), and `LlmUsage` for cost per company.
@@ -287,14 +326,14 @@ Google Drive / Sheets sync and a Connect Google OAuth flow are later, not v1. MC
 5. Handoff / close → HubSpot upsert + transcript.
 6. Backoffice thread list, detail, pause / resume.
 7. Form-lead trigger and welcome template.
-8. Optional allowlisted site notes into `siteNotes` (secondary; skip if there is no allowlist).
+8. Optional allowlisted site notes into `siteNotes` (secondary; skip if there is no allowlist). Not built in the MVP.
 9. Logging, alerts, usage tracking, replay test set.
 10. Live prompt tuning after go-live (ongoing; not a setup checkbox).
 
 ## Open at kickoff
 
-- Google sheet columns are later. Knowledge size limits are set: 80 KB of extracted text per file, 200 KB per company, 1 MB original upload.
 - HubSpot property names, and how advisors are notified (owner, task, or both).
+- Business-hours text, and the approved welcome template's name and wording.
 - HubSpot workflow for the form-lead trigger.
 - WhatsApp number, Meta Business access and verification, welcome template approval.
 - Allowlist of public URLs for site notes.
