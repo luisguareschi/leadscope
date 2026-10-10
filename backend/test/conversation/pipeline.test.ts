@@ -222,8 +222,10 @@ describe("recovery", () => {
     expect((await testDb().thread.findUniqueOrThrow({ where: { id: threadId } })).crmContactId).toBeNull();
 
     now = new Date(now.getTime() + 2 * 60_000);
+    // A process that crashed mid-turn left its lease behind; once expired it must not block the retry.
+    await testDb().thread.update({ where: { id: threadId }, data: { processingUntil: new Date(now.getTime() - 1000) } });
     await sweepOnce(ctx);
     saved = await testDb().thread.findUniqueOrThrow({ where: { id: threadId } });
-    expect(saved).toMatchObject({ crmPendingAction: null, crmContactId: "hs-1", crmLastError: null });
+    expect(saved).toMatchObject({ crmPendingAction: null, crmContactId: "hs-1", crmLastError: null, processingUntil: null });
   });
 });

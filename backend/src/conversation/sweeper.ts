@@ -29,8 +29,11 @@ export async function sweepOnce(ctx: AppContext): Promise<{ scheduled: number; c
     where: {
       crmPendingAction: { not: null },
       crmAttempts: { lt: MAX_CRM_ATTEMPTS },
-      OR: [{ crmNextAttemptAt: null }, { crmNextAttemptAt: { lte: now } }],
-      processingUntil: null,
+      AND: [
+        { OR: [{ crmNextAttemptAt: null }, { crmNextAttemptAt: { lte: now } }] },
+        // A lease left by a crashed process expires; a live one means a turn is writing right now.
+        { OR: [{ processingUntil: null }, { processingUntil: { lt: now } }] },
+      ],
     },
     select: { id: true },
     take: 50,

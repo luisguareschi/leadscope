@@ -42,7 +42,12 @@ export function createFakeLlm(): LlmClient {
     async complete(input: CompleteInput): Promise<CompleteResult> {
       const { thread, config, documents } = input.scenario;
       const lastLead = [...input.messages].reverse().find((turn) => turn.role === "user")?.content ?? "";
-      const said = (lastLead.split("\n").at(-1) ?? lastLead).trim();
+      // A burst arrives as one turn with a line per message.
+      const lines = lastLead
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("[The lead"));
+      const said = lines.at(-1) ?? "";
       const text = foldText(said);
       const stage = stageForPrompt(thread);
       const fields = fieldsOf(thread);
@@ -70,17 +75,18 @@ export function createFakeLlm(): LlmClient {
         intent = "qualified";
         reply = `Listo, un asesor te va a llamar ${said.charAt(0).toLowerCase()}${said.slice(1)}. ¡Gracias por escribirnos!`;
       } else {
-        if (!isQuestion && !GREETING_ONLY.test(text)) {
-          if (fields.interest === null) update.interest = said;
-          else if (fields.budget === null) update.budget = said;
-          else if (fields.knowsProjects === null) update.knowsProjects = YES.test(text) && !NO.test(text);
+        const merged: LeadFields = { ...fields };
+        for (const line of lines) {
+          const folded = foldText(line);
+          if (QUESTION.test(folded) || GREETING_ONLY.test(folded)) continue;
+          const cleaned = line.replace(/^(hola|buenas)[!,.\s]*/i, "").trim();
+          if (!cleaned) continue;
+          if (merged.interest === null) merged.interest = update.interest = cleaned;
+          else if (merged.budget === null) merged.budget = update.budget = cleaned;
+          else if (merged.knowsProjects === null) {
+            merged.knowsProjects = update.knowsProjects = YES.test(folded) && !NO.test(folded);
+          }
         }
-        const merged: LeadFields = {
-          interest: update.interest ?? fields.interest,
-          budget: update.budget ?? fields.budget,
-          knowsProjects: update.knowsProjects ?? fields.knowsProjects,
-          callTime: fields.callTime,
-        };
         const fact = isQuestion ? findFact(text, documents) : null;
         const answer = isQuestion ? (fact ? `${fact}.` : "Ese dato te lo confirma un asesor.") : "";
         const intro = stage === "greeting" ? `¡Hola! Soy el asistente virtual de ${config.displayName}.` : "";
