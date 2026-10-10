@@ -2,7 +2,7 @@
 
 Internal design for Luis. The commercial contract with Altamira is the HTML proposal. This file is how we build it.
 
-**Status:** design only. No application code until kickoff after Altamira accepts the proposal.
+**Status:** Altamira accepted. Kickoff is on and implementation has started. Live HubSpot, production WhatsApp, and their Anthropic key are still week-1 access; until then the apps run on env examples and fakes. v1 knowledge is files operators upload in the backoffice. Google Drive / Sheets sync is later.
 
 ## Goal
 
@@ -17,8 +17,8 @@ Altamira Uruguay is the first client. Volume they reported: about 15–20 leads/
 One repo, two apps. No Turborepo.
 
 ```
-backend/      TypeScript HTTP service (Express). WhatsApp webhook, conversation engine, CRM, knowledge sync.
-backoffice/   Next.js (client-side), shadcn, Tailwind, React Query. Thread list and pause.
+backend/      TypeScript HTTP service (Express). WhatsApp webhook, conversation engine, CRM, knowledge uploads.
+backoffice/   Next.js (client-side), shadcn new-york, Tailwind, React Query. Thread list and pause.
 docs/         Proposal, meeting notes, this design.
 ```
 
@@ -29,15 +29,16 @@ Backend source layout:
 ```
 backend/src/
   engine/                     conversation states, prompt building, guardrails
+  controllers/                one Express router per resource (webhook, form lead, threads, knowledge)
+  services/                   one service per resource; each takes a Prisma client and queries directly
   integrations/
     whatsapp/                 Meta Cloud API: webhook parsing, send text, send template
     crm/hubspot/              first CRM adapter
-    knowledge/google-sheet/   first knowledge adapter
-    knowledge/website/        allowlisted page fetcher
+    knowledge/                text extraction from uploaded files; optional allowlisted page fetcher
   llm/                        complete() wrapper around Anthropic
-  companies/                  loads a company's config and secrets
-  routes/                     Express routes
-  jobs/                       scheduled syncs
+  companies/                  company config, secrets, and the development seed
+  routes/                     operator auth
+  jobs/                       scheduled jobs (optional site-note fetch)
 ```
 
 The engine never imports HubSpot, Google, or Meta directly. It talks to small interfaces (`Crm`, `KnowledgeSource`, `Channel`). Adding a second CRM means a new adapter folder, not a rewrite.
@@ -55,7 +56,7 @@ The engine never imports HubSpot, Google, or Meta directly. It talks to small in
 | LLM | Anthropic (`claude-haiku-4-5` to start) | Already agreed with Altamira. Each company uses its own API key. One `complete()` wrapper so a later provider swap is one file. No fine-tune. No multi-provider framework. |
 | WhatsApp | Meta Cloud API | Official API number per company. |
 | CRM | HubSpot API (first adapter) | Direct API. No Zapier / Make / n8n. No HubSpot native AI. |
-| Knowledge | Google Sheet + allowlisted public pages (first adapters) | Sheet for commercial facts. Site for stable facts only. Injected into the prompt at reply time. |
+| Knowledge | Files operators upload in the backoffice | PDF, DOCX, Markdown, plain text, CSV, and the other usual office formats (XLSX, etc.). Text is extracted on upload, stored per company, and injected into the prompt. Optional allowlisted public pages for stable facts only. No RAG. Google Drive / Sheets is later. |
 
 ## Architecture
 
@@ -63,8 +64,7 @@ The engine never imports HubSpot, Google, or Meta directly. It talks to small in
 flowchart LR
   wa[WhatsApp] --> api[backend]
   hsForm[HubSpot form workflow] --> api
-  sheet[Google Sheet] --> api
-  site[Public pages] --> api
+  site[Public pages, optional] --> api
   api --> db[(Supabase Postgres)]
   api --> hs[HubSpot]
   api --> llm[Anthropic]
@@ -74,10 +74,10 @@ flowchart LR
 
 1. Meta posts an inbound message to the backend webhook. The backend finds the company from the WhatsApp `phone_number_id`, stores the message, and returns 200 right away.
 2. Processing happens after the response. Messages for one thread are handled one at a time, and a short wait (a few seconds) groups messages a lead sends in a row into one reply.
-3. When a reply is needed, the engine loads the company config and its project rows, builds the system prompt + knowledge block + recent messages, and calls Anthropic.
+3. When a reply is needed, the engine loads the company config and the extracted text of that company’s uploaded files, builds the system prompt + knowledge block + recent messages, and calls Anthropic.
 4. The model returns structured output: the reply text plus any extracted fields (see [Conversation](#conversation)). The engine updates the thread state from those fields, runs the guardrails, then sends the reply.
 5. On handoff or close, the engine upserts the CRM contact and writes the transcript.
-6. Operators open the backoffice, sign in with Supabase Auth, and call the backend (with the JWT) to list their company’s threads or pause one.
+6. Operators open the backoffice, sign in with Supabase Auth, and call the backend (with the JWT) to list their company’s threads, pause one, or upload, replace, and delete knowledge files.
 
 ## Multi-company
 
@@ -95,14 +95,14 @@ One shared deployment for all companies. Every company-owned row has a `companyI
 - Language and tone (for Altamira: Uruguayan Spanish with “vos”).
 - The qualifying questions.
 - Forbidden topics (for Altamira: future rental yield, guaranteed returns).
-- Knowledge sources: sheet id and column mapping, allowlisted URLs.
+- Knowledge: files uploaded for that company. Optional allowlisted URLs for secondary site notes. Size limits: 80 KB of extracted text per file and 200 KB per company, plus a 1 MB cap on the original upload.
 - CRM adapter type and property names.
 - WhatsApp phone number id and template names.
 - Business hours, used when offering a call time.
 
 ### Secrets per company
 
-Anthropic key, HubSpot token, Meta access token, and Google access are per company. Store them encrypted in the database (or a secrets manager) keyed by company. Only shared platform secrets (database URL, encryption key, Supabase keys) live in environment variables.
+Anthropic key, HubSpot token, and Meta access token are per company. They are encrypted on the Company row with AES-256-GCM. The encryption key lives only in the server environment. Platform secrets (database URLs, encryption key, Supabase URL and keys, Meta app secret, webhook verify token) stay in environment variables. No Vault in v1. Google access is not a v1 secret. Drive / Sheets sync and a Connect Google OAuth flow are later. MCP is not the plan.
 
 ### Not in v1
 
@@ -110,18 +110,23 @@ Self-signup, billing, a company admin screen, and onboarding wizards. Luis sets 
 
 ## Knowledge
 
-No RAG. No embeddings. No live website browsing during a chat. Facts are synced into Postgres ahead of time, then pasted into the LLM prompt when the bot answers.
+No RAG. No embeddings. No live website browsing during a chat. The v1 source is files operators upload in the backoffice, per company. Text is extracted on upload, stored in Postgres, and pasted into the LLM prompt when the bot answers.
+
+Supported formats: PDF, DOCX, Markdown, plain text, CSV, and the other usual office formats (XLSX, etc.).
+
+Extracted text is capped so it fits the prompt. The defaults, stored on the company config, are **80 KB per file** (`knowledge.maxFileBytes` = 81920) and **200 KB per company** (`knowledge.maxCompanyBytes` = 204800). The original upload is capped at **1 MB** (`KNOWLEDGE_MAX_UPLOAD_BYTES` = 1048576) before extraction.
 
 ### How facts reach the chatbot
 
 ```mermaid
 flowchart TD
-  drive[Google Sheet] --> sync[Sync job in backend]
-  web[Allowlisted public pages] --> sync
-  sync --> projects[(Project rows in Postgres)]
+  upload[Operator upload in the backoffice] --> extract[Extract text on upload]
+  extract --> files[(Uploaded file text in Postgres)]
+  web[Allowlisted public pages, optional] --> notes[siteNotes]
   promptBase[Base prompt in code] --> build[Build messages for Anthropic]
   companyConfig[Company config] --> build
-  projects --> build
+  files --> build
+  notes --> build
   thread[Thread state + recent messages] --> build
   build --> llm[Anthropic]
 ```
@@ -130,21 +135,21 @@ Four pieces, kept separate on purpose:
 
 1. **Base prompt (in code)** — generic behavior shared by every company: answer only from the knowledge block, one question at a time, hand off when unsure, return the structured fields. Edited by Luis.
 2. **Company config** — the company-specific parts filled into that prompt: name, tone, questions, forbidden topics.
-3. **Google Sheet → `Project` rows** — commercial facts the company updates. Sync job (manual from the backoffice, and on a schedule) reads the sheet and upserts rows: name/slug, price-from, typologies, delivery date, orientation, short notes. Full inventory stays out of chat.
-4. **Allowlisted public pages → `siteNotes` on each project** — stable facts only (address, amenities, neighborhood). A scheduled fetch strips the HTML to plain text and stores it against the matching project. The bot does not open URLs while chatting.
+3. **Uploaded files** — the commercial source. Price-from, typology, delivery, and orientation come from the extracted text. Re-uploading a file replaces its previous version. If the operator does not re-upload, prices go stale. Full inventory and unit-level availability stay with the advisor and are not dumped in chat.
+4. **Allowlisted public pages → `siteNotes`** — optional and secondary. Stable facts only (address, amenities, neighborhood). A scheduled fetch can strip the HTML to plain text. Skip it when no allowlist is set. The bot does not open URLs while chatting.
 
 At reply time the backend:
 
-1. Loads **all** of the company’s `Project` rows. Altamira has a handful of projects, so choosing a subset is not worth it.
+1. Loads the extracted text of that company’s uploaded files, plus site notes when they exist.
 2. Formats them into a short **knowledge block** (structured text, not a vector search).
 3. Sends to Anthropic: system prompt (base + company config + knowledge block, cached) and the conversation turns.
 4. The model answers only from that. If a fact is not in the block, it says it does not know and offers the advisor.
 
-v1 does **not** ingest extra PDFs, FAQs, or other tools. A later document type gets its own sync adapter into the same table (or a small `KnowledgeDoc` table) and joins the knowledge block. Still no RAG unless the amount of text forces it.
+Google Drive / Sheets sync, and a Connect Google OAuth flow, are later. MCP is not the plan. Still no RAG.
 
 Conflict rules:
 
-1. Price, typology, delivery, orientation, and availability → the sheet wins over `siteNotes`.
+1. Price, typology, delivery, orientation, and availability → the uploaded files win over `siteNotes`.
 2. If a fact is missing from both → the bot says it does not know and offers the advisor.
 3. Never answer a forbidden topic (for Altamira: future rental yield or guaranteed returns).
 4. Never crawl or fetch a URL while answering a lead.
@@ -182,7 +187,8 @@ The engine moves the state from those fields. The model never sets the state dir
 - A lead who writes on the API number gets the greeting.
 - A lead who fills a form gets one approved welcome template, then the same flow. A HubSpot workflow calls `POST /hooks/crm/form-lead` with the contact’s phone; the backend sends the template. The company pays Meta for that send.
 - WhatsApp only allows free-form replies within 24 hours of the lead’s last message. Outside that window, only approved templates can be sent. v1 does not send follow-ups after that window.
-- A lead who writes again after **Closed** or **Handoff** reopens the same thread in **Answer**. The thread keeps its history.
+- Leave **Qualify** only after `interest`, `budget`, and `knowsProjects` are stored. `knowsProjects` may be false. There is no numeric budget minimum in code. `intent` `not_interested` closes the thread even if a question is still open. `intent` `qualified` without the three stored answers does not leave Qualify.
+- A lead who writes again after **Closed** or **Handoff** reopens the same thread in **Answer**. The thread keeps its history. If that same turn is the one that first completes the three answers and `callTime`, it still finishes the handoff and writes the CRM.
 - Advisors keep their own personal WhatsApp numbers. The bot never lives on those phones.
 
 ### Guardrails
@@ -207,9 +213,9 @@ Names can move when the schema is created. Every table below except `Company` ha
 
 - **Company** — name, config (JSON), encrypted secrets, WhatsApp phone number id, createdAt.
 - **Operator** — Supabase Auth user id, companyId, email. Maps a login to a company.
-- **Project** — sheet fields + `siteNotes` + `syncedAt`.
-- **Thread** — lead phone (E.164), state, `paused`, extracted fields (interest, budget, knowsProjects, callTime), CRM contact id, last inbound at (for the 24-hour window), created/updated. Unique on (companyId, phone).
-- **Message** — thread id, direction (`in` / `out`), body, WhatsApp message id (unique, nullable for outbound until sent), createdAt.
+- **KnowledgeFile** — companyId, filename, format, extracted text, size, created and replaced timestamps. Re-uploading a file replaces its previous version. Commercial facts (price-from, typology, delivery, orientation) live in that text. Extracted text is limited to 80 KB per file and 200 KB per company. Optional site notes from an allowlist stay secondary and are not this table.
+- **Thread** — lead phone (E.164), state, `paused`, `needsHuman`, extracted fields (interest, budget, knowsProjects, callTime), optional email from a form, CRM contact id, last inbound at (for the 24-hour window), created/updated. Unique on (companyId, phone).
+- **Message** — thread id, direction (`in` / `out`), body, content type (`text` or the WhatsApp type), WhatsApp message id (unique, nullable for outbound until sent), createdAt.
 - **LlmUsage** — thread id, model, input/output tokens, createdAt. Used to see cost per company.
 
 ## Backend surface
@@ -218,7 +224,7 @@ Rough routes (names can change):
 
 - `GET/POST /webhooks/whatsapp` — Meta verification and inbound events. Company resolved from `phone_number_id`. Verified with Meta’s signature.
 - `POST /hooks/crm/form-lead` — form-lead trigger from the company’s CRM workflow. Verified with a per-company shared secret.
-- `POST /internal/knowledge/sync` — pull the sheet (and optionally site notes) for the operator’s company.
+- `GET/POST /internal/knowledge/files`, replace, and delete — list, upload, replace, and delete knowledge files for the operator’s company. Upload extracts text and stores it. Replace swaps that file’s previous version.
 - `GET /internal/threads` — list the operator’s company threads.
 - `GET /internal/threads/:id` — thread + messages.
 - `POST /internal/threads/:id/pause` and `.../resume`.
@@ -235,8 +241,8 @@ Pages:
 
 1. Login (Supabase email). No public signup.
 2. Thread list (newest activity first). Show phone, state, paused, last message preview.
-3. Thread detail — full messages, pause / resume.
-4. Knowledge — button to trigger a sheet sync; show last sync time.
+3. Thread detail — full messages, pause / resume. If the bot set `needsHuman`, the operator can clear that flag. The panel still does not send WhatsApp.
+4. Conocimiento — upload, list, replace, and delete files for the operator’s company. Not a “sync sheet now” button.
 
 The panel does not send messages. Advisors answer from their own WhatsApp.
 
@@ -248,11 +254,12 @@ Shadcn defaults are fine to ship first. Per-company branding is not in v1.
 
 ## Hosting, environments, and operations
 
+- **Region:** Supabase (Postgres and Auth) and the backend host are **us-east-1** (N. Virginia). Change this only if Altamira’s contract requires LatAm hosting. Do not create the Supabase project in another region.
 - **Backoffice:** Vercel.
-- **Backend:** Docker image of the Express app, running as one always-on container (Fly.io, Railway, Render, or similar). Supabase Edge Functions are not the app runtime. Supabase stays Postgres and Auth.
-- **Single instance:** scheduled jobs run inside the container (sheet sync, site notes). Keep one instance until jobs move to a proper queue.
+- **Backend:** Docker image of the Express app, running as one always-on container (Fly.io, Railway, Render, or similar). Supabase Edge Functions are not the app runtime. Supabase stays Postgres and Auth. The host account is still open; the image is the artifact.
+- **Single instance:** scheduled jobs run inside the container (optional site-note fetch only). Sheet sync is not a v1 job. Keep one instance until jobs move to a proper queue.
 - **Environments:** staging and production, each with its own database and a test WhatsApp number in staging. Prompt changes go to staging first.
-- **Platform secrets (env only, never committed):** database URLs (pooled + direct), Supabase URL and keys, secrets encryption key, Meta app secret and webhook verify token, Google service account if shared.
+- **Platform secrets (env only, never committed):** database URLs (pooled + direct), Supabase URL and keys, secrets encryption key, Meta app secret and webhook verify token. A Google service account is later, with Drive / Sheets, not v1.
 - **Monitoring:** structured logs, error alerts (Sentry or similar), and `LlmUsage` for cost per company.
 - **Testing:** a set of real conversations (from Altamira’s WhatsApp Web access) replayed against the prompt after each change. This complements live tuning; it does not replace it.
 
@@ -269,22 +276,24 @@ Instagram DM, Messenger, email-to-WhatsApp, landing-form automation beyond the o
 
 Also not in v1: resale features (self-signup, billing, company admin, onboarding). The architecture is ready for more companies; the product features come later.
 
+Google Drive / Sheets sync and a Connect Google OAuth flow are later, not v1. MCP is not the plan.
+
 ## Build order
 
 1. Repo skeleton: `backend/` and `backoffice/`, Prisma schema with `Company`, Supabase Auth, staging deploy.
-2. Altamira `Company` row and config; sheet sync into `Project` rows; manual sync from the backoffice.
+2. Altamira `Company` row and config; knowledge file upload (extract text, store per company); Conocimiento page to upload, list, replace, and delete.
 3. WhatsApp webhook: resolve company, store messages, answer fast, per-thread processing, greeting.
 4. Engine with structured output: questions, answers from the knowledge block, guardrails, fallback.
 5. Handoff / close → HubSpot upsert + transcript.
 6. Backoffice thread list, detail, pause / resume.
 7. Form-lead trigger and welcome template.
-8. Scheduled allowlisted site notes into `siteNotes`.
+8. Optional allowlisted site notes into `siteNotes` (secondary; skip if there is no allowlist).
 9. Logging, alerts, usage tracking, replay test set.
 10. Live prompt tuning after go-live (ongoing; not a setup checkbox).
 
 ## Open at kickoff
 
-- Exact sheet columns and who fills the template.
+- Google sheet columns are later. Knowledge size limits are set: 80 KB of extracted text per file, 200 KB per company, 1 MB original upload.
 - HubSpot property names, and how advisors are notified (owner, task, or both).
 - HubSpot workflow for the form-lead trigger.
 - WhatsApp number, Meta Business access and verification, welcome template approval.
@@ -292,4 +301,3 @@ Also not in v1: resale features (self-signup, billing, company admin, onboarding
 - Hosting account for the backend.
 - Software ownership with Altamira in the signed contract (needed for resale).
 - Partnership terms with José Daniel and Luis’s father, if the product is sold together.
-- Repo name: `altamira-chatbot-backend` will hold both apps and a product; a neutral name fits better.
