@@ -1,0 +1,173 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// One row per client company. Company-specific behavior lives in `config`, never in code.
+model Company {
+  id                    String          @id @default(cuid())
+  slug                  String          @unique
+  name                  String
+  /// Validated by `companyConfigSchema` (src/companies/company-config.ts).
+  config                Json
+  /// AES-256-GCM ciphertext of the company's API keys. See src/lib/crypto.ts.
+  encryptedSecrets      String?
+  whatsappPhoneNumberId String?         @unique
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  operators             Operator[]
+  knowledgeFiles        KnowledgeFile[]
+  threads               Thread[]
+  messages              Message[]
+  llmUsages             LlmUsage[]
+}
+
+/// Maps a backoffice login to the one company it belongs to.
+model Operator {
+  id             String          @id @default(cuid())
+  companyId      String
+  email          String          @unique
+  supabaseUserId String?         @unique
+  createdAt      DateTime        @default(now())
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  uploads        KnowledgeFile[]
+
+  @@index([companyId])
+}
+
+/// Text extracted from a file an operator uploaded. Only the text is kept, not the original file.
+model KnowledgeFile {
+  id           String    @id @default(cuid())
+  companyId    String
+  name         String
+  /// Lower-cased name. Uploading a file with the same name replaces this row.
+  nameKey      String
+  format       String
+  mimeType     String
+  sizeBytes    Int
+  sha256       String
+  text         String    @db.Text
+  charCount    Int
+  uploadedById String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  uploadedBy   Operator? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, nameKey])
+}
+
+enum ThreadState {
+  greeting
+  qualify
+  answer
+  handoff
+  closed
+}
+
+enum ThreadSource {
+  whatsapp
+  form
+}
+
+enum CrmAction {
+  handoff
+  close
+  needs_human
+}
+
+model Thread {
+  id                  String       @id @default(cuid())
+  companyId           String
+  /// E.164, e.g. +59899123456. Matches form contacts and WhatsApp contacts.
+  phone               String
+  /// WhatsApp id (digits) used as the `to` of outbound messages.
+  waId                String
+  /// WhatsApp profile name, when Meta sends it.
+  name                String?
+  /// Only from a form payload. The assistant does not ask for email.
+  email               String?
+  source              ThreadSource @default(whatsapp)
+  state               ThreadState  @default(greeting)
+  paused              Boolean      @default(false)
+  pausedAt            DateTime?
+  needsHuman          Boolean      @default(false)
+  needsHumanReason    String?
+  interest            String?
+  budget              String?
+  knowsProjects       Boolean?
+  callTime            String?
+  /// Start of WhatsApp's 24-hour free-form reply window.
+  lastInboundAt       DateTime?
+  lastMessageAt       DateTime?
+  lastMessagePreview  String?
+  /// Lease that keeps two processes from answering the same thread at once.
+  processingUntil     DateTime?
+  crmContactId        String?
+  /// Set when a CRM write is owed; cleared once it succeeds. Failed writes are retried.
+  crmPendingAction    CrmAction?
+  crmAttempts         Int          @default(0)
+  crmNextAttemptAt    DateTime?
+  crmLastError        String?
+  crmSyncedAt         DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  company             Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  messages            Message[]
+  llmUsages           LlmUsage[]
+
+  @@unique([companyId, phone])
+  @@index([companyId, lastMessageAt])
+  @@index([crmPendingAction])
+}
+
+enum MessageDirection {
+  inbound
+  outbound
+}
+
+model Message {
+  id          String           @id @default(cuid())
+  companyId   String
+  threadId    String
+  direction   MessageDirection
+  /// WhatsApp message type: text, template, image, audio, sticker, ...
+  type        String
+  body        String           @db.Text
+  waMessageId String?          @unique
+  /// Outbound delivery status from Meta: sent, delivered, read, failed.
+  status      String?
+  /// Inbound only: when the engine took this message into a turn.
+  handledAt   DateTime?
+  sentAt      DateTime         @default(now())
+  createdAt   DateTime         @default(now())
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  thread      Thread           @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, sentAt])
+  @@index([companyId])
+  @@index([direction, handledAt])
+}
+
+model LlmUsage {
+  id               String   @id @default(cuid())
+  companyId        String
+  threadId         String?
+  model            String
+  inputTokens      Int
+  outputTokens     Int
+  cacheReadTokens  Int      @default(0)
+  cacheWriteTokens Int      @default(0)
+  latencyMs        Int
+  createdAt        DateTime @default(now())
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  thread           Thread?  @relation(fields: [threadId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+}
