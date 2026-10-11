@@ -69,3 +69,14 @@ export type KnowledgeList = {
 };
 
 export type Me = { operator: { email: string }; company: { name: string; slug: string } };
+
+export type SecretName = "anthropicApiKey" | "metaAccessToken" | "hubspotAccessToken" | "formLeadSecret";
+
+/** Write-only status. `last4` is absent when showing it would reveal the whole secret. */
+export type SecretStatus = {
+  name: SecretName;
+  set: boolean;
+  last4: string | null;
+};
+
+export type SecretsList = { secrets: SecretStatus[] };

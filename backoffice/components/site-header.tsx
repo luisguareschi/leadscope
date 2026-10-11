@@ -6,6 +6,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 
 function titleFor(pathname: string): string {
   if (pathname.startsWith("/knowledge")) return "Conocimiento";
+  if (pathname.startsWith("/integrations")) return "Integraciones";
   return "Conversaciones";
 }
 

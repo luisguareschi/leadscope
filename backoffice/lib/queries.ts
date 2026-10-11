@@ -9,6 +9,9 @@ import type {
   KnowledgeFile,
   KnowledgeList,
   Me,
+  SecretName,
+  SecretStatus,
+  SecretsList,
   Thread,
   ThreadsPage,
   ThreadsSummary,
@@ -139,5 +142,32 @@ export function useDeleteKnowledgeFile() {
   return useMutation({
     mutationFn: (id: string) => api<void>(`/internal/knowledge/files/${id}`, { method: "DELETE" }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["knowledge"] }),
+  });
+}
+
+export function useSecrets() {
+  const api = useApi();
+  return useQuery({ queryKey: ["secrets"], queryFn: () => api<SecretsList>("/internal/secrets") });
+}
+
+export function useSetSecret() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ name, value }: { name: SecretName; value: string }) =>
+      api<{ secret: SecretStatus }>(`/internal/secrets/${name}`, {
+        method: "PUT",
+        body: JSON.stringify({ value }),
+      }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["secrets"] }),
+  });
+}
+
+export function useClearSecret() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (name: SecretName) => api<{ secret: SecretStatus }>(`/internal/secrets/${name}`, { method: "DELETE" }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["secrets"] }),
   });
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpenTextIcon, MessagesSquareIcon, RadarIcon } from "lucide-react";
+import { BookOpenTextIcon, KeyRoundIcon, MessagesSquareIcon, RadarIcon } from "lucide-react";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -28,6 +28,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       badgeLabel: "conversaciones que requieren un asesor",
     },
     { title: "Conocimiento", url: "/knowledge", icon: <BookOpenTextIcon /> },
+    { title: "Integraciones", url: "/integrations", icon: <KeyRoundIcon /> },
   ];
 
   return (

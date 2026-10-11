@@ -4,6 +4,7 @@ import type { AppContext } from "./context.js";
 import { formLeadsRoutes } from "./features/form-leads/form-leads.routes.js";
 import { knowledgeRoutes } from "./features/knowledge/knowledge.routes.js";
 import { meRoutes } from "./features/me/me.routes.js";
+import { secretsRoutes } from "./features/secrets/secrets.routes.js";
 import { threadsRoutes } from "./features/threads/threads.routes.js";
 import { whatsappWebhookRoutes } from "./features/whatsapp-webhook/whatsapp-webhook.routes.js";
 import { errorHandler } from "./http/error-handler.js";
@@ -41,6 +42,7 @@ export function createApp(ctx: AppContext): Express {
   backoffice.use("/me", meRoutes(ctx));
   backoffice.use("/threads", threadsRoutes(ctx));
   backoffice.use("/knowledge", knowledgeRoutes(ctx));
+  backoffice.use("/secrets", secretsRoutes(ctx));
   app.use("/internal", backoffice);
 
   app.use(errorHandler(ctx));

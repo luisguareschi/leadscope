@@ -1,5 +1,6 @@
 /**
- * Stores one of a company's API keys, encrypted on its Company row:
+ * Debug helper. A company sets these in the panel (Integraciones). This script writes one
+ * encrypted secret on a company row from a checkout:
  *   npm run company:secret -- <companySlug> <name> <value>
  *   npm run company:secret -- <companySlug> <name> -          (reads the value from stdin)
  *   npm run company:secret -- <companySlug> <name> --delete

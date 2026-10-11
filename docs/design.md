@@ -18,7 +18,7 @@ One repo, two apps. No Turborepo.
 
 ```
 backend/      TypeScript HTTP service (Express). WhatsApp webhook, conversation engine, CRM, knowledge uploads.
-backoffice/   Next.js (client-side), shadcn (preset b1Z5bafVA), Tailwind, React Query. Threads, pause, knowledge files.
+backoffice/   Next.js (client-side), shadcn (preset b1Z5bafVA), Tailwind, React Query. Threads, pause, knowledge files, company secrets.
 docs/         Proposal, meeting notes, this design.
 docker-compose.yml   Local Postgres (plus a test database).
 ```
@@ -30,7 +30,7 @@ Backend source layout:
 ```
 backend/src/
   features/<resource>/        one controller + one service per endpoint, plus a routes file per resource
-                              (threads, knowledge, me, whatsapp-webhook, form-leads). Services call Prisma directly.
+                              (threads, knowledge, secrets, me, whatsapp-webhook, form-leads). Services call Prisma directly.
   engine/                     pure: turn decisions (states, qualify gate), prompt building, history, guardrails
   conversation/               the pipeline: record inbound, reply scheduler, one bot turn, CRM sync, sweeper, lease
   integrations/
@@ -43,7 +43,7 @@ backend/src/
   http/                       operator auth, input validation, error handler
   lib/                        env-free helpers: Prisma client, logger, crypto, phone numbers
 backend/prisma/               schema, migrations, development seed (Altamira's config lives in seed-data/)
-backend/scripts/              terminal chat, signed test webhook, set a company secret, add an operator
+backend/scripts/              terminal chat, signed test webhook, debug company secret, add an operator
 ```
 
 The engine never imports HubSpot, Google, or Meta directly. It talks to small interfaces (`Crm`, `Channel`, `LlmClient`). Adding a second CRM means a new adapter folder, not a rewrite.
@@ -82,7 +82,7 @@ flowchart LR
 3. When a reply is needed, the engine loads the company config and the extracted text of that company’s uploaded files, builds the system prompt + knowledge block + recent messages, and calls Anthropic.
 4. The model returns structured output: the reply text plus any extracted fields (see [Conversation](#conversation)). The engine updates the thread state from those fields, runs the guardrails, then sends the reply.
 5. On handoff or close, the engine upserts the CRM contact and writes the transcript.
-6. Operators open the backoffice, sign in with Supabase Auth, and call the backend (with the JWT) to list their company’s threads, pause one, or upload, replace, and delete knowledge files.
+6. Operators open the backoffice, sign in with Supabase Auth, and call the backend (with the JWT) to list their company’s threads, pause one, upload, replace, and delete knowledge files, or set and clear that company's integration secrets.
 
 ## Multi-company
 
@@ -107,11 +107,17 @@ One shared deployment for all companies. Every company-owned row has a `companyI
 
 ### Secrets per company
 
-Anthropic key, HubSpot token, and Meta access token are per company. They are encrypted on the Company row with AES-256-GCM. The encryption key lives only in the server environment. Platform secrets (database URLs, encryption key, Supabase URL and keys, Meta app secret, webhook verify token) stay in environment variables. No Vault in v1. Google access is not a v1 secret. Drive / Sheets sync and a Connect Google OAuth flow are later. MCP is not the plan.
+Anthropic API key (`anthropicApiKey`), Meta access token (`metaAccessToken`), HubSpot access token (`hubspotAccessToken`), and the form-lead secret (`formLeadSecret`) are per company. They are encrypted together on the Company row with AES-256-GCM. The encryption key (`SECRETS_ENCRYPTION_KEY`) lives only in the server environment and is never entered in the panel.
+
+An operator sets these for their own company from Integraciones in the backoffice. The API is write-only: it reports whether each secret is set and, when the value is longer than 4 characters, the last 4. It never returns the full secret. Saving a value replaces that one secret. An empty value is rejected, so it cannot wipe a secret; Quitar clears one on purpose. The company id comes from the operator's session, so one company cannot read or write another's keys.
+
+`npm run company:secret` still writes the same fields from a checkout, for debugging. It is not how a company sets them.
+
+Platform secrets (database URLs, encryption key, Supabase URL and keys, Meta app secret, webhook verify token) stay in environment variables. No Vault in v1. Google access is not a v1 secret. Drive / Sheets sync and a Connect Google OAuth flow are later. MCP is not the plan.
 
 ### Not in v1
 
-Self-signup, billing, a company admin screen, and onboarding wizards. Luis sets up each new company by hand (seed script or SQL).
+Self-signup, billing, a company admin screen, and onboarding wizards. Luis sets up each new company by hand (seed script or SQL). Integraciones is not that screen: an operator only writes secrets for the company they already belong to.
 
 ## Knowledge
 
@@ -265,9 +271,12 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 - `POST /internal/threads/:id/pause`, `.../resume`, `.../clear-needs-human`, `.../crm-sync` (retry a failed CRM write).
 - `DELETE /internal/threads/:id` — delete a lead's thread and messages on request.
 - `GET /internal/knowledge/files` (with usage and limits), `GET /internal/knowledge/files/:id` (with the text), `POST /internal/knowledge/files` (upload; same name replaces), `PUT /internal/knowledge/files/:id` (replace), `DELETE /internal/knowledge/files/:id`.
+- `GET /internal/secrets` — whether each company secret is set, and the last 4 characters when that does not reveal the whole value.
+- `PUT /internal/secrets/:name` — replace one secret (`anthropicApiKey`, `metaAccessToken`, `hubspotAccessToken`, `formLeadSecret`). Body `{ "value" }`. An empty value is rejected.
+- `DELETE /internal/secrets/:name` — clear that one secret. There is no company id on these routes.
 - `GET /health`.
 
-Auth: Supabase JWT on `/internal/*` (JWKS, or the legacy HS256 secret), mapped to `Operator.companyId`; an operator row created by email is linked to its Supabase user on first login. `AUTH_MODE=dev` accepts `dev:<email>` and is refused in production. CORS allows only the backoffice origin. Every query filters by the operator's company, and another company's id is a 404.
+Auth: Supabase JWT on `/internal/*` (JWKS, or the legacy HS256 secret), mapped to `Operator.companyId`; an operator row created by email is linked to its Supabase user on first login. `AUTH_MODE=dev` accepts `dev:<email>` and is refused in production. CORS allows only the backoffice origin. Every query filters by the operator's company, and another company's id is a 404. Secret writes use that same company and ignore any company id in the body.
 
 LLM: one module, `backend/src/llm/anthropic.ts`, that takes the two system blocks + messages and returns the parsed fields. Prompt building lives in `engine/`, not inside the model call.
 
@@ -281,6 +290,7 @@ Pages:
 2. Conversaciones — four count cards (en curso, derivadas, requieren asesor, pausadas) that also filter, status tabs, search by name or phone, and the list (newest activity first) with status, last message, and HubSpot status. The sidebar shows how many threads need an advisor.
 3. Thread detail — the full conversation with delivery ticks, the lead's answers, HubSpot status, and the 24-hour window. Alerts say why the bot stopped and offer the fix: mark as attended (clears `needsHuman`), resume, or retry HubSpot. Pause / resume and delete. The panel still does not send WhatsApp.
 4. Conocimiento — upload (drag and drop), list, preview the extracted text, replace, and delete files for the operator’s company, with a meter of the space used. Not a “sync sheet now” button.
+5. Integraciones — the operator sets the Anthropic API key, Meta access token, HubSpot access token, and form-lead secret for their company. Write-only fields, whether each is set, the last 4 characters when available, and an explicit Quitar. The platform encryption key is not on this page.
 
 The panel does not send messages. Advisors answer from their own WhatsApp.
 
@@ -296,7 +306,7 @@ Shadcn with Luis's preset `b1Z5bafVA` and the `dashboard-01` layout. Per-company
 - **Backoffice:** Vercel.
 - **Backend:** Docker image of the Express app, running as one always-on container (Fly.io, Railway, Render, or similar). Supabase Edge Functions are not the app runtime. Supabase stays Postgres and Auth. The host account is still open; the image is the artifact.
 - **Single instance:** the sweeper runs inside the container. Keep one instance until work moves to a proper queue; the thread lease covers the short overlap during a deploy.
-- **Setup scripts** (`backend/scripts`): `company:secret` stores a company's API key encrypted, `operator:add` creates an operator (optionally sending a Supabase invitation), `chat` talks to the assistant from the terminal, and `webhook:send` posts a signed test webhook. Company config is applied by the seed from `prisma/seed-data/`.
+- **Setup scripts** (`backend/scripts`): `company:secret` is a debug write of one encrypted company secret (operators set secrets in Integraciones), `operator:add` creates an operator (optionally sending a Supabase invitation), `chat` talks to the assistant from the terminal, and `webhook:send` posts a signed test webhook. Company config is applied by the seed from `prisma/seed-data/`.
 - **Environments:** staging and production, each with its own database and a test WhatsApp number in staging. Prompt changes go to staging first.
 - **Platform secrets (env only, never committed):** database URLs (pooled + direct), Supabase URL and keys, secrets encryption key, Meta app secret and webhook verify token. A Google service account is later, with Drive / Sheets, not v1.
 - **Monitoring:** structured logs, error alerts (Sentry or similar), and `LlmUsage` for cost per company.
@@ -305,7 +315,7 @@ Shadcn with Luis's preset `b1Z5bafVA` and the `dashboard-01` layout. Per-company
 ## Privacy
 
 - Conversations contain personal data. Follow Uruguay’s data protection law (Ley 18.331).
-- Do not log message bodies or phone numbers in plain text in application logs.
+- Do not log company secrets, message bodies, or phone numbers in plain text. The secrets API never returns a full secret.
 - Support deleting a lead’s thread and messages on request.
 - Outbound templates only go to leads who gave their phone in a form or wrote first.
 
