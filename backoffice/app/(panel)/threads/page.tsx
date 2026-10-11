@@ -57,7 +57,7 @@ function ThreadsView() {
         <Card className="gap-0 py-0 shadow-xs">
           <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
             <Tabs value={status} onValueChange={(value) => setParams({ status: value as ThreadStatusFilter })}>
-              <div className="-mx-1 overflow-x-auto px-1">
+              <div className="-mx-1 overflow-x-auto px-1 overflow-y-hidden">
                 <TabsList>
                   {FILTERS.map((filter) => {
                     const count = filter.value === "all" ? counts?.total : counts?.[filter.value];
