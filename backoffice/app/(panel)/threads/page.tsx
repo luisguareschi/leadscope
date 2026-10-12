@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCompanyPages } from "@/lib/company-access";
 import { useThreads, useThreadsSummary } from "@/lib/queries";
 import { FILTERS, isStatusFilter } from "@/lib/thread-status";
 import type { ThreadStatusFilter } from "@/lib/types";
@@ -30,8 +31,9 @@ function ThreadsView() {
   const search = params.get("q") ?? "";
   const [searchInput, setSearchInput] = useState(search);
 
-  const summary = useThreadsSummary();
-  const threads = useThreads(status, search);
+  const companyPages = useCompanyPages();
+  const summary = useThreadsSummary(companyPages.enabled);
+  const threads = useThreads(status, search, companyPages.enabled);
 
   const setParams = (next: { status?: ThreadStatusFilter; q?: string }) => {
     const updated = new URLSearchParams(params);
@@ -57,6 +59,14 @@ function ThreadsView() {
 
   const rows = threads.data?.pages.flatMap((page) => page.threads) ?? [];
   const counts = summary.data;
+
+  if (companyPages.blocked) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-24">
+        <Spinner className="size-6 text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <>

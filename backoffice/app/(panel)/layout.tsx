@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
+import { isCompanyLessAdmin } from "@/lib/company-access";
 import { useAuth } from "@/lib/auth";
 import { useMe } from "@/lib/queries";
 
@@ -19,8 +20,7 @@ export default function PanelLayout({
   const me = useMe();
   const router = useRouter();
   const pathname = usePathname();
-  const adminWithoutCompany =
-    me.data?.platformAdmin === true && me.data.company == null;
+  const adminWithoutCompany = isCompanyLessAdmin(me.data);
 
   useEffect(() => {
     if (status === "signed_out") router.replace("/login");

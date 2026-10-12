@@ -19,15 +19,16 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { hasCompany, isPlatformAdmin } from "@/lib/company-access";
 import { useMe, useThreadsSummary } from "@/lib/queries";
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const me = useMe();
-  const hasCompany = Boolean(me.data?.company);
-  const summary = useThreadsSummary(hasCompany);
+  const companyPages = hasCompany(me.data);
+  const summary = useThreadsSummary(companyPages);
 
   const items = [
-    ...(hasCompany
+    ...(companyPages
       ? [
           {
             title: "Conversaciones",
@@ -48,7 +49,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           },
         ]
       : []),
-    ...(me.data?.platformAdmin
+    ...(isPlatformAdmin(me.data)
       ? [
           {
             title: "Empresas",
@@ -66,7 +67,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              render={<Link href={hasCompany ? "/threads" : "/companies"} />}
+              render={<Link href={companyPages ? "/threads" : "/companies"} />}
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <RadarIcon className="size-4" />
@@ -77,7 +78,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
                   {me.data?.company?.name ??
-                    (me.data?.platformAdmin ? "Plataforma" : " ")}
+                    (isPlatformAdmin(me.data) ? "Plataforma" : " ")}
                 </span>
               </div>
             </SidebarMenuButton>
@@ -90,7 +91,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <NavUser
           email={me.data?.operator?.email ?? ""}
-          label={hasCompany ? "Operador" : "Administración"}
+          label={companyPages ? "Operador" : "Administración"}
         />
       </SidebarFooter>
     </Sidebar>

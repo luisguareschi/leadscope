@@ -10,12 +10,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { useCompanyPages } from "@/lib/company-access";
 import { useMe, useSecrets } from "@/lib/queries";
 
 export default function IntegrationsPage() {
   const me = useMe();
-  const query = useSecrets();
+  const companyPages = useCompanyPages();
+  const query = useSecrets(companyPages.enabled);
   const company = me.data?.company?.name;
+
+  if (companyPages.blocked) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-24">
+        <Spinner className="size-6 text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
