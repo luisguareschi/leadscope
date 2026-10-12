@@ -72,8 +72,23 @@ describe("platform admin companies", () => {
 
     const row = await db.company.findUniqueOrThrow({
       where: { slug: "costa-sur" },
-      include: { operators: true, threads: true },
+      include: { operators: true, threads: true, settingsVersions: true },
     });
+    expect(row.instructions).toBe(
+      "Costa Sur es una desarrolladora inmobiliaria.",
+    );
+    expect(
+      row.settingsVersions.map(({ kind, createdByEmail }) => ({
+        kind,
+        createdByEmail,
+      })),
+    ).toEqual(
+      expect.arrayContaining([
+        { kind: "config", createdByEmail: "admin@example.com" },
+        { kind: "instructions", createdByEmail: "admin@example.com" },
+      ]),
+    );
+    expect(row.settingsVersions).toHaveLength(2);
     expect(row.encryptedSecrets).toBeNull();
     expect(row.whatsappPhoneNumberId).toBeNull();
     expect(row.threads).toEqual([]);

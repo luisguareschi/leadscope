@@ -6,6 +6,7 @@ import { formLeadsRoutes } from "./features/form-leads/form-leads.routes.js";
 import { knowledgeRoutes } from "./features/knowledge/knowledge.routes.js";
 import { meRoutes } from "./features/me/me.routes.js";
 import { secretsRoutes } from "./features/secrets/secrets.routes.js";
+import { settingsRoutes } from "./features/settings/settings.routes.js";
 import { threadsRoutes } from "./features/threads/threads.routes.js";
 import { whatsappWebhookRoutes } from "./features/whatsapp-webhook/whatsapp-webhook.routes.js";
 import {
@@ -60,6 +61,7 @@ export function createApp(ctx: AppContext): Express {
   backoffice.use("/threads", company, threadsRoutes(ctx));
   backoffice.use("/knowledge", company, knowledgeRoutes(ctx));
   backoffice.use("/secrets", company, secretsRoutes(ctx));
+  backoffice.use("/settings", company, settingsRoutes(ctx));
   backoffice.use("/companies", requirePlatformAdmin(ctx), companiesRoutes(ctx));
   app.use("/internal", backoffice);
 

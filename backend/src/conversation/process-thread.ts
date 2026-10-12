@@ -1,11 +1,7 @@
 import { loadCompany, type LoadedCompany } from "../companies/load-company.js";
 import type { AppContext } from "../context.js";
 import { buildChatTurns } from "../engine/history.js";
-import {
-  buildSystemPrompt,
-  buildTurnContext,
-  type KnowledgeDocument,
-} from "../engine/prompt.js";
+import { buildTurnContext } from "../engine/prompt.js";
 import { decideTurn } from "../engine/turn.js";
 import type {
   CrmActionKind,
@@ -19,6 +15,7 @@ import type { LlmUsageRecord } from "../llm/types.js";
 import { syncThreadToCrm } from "./crm-sync.js";
 import { messagePreview } from "./inbound.js";
 import { isWithinReplyWindow } from "./reply-window.js";
+import { loadSystemPrompt } from "./system-prompt.js";
 import { withThreadLease } from "./thread-lease.js";
 
 export type TurnOutcome =
@@ -37,17 +34,6 @@ function rulesFor(company: LoadedCompany): TurnRules {
   };
 }
 
-async function loadKnowledge(
-  ctx: AppContext,
-  companyId: string,
-): Promise<KnowledgeDocument[]> {
-  return ctx.db.knowledgeFile.findMany({
-    where: { companyId },
-    orderBy: { name: "asc" },
-    select: { name: true, updatedAt: true, text: true },
-  });
-}
-
 async function askModel(
   ctx: AppContext,
   company: LoadedCompany,
@@ -55,8 +41,8 @@ async function askModel(
 ): Promise<{ input: TurnInput; usage: LlmUsageRecord | null }> {
   const { config } = company;
   try {
-    const [documents, recent] = await Promise.all([
-      loadKnowledge(ctx, company.id),
+    const [{ system, documents }, recent] = await Promise.all([
+      loadSystemPrompt(ctx, company),
       ctx.db.message.findMany({
         where: { threadId: thread.id },
         orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
@@ -68,7 +54,7 @@ async function askModel(
       model: config.llm.model,
       temperature: config.llm.temperature,
       timeoutMs: config.llm.timeoutMs,
-      system: buildSystemPrompt(config, documents),
+      system,
       turnContext: buildTurnContext(thread, config, ctx.now()),
       messages: buildChatTurns(recent.reverse(), config.llm.historyLimit),
       scenario: { thread, config, documents },

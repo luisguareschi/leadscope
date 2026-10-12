@@ -1,5 +1,8 @@
 import { parseCompanyConfig } from "../../companies/company-config.js";
-import { starterCompanyConfig } from "../../companies/starter-config.js";
+import {
+  starterCompanyConfig,
+  starterInstructions,
+} from "../../companies/starter-config.js";
 import type { AppContext } from "../../context.js";
 import { conflict } from "../../lib/http-error.js";
 import { isUniqueViolation } from "../../lib/prisma.js";
@@ -20,13 +23,14 @@ function uniqueFields(error: unknown): string {
 }
 
 /**
- * Company row, slug, starter config, and the first operator. Secrets stay empty; that
- * company's operator sets them later from Integraciones. Does not move an email that
- * already belongs to a company.
+ * Company row, slug, starter config and instructions (each saved as its first version), and the
+ * first operator. Secrets stay empty; that company's operator sets them later from Integraciones.
+ * Does not move an email that already belongs to a company.
  */
 export async function createCompany(
   ctx: AppContext,
   input: CreateCompanyInput,
+  adminEmail: string,
 ) {
   const slugTaken = await ctx.db.company.findUnique({
     where: { slug: input.slug },
@@ -45,13 +49,22 @@ export async function createCompany(
   if (emailTaken)
     throw conflict("Ese email ya es operador de una empresa.", "email_taken");
 
+  const config = parseCompanyConfig(starterCompanyConfig(input.name));
+  const instructions = starterInstructions(input.name);
   try {
     const company = await ctx.db.company.create({
       data: {
         name: input.name,
         slug: input.slug,
-        config: parseCompanyConfig(starterCompanyConfig(input.name)),
+        config,
+        instructions,
         operators: { create: { email: input.operatorEmail } },
+        settingsVersions: {
+          create: [
+            { kind: "config", config, createdByEmail: adminEmail },
+            { kind: "instructions", instructions, createdByEmail: adminEmail },
+          ],
+        },
       },
       select: companySelect,
     });
