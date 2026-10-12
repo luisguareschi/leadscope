@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useClearSecret, useSetSecret } from "@/lib/queries";
 import type { SecretStatus } from "@/lib/types";
+import { cn } from "cn";
 
 const COPY: Record<SecretStatus["name"], { title: string; description: string }> = {
   anthropicApiKey: {
@@ -68,7 +69,7 @@ export function SecretRow({ secret }: { secret: SecretStatus }) {
         <Field>
           <div className="flex flex-wrap items-center gap-2">
             <FieldLabel htmlFor={inputId}>{copy.title}</FieldLabel>
-            <Badge variant={secret.set ? "secondary" : "outline"}>{secret.set ? "Configurada" : "Sin configurar"}</Badge>
+            <Badge variant={secret.set ? "secondary" : "outline"} className={cn(secret.set ? "bg-green-500 text-white": "")}>{secret.set ? "Configurada" : "Sin configurar"}</Badge>
             {secret.last4 ? (
               <span className="font-mono text-xs text-muted-foreground" title="Últimos 4 caracteres">
                 …{secret.last4}
