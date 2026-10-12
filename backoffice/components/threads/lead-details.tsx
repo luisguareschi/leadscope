@@ -27,7 +27,9 @@ function Detail({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="grid gap-0.5">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="text-sm break-words">{value ?? <span className="text-muted-foreground">—</span>}</dd>
+      <dd className="text-sm break-words">
+        {value ?? <span className="text-muted-foreground">—</span>}
+      </dd>
     </div>
   );
 }
@@ -65,7 +67,10 @@ export function LeadDetails({ thread }: { thread: Thread }) {
         <Separator />
         <dl className="grid gap-3">
           <Detail label="HubSpot" value={crmLabel(thread.crm)} />
-          <Detail label="Ventana de respuesta de WhatsApp" value={replyWindowText(thread.replyWindowClosesAt)} />
+          <Detail
+            label="Ventana de respuesta de WhatsApp"
+            value={replyWindowText(thread.replyWindowClosesAt)}
+          />
           <Detail label="Primer contacto" value={formatDateTime(thread.createdAt)} />
         </dl>
         <Separator />
@@ -82,9 +87,14 @@ export function LeadDetails({ thread }: { thread: Thread }) {
             </Button>
           )}
           <p className="text-xs text-muted-foreground">
-            Pausá cuando un asesor tome la conversación desde su WhatsApp, así el asistente no se mete.
+            Pausá cuando un asesor tome la conversación desde su WhatsApp, así el asistente no se
+            mete.
           </p>
-          <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setConfirming(true)}>
+          <Button
+            variant="ghost"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setConfirming(true)}
+          >
             <Trash2Icon />
             Eliminar conversación
           </Button>
@@ -95,8 +105,8 @@ export function LeadDetails({ thread }: { thread: Thread }) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar esta conversación?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se borran la conversación y todos sus mensajes de LeadScope. Usalo cuando el lead pide que borremos sus datos
-              (Ley 18.331). El contacto en HubSpot no se modifica.
+              Se borran la conversación y todos sus mensajes de LeadScope. Usalo cuando el lead pide
+              que borremos sus datos (Ley 18.331). El contacto en HubSpot no se modifica.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

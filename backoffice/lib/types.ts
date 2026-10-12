@@ -64,13 +64,19 @@ export type KnowledgeFile = {
 
 export type KnowledgeList = {
   files: KnowledgeFile[];
-  usage: { usedChars: number; maxFileBytes: number; maxCharsPerFile: number; maxCharsTotal: number };
+  usage: {
+    usedChars: number;
+    maxFileBytes: number;
+    maxCharsPerFile: number;
+    maxCharsTotal: number;
+  };
   acceptedExtensions: string[];
 };
 
 export type Me = { operator: { email: string }; company: { name: string; slug: string } };
 
-export type SecretName = "anthropicApiKey" | "metaAccessToken" | "hubspotAccessToken" | "formLeadSecret";
+export type SecretName =
+  "anthropicApiKey" | "metaAccessToken" | "hubspotAccessToken" | "formLeadSecret";
 
 /** Write-only status. `last4` is absent when showing it would reveal the whole secret. */
 export type SecretStatus = {

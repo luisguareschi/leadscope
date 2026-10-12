@@ -1,7 +1,15 @@
 "use client";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 const DEV_TOKEN_KEY = "leadscope.devToken";
 
@@ -20,14 +28,16 @@ type AuthValue = {
 
 const AuthContext = createContext<AuthValue | null>(null);
 
-export const AUTH_MODE: AuthMode = process.env.NEXT_PUBLIC_AUTH_MODE === "supabase" ? "supabase" : "dev";
+export const AUTH_MODE: AuthMode =
+  process.env.NEXT_PUBLIC_AUTH_MODE === "supabase" ? "supabase" : "dev";
 
 let supabase: SupabaseClient | null = null;
 
 function supabaseClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error("Falta configurar NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+  if (!url || !key)
+    throw new Error("Falta configurar NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.");
   supabase ??= createClient(url, key);
   return supabase;
 }
@@ -56,7 +66,11 @@ function writeDevToken(token: string | null) {
 
 /** Dev sign-in lives in localStorage. `undefined` until the browser has been read (first render). */
 function useDevToken(): string | null | undefined {
-  return useSyncExternalStore(subscribeDevToken, () => localStorage.getItem(DEV_TOKEN_KEY), () => undefined);
+  return useSyncExternalStore(
+    subscribeDevToken,
+    () => localStorage.getItem(DEV_TOKEN_KEY),
+    () => undefined,
+  );
 }
 
 /**
@@ -69,7 +83,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [supabaseEmail, setSupabaseEmail] = useState<string | null>(null);
 
   const status: AuthValue["status"] =
-    AUTH_MODE === "dev" ? (devToken === undefined ? "loading" : devToken ? "signed_in" : "signed_out") : supabaseStatus;
+    AUTH_MODE === "dev"
+      ? devToken === undefined
+        ? "loading"
+        : devToken
+          ? "signed_in"
+          : "signed_out"
+      : supabaseStatus;
   const email = AUTH_MODE === "dev" ? (devToken ? devToken.slice(4) : null) : supabaseEmail;
 
   useEffect(() => {
@@ -111,9 +131,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const requestPasswordReset = useCallback(async (address: string) => {
-    const { error } = await supabaseClient().auth.resetPasswordForEmail(address.trim().toLowerCase(), {
-      redirectTo: `${window.location.origin}/auth/set-password`,
-    });
+    const { error } = await supabaseClient().auth.resetPasswordForEmail(
+      address.trim().toLowerCase(),
+      {
+        redirectTo: `${window.location.origin}/auth/set-password`,
+      },
+    );
     if (error) throw new Error(error.message);
   }, []);
 
@@ -123,7 +146,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<AuthValue>(
-    () => ({ mode: AUTH_MODE, status, email, getToken, signIn, signOut, requestPasswordReset, updatePassword }),
+    () => ({
+      mode: AUTH_MODE,
+      status,
+      email,
+      getToken,
+      signIn,
+      signOut,
+      requestPasswordReset,
+      updatePassword,
+    }),
     [status, email, getToken, signIn, signOut, requestPasswordReset, updatePassword],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

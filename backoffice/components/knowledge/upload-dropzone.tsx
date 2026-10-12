@@ -8,7 +8,12 @@ import { Spinner } from "@/components/ui/spinner";
 import { useUploadKnowledgeFile } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
-type UploadStatus = { id: number; name: string; state: "uploading" | "done" | "error"; message?: string };
+type UploadStatus = {
+  id: number;
+  name: string;
+  state: "uploading" | "done" | "error";
+  message?: string;
+};
 
 let nextId = 0;
 
@@ -19,19 +24,31 @@ export function UploadDropzone({ accept }: { accept: string[] }) {
   const [statuses, setStatuses] = useState<UploadStatus[]>([]);
 
   const update = (id: number, patch: Partial<UploadStatus>) =>
-    setStatuses((current) => current.map((status) => (status.id === id ? { ...status, ...patch } : status)));
+    setStatuses((current) =>
+      current.map((status) => (status.id === id ? { ...status, ...patch } : status)),
+    );
 
   async function uploadAll(files: File[]) {
-    const queued = files.map((file) => ({ id: nextId++, name: file.name, state: "uploading" as const }));
+    const queued = files.map((file) => ({
+      id: nextId++,
+      name: file.name,
+      state: "uploading" as const,
+    }));
     setStatuses((current) => [...queued, ...current].slice(0, 12));
     // One at a time, so each upload is checked against the space the previous ones used.
     for (const [index, file] of files.entries()) {
       const id = queued[index]!.id;
       try {
         const result = await upload.mutateAsync({ file });
-        update(id, { state: "done", message: result.replaced ? "Reemplazó a la versión anterior" : "Subido" });
+        update(id, {
+          state: "done",
+          message: result.replaced ? "Reemplazó a la versión anterior" : "Subido",
+        });
       } catch (error) {
-        update(id, { state: "error", message: error instanceof Error ? error.message : "No se pudo subir" });
+        update(id, {
+          state: "error",
+          message: error instanceof Error ? error.message : "No se pudo subir",
+        });
       }
     }
   }
@@ -63,7 +80,8 @@ export function UploadDropzone({ accept }: { accept: string[] }) {
           </div>
           <span className="font-medium">Arrastrá archivos o hacé clic para elegirlos</span>
           <span className="text-sm text-muted-foreground">
-            PDF, Word, Excel, PowerPoint, CSV, texto o Markdown. Un archivo con el mismo nombre reemplaza al anterior.
+            PDF, Word, Excel, PowerPoint, CSV, texto o Markdown. Un archivo con el mismo nombre
+            reemplaza al anterior.
           </span>
         </button>
         <input
@@ -81,7 +99,10 @@ export function UploadDropzone({ accept }: { accept: string[] }) {
         {statuses.length > 0 ? (
           <ul className="flex flex-col gap-1.5">
             {statuses.map((status) => (
-              <li key={status.id} className="flex items-start gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm">
+              <li
+                key={status.id}
+                className="flex items-start gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm"
+              >
                 <span className="mt-0.5">
                   {status.state === "uploading" ? (
                     <Spinner className="size-4" />
@@ -94,7 +115,12 @@ export function UploadDropzone({ accept }: { accept: string[] }) {
                 <span className="grid min-w-0 flex-1">
                   <span className="truncate font-medium">{status.name}</span>
                   {status.message ? (
-                    <span className={cn("text-xs", status.state === "error" ? "text-destructive" : "text-muted-foreground")}>
+                    <span
+                      className={cn(
+                        "text-xs",
+                        status.state === "error" ? "text-destructive" : "text-muted-foreground",
+                      )}
+                    >
                       {status.message}
                     </span>
                   ) : null}
@@ -104,7 +130,9 @@ export function UploadDropzone({ accept }: { accept: string[] }) {
                     variant="ghost"
                     size="icon-xs"
                     aria-label="Quitar de la lista"
-                    onClick={() => setStatuses((current) => current.filter((item) => item.id !== status.id))}
+                    onClick={() =>
+                      setStatuses((current) => current.filter((item) => item.id !== status.id))
+                    }
                   >
                     <XIcon />
                   </Button>

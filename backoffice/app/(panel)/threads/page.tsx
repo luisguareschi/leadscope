@@ -52,11 +52,18 @@ function ThreadsView() {
 
   return (
     <>
-      <SummaryCards summary={counts} active={status} onSelect={(next) => setParams({ status: next })} />
+      <SummaryCards
+        summary={counts}
+        active={status}
+        onSelect={(next) => setParams({ status: next })}
+      />
       <div className="px-4 lg:px-6">
         <Card className="gap-0 py-0 shadow-xs">
           <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-            <Tabs value={status} onValueChange={(value) => setParams({ status: value as ThreadStatusFilter })}>
+            <Tabs
+              value={status}
+              onValueChange={(value) => setParams({ status: value as ThreadStatusFilter })}
+            >
               <div className="-mx-1 overflow-x-auto px-1 overflow-y-hidden">
                 <TabsList>
                   {FILTERS.map((filter) => {
@@ -64,7 +71,11 @@ function ThreadsView() {
                     return (
                       <TabsTrigger key={filter.value} value={filter.value}>
                         {filter.label}
-                        {count !== undefined ? <span className="text-xs text-muted-foreground tabular-nums">{count}</span> : null}
+                        {count !== undefined ? (
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {count}
+                          </span>
+                        ) : null}
                       </TabsTrigger>
                     );
                   })}
@@ -91,11 +102,19 @@ function ThreadsView() {
               </Alert>
             </div>
           ) : (
-            <ThreadsTable threads={rows} loading={threads.isPending} filtered={status !== "all" || Boolean(search)} />
+            <ThreadsTable
+              threads={rows}
+              loading={threads.isPending}
+              filtered={status !== "all" || Boolean(search)}
+            />
           )}
           {threads.hasNextPage ? (
             <div className="flex justify-center border-t p-3">
-              <Button variant="ghost" onClick={() => threads.fetchNextPage()} disabled={threads.isFetchingNextPage}>
+              <Button
+                variant="ghost"
+                onClick={() => threads.fetchNextPage()}
+                disabled={threads.isFetchingNextPage}
+              >
                 {threads.isFetchingNextPage ? <Spinner /> : null}
                 Ver más conversaciones
               </Button>

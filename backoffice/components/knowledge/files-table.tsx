@@ -30,13 +30,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { formatBytes, formatNumber, formatRelative } from "@/lib/format";
 import { useDeleteKnowledgeFile, useUploadKnowledgeFile } from "@/lib/queries";
 import type { KnowledgeFile } from "@/lib/types";
 
 function FormatIcon({ format }: { format: string }) {
-  if (["xlsx", "xls", "ods", "csv"].includes(format)) return <FileSpreadsheetIcon className="size-4 text-emerald-600" />;
+  if (["xlsx", "xls", "ods", "csv"].includes(format))
+    return <FileSpreadsheetIcon className="size-4 text-emerald-600" />;
   if (format === "pptx") return <PresentationIcon className="size-4 text-orange-600" />;
   if (format === "pdf") return <FileTypeIcon className="size-4 text-red-600" />;
   return <FileTextIcon className="size-4 text-primary" />;
@@ -81,11 +89,17 @@ export function FilesTable({
                 >
                   <FormatIcon format={file.format} />
                   <span className="truncate">{file.name}</span>
-                  {upload.isPending && replacing?.id === file.id ? <Spinner className="size-3.5" /> : null}
+                  {upload.isPending && replacing?.id === file.id ? (
+                    <Spinner className="size-3.5" />
+                  ) : null}
                 </button>
               </TableCell>
-              <TableCell className="hidden text-muted-foreground sm:table-cell">{file.formatLabel}</TableCell>
-              <TableCell className="text-right tabular-nums">{formatNumber(file.charCount)}</TableCell>
+              <TableCell className="hidden text-muted-foreground sm:table-cell">
+                {file.formatLabel}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatNumber(file.charCount)}
+              </TableCell>
               <TableCell className="hidden text-right text-muted-foreground tabular-nums md:table-cell">
                 {formatBytes(file.sizeBytes)}
               </TableCell>
@@ -95,7 +109,15 @@ export function FilesTable({
               </TableCell>
               <TableCell className="pr-4 lg:pr-6">
                 <DropdownMenu>
-                  <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Acciones para ${file.name}`} />}>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Acciones para ${file.name}`}
+                      />
+                    }
+                  >
                     <EllipsisVerticalIcon />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-44">

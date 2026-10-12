@@ -34,7 +34,8 @@ export function useThreadActionWithToast(threadId: string) {
 
 export function ThreadAlerts({ thread }: { thread: Thread }) {
   const { run, pending } = useThreadActionWithToast(thread.id);
-  const windowClosed = thread.replyWindowClosesAt !== null && new Date(thread.replyWindowClosesAt) < new Date();
+  const windowClosed =
+    thread.replyWindowClosesAt !== null && new Date(thread.replyWindowClosesAt) < new Date();
 
   return (
     <div className="flex flex-col gap-3">
@@ -43,11 +44,16 @@ export function ThreadAlerts({ thread }: { thread: Thread }) {
           <HandIcon />
           <AlertTitle>El asistente se detuvo y espera a una persona</AlertTitle>
           <AlertDescription className="text-amber-900/80 dark:text-amber-200/80">
-            {needsHumanReasonLabel(thread.needsHumanReason)} Contactá al lead desde tu WhatsApp y, cuando esté resuelto,
-            devolvele la conversación al asistente.
+            {needsHumanReasonLabel(thread.needsHumanReason)} Contactá al lead desde tu WhatsApp y,
+            cuando esté resuelto, devolvele la conversación al asistente.
           </AlertDescription>
           <AlertAction>
-            <Button size="sm" variant="outline" onClick={() => run("clear-needs-human")} disabled={pending !== null}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => run("clear-needs-human")}
+              disabled={pending !== null}
+            >
               {pending === "clear-needs-human" ? <Spinner /> : null}
               Marcar como atendida
             </Button>
@@ -58,9 +64,17 @@ export function ThreadAlerts({ thread }: { thread: Thread }) {
         <Alert>
           <PauseCircleIcon />
           <AlertTitle>Asistente pausado</AlertTitle>
-          <AlertDescription>Un asesor tomó esta conversación. Los mensajes nuevos se guardan, pero el asistente no responde.</AlertDescription>
+          <AlertDescription>
+            Un asesor tomó esta conversación. Los mensajes nuevos se guardan, pero el asistente no
+            responde.
+          </AlertDescription>
           <AlertAction>
-            <Button size="sm" variant="outline" onClick={() => run("resume")} disabled={pending !== null}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => run("resume")}
+              disabled={pending !== null}
+            >
               {pending === "resume" ? <Spinner /> : null}
               Reanudar
             </Button>
@@ -73,10 +87,17 @@ export function ThreadAlerts({ thread }: { thread: Thread }) {
           <AlertTitle>No se pudo guardar en HubSpot</AlertTitle>
           <AlertDescription>
             {thread.crm.lastError}
-            {thread.crm.retriesExhausted ? " Se agotaron los reintentos automáticos." : " Se reintenta solo en unos minutos."}
+            {thread.crm.retriesExhausted
+              ? " Se agotaron los reintentos automáticos."
+              : " Se reintenta solo en unos minutos."}
           </AlertDescription>
           <AlertAction>
-            <Button size="sm" variant="outline" onClick={() => run("crm-sync")} disabled={pending !== null}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => run("crm-sync")}
+              disabled={pending !== null}
+            >
               {pending === "crm-sync" ? <Spinner /> : null}
               Reintentar
             </Button>
@@ -87,7 +108,9 @@ export function ThreadAlerts({ thread }: { thread: Thread }) {
         <Alert>
           <TimerOffIcon />
           <AlertTitle>Pasaron más de 24 horas desde el último mensaje del lead</AlertTitle>
-          <AlertDescription>WhatsApp no deja que el asistente le escriba hasta que el lead vuelva a escribir.</AlertDescription>
+          <AlertDescription>
+            WhatsApp no deja que el asistente le escriba hasta que el lead vuelva a escribir.
+          </AlertDescription>
         </Alert>
       ) : null}
     </div>

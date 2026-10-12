@@ -8,7 +8,13 @@ import { UploadDropzone } from "@/components/knowledge/upload-dropzone";
 import { UsageCard } from "@/components/knowledge/usage-card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useKnowledgeFiles } from "@/lib/queries";
 import type { KnowledgeFile } from "@/lib/types";
@@ -24,8 +30,9 @@ export default function KnowledgePage() {
         <InfoIcon />
         <AlertTitle>El asistente responde solo con lo que está en estos archivos</AlertTitle>
         <AlertDescription>
-          Precios desde, tipologías, fechas de entrega y orientación salen de acá. Cuando cambie algo, subí la versión nueva con
-          el mismo nombre: reemplaza a la anterior y el asistente la usa desde la próxima respuesta.
+          Precios desde, tipologías, fechas de entrega y orientación salen de acá. Cuando cambie
+          algo, subí la versión nueva con el mismo nombre: reemplaza a la anterior y el asistente la
+          usa desde la próxima respuesta.
         </AlertDescription>
       </Alert>
 
@@ -48,7 +55,9 @@ export default function KnowledgePage() {
       <Card className="gap-0 pb-0 shadow-xs">
         <CardHeader className="border-b pb-4">
           <CardTitle>Archivos</CardTitle>
-          <CardDescription>Hacé clic en un archivo para ver el texto que lee el asistente.</CardDescription>
+          <CardDescription>
+            Hacé clic en un archivo para ver el texto que lee el asistente.
+          </CardDescription>
         </CardHeader>
         {query.isPending ? (
           <div className="flex flex-col gap-2 p-4 lg:p-6">
@@ -65,7 +74,8 @@ export default function KnowledgePage() {
               </EmptyMedia>
               <EmptyTitle>Todavía no hay archivos</EmptyTitle>
               <EmptyDescription>
-                Subí la ficha de proyectos (precios, tipologías, entrega, orientación) y las preguntas frecuentes.
+                Subí la ficha de proyectos (precios, tipologías, entrega, orientación) y las
+                preguntas frecuentes.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

@@ -1,7 +1,14 @@
 "use client";
 
 import { HandIcon, MessageCircleIcon, PauseCircleIcon, PhoneCallIcon } from "lucide-react";
-import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { ThreadsSummary, ThreadStatusFilter } from "@/lib/types";
@@ -12,10 +19,30 @@ const CARDS: Array<{
   hint: string;
   icon: React.ReactNode;
 }> = [
-  { status: "active", title: "En curso", hint: "El asistente está calificando o respondiendo", icon: <MessageCircleIcon /> },
-  { status: "handoff", title: "Derivadas", hint: "Esperan la llamada de un asesor", icon: <PhoneCallIcon /> },
-  { status: "needs_human", title: "Requieren asesor", hint: "El asistente se detuvo y espera a una persona", icon: <HandIcon /> },
-  { status: "paused", title: "Pausadas", hint: "Un asesor tomó la conversación", icon: <PauseCircleIcon /> },
+  {
+    status: "active",
+    title: "En curso",
+    hint: "El asistente está calificando o respondiendo",
+    icon: <MessageCircleIcon />,
+  },
+  {
+    status: "handoff",
+    title: "Derivadas",
+    hint: "Esperan la llamada de un asesor",
+    icon: <PhoneCallIcon />,
+  },
+  {
+    status: "needs_human",
+    title: "Requieren asesor",
+    hint: "El asistente se detuvo y espera a una persona",
+    icon: <HandIcon />,
+  },
+  {
+    status: "paused",
+    title: "Pausadas",
+    hint: "Un asesor tomó la conversación",
+    icon: <PauseCircleIcon />,
+  },
 ];
 
 export function SummaryCards({

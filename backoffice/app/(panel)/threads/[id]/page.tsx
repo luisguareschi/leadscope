@@ -21,7 +21,13 @@ export default function ThreadPage() {
   const query = useThread(id);
 
   const back = (
-    <Button variant="ghost" size="sm" className="w-fit" nativeButton={false} render={<Link href="/threads" />}>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="w-fit"
+      nativeButton={false}
+      render={<Link href="/threads" />}
+    >
       <ArrowLeftIcon />
       Conversaciones
     </Button>
@@ -33,8 +39,12 @@ export default function ThreadPage() {
       <div className="flex flex-col gap-4 px-4 lg:px-6">
         {back}
         <Alert variant={missing ? "default" : "destructive"}>
-          <AlertTitle>{missing ? "Esta conversación no existe" : "No se pudo cargar la conversación"}</AlertTitle>
-          <AlertDescription>{missing ? "Puede que la hayan eliminado." : query.error.message}</AlertDescription>
+          <AlertTitle>
+            {missing ? "Esta conversación no existe" : "No se pudo cargar la conversación"}
+          </AlertTitle>
+          <AlertDescription>
+            {missing ? "Puede que la hayan eliminado." : query.error.message}
+          </AlertDescription>
         </Alert>
       </div>
     );
@@ -47,7 +57,9 @@ export default function ThreadPage() {
         {back}
         {data ? (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h2 className="text-xl font-semibold">{data.thread.name ?? formatPhone(data.thread.phone)}</h2>
+            <h2 className="text-xl font-semibold">
+              {data.thread.name ?? formatPhone(data.thread.phone)}
+            </h2>
             <StatusBadge thread={data.thread} />
             {data.thread.source === "form" ? (
               <Badge variant="outline" className="gap-1 text-muted-foreground">
@@ -55,7 +67,11 @@ export default function ThreadPage() {
                 Formulario
               </Badge>
             ) : null}
-            {data.thread.name ? <span className="text-sm text-muted-foreground">{formatPhone(data.thread.phone)}</span> : null}
+            {data.thread.name ? (
+              <span className="text-sm text-muted-foreground">
+                {formatPhone(data.thread.phone)}
+              </span>
+            ) : null}
           </div>
         ) : (
           <Skeleton className="h-7 w-64" />
@@ -67,7 +83,9 @@ export default function ThreadPage() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Card className="gap-0 overflow-hidden py-0 shadow-xs">
           <CardHeader className="border-b py-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Conversación</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Conversación
+            </CardTitle>
           </CardHeader>
           <div className="h-[calc(100svh-17rem)] min-h-96 overflow-y-auto bg-muted/30">
             {data ? (

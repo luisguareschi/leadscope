@@ -5,9 +5,22 @@ import { useRouter } from "next/navigation";
 import { FileTextIcon, MessagesSquareIcon, SearchXIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { formatPhone, formatRelative, initials } from "@/lib/format";
 import type { Thread } from "@/lib/types";
 import { CrmIndicator } from "./crm-indicator";
@@ -28,8 +41,12 @@ export function ThreadsTable({
     return (
       <Empty className="border-0">
         <EmptyHeader>
-          <EmptyMedia variant="icon">{filtered ? <SearchXIcon /> : <MessagesSquareIcon />}</EmptyMedia>
-          <EmptyTitle>{filtered ? "No hay conversaciones con este filtro" : "Todavía no hay conversaciones"}</EmptyTitle>
+          <EmptyMedia variant="icon">
+            {filtered ? <SearchXIcon /> : <MessagesSquareIcon />}
+          </EmptyMedia>
+          <EmptyTitle>
+            {filtered ? "No hay conversaciones con este filtro" : "Todavía no hay conversaciones"}
+          </EmptyTitle>
           <EmptyDescription>
             {filtered
               ? "Probá con otro estado o buscá por otro nombre o teléfono."
@@ -69,7 +86,9 @@ export function ThreadsTable({
                 <TableCell className="pl-4 lg:pl-6">
                   <div className="flex items-center gap-3">
                     <Avatar className="size-8">
-                      <AvatarFallback className="text-xs">{initials(thread.name ?? thread.phone.slice(-2))}</AvatarFallback>
+                      <AvatarFallback className="text-xs">
+                        {initials(thread.name ?? thread.phone.slice(-2))}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="grid min-w-0 leading-tight">
                       <Link
@@ -79,10 +98,15 @@ export function ThreadsTable({
                       >
                         {thread.name ?? "Sin nombre"}
                       </Link>
-                      <span className="truncate text-xs text-muted-foreground">{formatPhone(thread.phone)}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {formatPhone(thread.phone)}
+                      </span>
                     </div>
                     {thread.source === "form" ? (
-                      <Badge variant="outline" className="hidden gap-1 text-muted-foreground lg:inline-flex">
+                      <Badge
+                        variant="outline"
+                        className="hidden gap-1 text-muted-foreground lg:inline-flex"
+                      >
                         <FileTextIcon />
                         Formulario
                       </Badge>
@@ -93,10 +117,17 @@ export function ThreadsTable({
                   <StatusBadge thread={thread} />
                 </TableCell>
                 <TableCell className="hidden max-w-[22rem] md:table-cell">
-                  <span className="block truncate text-muted-foreground">{thread.lastMessagePreview ?? "—"}</span>
+                  <span className="block truncate text-muted-foreground">
+                    {thread.lastMessagePreview ?? "—"}
+                  </span>
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-muted-foreground">{formatRelative(thread.lastMessageAt)}</TableCell>
-                <TableCell className="pr-4 text-center lg:pr-6" onClick={(event) => event.stopPropagation()}>
+                <TableCell className="whitespace-nowrap text-muted-foreground">
+                  {formatRelative(thread.lastMessageAt)}
+                </TableCell>
+                <TableCell
+                  className="pr-4 text-center lg:pr-6"
+                  onClick={(event) => event.stopPropagation()}
+                >
                   <CrmIndicator crm={thread.crm} />
                 </TableCell>
               </TableRow>

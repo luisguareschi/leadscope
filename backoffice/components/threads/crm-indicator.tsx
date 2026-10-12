@@ -29,7 +29,9 @@ export function CrmIndicator({ crm }: { crm: Thread["crm"] }) {
     );
   return (
     <Tooltip>
-      <TooltipTrigger render={<span className="inline-flex" aria-label={crmLabel(crm)} />}>{icon}</TooltipTrigger>
+      <TooltipTrigger render={<span className="inline-flex" aria-label={crmLabel(crm)} />}>
+        {icon}
+      </TooltipTrigger>
       <TooltipContent>{crmLabel(crm)}</TooltipContent>
     </Tooltip>
   );

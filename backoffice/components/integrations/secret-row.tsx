@@ -69,9 +69,17 @@ export function SecretRow({ secret }: { secret: SecretStatus }) {
         <Field>
           <div className="flex flex-wrap items-center gap-2">
             <FieldLabel htmlFor={inputId}>{copy.title}</FieldLabel>
-            <Badge variant={secret.set ? "secondary" : "outline"} className={cn(secret.set ? "bg-green-500 text-white": "")}>{secret.set ? "Configurada" : "Sin configurar"}</Badge>
+            <Badge
+              variant={secret.set ? "secondary" : "outline"}
+              className={cn(secret.set ? "bg-green-500 text-white" : "")}
+            >
+              {secret.set ? "Configurada" : "Sin configurar"}
+            </Badge>
             {secret.last4 ? (
-              <span className="font-mono text-xs text-muted-foreground" title="Últimos 4 caracteres">
+              <span
+                className="font-mono text-xs text-muted-foreground"
+                title="Últimos 4 caracteres"
+              >
                 …{secret.last4}
               </span>
             ) : null}
@@ -96,13 +104,20 @@ export function SecretRow({ secret }: { secret: SecretStatus }) {
                 Guardar
               </Button>
               {secret.set ? (
-                <Button type="button" variant="outline" onClick={() => setConfirming(true)} disabled={clear.isPending}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setConfirming(true)}
+                  disabled={clear.isPending}
+                >
                   Quitar
                 </Button>
               ) : null}
             </div>
           </div>
-          <FieldDescription>Guardar reemplaza esta clave. Si lo dejás vacío, no cambia.</FieldDescription>
+          <FieldDescription>
+            Guardar reemplaza esta clave. Si lo dejás vacío, no cambia.
+          </FieldDescription>
         </Field>
       </form>
 

@@ -38,7 +38,8 @@ function DeliveryStatus({ status }: { status: string | null }) {
       </span>
     );
   }
-  if (status === "read") return <CheckCheckIcon className="size-3.5 text-sky-600" aria-label="Leído" />;
+  if (status === "read")
+    return <CheckCheckIcon className="size-3.5 text-sky-600" aria-label="Leído" />;
   if (status === "delivered") return <CheckCheckIcon className="size-3.5" aria-label="Entregado" />;
   return <CheckIcon className="size-3.5" aria-label="Enviado" />;
 }
@@ -62,7 +63,9 @@ function Bubble({ message }: { message: ChatMessage }) {
           </div>
         ) : null}
         {message.body ? <p className="break-words whitespace-pre-wrap">{message.body}</p> : null}
-        {!message.body && !meta ? <p className="text-muted-foreground italic">(sin texto)</p> : null}
+        {!message.body && !meta ? (
+          <p className="text-muted-foreground italic">(sin texto)</p>
+        ) : null}
         <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-muted-foreground tabular-nums">
           {formatTime(message.sentAt)}
           {outbound ? <DeliveryStatus status={message.status} /> : null}
@@ -90,7 +93,9 @@ export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
           <Fragment key={message.id}>
             {showDay ? (
               <div className="my-2 flex justify-center">
-                <span className="rounded-full bg-muted px-3 py-0.5 text-xs text-muted-foreground">{day}</span>
+                <span className="rounded-full bg-muted px-3 py-0.5 text-xs text-muted-foreground">
+                  {day}
+                </span>
               </div>
             ) : null}
             <Bubble message={message} />

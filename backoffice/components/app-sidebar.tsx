@@ -42,7 +42,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               </div>
               <div className="grid flex-1 text-left leading-tight">
                 <span className="truncate text-base font-semibold">LeadScope</span>
-                <span className="truncate text-xs text-muted-foreground">{me.data?.company.name ?? " "}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {me.data?.company.name ?? " "}
+                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
