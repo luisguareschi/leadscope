@@ -47,9 +47,10 @@ export function PromptPreviewCard() {
               variant="outline"
               size="sm"
               onClick={() => {
-                void navigator.clipboard
-                  .writeText(preview.system)
-                  .then(() => toast.success("Prompt copiado."));
+                navigator.clipboard.writeText(preview.system).then(
+                  () => toast.success("Prompt copiado."),
+                  () => toast.error("No se pudo copiar el prompt."),
+                );
               }}
             >
               <CopyIcon />
