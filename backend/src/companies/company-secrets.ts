@@ -11,13 +11,18 @@ export const companySecretsSchema = z.object({
 
 export type CompanySecrets = z.infer<typeof companySecretsSchema>;
 export type CompanySecretName = keyof CompanySecrets;
-export const COMPANY_SECRET_NAMES = Object.keys(companySecretsSchema.shape) as CompanySecretName[];
+export const COMPANY_SECRET_NAMES = Object.keys(
+  companySecretsSchema.shape,
+) as CompanySecretName[];
 
 export function encryptSecrets(secrets: CompanySecrets, key: Buffer): string {
   return encrypt(JSON.stringify(companySecretsSchema.parse(secrets)), key);
 }
 
-export function decryptSecrets(payload: string | null, key: Buffer): CompanySecrets {
+export function decryptSecrets(
+  payload: string | null,
+  key: Buffer,
+): CompanySecrets {
   if (!payload) return {};
   return companySecretsSchema.parse(JSON.parse(decrypt(payload, key)));
 }

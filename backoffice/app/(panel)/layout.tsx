@@ -8,7 +8,11 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth";
 
-export default function PanelLayout({ children }: { children: React.ReactNode }) {
+export default function PanelLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { status } = useAuth();
   const router = useRouter();
 

@@ -34,13 +34,16 @@ export default function ThreadPage() {
   );
 
   if (query.isError) {
-    const missing = query.error instanceof ApiError && query.error.status === 404;
+    const missing =
+      query.error instanceof ApiError && query.error.status === 404;
     return (
       <div className="flex flex-col gap-4 px-4 lg:px-6">
         {back}
         <Alert variant={missing ? "default" : "destructive"}>
           <AlertTitle>
-            {missing ? "Esta conversación no existe" : "No se pudo cargar la conversación"}
+            {missing
+              ? "Esta conversación no existe"
+              : "No se pudo cargar la conversación"}
           </AlertTitle>
           <AlertDescription>
             {missing ? "Puede que la hayan eliminado." : query.error.message}
@@ -99,7 +102,11 @@ export default function ThreadPage() {
             )}
           </div>
         </Card>
-        {data ? <LeadDetails thread={data.thread} /> : <Skeleton className="h-96 w-full" />}
+        {data ? (
+          <LeadDetails thread={data.thread} />
+        ) : (
+          <Skeleton className="h-96 w-full" />
+        )}
       </div>
     </div>
   );

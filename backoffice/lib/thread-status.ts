@@ -30,7 +30,10 @@ export function displayStatus(
   }
 }
 
-export const STATUS_META: Record<DisplayStatus, { label: string; className: string }> = {
+export const STATUS_META: Record<
+  DisplayStatus,
+  { label: string; className: string }
+> = {
   needs_human: {
     label: "Requiere asesor",
     className: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
@@ -59,7 +62,9 @@ export const FILTERS: Array<{ value: ThreadStatusFilter; label: string }> = [
   { value: "closed", label: "Cerradas" },
 ];
 
-export function isStatusFilter(value: string | null): value is ThreadStatusFilter {
+export function isStatusFilter(
+  value: string | null,
+): value is ThreadStatusFilter {
   return FILTERS.some((filter) => filter.value === value);
 }
 
@@ -70,10 +75,13 @@ export function needsHumanReasonLabel(reason: string | null): string {
     return "El lead preguntó algo que tiene que responder una persona.";
   if (reason.startsWith("blocked_reply"))
     return "La respuesta del asistente tocaba un tema prohibido y no se envió.";
-  if (reason.startsWith("model_failure")) return "El modelo de IA no respondió a tiempo.";
-  if (reason === "empty_reply") return "El modelo de IA devolvió una respuesta vacía.";
+  if (reason.startsWith("model_failure"))
+    return "El modelo de IA no respondió a tiempo.";
+  if (reason === "empty_reply")
+    return "El modelo de IA devolvió una respuesta vacía.";
   if (reason.startsWith("send_failed"))
     return `WhatsApp no entregó la respuesta (${reason.slice("send_failed: ".length)}).`;
-  if (reason === "channel_unavailable") return "WhatsApp no está configurado para esta empresa.";
+  if (reason === "channel_unavailable")
+    return "WhatsApp no está configurado para esta empresa.";
   return reason;
 }

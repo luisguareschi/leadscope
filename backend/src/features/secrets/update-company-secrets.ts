@@ -1,4 +1,8 @@
-import { decryptSecrets, encryptSecrets, type CompanySecrets } from "../../companies/company-secrets.js";
+import {
+  decryptSecrets,
+  encryptSecrets,
+  type CompanySecrets,
+} from "../../companies/company-secrets.js";
 import type { AppContext } from "../../context.js";
 import { notFound } from "../../lib/http-error.js";
 
@@ -16,7 +20,9 @@ export async function updateCompanySecrets(
       SELECT "id" FROM "Company" WHERE "id" = ${companyId} FOR UPDATE
     `;
     if (!locked[0]) throw notFound("Empresa no encontrada");
-    const company = await tx.company.findUniqueOrThrow({ where: { id: companyId } });
+    const company = await tx.company.findUniqueOrThrow({
+      where: { id: companyId },
+    });
     const secrets = decryptSecrets(company.encryptedSecrets, ctx.encryptionKey);
     change(secrets);
     await tx.company.update({

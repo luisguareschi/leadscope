@@ -1,9 +1,18 @@
 import pino from "pino";
-import { parseCompanyConfig, type CompanyConfigInput } from "../../src/companies/company-config.js";
-import { encryptSecrets, type CompanySecrets } from "../../src/companies/company-secrets.js";
+import {
+  parseCompanyConfig,
+  type CompanyConfigInput,
+} from "../../src/companies/company-config.js";
+import {
+  encryptSecrets,
+  type CompanySecrets,
+} from "../../src/companies/company-secrets.js";
 import type { AppContext } from "../../src/context.js";
 import { createContext } from "../../src/create-context.js";
-import { createIntegrations, type Integrations } from "../../src/integrations/registry.js";
+import {
+  createIntegrations,
+  type Integrations,
+} from "../../src/integrations/registry.js";
 import type { InboundMessage } from "../../src/integrations/whatsapp/webhook-payload.js";
 import { parseEncryptionKey } from "../../src/lib/crypto.js";
 import { createPrisma, type Db } from "../../src/lib/prisma.js";
@@ -32,18 +41,32 @@ export const baseConfig: CompanyConfigInput = {
     budget: "¿Con qué presupuesto contás?",
     knowsProjects: "¿Ya conocés nuestros proyectos?",
   },
-  forbiddenTopics: { describe: ["Rentabilidad futura"], patterns: ["rentabilidad", "renta garantizada"] },
+  forbiddenTopics: {
+    describe: ["Rentabilidad futura"],
+    patterns: ["rentabilidad", "renta garantizada"],
+  },
   messages: {
     fallback: "Te va a contactar un asesor.",
     needsHuman: "Un asesor te va a responder eso.",
     nonText: "¿Me lo escribís?",
   },
-  whatsapp: { welcomeTemplate: { name: "bienvenida", language: "es", bodyPreview: "¡Hola! Gracias por escribirnos." } },
+  whatsapp: {
+    welcomeTemplate: {
+      name: "bienvenida",
+      language: "es",
+      bodyPreview: "¡Hola! Gracias por escribirnos.",
+    },
+  },
 };
 
 export async function createCompany(
   db: Db,
-  options: { slug?: string; phoneNumberId?: string; config?: Partial<CompanyConfigInput>; secrets?: CompanySecrets } = {},
+  options: {
+    slug?: string;
+    phoneNumberId?: string;
+    config?: Partial<CompanyConfigInput>;
+    secrets?: CompanySecrets;
+  } = {},
 ) {
   const slug = options.slug ?? "test-co";
   return db.company.create({
@@ -62,7 +85,9 @@ export async function createCompany(
 
 export type TestContext = AppContext & { llm: ScriptedLlm };
 
-export function createTestContext(options: { integrations?: Partial<Integrations>; now?: () => Date } = {}): TestContext {
+export function createTestContext(
+  options: { integrations?: Partial<Integrations>; now?: () => Date } = {},
+): TestContext {
   const env = testEnv();
   const llm = scriptedLlm();
   const base = createIntegrations(env, { llmFor: () => llm });
@@ -77,7 +102,10 @@ export function createTestContext(options: { integrations?: Partial<Integrations
 
 let messageCounter = 0;
 
-export function inbound(phoneNumberId: string, overrides: Partial<InboundMessage> = {}): InboundMessage {
+export function inbound(
+  phoneNumberId: string,
+  overrides: Partial<InboundMessage> = {},
+): InboundMessage {
   messageCounter += 1;
   return {
     phoneNumberId,

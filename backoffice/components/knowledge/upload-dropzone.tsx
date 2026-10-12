@@ -1,7 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CircleAlertIcon, CircleCheckIcon, UploadIcon, XIcon } from "lucide-react";
+import {
+  CircleAlertIcon,
+  CircleCheckIcon,
+  UploadIcon,
+  XIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -25,7 +30,9 @@ export function UploadDropzone({ accept }: { accept: string[] }) {
 
   const update = (id: number, patch: Partial<UploadStatus>) =>
     setStatuses((current) =>
-      current.map((status) => (status.id === id ? { ...status, ...patch } : status)),
+      current.map((status) =>
+        status.id === id ? { ...status, ...patch } : status,
+      ),
     );
 
   async function uploadAll(files: File[]) {
@@ -42,7 +49,9 @@ export function UploadDropzone({ accept }: { accept: string[] }) {
         const result = await upload.mutateAsync({ file });
         update(id, {
           state: "done",
-          message: result.replaced ? "Reemplazó a la versión anterior" : "Subido",
+          message: result.replaced
+            ? "Reemplazó a la versión anterior"
+            : "Subido",
         });
       } catch (error) {
         update(id, {
@@ -78,10 +87,12 @@ export function UploadDropzone({ accept }: { accept: string[] }) {
           <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
             <UploadIcon className="size-5" />
           </div>
-          <span className="font-medium">Arrastrá archivos o hacé clic para elegirlos</span>
+          <span className="font-medium">
+            Arrastrá archivos o hacé clic para elegirlos
+          </span>
           <span className="text-sm text-muted-foreground">
-            PDF, Word, Excel, PowerPoint, CSV, texto o Markdown. Un archivo con el mismo nombre
-            reemplaza al anterior.
+            PDF, Word, Excel, PowerPoint, CSV, texto o Markdown. Un archivo con
+            el mismo nombre reemplaza al anterior.
           </span>
         </button>
         <input
@@ -118,7 +129,9 @@ export function UploadDropzone({ accept }: { accept: string[] }) {
                     <span
                       className={cn(
                         "text-xs",
-                        status.state === "error" ? "text-destructive" : "text-muted-foreground",
+                        status.state === "error"
+                          ? "text-destructive"
+                          : "text-muted-foreground",
                       )}
                     >
                       {status.message}
@@ -131,7 +144,9 @@ export function UploadDropzone({ accept }: { accept: string[] }) {
                     size="icon-xs"
                     aria-label="Quitar de la lista"
                     onClick={() =>
-                      setStatuses((current) => current.filter((item) => item.id !== status.id))
+                      setStatuses((current) =>
+                        current.filter((item) => item.id !== status.id),
+                      )
                     }
                   >
                     <XIcon />

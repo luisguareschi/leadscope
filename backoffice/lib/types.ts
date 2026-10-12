@@ -1,5 +1,7 @@
-export type ThreadState = "greeting" | "qualify" | "answer" | "handoff" | "closed";
-export type ThreadStatusFilter = "all" | "active" | "handoff" | "needs_human" | "paused" | "closed";
+export type ThreadState =
+  "greeting" | "qualify" | "answer" | "handoff" | "closed";
+export type ThreadStatusFilter =
+  "all" | "active" | "handoff" | "needs_human" | "paused" | "closed";
 export type CrmStatus = "none" | "pending" | "synced" | "failed";
 
 export type Thread = {
@@ -73,10 +75,16 @@ export type KnowledgeList = {
   acceptedExtensions: string[];
 };
 
-export type Me = { operator: { email: string }; company: { name: string; slug: string } };
+export type Me = {
+  operator: { email: string };
+  company: { name: string; slug: string };
+};
 
 export type SecretName =
-  "anthropicApiKey" | "metaAccessToken" | "hubspotAccessToken" | "formLeadSecret";
+  | "anthropicApiKey"
+  | "metaAccessToken"
+  | "hubspotAccessToken"
+  | "formLeadSecret";
 
 /** Write-only status. `last4` is absent when showing it would reveal the whole secret. */
 export type SecretStatus = {

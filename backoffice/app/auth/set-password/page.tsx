@@ -5,7 +5,12 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth";
@@ -31,7 +36,11 @@ export default function SetPasswordPage() {
       toast.success("Contraseña guardada.");
       router.replace("/threads");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo guardar la contraseña.");
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "No se pudo guardar la contraseña.",
+      );
     } finally {
       setPending(false);
     }
@@ -47,7 +56,10 @@ export default function SetPasswordPage() {
 
   if (status === "signed_out") {
     return (
-      <AuthCard title="El enlace venció" description="Pedí uno nuevo desde la pantalla de ingreso.">
+      <AuthCard
+        title="El enlace venció"
+        description="Pedí uno nuevo desde la pantalla de ingreso."
+      >
         <Button className="w-full" onClick={() => router.replace("/login")}>
           Ir al ingreso
         </Button>
@@ -56,7 +68,10 @@ export default function SetPasswordPage() {
   }
 
   return (
-    <AuthCard title="Elegí tu contraseña" description="La vas a usar para entrar al panel.">
+    <AuthCard
+      title="Elegí tu contraseña"
+      description="La vas a usar para entrar al panel."
+    >
       <form onSubmit={onSubmit}>
         <FieldGroup>
           <Field>

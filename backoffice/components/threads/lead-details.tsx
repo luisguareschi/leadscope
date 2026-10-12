@@ -48,7 +48,8 @@ export function LeadDetails({ thread }: { thread: Thread }) {
   const remove = useDeleteThread();
   const [confirming, setConfirming] = useState(false);
 
-  const knows = thread.knowsProjects === null ? null : thread.knowsProjects ? "Sí" : "No";
+  const knows =
+    thread.knowsProjects === null ? null : thread.knowsProjects ? "Sí" : "No";
 
   return (
     <Card className="shadow-xs">
@@ -62,7 +63,10 @@ export function LeadDetails({ thread }: { thread: Thread }) {
           <Detail label="Conoce los proyectos" value={knows} />
           <Detail label="Horario para llamar" value={thread.callTime} />
           {thread.email ? <Detail label="Email" value={thread.email} /> : null}
-          <Detail label="Origen" value={thread.source === "form" ? "Formulario" : "WhatsApp"} />
+          <Detail
+            label="Origen"
+            value={thread.source === "form" ? "Formulario" : "WhatsApp"}
+          />
         </dl>
         <Separator />
         <dl className="grid gap-3">
@@ -71,24 +75,35 @@ export function LeadDetails({ thread }: { thread: Thread }) {
             label="Ventana de respuesta de WhatsApp"
             value={replyWindowText(thread.replyWindowClosesAt)}
           />
-          <Detail label="Primer contacto" value={formatDateTime(thread.createdAt)} />
+          <Detail
+            label="Primer contacto"
+            value={formatDateTime(thread.createdAt)}
+          />
         </dl>
         <Separator />
         <div className="flex flex-col gap-2">
           {thread.paused ? (
-            <Button variant="outline" onClick={() => run("resume")} disabled={pending !== null}>
+            <Button
+              variant="outline"
+              onClick={() => run("resume")}
+              disabled={pending !== null}
+            >
               {pending === "resume" ? <Spinner /> : <PlayIcon />}
               Reanudar asistente
             </Button>
           ) : (
-            <Button variant="outline" onClick={() => run("pause")} disabled={pending !== null}>
+            <Button
+              variant="outline"
+              onClick={() => run("pause")}
+              disabled={pending !== null}
+            >
               {pending === "pause" ? <Spinner /> : <PauseIcon />}
               Pausar asistente
             </Button>
           )}
           <p className="text-xs text-muted-foreground">
-            Pausá cuando un asesor tome la conversación desde su WhatsApp, así el asistente no se
-            mete.
+            Pausá cuando un asesor tome la conversación desde su WhatsApp, así
+            el asistente no se mete.
           </p>
           <Button
             variant="ghost"
@@ -105,8 +120,9 @@ export function LeadDetails({ thread }: { thread: Thread }) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar esta conversación?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se borran la conversación y todos sus mensajes de LeadScope. Usalo cuando el lead pide
-              que borremos sus datos (Ley 18.331). El contacto en HubSpot no se modifica.
+              Se borran la conversación y todos sus mensajes de LeadScope. Usalo
+              cuando el lead pide que borremos sus datos (Ley 18.331). El
+              contacto en HubSpot no se modifica.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -4,20 +4,39 @@ import { processThread } from "../../src/conversation/process-thread.js";
 import { sweepOnce } from "../../src/conversation/sweeper.js";
 import { withThreadLease } from "../../src/conversation/thread-lease.js";
 import type { Crm } from "../../src/integrations/crm/crm.js";
-import { ChannelError, FakeChannel } from "../../src/integrations/whatsapp/channel.js";
-import { createCompany, createTestContext, inbound, resetDb, testDb, type TestContext } from "../support/harness.js";
+import {
+  ChannelError,
+  FakeChannel,
+} from "../../src/integrations/whatsapp/channel.js";
+import {
+  createCompany,
+  createTestContext,
+  inbound,
+  resetDb,
+  testDb,
+  type TestContext,
+} from "../support/harness.js";
 
 let ctx: TestContext;
 let pnid: string;
 
-async function receive(body: string, overrides: Parameters<typeof inbound>[1] = {}) {
-  const result = await recordInboundMessage(ctx, inbound(pnid, { body, ...overrides }));
-  if (result.status !== "recorded") throw new Error(`not recorded: ${result.status}`);
+async function receive(
+  body: string,
+  overrides: Parameters<typeof inbound>[1] = {},
+) {
+  const result = await recordInboundMessage(
+    ctx,
+    inbound(pnid, { body, ...overrides }),
+  );
+  if (result.status !== "recorded")
+    throw new Error(`not recorded: ${result.status}`);
   return result;
 }
 
 async function thread() {
-  return testDb().thread.findFirstOrThrow({ include: { messages: { orderBy: { sentAt: "asc" } } } });
+  return testDb().thread.findFirstOrThrow({
+    include: { messages: { orderBy: { sentAt: "asc" } } },
+  });
 }
 
 beforeEach(async () => {
@@ -33,7 +52,12 @@ describe("inbound messages", () => {
   it("stores a new lead with an E.164 phone and their WhatsApp name", async () => {
     await receive("Hola");
     const saved = await thread();
-    expect(saved).toMatchObject({ phone: "+59899111222", waId: "59899111222", name: "Ana", state: "greeting" });
+    expect(saved).toMatchObject({
+      phone: "+59899111222",
+      waId: "59899111222",
+      name: "Ana",
+      state: "greeting",
+    });
     expect(saved.messages).toHaveLength(1);
     expect(saved.lastMessagePreview).toBe("Hola");
   });
@@ -41,12 +65,16 @@ describe("inbound messages", () => {
   it("ignores a second delivery of the same Meta message", async () => {
     const message = inbound(pnid, { body: "Hola" });
     await recordInboundMessage(ctx, message);
-    await expect(recordInboundMessage(ctx, message)).resolves.toEqual({ status: "duplicate" });
+    await expect(recordInboundMessage(ctx, message)).resolves.toEqual({
+      status: "duplicate",
+    });
     expect(await testDb().message.count()).toBe(1);
   });
 
   it("does not create a thread for a phone number id with no company", async () => {
-    await expect(recordInboundMessage(ctx, inbound("UNKNOWN"))).resolves.toEqual({ status: "unknown_company" });
+    await expect(
+      recordInboundMessage(ctx, inbound("UNKNOWN")),
+    ).resolves.toEqual({ status: "unknown_company" });
     expect(await testDb().thread.count()).toBe(0);
   });
 
@@ -61,20 +89,34 @@ describe("a bot turn", () => {
   it("answers a burst of messages with one reply and records model usage", async () => {
     const { threadId } = await receive("Hola");
     await receive("Busco 2 dormitorios para vivir");
-    ctx.llm.push({ reply: "¡Hola Ana! ¿Con qué presupuesto contás?", interest: "2 dormitorios para vivir" });
+    ctx.llm.push({
+      reply: "¡Hola Ana! ¿Con qué presupuesto contás?",
+      interest: "2 dormitorios para vivir",
+    });
 
     await expect(processThread(ctx, threadId)).resolves.toBe("replied");
 
     const saved = await thread();
     expect(saved.state).toBe("qualify");
     expect(saved.interest).toBe("2 dormitorios para vivir");
-    expect(saved.messages.filter((m) => m.direction === "outbound").map((m) => m.body)).toEqual([
-      "¡Hola Ana! ¿Con qué presupuesto contás?",
-    ]);
-    expect(saved.messages.every((m) => m.direction === "outbound" || m.handledAt !== null)).toBe(true);
+    expect(
+      saved.messages
+        .filter((m) => m.direction === "outbound")
+        .map((m) => m.body),
+    ).toEqual(["¡Hola Ana! ¿Con qué presupuesto contás?"]);
+    expect(
+      saved.messages.every(
+        (m) => m.direction === "outbound" || m.handledAt !== null,
+      ),
+    ).toBe(true);
     expect(ctx.llm.calls).toHaveLength(1);
-    expect(ctx.llm.calls[0]?.messages.at(-1)).toEqual({ role: "user", content: "Hola\nBusco 2 dormitorios para vivir" });
-    expect(ctx.integrations.fakes.channel.sent).toMatchObject([{ to: "59899111222", kind: "text" }]);
+    expect(ctx.llm.calls[0]?.messages.at(-1)).toEqual({
+      role: "user",
+      content: "Hola\nBusco 2 dormitorios para vivir",
+    });
+    expect(ctx.integrations.fakes.channel.sent).toMatchObject([
+      { to: "59899111222", kind: "text" },
+    ]);
     expect(await testDb().llmUsage.count()).toBe(1);
   });
 
@@ -108,12 +150,17 @@ describe("a bot turn", () => {
 
   it("stays quiet on a paused thread and treats its messages as handled", async () => {
     const { threadId } = await receive("Hola");
-    await testDb().thread.update({ where: { id: threadId }, data: { paused: true } });
+    await testDb().thread.update({
+      where: { id: threadId },
+      data: { paused: true },
+    });
     const later = await receive("¿Hola?");
     expect(later.needsReply).toBe(false);
     await expect(processThread(ctx, threadId)).resolves.toBe("silenced");
     expect(ctx.llm.calls).toHaveLength(0);
-    expect(await testDb().message.count({ where: { handledAt: null } })).toBe(0);
+    expect(await testDb().message.count({ where: { handledAt: null } })).toBe(
+      0,
+    );
   });
 
   it("asks the lead to type when only a voice note arrived, without calling the model", async () => {
@@ -129,15 +176,21 @@ describe("a bot turn", () => {
     await processThread(ctx, threadId);
     const saved = await thread();
     expect(saved.messages.at(-1)?.body).toBe("Te va a contactar un asesor.");
-    expect(saved).toMatchObject({ needsHuman: true, needsHumanReason: "model_failure: overloaded", crmPendingAction: null });
+    expect(saved).toMatchObject({
+      needsHuman: true,
+      needsHumanReason: "model_failure: overloaded",
+      crmPendingAction: null,
+    });
     expect(saved.crmSyncedAt).not.toBeNull();
-    expect(ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary).toContain(
-      "Estado: Requiere atención de un asesor",
-    );
+    expect(
+      ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary,
+    ).toContain("Estado: Requiere atención de un asesor");
   });
 
   it("writes the CRM with the summary once the handoff completes", async () => {
-    const { threadId } = await receive("Busco 2 dormitorios, tengo 150 mil y no conozco los proyectos");
+    const { threadId } = await receive(
+      "Busco 2 dormitorios, tengo 150 mil y no conozco los proyectos",
+    );
     ctx.llm.push({
       reply: "¿Cuándo te puede llamar un asesor?",
       interest: "2 dormitorios",
@@ -149,12 +202,22 @@ describe("a bot turn", () => {
     expect(ctx.integrations.fakes.crm.contacts.size).toBe(0);
 
     await receive("Mañana a las 10");
-    ctx.llm.push({ reply: "Listo, te llaman mañana a las 10.", callTime: "Mañana a las 10", intent: "qualified" });
+    ctx.llm.push({
+      reply: "Listo, te llaman mañana a las 10.",
+      callTime: "Mañana a las 10",
+      intent: "qualified",
+    });
     await processThread(ctx, threadId);
 
     const saved = await thread();
-    expect(saved).toMatchObject({ state: "handoff", callTime: "Mañana a las 10", crmContactId: "fake-contact-1" });
-    const summary = ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary ?? "";
+    expect(saved).toMatchObject({
+      state: "handoff",
+      callTime: "Mañana a las 10",
+      crmContactId: "fake-contact-1",
+    });
+    const summary =
+      ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary ??
+      "";
     expect(summary).toContain("Estado: Derivado a asesor (calificado)");
     expect(summary).toContain("Presupuesto: USD 150.000");
     expect(summary).toContain("Conoce los proyectos: No");
@@ -172,19 +235,29 @@ describe("a bot turn", () => {
     await expect(processThread(ctx, threadId)).resolves.toBe("send_failed");
     const saved = await thread();
     expect(saved.needsHuman).toBe(true);
-    expect(saved.needsHumanReason).toContain("send_failed: Re-engagement message");
-    expect(saved.messages.at(-1)).toMatchObject({ direction: "outbound", status: "failed", waMessageId: null });
+    expect(saved.needsHumanReason).toContain(
+      "send_failed: Re-engagement message",
+    );
+    expect(saved.messages.at(-1)).toMatchObject({
+      direction: "outbound",
+      status: "failed",
+      waMessageId: null,
+    });
   });
 
   it("does not answer once WhatsApp's 24-hour window has closed", async () => {
-    const { threadId } = await receive("Hola", { sentAt: new Date(Date.now() - 25 * 60 * 60 * 1000) });
+    const { threadId } = await receive("Hola", {
+      sentAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
+    });
     await expect(processThread(ctx, threadId)).resolves.toBe("window_closed");
     expect(ctx.integrations.fakes.channel.sent).toHaveLength(0);
   });
 
   it("skips a thread another process is answering", async () => {
     const { threadId } = await receive("Hola");
-    const outcome = await withThreadLease(ctx, threadId, () => processThread(ctx, threadId));
+    const outcome = await withThreadLease(ctx, threadId, () =>
+      processThread(ctx, threadId),
+    );
     expect(outcome).toEqual({ claimed: true, result: "busy" });
   });
 });
@@ -192,13 +265,16 @@ describe("a bot turn", () => {
 describe("recovery", () => {
   it("schedules messages nobody answered, e.g. after a restart", async () => {
     const { threadId } = await receive("Hola");
-    await testDb().message.updateMany({ data: { createdAt: new Date(Date.now() - 60_000) } });
+    await testDb().message.updateMany({
+      data: { createdAt: new Date(Date.now() - 60_000) },
+    });
     const result = await sweepOnce(ctx);
     expect(result.scheduled).toBe(1);
     await ctx.replies.drain();
-    expect((await testDb().thread.findUniqueOrThrow({ where: { id: threadId } })).lastMessagePreview).toBe(
-      "Respuesta de prueba.",
-    );
+    expect(
+      (await testDb().thread.findUniqueOrThrow({ where: { id: threadId } }))
+        .lastMessagePreview,
+    ).toBe("Respuesta de prueba.");
   });
 
   it("retries a failed CRM write with backoff until it succeeds", async () => {
@@ -211,23 +287,46 @@ describe("recovery", () => {
       },
     };
     let now = new Date();
-    ctx = createTestContext({ integrations: { crmFor: () => flaky }, now: () => now });
+    ctx = createTestContext({
+      integrations: { crmFor: () => flaky },
+      now: () => now,
+    });
     const { threadId } = await receive("No me interesa");
     ctx.llm.push({ reply: "Gracias por avisar.", intent: "not_interested" });
     await processThread(ctx, threadId);
 
-    let saved = await testDb().thread.findUniqueOrThrow({ where: { id: threadId } });
-    expect(saved).toMatchObject({ state: "closed", crmPendingAction: "close", crmAttempts: 1, crmLastError: "HubSpot returned 503" });
+    let saved = await testDb().thread.findUniqueOrThrow({
+      where: { id: threadId },
+    });
+    expect(saved).toMatchObject({
+      state: "closed",
+      crmPendingAction: "close",
+      crmAttempts: 1,
+      crmLastError: "HubSpot returned 503",
+    });
     expect(saved.crmNextAttemptAt!.getTime()).toBeGreaterThan(now.getTime());
 
     await sweepOnce(ctx);
-    expect((await testDb().thread.findUniqueOrThrow({ where: { id: threadId } })).crmContactId).toBeNull();
+    expect(
+      (await testDb().thread.findUniqueOrThrow({ where: { id: threadId } }))
+        .crmContactId,
+    ).toBeNull();
 
     now = new Date(now.getTime() + 2 * 60_000);
     // A process that crashed mid-turn left its lease behind; once expired it must not block the retry.
-    await testDb().thread.update({ where: { id: threadId }, data: { processingUntil: new Date(now.getTime() - 1000) } });
+    await testDb().thread.update({
+      where: { id: threadId },
+      data: { processingUntil: new Date(now.getTime() - 1000) },
+    });
     await sweepOnce(ctx);
-    saved = await testDb().thread.findUniqueOrThrow({ where: { id: threadId } });
-    expect(saved).toMatchObject({ crmPendingAction: null, crmContactId: "hs-1", crmLastError: null, processingUntil: null });
+    saved = await testDb().thread.findUniqueOrThrow({
+      where: { id: threadId },
+    });
+    expect(saved).toMatchObject({
+      crmPendingAction: null,
+      crmContactId: "hs-1",
+      crmLastError: null,
+      processingUntil: null,
+    });
   });
 });

@@ -1,8 +1,18 @@
 "use client";
 
 import { toast } from "sonner";
-import { CircleAlertIcon, HandIcon, PauseCircleIcon, TimerOffIcon } from "lucide-react";
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  CircleAlertIcon,
+  HandIcon,
+  PauseCircleIcon,
+  TimerOffIcon,
+} from "lucide-react";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { needsHumanReasonLabel } from "@/lib/thread-status";
@@ -10,7 +20,8 @@ import { useThreadAction, type ThreadAction } from "@/lib/queries";
 import type { Thread } from "@/lib/types";
 
 const SUCCESS: Record<ThreadAction, string> = {
-  "clear-needs-human": "El asistente vuelve a responder desde el próximo mensaje del lead.",
+  "clear-needs-human":
+    "El asistente vuelve a responder desde el próximo mensaje del lead.",
   resume: "El asistente vuelve a responder desde el próximo mensaje del lead.",
   pause: "Pausaste el asistente en esta conversación.",
   "crm-sync": "Guardado en HubSpot.",
@@ -22,7 +33,9 @@ export function useThreadActionWithToast(threadId: string) {
     mutation.mutate(action, {
       onSuccess: ({ thread }) => {
         if (action === "crm-sync" && thread.crm.status !== "synced") {
-          toast.error(`HubSpot sigue fallando: ${thread.crm.lastError ?? "error desconocido"}`);
+          toast.error(
+            `HubSpot sigue fallando: ${thread.crm.lastError ?? "error desconocido"}`,
+          );
         } else {
           toast.success(SUCCESS[action]);
         }
@@ -35,7 +48,8 @@ export function useThreadActionWithToast(threadId: string) {
 export function ThreadAlerts({ thread }: { thread: Thread }) {
   const { run, pending } = useThreadActionWithToast(thread.id);
   const windowClosed =
-    thread.replyWindowClosesAt !== null && new Date(thread.replyWindowClosesAt) < new Date();
+    thread.replyWindowClosesAt !== null &&
+    new Date(thread.replyWindowClosesAt) < new Date();
 
   return (
     <div className="flex flex-col gap-3">
@@ -44,8 +58,9 @@ export function ThreadAlerts({ thread }: { thread: Thread }) {
           <HandIcon />
           <AlertTitle>El asistente se detuvo y espera a una persona</AlertTitle>
           <AlertDescription className="text-amber-900/80 dark:text-amber-200/80">
-            {needsHumanReasonLabel(thread.needsHumanReason)} Contactá al lead desde tu WhatsApp y,
-            cuando esté resuelto, devolvele la conversación al asistente.
+            {needsHumanReasonLabel(thread.needsHumanReason)} Contactá al lead
+            desde tu WhatsApp y, cuando esté resuelto, devolvele la conversación
+            al asistente.
           </AlertDescription>
           <AlertAction>
             <Button
@@ -65,8 +80,8 @@ export function ThreadAlerts({ thread }: { thread: Thread }) {
           <PauseCircleIcon />
           <AlertTitle>Asistente pausado</AlertTitle>
           <AlertDescription>
-            Un asesor tomó esta conversación. Los mensajes nuevos se guardan, pero el asistente no
-            responde.
+            Un asesor tomó esta conversación. Los mensajes nuevos se guardan,
+            pero el asistente no responde.
           </AlertDescription>
           <AlertAction>
             <Button
@@ -107,9 +122,12 @@ export function ThreadAlerts({ thread }: { thread: Thread }) {
       {windowClosed && !thread.paused && thread.state !== "closed" ? (
         <Alert>
           <TimerOffIcon />
-          <AlertTitle>Pasaron más de 24 horas desde el último mensaje del lead</AlertTitle>
+          <AlertTitle>
+            Pasaron más de 24 horas desde el último mensaje del lead
+          </AlertTitle>
           <AlertDescription>
-            WhatsApp no deja que el asistente le escriba hasta que el lead vuelva a escribir.
+            WhatsApp no deja que el asistente le escriba hasta que el lead
+            vuelva a escribir.
           </AlertDescription>
         </Alert>
       ) : null}

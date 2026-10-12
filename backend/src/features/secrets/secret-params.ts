@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { COMPANY_SECRET_NAMES, type CompanySecretName } from "../../companies/company-secrets.js";
+import {
+  COMPANY_SECRET_NAMES,
+  type CompanySecretName,
+} from "../../companies/company-secrets.js";
 
 export function isCompanySecretName(value: string): value is CompanySecretName {
   return (COMPANY_SECRET_NAMES as readonly string[]).includes(value);

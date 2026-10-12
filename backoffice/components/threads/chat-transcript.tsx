@@ -39,8 +39,11 @@ function DeliveryStatus({ status }: { status: string | null }) {
     );
   }
   if (status === "read")
-    return <CheckCheckIcon className="size-3.5 text-sky-600" aria-label="Leído" />;
-  if (status === "delivered") return <CheckCheckIcon className="size-3.5" aria-label="Entregado" />;
+    return (
+      <CheckCheckIcon className="size-3.5 text-sky-600" aria-label="Leído" />
+    );
+  if (status === "delivered")
+    return <CheckCheckIcon className="size-3.5" aria-label="Entregado" />;
   return <CheckIcon className="size-3.5" aria-label="Enviado" />;
 }
 
@@ -52,7 +55,9 @@ function Bubble({ message }: { message: ChatMessage }) {
       <div
         className={cn(
           "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm shadow-xs sm:max-w-[70%]",
-          outbound ? "rounded-br-md bg-primary/10 text-foreground" : "rounded-bl-md border bg-card",
+          outbound
+            ? "rounded-br-md bg-primary/10 text-foreground"
+            : "rounded-bl-md border bg-card",
           message.status === "failed" && "ring-1 ring-destructive/40",
         )}
       >
@@ -62,7 +67,9 @@ function Bubble({ message }: { message: ChatMessage }) {
             {meta.label}
           </div>
         ) : null}
-        {message.body ? <p className="break-words whitespace-pre-wrap">{message.body}</p> : null}
+        {message.body ? (
+          <p className="break-words whitespace-pre-wrap">{message.body}</p>
+        ) : null}
         {!message.body && !meta ? (
           <p className="text-muted-foreground italic">(sin texto)</p>
         ) : null}

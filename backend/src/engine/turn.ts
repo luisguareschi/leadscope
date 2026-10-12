@@ -1,5 +1,12 @@
 import { capReply, findForbidden } from "./guardrails.js";
-import type { LeadFields, ThreadSnapshot, ThreadState, TurnDecision, TurnInput, TurnRules } from "./types.js";
+import type {
+  LeadFields,
+  ThreadSnapshot,
+  ThreadState,
+  TurnDecision,
+  TurnInput,
+  TurnRules,
+} from "./types.js";
 
 function clean(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
@@ -17,7 +24,11 @@ export function fieldsOf(thread: LeadFields): LeadFields {
 
 /** The qualify gate: interest, budget, and knowsProjects stored. knowsProjects=false still counts. */
 export function hasQualifyingAnswers(fields: LeadFields): boolean {
-  return fields.interest !== null && fields.budget !== null && fields.knowsProjects !== null;
+  return (
+    fields.interest !== null &&
+    fields.budget !== null &&
+    fields.knowsProjects !== null
+  );
 }
 
 export function isHandoffComplete(fields: LeadFields): boolean {
@@ -25,7 +36,10 @@ export function isHandoffComplete(fields: LeadFields): boolean {
 }
 
 /** New values from the lead win (they may correct their budget); empty values keep what we had. */
-export function mergeFields(current: LeadFields, update: LeadFields): LeadFields {
+export function mergeFields(
+  current: LeadFields,
+  update: LeadFields,
+): LeadFields {
   return {
     interest: clean(update.interest) ?? current.interest,
     budget: clean(update.budget) ?? current.budget,
@@ -40,16 +54,22 @@ export function mergeFields(current: LeadFields, update: LeadFields): LeadFields
  */
 export function stageForPrompt(thread: ThreadSnapshot): ThreadState {
   if (thread.state === "closed") return "answer";
-  if (thread.state === "handoff" && isHandoffComplete(fieldsOf(thread))) return "answer";
+  if (thread.state === "handoff" && isHandoffComplete(fieldsOf(thread)))
+    return "answer";
   return thread.state;
 }
 
-function nextState(previous: ThreadSnapshot, fields: LeadFields): Pick<TurnDecision, "state" | "crm"> {
+function nextState(
+  previous: ThreadSnapshot,
+  fields: LeadFields,
+): Pick<TurnDecision, "state" | "crm"> {
   const wasComplete = isHandoffComplete(fieldsOf(previous));
-  if (!wasComplete && isHandoffComplete(fields)) return { state: "handoff", crm: "handoff" };
+  if (!wasComplete && isHandoffComplete(fields))
+    return { state: "handoff", crm: "handoff" };
 
   const reopened = stageForPrompt(previous) === "answer";
-  if (!hasQualifyingAnswers(fields)) return { state: reopened ? "answer" : "qualify", crm: null };
+  if (!hasQualifyingAnswers(fields))
+    return { state: reopened ? "answer" : "qualify", crm: null };
   if (fields.callTime === null) return { state: "handoff", crm: null };
   return { state: "answer", crm: null };
 }
@@ -58,11 +78,21 @@ function nextState(previous: ThreadSnapshot, fields: LeadFields): Pick<TurnDecis
  * Decides one bot turn. Pure: the caller loads the thread, calls the model, and persists the result.
  * The model writes the words and extracts fields; this function owns the state.
  */
-export function decideTurn(thread: ThreadSnapshot, input: TurnInput, rules: TurnRules): TurnDecision {
+export function decideTurn(
+  thread: ThreadSnapshot,
+  input: TurnInput,
+  rules: TurnRules,
+): TurnDecision {
   const current = fieldsOf(thread);
 
   if (input.kind === "non_text") {
-    return { state: thread.state, fields: current, reply: rules.messages.nonText, needsHuman: null, crm: null };
+    return {
+      state: thread.state,
+      fields: current,
+      reply: rules.messages.nonText,
+      needsHuman: null,
+      crm: null,
+    };
   }
 
   if (input.kind === "model_failure") {

@@ -10,7 +10,8 @@ export function clearSecretController(ctx: AppContext): RequestHandler {
   return async (req, res) => {
     const { companyId } = operatorOf(req);
     const { name } = parseInput(secretParamsSchema, req.params);
-    if (!isCompanySecretName(name)) throw badRequest("Secreto desconocido.", "invalid_input");
+    if (!isCompanySecretName(name))
+      throw badRequest("Secreto desconocido.", "invalid_input");
     res.json({ secret: await clearSecret(ctx, companyId, name) });
   };
 }

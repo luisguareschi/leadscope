@@ -3,7 +3,12 @@
 import { KeyRoundIcon } from "lucide-react";
 import { SecretRow } from "@/components/integrations/secret-row";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMe, useSecrets } from "@/lib/queries";
 
@@ -18,8 +23,9 @@ export default function IntegrationsPage() {
         <KeyRoundIcon />
         <AlertTitle>Cada empresa carga sus propias claves</AlertTitle>
         <AlertDescription>
-          Acá ves si están configuradas y los últimos 4 caracteres. El valor completo no vuelve al
-          navegador. Dejar un campo vacío no borra la clave: para quitarla usá Quitar.
+          Acá ves si están configuradas y los últimos 4 caracteres. El valor
+          completo no vuelve al navegador. Dejar un campo vacío no borra la
+          clave: para quitarla usá Quitar.
         </AlertDescription>
       </Alert>
 
@@ -35,8 +41,9 @@ export default function IntegrationsPage() {
           <CardTitle>Integraciones</CardTitle>
           <CardDescription>
             {company ? `Claves de ${company}. ` : null}
-            Anthropic responde, Meta es WhatsApp, HubSpot guarda el contacto, y el secreto del
-            formulario autentica los leads que llegan desde un flujo.
+            Anthropic responde, Meta es WhatsApp, HubSpot guarda el contacto, y
+            el secreto del formulario autentica los leads que llegan desde un
+            flujo.
           </CardDescription>
         </CardHeader>
         {query.isPending ? (

@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpenTextIcon, KeyRoundIcon, MessagesSquareIcon, RadarIcon } from "lucide-react";
+import {
+  BookOpenTextIcon,
+  KeyRoundIcon,
+  MessagesSquareIcon,
+  RadarIcon,
+} from "lucide-react";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -41,7 +46,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                 <RadarIcon className="size-4" />
               </div>
               <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate text-base font-semibold">LeadScope</span>
+                <span className="truncate text-base font-semibold">
+                  LeadScope
+                </span>
                 <span className="truncate text-xs text-muted-foreground">
                   {me.data?.company.name ?? " "}
                 </span>

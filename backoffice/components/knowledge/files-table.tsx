@@ -45,7 +45,8 @@ import type { KnowledgeFile } from "@/lib/types";
 function FormatIcon({ format }: { format: string }) {
   if (["xlsx", "xls", "ods", "csv"].includes(format))
     return <FileSpreadsheetIcon className="size-4 text-emerald-600" />;
-  if (format === "pptx") return <PresentationIcon className="size-4 text-orange-600" />;
+  if (format === "pptx")
+    return <PresentationIcon className="size-4 text-orange-600" />;
   if (format === "pdf") return <FileTypeIcon className="size-4 text-red-600" />;
   return <FileTextIcon className="size-4 text-primary" />;
 }
@@ -73,7 +74,9 @@ export function FilesTable({
             <TableHead className="pl-4 lg:pl-6">Archivo</TableHead>
             <TableHead className="hidden sm:table-cell">Formato</TableHead>
             <TableHead className="text-right">Caracteres</TableHead>
-            <TableHead className="hidden text-right md:table-cell">Tamaño</TableHead>
+            <TableHead className="hidden text-right md:table-cell">
+              Tamaño
+            </TableHead>
             <TableHead className="hidden lg:table-cell">Actualizado</TableHead>
             <TableHead className="w-12 pr-4 lg:pr-6" />
           </TableRow>
@@ -105,7 +108,9 @@ export function FilesTable({
               </TableCell>
               <TableCell className="hidden text-muted-foreground lg:table-cell">
                 {formatRelative(file.updatedAt)}
-                {file.uploadedBy ? <span className="block text-xs">{file.uploadedBy}</span> : null}
+                {file.uploadedBy ? (
+                  <span className="block text-xs">{file.uploadedBy}</span>
+                ) : null}
               </TableCell>
               <TableCell className="pr-4 lg:pr-6">
                 <DropdownMenu>
@@ -135,7 +140,10 @@ export function FilesTable({
                       Reemplazar
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" onClick={() => setDeleting(file)}>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setDeleting(file)}
+                    >
                       <Trash2Icon />
                       Eliminar
                     </DropdownMenuItem>
@@ -168,10 +176,15 @@ export function FilesTable({
         }}
       />
 
-      <AlertDialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
+      <AlertDialog
+        open={deleting !== null}
+        onOpenChange={(open) => !open && setDeleting(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar &quot;{deleting?.name}&quot;?</AlertDialogTitle>
+            <AlertDialogTitle>
+              ¿Eliminar &quot;{deleting?.name}&quot;?
+            </AlertDialogTitle>
             <AlertDialogDescription>
               El asistente deja de usar este archivo desde la próxima respuesta.
             </AlertDialogDescription>

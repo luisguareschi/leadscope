@@ -1,5 +1,9 @@
 import { CircleAlertIcon, CircleCheckIcon, ClockIcon } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatDateTime } from "@/lib/format";
 import type { Thread } from "@/lib/types";
 
@@ -29,7 +33,9 @@ export function CrmIndicator({ crm }: { crm: Thread["crm"] }) {
     );
   return (
     <Tooltip>
-      <TooltipTrigger render={<span className="inline-flex" aria-label={crmLabel(crm)} />}>
+      <TooltipTrigger
+        render={<span className="inline-flex" aria-label={crmLabel(crm)} />}
+      >
         {icon}
       </TooltipTrigger>
       <TooltipContent>{crmLabel(crm)}</TooltipContent>

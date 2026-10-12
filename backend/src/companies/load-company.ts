@@ -12,11 +12,21 @@ export type LoadedCompany = {
   secrets: CompanySecrets;
 };
 
-export async function loadCompanyById(db: Db, companyId: string, encryptionKey: Buffer): Promise<LoadedCompany> {
-  return loadCompany(await db.company.findUniqueOrThrow({ where: { id: companyId } }), encryptionKey);
+export async function loadCompanyById(
+  db: Db,
+  companyId: string,
+  encryptionKey: Buffer,
+): Promise<LoadedCompany> {
+  return loadCompany(
+    await db.company.findUniqueOrThrow({ where: { id: companyId } }),
+    encryptionKey,
+  );
 }
 
-export function loadCompany(row: Company, encryptionKey: Buffer): LoadedCompany {
+export function loadCompany(
+  row: Company,
+  encryptionKey: Buffer,
+): LoadedCompany {
   return {
     id: row.id,
     slug: row.slug,

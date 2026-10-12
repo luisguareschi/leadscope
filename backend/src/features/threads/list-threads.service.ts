@@ -1,6 +1,10 @@
 import type { AppContext } from "../../context.js";
 import type { Prisma } from "../../generated/prisma/client.js";
-import { statusWhere, toThreadDto, type ThreadStatusFilter } from "./thread-dto.js";
+import {
+  statusWhere,
+  toThreadDto,
+  type ThreadStatusFilter,
+} from "./thread-dto.js";
 
 export type ListThreadsInput = {
   status: ThreadStatusFilter;
@@ -22,10 +26,21 @@ function searchWhere(search: string | undefined): Prisma.ThreadWhereInput {
   };
 }
 
-export async function listThreads(ctx: AppContext, companyId: string, input: ListThreadsInput) {
+export async function listThreads(
+  ctx: AppContext,
+  companyId: string,
+  input: ListThreadsInput,
+) {
   const rows = await ctx.db.thread.findMany({
-    where: { companyId, ...statusWhere(input.status), ...searchWhere(input.search) },
-    orderBy: [{ lastMessageAt: { sort: "desc", nulls: "last" } }, { id: "desc" }],
+    where: {
+      companyId,
+      ...statusWhere(input.status),
+      ...searchWhere(input.search),
+    },
+    orderBy: [
+      { lastMessageAt: { sort: "desc", nulls: "last" } },
+      { id: "desc" },
+    ],
     take: input.limit + 1,
     ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
   });

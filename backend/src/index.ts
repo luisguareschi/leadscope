@@ -12,7 +12,14 @@ const ctx = createContext(env);
 const app = createApp(ctx);
 
 const server = app.listen(env.PORT, () => {
-  logger.info({ port: env.PORT, authMode: env.AUTH_MODE, fakes: env.ALLOW_FAKE_INTEGRATIONS }, "leadscope backend listening");
+  logger.info(
+    {
+      port: env.PORT,
+      authMode: env.AUTH_MODE,
+      fakes: env.ALLOW_FAKE_INTEGRATIONS,
+    },
+    "leadscope backend listening",
+  );
 });
 const stopSweeper = startSweeper(ctx);
 
@@ -22,7 +29,10 @@ async function shutdown(signal: string) {
   server.close();
   // Finish turns already running; anything still pending is picked up by the next process.
   ctx.replies.stop();
-  await Promise.race([ctx.replies.drain(), new Promise((resolve) => setTimeout(resolve, 20_000))]);
+  await Promise.race([
+    ctx.replies.drain(),
+    new Promise((resolve) => setTimeout(resolve, 20_000)),
+  ]);
   await ctx.db.$disconnect();
   process.exit(0);
 }

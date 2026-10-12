@@ -19,7 +19,12 @@ export function createApp(ctx: AppContext): Express {
     const started = Date.now();
     res.on("finish", () => {
       ctx.logger.info(
-        { method: req.method, path: req.originalUrl.split("?")[0], status: res.statusCode, ms: Date.now() - started },
+        {
+          method: req.method,
+          path: req.originalUrl.split("?")[0],
+          status: res.statusCode,
+          ms: Date.now() - started,
+        },
         "request",
       );
     });
@@ -36,7 +41,12 @@ export function createApp(ctx: AppContext): Express {
   app.use("/hooks/crm/form-lead", formLeadsRoutes(ctx));
 
   const backoffice = express.Router();
-  backoffice.use(cors({ origin: ctx.env.BACKOFFICE_ORIGIN, allowedHeaders: ["Authorization", "Content-Type"] }));
+  backoffice.use(
+    cors({
+      origin: ctx.env.BACKOFFICE_ORIGIN,
+      allowedHeaders: ["Authorization", "Content-Type"],
+    }),
+  );
   backoffice.use(express.json({ limit: "100kb" }));
   backoffice.use(requireOperator(ctx));
   backoffice.use("/me", meRoutes(ctx));

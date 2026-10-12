@@ -2,13 +2,16 @@ import type { Prisma, Thread } from "../../generated/prisma/client.js";
 import { MAX_CRM_ATTEMPTS } from "../../conversation/crm-sync.js";
 import { replyWindowClosesAt } from "../../conversation/reply-window.js";
 
-export type ThreadStatusFilter = "all" | "active" | "handoff" | "needs_human" | "paused" | "closed";
+export type ThreadStatusFilter =
+  "all" | "active" | "handoff" | "needs_human" | "paused" | "closed";
 
 /**
  * The panel shows one status per thread, flags first: a thread waiting for a person is "needs_human"
  * whatever its stage. The filters partition the threads, so the counts add up to the total.
  */
-export function statusWhere(status: ThreadStatusFilter): Prisma.ThreadWhereInput {
+export function statusWhere(
+  status: ThreadStatusFilter,
+): Prisma.ThreadWhereInput {
   switch (status) {
     case "all":
       return {};
@@ -21,14 +24,19 @@ export function statusWhere(status: ThreadStatusFilter): Prisma.ThreadWhereInput
     case "closed":
       return { state: "closed", paused: false, needsHuman: false };
     case "active":
-      return { state: { in: ["greeting", "qualify", "answer"] }, paused: false, needsHuman: false };
+      return {
+        state: { in: ["greeting", "qualify", "answer"] },
+        paused: false,
+        needsHuman: false,
+      };
   }
 }
 
 export type CrmStatus = "none" | "pending" | "synced" | "failed";
 
 function crmStatus(thread: Thread): CrmStatus {
-  if (thread.crmPendingAction) return thread.crmLastError ? "failed" : "pending";
+  if (thread.crmPendingAction)
+    return thread.crmLastError ? "failed" : "pending";
   return thread.crmSyncedAt ? "synced" : "none";
 }
 
@@ -56,7 +64,9 @@ export function toThreadDto(thread: Thread) {
       contactId: thread.crmContactId,
       syncedAt: thread.crmSyncedAt,
       lastError: thread.crmLastError,
-      retriesExhausted: thread.crmPendingAction !== null && thread.crmAttempts >= MAX_CRM_ATTEMPTS,
+      retriesExhausted:
+        thread.crmPendingAction !== null &&
+        thread.crmAttempts >= MAX_CRM_ATTEMPTS,
     },
     createdAt: thread.createdAt,
   };

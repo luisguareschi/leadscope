@@ -45,7 +45,9 @@ export function ThreadsTable({
             {filtered ? <SearchXIcon /> : <MessagesSquareIcon />}
           </EmptyMedia>
           <EmptyTitle>
-            {filtered ? "No hay conversaciones con este filtro" : "Todavía no hay conversaciones"}
+            {filtered
+              ? "No hay conversaciones con este filtro"
+              : "Todavía no hay conversaciones"}
           </EmptyTitle>
           <EmptyDescription>
             {filtered

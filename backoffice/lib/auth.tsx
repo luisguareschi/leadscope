@@ -37,7 +37,9 @@ function supabaseClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key)
-    throw new Error("Falta configurar NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+    throw new Error(
+      "Falta configurar NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+    );
   supabase ??= createClient(url, key);
   return supabase;
 }
@@ -79,7 +81,8 @@ function useDevToken(): string | null | undefined {
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const devToken = useDevToken();
-  const [supabaseStatus, setSupabaseStatus] = useState<AuthValue["status"]>("loading");
+  const [supabaseStatus, setSupabaseStatus] =
+    useState<AuthValue["status"]>("loading");
   const [supabaseEmail, setSupabaseEmail] = useState<string | null>(null);
 
   const status: AuthValue["status"] =
@@ -90,7 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ? "signed_in"
           : "signed_out"
       : supabaseStatus;
-  const email = AUTH_MODE === "dev" ? (devToken ? devToken.slice(4) : null) : supabaseEmail;
+  const email =
+    AUTH_MODE === "dev" ? (devToken ? devToken.slice(4) : null) : supabaseEmail;
 
   useEffect(() => {
     if (AUTH_MODE === "dev") return;
@@ -118,7 +122,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       writeDevToken(`dev:${address}`);
       return;
     }
-    const { error } = await supabaseClient().auth.signInWithPassword({ email: address, password });
+    const { error } = await supabaseClient().auth.signInWithPassword({
+      email: address,
+      password,
+    });
     if (error) throw new Error(SUPABASE_ERRORS[error.message] ?? error.message);
   }, []);
 
@@ -156,7 +163,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       requestPasswordReset,
       updatePassword,
     }),
-    [status, email, getToken, signIn, signOut, requestPasswordReset, updatePassword],
+    [
+      status,
+      email,
+      getToken,
+      signIn,
+      signOut,
+      requestPasswordReset,
+      updatePassword,
+    ],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

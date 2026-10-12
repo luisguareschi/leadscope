@@ -20,7 +20,10 @@ import { useClearSecret, useSetSecret } from "@/lib/queries";
 import type { SecretStatus } from "@/lib/types";
 import { cn } from "cn";
 
-const COPY: Record<SecretStatus["name"], { title: string; description: string }> = {
+const COPY: Record<
+  SecretStatus["name"],
+  { title: string; description: string }
+> = {
   anthropicApiKey: {
     title: "Clave de Anthropic",
     description: "La usa el asistente para responder.",
@@ -35,7 +38,8 @@ const COPY: Record<SecretStatus["name"], { title: string; description: string }>
   },
   formLeadSecret: {
     title: "Secreto del formulario",
-    description: "Lo envía el flujo de HubSpot cuando entra un lead de un formulario.",
+    description:
+      "Lo envía el flujo de HubSpot cuando entra un lead de un formulario.",
   },
 };
 
@@ -65,7 +69,11 @@ export function SecretRow({ secret }: { secret: SecretStatus }) {
 
   return (
     <>
-      <form onSubmit={onSubmit} autoComplete="off" className="px-4 py-5 lg:px-6">
+      <form
+        onSubmit={onSubmit}
+        autoComplete="off"
+        className="px-4 py-5 lg:px-6"
+      >
         <Field>
           <div className="flex flex-wrap items-center gap-2">
             <FieldLabel htmlFor={inputId}>{copy.title}</FieldLabel>
@@ -94,7 +102,11 @@ export function SecretRow({ secret }: { secret: SecretStatus }) {
               autoCapitalize="off"
               spellCheck={false}
               value={draft}
-              placeholder={secret.set ? "Pegá un valor nuevo para reemplazarla" : "Pegá el valor"}
+              placeholder={
+                secret.set
+                  ? "Pegá un valor nuevo para reemplazarla"
+                  : "Pegá el valor"
+              }
               onChange={(event) => setDraft(event.target.value)}
               className="sm:max-w-md"
             />
@@ -126,7 +138,8 @@ export function SecretRow({ secret }: { secret: SecretStatus }) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Quitar {copy.title}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta integración deja de usar la clave hasta que cargues otra. Las demás no cambian.
+              Esta integración deja de usar la clave hasta que cargues otra. Las
+              demás no cambian.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,10 +1,15 @@
 import type { ModelTurn } from "../../src/engine/types.js";
 import type { CompleteInput, LlmClient } from "../../src/llm/types.js";
 
-export type ScriptedLlm = LlmClient & { calls: CompleteInput[]; push(...turns: Array<Partial<ModelTurn> | Error>): void };
+export type ScriptedLlm = LlmClient & {
+  calls: CompleteInput[];
+  push(...turns: Array<Partial<ModelTurn> | Error>): void;
+};
 
 /** An LLM that returns queued turns in order and records every request it received. */
-export function scriptedLlm(...initial: Array<Partial<ModelTurn> | Error>): ScriptedLlm {
+export function scriptedLlm(
+  ...initial: Array<Partial<ModelTurn> | Error>
+): ScriptedLlm {
   const queue = [...initial];
   const calls: CompleteInput[] = [];
   return {
@@ -27,7 +32,14 @@ export function scriptedLlm(...initial: Array<Partial<ModelTurn> | Error>): Scri
           callTime: null,
           ...next,
         },
-        usage: { model: "scripted", inputTokens: 100, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 0, latencyMs: 1 },
+        usage: {
+          model: "scripted",
+          inputTokens: 100,
+          outputTokens: 20,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          latencyMs: 1,
+        },
       };
     },
   };

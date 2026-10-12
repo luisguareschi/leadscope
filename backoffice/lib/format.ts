@@ -15,7 +15,10 @@ const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
   minute: "2-digit",
   hourCycle: "h23",
 });
-const shortDateFormat = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short" });
+const shortDateFormat = new Intl.DateTimeFormat(LOCALE, {
+  day: "numeric",
+  month: "short",
+});
 const longDateFormat = new Intl.DateTimeFormat(LOCALE, {
   weekday: "long",
   day: "numeric",
@@ -23,7 +26,11 @@ const longDateFormat = new Intl.DateTimeFormat(LOCALE, {
 });
 
 function startOfDay(date: Date): number {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  ).getTime();
 }
 
 /** "hace 5 minutos", "ayer", "3 oct" */
@@ -65,7 +72,8 @@ export function formatNumber(value: number): string {
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${numberFormat.format(Math.round(bytes / 102.4) / 10)} KB`;
+  if (bytes < 1024 * 1024)
+    return `${numberFormat.format(Math.round(bytes / 102.4) / 10)} KB`;
   return `${numberFormat.format(Math.round(bytes / (1024 * 102.4)) / 10)} MB`;
 }
 

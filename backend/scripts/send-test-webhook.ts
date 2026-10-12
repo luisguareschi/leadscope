@@ -36,8 +36,13 @@ async function main() {
             field: "messages",
             value: {
               messaging_product: "whatsapp",
-              metadata: { display_phone_number: "59800000000", phone_number_id: values["phone-number-id"] },
-              contacts: [{ wa_id: values.from, profile: { name: values.name } }],
+              metadata: {
+                display_phone_number: "59800000000",
+                phone_number_id: values["phone-number-id"],
+              },
+              contacts: [
+                { wa_id: values.from, profile: { name: values.name } },
+              ],
               messages: [
                 {
                   from: values.from,
@@ -54,7 +59,10 @@ async function main() {
   });
   const response = await fetch(`${values.url}/webhooks/whatsapp`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Hub-Signature-256": signWebhookBody(body, env.META_APP_SECRET) },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Hub-Signature-256": signWebhookBody(body, env.META_APP_SECRET),
+    },
     body,
   });
   console.log(response.status, await response.text());

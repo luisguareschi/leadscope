@@ -7,13 +7,20 @@ import type { Logger } from "../lib/logger.js";
  * messages), so a restart loses nothing: the sweeper schedules it again.
  */
 export class ReplyScheduler {
-  private readonly timers = new Map<string, { timer: NodeJS.Timeout; firstAt: number }>();
+  private readonly timers = new Map<
+    string,
+    { timer: NodeJS.Timeout; firstAt: number }
+  >();
   private readonly running = new Map<string, Promise<void>>();
   private readonly rerun = new Set<string>();
 
   constructor(
     private readonly handler: (threadId: string) => Promise<void>,
-    private readonly options: { debounceMs: number; maxWaitMs: number; logger: Logger },
+    private readonly options: {
+      debounceMs: number;
+      maxWaitMs: number;
+      logger: Logger;
+    },
   ) {}
 
   schedule(threadId: string): void {
@@ -21,7 +28,10 @@ export class ReplyScheduler {
     if (existing) clearTimeout(existing.timer);
     const firstAt = existing?.firstAt ?? Date.now();
     const deadline = firstAt + this.options.maxWaitMs;
-    const delay = Math.max(0, Math.min(this.options.debounceMs, deadline - Date.now()));
+    const delay = Math.max(
+      0,
+      Math.min(this.options.debounceMs, deadline - Date.now()),
+    );
     const timer = setTimeout(() => {
       this.timers.delete(threadId);
       this.run(threadId);
@@ -39,7 +49,12 @@ export class ReplyScheduler {
       return;
     }
     const task = this.handler(threadId)
-      .catch((error: unknown) => this.options.logger.error({ err: error, threadId }, "thread turn failed"))
+      .catch((error: unknown) =>
+        this.options.logger.error(
+          { err: error, threadId },
+          "thread turn failed",
+        ),
+      )
       .finally(() => {
         this.running.delete(threadId);
         if (this.rerun.delete(threadId)) this.run(threadId);

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { parseCompanyConfig } from "../../src/companies/company-config.js";
-import { capReply, findForbidden, foldText } from "../../src/engine/guardrails.js";
+import {
+  capReply,
+  findForbidden,
+  foldText,
+} from "../../src/engine/guardrails.js";
 import { altamiraConfig } from "../../prisma/seed-data/altamira.js";
 
 const altamira = parseCompanyConfig(altamiraConfig).forbiddenTopics.patterns;
@@ -46,7 +50,9 @@ describe("capReply", () => {
   });
 
   it("cuts at the last sentence that fits", () => {
-    expect(capReply("Uno dos tres. Cuatro cinco seis. Siete ocho nueve.", 35)).toBe("Uno dos tres. Cuatro cinco seis.");
+    expect(
+      capReply("Uno dos tres. Cuatro cinco seis. Siete ocho nueve.", 35),
+    ).toBe("Uno dos tres. Cuatro cinco seis.");
   });
 
   it("cuts at a word with an ellipsis when there is no sentence end", () => {

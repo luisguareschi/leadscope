@@ -26,8 +26,9 @@ export function FilePreviewDialog({
         <DialogHeader>
           <DialogTitle className="truncate pr-8">{file?.name}</DialogTitle>
           <DialogDescription>
-            Este es el texto que lee el asistente ({formatNumber(file?.charCount ?? 0)} caracteres).
-            Si falta algo o se ve desordenado, exportá el archivo de nuevo o pasalo a otro formato.
+            Este es el texto que lee el asistente (
+            {formatNumber(file?.charCount ?? 0)} caracteres). Si falta algo o se
+            ve desordenado, exportá el archivo de nuevo o pasalo a otro formato.
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto rounded-md border bg-muted/40 p-4">

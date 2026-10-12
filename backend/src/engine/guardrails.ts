@@ -1,13 +1,13 @@
 /** Lower-cases and strips accents, so patterns can be written as "garantia" and still match "Garantía". */
 export function foldText(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase();
+  return text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 }
 
 /** Returns the first forbidden pattern found in the reply, or null. Invalid patterns are skipped. */
-export function findForbidden(reply: string, patterns: string[]): string | null {
+export function findForbidden(
+  reply: string,
+  patterns: string[],
+): string | null {
   const folded = foldText(reply);
   for (const pattern of patterns) {
     let regex: RegExp;
@@ -32,7 +32,8 @@ export function capReply(reply: string, maxChars: number): string {
     slice.lastIndexOf("! "),
     slice.lastIndexOf("\n"),
   );
-  if (sentenceEnd > maxChars * 0.5) return slice.slice(0, sentenceEnd + 1).trim();
+  if (sentenceEnd > maxChars * 0.5)
+    return slice.slice(0, sentenceEnd + 1).trim();
   const wordEnd = slice.lastIndexOf(" ");
   return `${slice.slice(0, wordEnd > 0 ? wordEnd : maxChars - 1).trim()}…`;
 }

@@ -1,7 +1,6 @@
-export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(
-  /\/$/,
-  "",
-);
+export const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
+).replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(
@@ -13,8 +12,13 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, token: string, init: RequestInit = {}): Promise<T> {
-  const isForm = typeof FormData !== "undefined" && init.body instanceof FormData;
+export async function apiFetch<T>(
+  path: string,
+  token: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const isForm =
+    typeof FormData !== "undefined" && init.body instanceof FormData;
   let response: Response;
   try {
     response = await fetch(`${API_URL}${path}`, {

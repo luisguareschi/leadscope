@@ -5,7 +5,11 @@ import { createFakeLlm } from "../llm/fake-llm.js";
 import type { LlmClient } from "../llm/types.js";
 import { FakeCrm, type Crm } from "./crm/crm.js";
 import { createHubSpotCrm } from "./crm/hubspot.js";
-import { createMetaChannel, FakeChannel, type Channel } from "./whatsapp/channel.js";
+import {
+  createMetaChannel,
+  FakeChannel,
+  type Channel,
+} from "./whatsapp/channel.js";
 
 export class MissingIntegrationError extends Error {}
 
@@ -23,13 +27,22 @@ type Overrides = Partial<{
   crmFor: Integrations["crmFor"];
 }>;
 
-export function createIntegrations(env: Env, overrides: Overrides = {}): Integrations {
-  const fakes = { llm: createFakeLlm(), channel: new FakeChannel(), crm: new FakeCrm() };
+export function createIntegrations(
+  env: Env,
+  overrides: Overrides = {},
+): Integrations {
+  const fakes = {
+    llm: createFakeLlm(),
+    channel: new FakeChannel(),
+    crm: new FakeCrm(),
+  };
   const anthropicClients = new Map<string, LlmClient>();
 
   function fakeOrFail<T>(fake: T, what: string, company: LoadedCompany): T {
     if (env.ALLOW_FAKE_INTEGRATIONS) return fake;
-    throw new MissingIntegrationError(`${company.slug} has no ${what} configured`);
+    throw new MissingIntegrationError(
+      `${company.slug} has no ${what} configured`,
+    );
   }
 
   return {
@@ -37,7 +50,8 @@ export function createIntegrations(env: Env, overrides: Overrides = {}): Integra
     llmFor:
       overrides.llmFor ??
       ((company) => {
-        const devKey = env.NODE_ENV === "production" ? undefined : env.ANTHROPIC_API_KEY;
+        const devKey =
+          env.NODE_ENV === "production" ? undefined : env.ANTHROPIC_API_KEY;
         const apiKey = company.secrets.anthropicApiKey ?? devKey;
         if (!apiKey) return fakeOrFail(fakes.llm, "Anthropic API key", company);
         let client = anthropicClients.get(apiKey);
@@ -64,7 +78,8 @@ export function createIntegrations(env: Env, overrides: Overrides = {}): Integra
       overrides.crmFor ??
       ((company) => {
         const { hubspotAccessToken } = company.secrets;
-        if (!hubspotAccessToken) return fakeOrFail(fakes.crm, "HubSpot access token", company);
+        if (!hubspotAccessToken)
+          return fakeOrFail(fakes.crm, "HubSpot access token", company);
         return createHubSpotCrm({
           accessToken: hubspotAccessToken,
           transcriptProperty: company.config.crm.transcriptProperty,

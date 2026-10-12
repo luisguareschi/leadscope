@@ -32,14 +32,20 @@ export function NavUser({ email }: { email: string }) {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />}
+            render={
+              <SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
+            }
           >
             <Avatar className="size-8 rounded-lg">
-              <AvatarFallback className="rounded-lg">{initials(shown)}</AvatarFallback>
+              <AvatarFallback className="rounded-lg">
+                {initials(shown)}
+              </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">Operador</span>
-              <span className="truncate text-xs text-foreground/70">{shown}</span>
+              <span className="truncate text-xs text-foreground/70">
+                {shown}
+              </span>
             </div>
             <EllipsisVerticalIcon className="ml-auto size-4" />
           </DropdownMenuTrigger>

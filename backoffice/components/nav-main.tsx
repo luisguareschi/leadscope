@@ -29,7 +29,9 @@ export function NavMain({ items }: { items: NavItem[] }) {
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 tooltip={item.title}
-                isActive={pathname === item.url || pathname.startsWith(`${item.url}/`)}
+                isActive={
+                  pathname === item.url || pathname.startsWith(`${item.url}/`)
+                }
                 render={<Link href={item.url} />}
               >
                 {item.icon}

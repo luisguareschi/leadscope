@@ -14,7 +14,11 @@ export function StatusBadge({
   return (
     <Badge
       variant="secondary"
-      className={cn("border-transparent font-medium", meta.className, className)}
+      className={cn(
+        "border-transparent font-medium",
+        meta.className,
+        className,
+      )}
     >
       {meta.label}
     </Badge>

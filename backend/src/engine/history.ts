@@ -18,7 +18,8 @@ const NON_TEXT_LABELS: Record<string, string> = {
 
 function contentOf(message: HistoryMessage): string | null {
   const body = message.body.trim();
-  if (message.type === "text" || message.direction === "outbound") return body || null;
+  if (message.type === "text" || message.direction === "outbound")
+    return body || null;
   const label = NON_TEXT_LABELS[message.type] ?? "a message you cannot read";
   const caption = body ? ` with the caption "${body}"` : "";
   return `[The lead sent ${label}${caption}. You cannot see or hear attachments.]`;
@@ -28,7 +29,10 @@ function contentOf(message: HistoryMessage): string | null {
  * Turns stored messages into the alternating user/assistant turns the Messages API expects.
  * Consecutive messages from the same side are joined, and the list always starts with the lead.
  */
-export function buildChatTurns(messages: HistoryMessage[], limit: number): ChatTurn[] {
+export function buildChatTurns(
+  messages: HistoryMessage[],
+  limit: number,
+): ChatTurn[] {
   const turns: ChatTurn[] = [];
   for (const message of messages.slice(-limit)) {
     const content = contentOf(message);
@@ -39,7 +43,10 @@ export function buildChatTurns(messages: HistoryMessage[], limit: number): ChatT
     else turns.push({ role, content });
   }
   if (turns[0]?.role === "assistant") {
-    turns.unshift({ role: "user", content: "[The lead filled in a contact form.]" });
+    turns.unshift({
+      role: "user",
+      content: "[The lead filled in a contact form.]",
+    });
   }
   return turns;
 }

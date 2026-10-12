@@ -40,21 +40,40 @@ async function main() {
     crmFor: values["real-crm"] ? base.crmFor : () => base.fakes.crm,
   };
   const ctx = createContext(env, { integrations });
-  const company = await ctx.db.company.findUnique({ where: { slug: values.company } });
-  if (!company?.whatsappPhoneNumberId) throw new Error(`Company "${values.company}" not found or has no phone number id`);
+  const company = await ctx.db.company.findUnique({
+    where: { slug: values.company },
+  });
+  if (!company?.whatsappPhoneNumberId)
+    throw new Error(
+      `Company "${values.company}" not found or has no phone number id`,
+    );
   const waId = e164ToWaId(values.phone);
   const phone = waIdToE164(waId);
   if (!phone) throw new Error(`Invalid phone ${values.phone}`);
 
-  const llmKind = ctx.integrations.llmFor(loadCompany(company, ctx.encryptionKey)).kind;
-  console.log(bold(`Chat with ${company.name}'s assistant as ${values.name} (${phone}).`));
-  console.log(dim(`Model: ${llmKind === "fake" ? "local fake (set an Anthropic key for the real model)" : "Anthropic"}. Commands: /audio /estado /reset /salir`));
+  const llmKind = ctx.integrations.llmFor(
+    loadCompany(company, ctx.encryptionKey),
+  ).kind;
+  console.log(
+    bold(`Chat with ${company.name}'s assistant as ${values.name} (${phone}).`),
+  );
+  console.log(
+    dim(
+      `Model: ${llmKind === "fake" ? "local fake (set an Anthropic key for the real model)" : "Anthropic"}. Commands: /audio /estado /reset /salir`,
+    ),
+  );
 
-  const findThread = () => ctx.db.thread.findUnique({ where: { companyId_phone: { companyId: company.id, phone } } });
+  const findThread = () =>
+    ctx.db.thread.findUnique({
+      where: { companyId_phone: { companyId: company.id, phone } },
+    });
   const printState = async () => {
     const thread = await findThread();
     if (!thread) return console.log(dim("(no conversation yet)"));
-    const flags = [thread.paused && "paused", thread.needsHuman && `needs human: ${thread.needsHumanReason}`].filter(Boolean);
+    const flags = [
+      thread.paused && "paused",
+      thread.needsHuman && `needs human: ${thread.needsHumanReason}`,
+    ].filter(Boolean);
     console.log(
       dim(
         `[${thread.state}${flags.length ? ` · ${flags.join(" · ")}` : ""}] interest: ${thread.interest ?? "—"} · budget: ${thread.budget ?? "—"} · knows projects: ${thread.knowsProjects ?? "—"} · call: ${thread.callTime ?? "—"} · crm: ${thread.crmSyncedAt ? "synced" : thread.crmPendingAction ? "pending" : "—"}`,
@@ -62,7 +81,11 @@ async function main() {
     );
   };
 
-  const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: process.stdin.isTTY });
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: process.stdin.isTTY,
+  });
   rl.setPrompt(bold("Vos: "));
   rl.prompt();
   let counter = 0;
@@ -76,7 +99,9 @@ async function main() {
     }
     if (line === "/estado" || line === "/reset") {
       if (line === "/reset") {
-        await ctx.db.thread.deleteMany({ where: { companyId: company.id, phone } });
+        await ctx.db.thread.deleteMany({
+          where: { companyId: company.id, phone },
+        });
         console.log(dim("(conversation deleted)"));
       } else {
         await printState();
@@ -102,10 +127,15 @@ async function main() {
     const since = new Date();
     const outcome = await processThread(ctx, result.threadId);
     const replies = await ctx.db.message.findMany({
-      where: { threadId: result.threadId, direction: "outbound", createdAt: { gte: since } },
+      where: {
+        threadId: result.threadId,
+        direction: "outbound",
+        createdAt: { gte: since },
+      },
       orderBy: { sentAt: "asc" },
     });
-    for (const reply of replies) console.log(`${bold("Asistente:")} ${reply.body}`);
+    for (const reply of replies)
+      console.log(`${bold("Asistente:")} ${reply.body}`);
     if (replies.length === 0) console.log(dim(`(no reply: ${outcome})`));
     await printState();
     rl.prompt();

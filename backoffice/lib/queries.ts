@@ -1,6 +1,11 @@
 "use client";
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useCallback } from "react";
 import { ApiError, apiFetch } from "./api";
 import { useAuth } from "./auth";
@@ -80,20 +85,27 @@ export function useThread(id: string) {
   const api = useApi();
   return useQuery({
     queryKey: ["threads", "detail", id],
-    queryFn: () => api<{ thread: Thread; messages: ChatMessage[] }>(`/internal/threads/${id}`),
+    queryFn: () =>
+      api<{ thread: Thread; messages: ChatMessage[] }>(
+        `/internal/threads/${id}`,
+      ),
     refetchInterval: THREAD_POLL_MS,
-    retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 2,
+    retry: (count, error) =>
+      !(error instanceof ApiError && error.status === 404) && count < 2,
   });
 }
 
-export type ThreadAction = "pause" | "resume" | "clear-needs-human" | "crm-sync";
+export type ThreadAction =
+  "pause" | "resume" | "clear-needs-human" | "crm-sync";
 
 export function useThreadAction(id: string) {
   const api = useApi();
   const client = useQueryClient();
   return useMutation({
     mutationFn: (action: ThreadAction) =>
-      api<{ thread: Thread }>(`/internal/threads/${id}/${action}`, { method: "POST" }),
+      api<{ thread: Thread }>(`/internal/threads/${id}/${action}`, {
+        method: "POST",
+      }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["threads"] }),
   });
 }
@@ -102,7 +114,8 @@ export function useDeleteThread() {
   const api = useApi();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api<void>(`/internal/threads/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) =>
+      api<void>(`/internal/threads/${id}`, { method: "DELETE" }),
     onSuccess: (_data, id) => {
       client.removeQueries({ queryKey: ["threads", "detail", id] });
       return client.invalidateQueries({ queryKey: ["threads"] });
@@ -124,7 +137,9 @@ export function useKnowledgeFileText(id: string | null) {
     queryKey: ["knowledge", "file", id],
     enabled: id !== null,
     queryFn: () =>
-      api<{ file: KnowledgeFile & { text: string } }>(`/internal/knowledge/files/${id}`),
+      api<{ file: KnowledgeFile & { text: string } }>(
+        `/internal/knowledge/files/${id}`,
+      ),
   });
 }
 
@@ -138,8 +153,14 @@ export function useUploadKnowledgeFile() {
       const body = new FormData();
       body.append("file", file);
       return replaceId
-        ? api<UploadResult>(`/internal/knowledge/files/${replaceId}`, { method: "PUT", body })
-        : api<UploadResult>("/internal/knowledge/files", { method: "POST", body });
+        ? api<UploadResult>(`/internal/knowledge/files/${replaceId}`, {
+            method: "PUT",
+            body,
+          })
+        : api<UploadResult>("/internal/knowledge/files", {
+            method: "POST",
+            body,
+          });
     },
     onSuccess: () => client.invalidateQueries({ queryKey: ["knowledge"] }),
   });
@@ -149,14 +170,18 @@ export function useDeleteKnowledgeFile() {
   const api = useApi();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api<void>(`/internal/knowledge/files/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) =>
+      api<void>(`/internal/knowledge/files/${id}`, { method: "DELETE" }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["knowledge"] }),
   });
 }
 
 export function useSecrets() {
   const api = useApi();
-  return useQuery({ queryKey: ["secrets"], queryFn: () => api<SecretsList>("/internal/secrets") });
+  return useQuery({
+    queryKey: ["secrets"],
+    queryFn: () => api<SecretsList>("/internal/secrets"),
+  });
 }
 
 export function useSetSecret() {
@@ -177,7 +202,9 @@ export function useClearSecret() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (name: SecretName) =>
-      api<{ secret: SecretStatus }>(`/internal/secrets/${name}`, { method: "DELETE" }),
+      api<{ secret: SecretStatus }>(`/internal/secrets/${name}`, {
+        method: "DELETE",
+      }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["secrets"] }),
   });
 }

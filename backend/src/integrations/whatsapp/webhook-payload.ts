@@ -42,10 +42,17 @@ const valueSchema = z
   .object({
     metadata: z.object({ phone_number_id: z.string() }).loose(),
     contacts: z
-      .array(z.object({ wa_id: z.string().optional(), profile: z.object({ name: z.string().optional() }).optional() }))
+      .array(
+        z.object({
+          wa_id: z.string().optional(),
+          profile: z.object({ name: z.string().optional() }).optional(),
+        }),
+      )
       .optional(),
     messages: z.array(z.unknown()).optional(),
-    statuses: z.array(z.object({ id: z.string(), status: z.string() }).loose()).optional(),
+    statuses: z
+      .array(z.object({ id: z.string(), status: z.string() }).loose())
+      .optional(),
   })
   .loose();
 
@@ -54,7 +61,15 @@ const payloadSchema = z
     entry: z
       .array(
         z
-          .object({ changes: z.array(z.object({ field: z.string().optional(), value: z.unknown() }).loose()).default([]) })
+          .object({
+            changes: z
+              .array(
+                z
+                  .object({ field: z.string().optional(), value: z.unknown() })
+                  .loose(),
+              )
+              .default([]),
+          })
           .loose(),
       )
       .default([]),
@@ -62,9 +77,17 @@ const payloadSchema = z
   .loose();
 
 /** Message types that never trigger a reply. */
-const IGNORED_TYPES = new Set(["reaction", "system", "request_welcome", "ephemeral"]);
+const IGNORED_TYPES = new Set([
+  "reaction",
+  "system",
+  "request_welcome",
+  "ephemeral",
+]);
 
-function textOf(message: z.infer<typeof messageSchema>): { type: string; body: string } {
+function textOf(message: z.infer<typeof messageSchema>): {
+  type: string;
+  body: string;
+} {
   switch (message.type) {
     case "text":
       return { type: "text", body: message.text?.body ?? "" };
@@ -73,7 +96,10 @@ function textOf(message: z.infer<typeof messageSchema>): { type: string; body: s
     case "interactive":
       return {
         type: "text",
-        body: message.interactive?.button_reply?.title ?? message.interactive?.list_reply?.title ?? "",
+        body:
+          message.interactive?.button_reply?.title ??
+          message.interactive?.list_reply?.title ??
+          "",
       };
     case "image":
       return { type: "image", body: message.image?.caption ?? "" };
@@ -86,7 +112,10 @@ function textOf(message: z.infer<typeof messageSchema>): { type: string; body: s
   }
 }
 
-export function parseWebhookPayload(payload: unknown): { messages: InboundMessage[]; statuses: StatusUpdate[] } {
+export function parseWebhookPayload(payload: unknown): {
+  messages: InboundMessage[];
+  statuses: StatusUpdate[];
+} {
   const parsed = payloadSchema.safeParse(payload);
   if (!parsed.success) return { messages: [], statuses: [] };
   const messages: InboundMessage[] = [];
@@ -98,7 +127,10 @@ export function parseWebhookPayload(payload: unknown): { messages: InboundMessag
       if (!value.success) continue;
       const phoneNumberId = value.data.metadata.phone_number_id;
       const names = new Map(
-        (value.data.contacts ?? []).map((contact) => [contact.wa_id ?? "", contact.profile?.name ?? null]),
+        (value.data.contacts ?? []).map((contact) => [
+          contact.wa_id ?? "",
+          contact.profile?.name ?? null,
+        ]),
       );
 
       for (const raw of value.data.messages ?? []) {
@@ -113,7 +145,10 @@ export function parseWebhookPayload(payload: unknown): { messages: InboundMessag
           profileName: names.get(message.data.from) ?? null,
           type,
           body: body.trim(),
-          sentAt: Number.isFinite(seconds) && seconds > 0 ? new Date(seconds * 1000) : new Date(),
+          sentAt:
+            Number.isFinite(seconds) && seconds > 0
+              ? new Date(seconds * 1000)
+              : new Date(),
         });
       }
 

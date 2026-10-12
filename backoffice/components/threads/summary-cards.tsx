@@ -1,6 +1,11 @@
 "use client";
 
-import { HandIcon, MessageCircleIcon, PauseCircleIcon, PhoneCallIcon } from "lucide-react";
+import {
+  HandIcon,
+  MessageCircleIcon,
+  PauseCircleIcon,
+  PhoneCallIcon,
+} from "lucide-react";
 import {
   Card,
   CardAction,
@@ -82,18 +87,25 @@ export function SummaryCards({
                     attention && "text-amber-700 dark:text-amber-300",
                   )}
                 >
-                  {count === undefined ? <Skeleton className="h-8 w-12" /> : count}
+                  {count === undefined ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    count
+                  )}
                 </CardTitle>
                 <CardAction
                   className={cn(
                     "rounded-lg bg-muted p-2 text-muted-foreground [&_svg]:size-4",
-                    attention && "bg-amber-500/15 text-amber-800 dark:text-amber-300",
+                    attention &&
+                      "bg-amber-500/15 text-amber-800 dark:text-amber-300",
                   )}
                 >
                   {card.icon}
                 </CardAction>
               </CardHeader>
-              <CardFooter className="text-sm text-muted-foreground">{card.hint}</CardFooter>
+              <CardFooter className="text-sm text-muted-foreground">
+                {card.hint}
+              </CardFooter>
             </Card>
           </button>
         );

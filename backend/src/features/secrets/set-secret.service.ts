@@ -12,7 +12,11 @@ export async function setSecret(
   value: string,
 ): Promise<SecretStatus> {
   const trimmed = value.trim();
-  if (!trimmed) throw badRequest("Indicá un valor. Un campo vacío no borra la clave.", "empty_secret");
+  if (!trimmed)
+    throw badRequest(
+      "Indicá un valor. Un campo vacío no borra la clave.",
+      "empty_secret",
+    );
   await updateCompanySecrets(ctx, companyId, (secrets) => {
     secrets[name] = trimmed;
   });

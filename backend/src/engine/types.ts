@@ -1,7 +1,13 @@
-export const INTENTS = ["continue", "qualified", "not_interested", "needs_human"] as const;
+export const INTENTS = [
+  "continue",
+  "qualified",
+  "not_interested",
+  "needs_human",
+] as const;
 export type Intent = (typeof INTENTS)[number];
 
-export type ThreadState = "greeting" | "qualify" | "answer" | "handoff" | "closed";
+export type ThreadState =
+  "greeting" | "qualify" | "answer" | "handoff" | "closed";
 
 export type LeadFields = {
   interest: string | null;
