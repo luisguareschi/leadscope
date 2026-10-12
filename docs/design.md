@@ -40,7 +40,7 @@ backend/src/
     registry.ts               picks the real adapter or the fake per company
   llm/                        complete() around Anthropic (tool use), and the local fake
   companies/                  company config schema, starter config for a new company, encrypted secrets, loading a company
-  http/                       operator auth, platform-admin allowlist, input validation, error handler
+  http/                       session auth, platform-admin allowlist, company access (support access + audit), input validation, error handler
   lib/                        env-free helpers: Prisma client, logger, crypto, phone numbers
 backend/prisma/               schema, migrations, development seed (Altamira's config lives in seed-data/)
 backend/scripts/              terminal chat, signed test webhook, debug company secret, add an operator
@@ -109,7 +109,7 @@ One shared deployment for all companies. Every company-owned row has a `companyI
 
 Anthropic API key (`anthropicApiKey`), Meta access token (`metaAccessToken`), HubSpot access token (`hubspotAccessToken`), and the form-lead secret (`formLeadSecret`) are per company. They are encrypted together on the Company row with AES-256-GCM. The encryption key (`SECRETS_ENCRYPTION_KEY`) lives only in the server environment and is never entered in the panel.
 
-An operator sets these for their own company from Integraciones in the backoffice. The API is write-only: it reports whether each secret is set and, when the value is longer than 4 characters, the last 4. It never returns the full secret. Saving a value replaces that one secret. An empty value is rejected, so it cannot wipe a secret; Quitar clears one on purpose. The company id comes from the operator's session, so one company cannot read or write another's keys.
+An operator sets these for their own company from Integraciones in the backoffice. The API is write-only: it reports whether each secret is set and, when the value is longer than 4 characters, the last 4. It never returns the full secret. Saving a value replaces that one secret. An empty value is rejected, so it cannot wipe a secret; Quitar clears one on purpose. The company id comes from the operator's session, so one company cannot read or write another's keys. The only exception is a platform admin in [support access](#support-access), whose writes are recorded.
 
 `npm run company:secret` still writes the same fields from a checkout, for debugging. It is not how a company sets them.
 
@@ -119,9 +119,19 @@ Platform secrets (database URLs, encryption key, Supabase URL and keys, Meta app
 
 A fresh database has no companies and no operators. `db:seed` and `operator:add` are local fixtures only (demo threads, a sample file). A production setup does not run them. The container applies migrations and starts; it does not seed.
 
-A signed-in Supabase user whose email is on `PLATFORM_ADMIN_EMAILS` can open Empresas and call `GET /internal/me`, `GET /internal/companies`, and `POST /internal/companies` with no operator row. The check is the session email (the JWT, or the dev token). It is not hardcoded. Company routes (threads, knowledge, secrets) still require an operator, so this login cannot open a company's threads. The panel sends them to Empresas and hides the company pages until they have an operator row.
+A signed-in Supabase user whose email is on `PLATFORM_ADMIN_EMAILS` can open Empresas and call `GET /internal/me`, `GET /internal/companies`, and `POST /internal/companies` with no operator row. The check is the session email (the JWT, or the dev token). It is not hardcoded. Company routes (threads, knowledge, secrets) need a company: the login's operator row, or support access below. With neither, the panel sends the admin to Empresas and hides the company pages.
 
-Creating a company writes the company row, the slug, a starter config (display name, the three questions, default knowledge limits, no welcome template), and the first operator email. That is how the first company, including Altamira, is created. It does not collect API keys and does not set a WhatsApp phone number id. The same page lists existing companies (name, slug, operator emails). The operator created there signs in afterwards and only sees their company. They set secrets on Integraciones. An operator whose email is not on the list gets no nav item and 403 on the company routes.
+Creating a company writes the company row, the slug, a starter config (display name, the three questions, default knowledge limits, no welcome template), and the first operator email. That is how the first company, including Altamira, is created. It does not collect API keys and does not set a WhatsApp phone number id. The same page lists existing companies (name, slug, operator emails), each with Entrar. The operator created there signs in afterwards and only sees their company. They set secrets on Integraciones. An operator whose email is not on the list gets no nav item and 403 on the company routes.
+
+### Support access
+
+Entrar on Empresas lets a platform admin work inside one company's panel, for setup and support, without an operator row there.
+
+- The panel keeps the entered company per browser tab and sends `X-Company-Id: <company id>` on every API request. Entering and leaving reload the page, so no cached data from one company shows under another.
+- The API honors the header only when the signed-in email is on `PLATFORM_ADMIN_EMAILS`. A header naming a company that does not exist is a 404. For everyone else, including operators, the company comes from their operator row and the header is ignored. An admin who is also an operator gets their own company until they send the header.
+- `GET /internal/me` then returns that company and `supportAccess: true`. The panel shows a bar at the top, "Viendo como administrador: <empresa>", with Volver a Empresas. The sidebar shows the company pages and hides Empresas while inside.
+- Every write (POST, PUT, PATCH, DELETE) on a company route made this way is recorded in `AdminAuditEntry` before it runs: admin email, company, method and path, time, and then the response status. Reads are not recorded. Request bodies are never stored, since they can hold secrets. There is no screen to browse the table yet.
+- Uploads made through support access have no operator (`uploadedById` is null); the audit entry says who made them.
 
 `prisma/seed-data/altamira.ts` is the local fixture's copy. Production does not apply it.
 
@@ -269,12 +279,13 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 - **Thread** — lead phone (E.164) and WhatsApp id, WhatsApp name, form email, source (`whatsapp` / `form`), state, `paused`, `needsHuman` + reason, the four lead fields, last inbound at (24-hour window), last message at + preview (for the list), processing lease, CRM contact id and outbox (`crmPendingAction`, attempts, next attempt, last error, synced at). Unique on (companyId, phone).
 - **Message** — thread id, direction, WhatsApp type, body (or caption), WhatsApp message id (unique), delivery status from Meta's receipts, `handledAt` (inbound: when a turn took it), sent at.
 - **LlmUsage** — thread id, model, input/output and cache read/write tokens, latency. Used to see cost per company.
+- **AdminAuditEntry** — a write a platform admin made inside a company through support access: admin email, method and path, response status, time.
 
 ## Backend surface
 
 - `GET/POST /webhooks/whatsapp` — Meta verification and inbound events. Company resolved from `phone_number_id`. Verified with Meta’s signature.
 - `POST /hooks/crm/form-lead/:companySlug` — form-lead trigger from the company’s CRM workflow. Secret in `X-LeadScope-Secret` (or `Authorization: Bearer`). Accepts HubSpot's "Send a webhook" body as is (`phone` / `mobilephone`, `email`, `firstname`, `lastname`, `hs_object_id`). Sends the welcome template only to a thread with no messages yet.
-- `GET /internal/me` — the signed-in email. With an operator row: that operator, their company, and `platformAdmin`. A platform admin with no operator row gets `operator: null`, `company: null`, and `platformAdmin: true`. Anyone else with no operator row gets 403.
+- `GET /internal/me` — the signed-in email. With an operator row: that operator, their company, `platformAdmin`, and `supportAccess: false`. A platform admin with no operator row gets `operator: null`, `company: null`, and `platformAdmin: true`. A platform admin who sends `X-Company-Id` gets that company and `supportAccess: true`. Anyone else with no operator row gets 403.
 - `GET /internal/companies` — platform admin only, with or without an operator row. Companies (name, slug, operator emails, created at). No secrets, no threads.
 - `POST /internal/companies` — platform admin only, with or without an operator row. Body `{ name, slug, operatorEmail }`. Writes the company, starter config, and first operator. 409 if the slug or email is taken. Extra fields, including API keys, are ignored.
 - `GET /internal/threads?status=&search=&cursor=` — the operator's company threads, newest activity first, 50 per page.
@@ -288,7 +299,7 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 - `DELETE /internal/secrets/:name` — clear that one secret. There is no company id on these routes.
 - `GET /health`.
 
-Auth: Supabase JWT on `/internal/*`. Current projects sign access tokens with ES256; the backend verifies those with the project's JWKS (`SUPABASE_URL`). The legacy `SUPABASE_JWT_SECRET` is used only for HS256 tokens, so a configured secret does not reject an ES256 session. `Sesión inválida o vencida` is that verification failing (signature, expiry, issuer, or audience), not a missing operator row. An operator row is linked to its Supabase user on first login and scopes threads, knowledge, and secrets to that company. `AUTH_MODE=dev` accepts `dev:<email>` and is refused in production. CORS allows only the backoffice origin. Every company query filters by the operator's company, and another company's id is a 404. Secret writes use that same company and ignore any company id in the body. `/internal/me` and `/internal/companies` also accept a signed-in email on `PLATFORM_ADMIN_EMAILS` when no operator row exists. Anyone else on those company routes gets 403. Listing companies does not grant access to their threads.
+Auth: Supabase JWT on `/internal/*`. Current projects sign access tokens with ES256; the backend verifies those with the project's JWKS (`SUPABASE_URL`). The legacy `SUPABASE_JWT_SECRET` is used only for HS256 tokens, so a configured secret does not reject an ES256 session. `Sesión inválida o vencida` is that verification failing (signature, expiry, issuer, or audience), not a missing operator row. An operator row is linked to its Supabase user on first login and scopes threads, knowledge, and secrets to that company. `AUTH_MODE=dev` accepts `dev:<email>` and is refused in production. CORS allows only the backoffice origin and the headers `Authorization`, `Content-Type`, and `X-Company-Id`. Every company query filters by the request's company, and another company's id is a 404. That company is the operator's, or, for a signed-in email on `PLATFORM_ADMIN_EMAILS` that sends `X-Company-Id`, the one in the header (see [Support access](#support-access)). The header is ignored for everyone else. Secret writes use that same company and ignore any company id in the body. `/internal/me` and `/internal/companies` also accept a platform admin with no operator row. Anyone else on `/internal/companies` gets 403.
 
 LLM: one module, `backend/src/llm/anthropic.ts`, that takes the two system blocks + messages and returns the parsed fields. Prompt building lives in `engine/`, not inside the model call.
 
@@ -303,11 +314,11 @@ Pages:
 3. Thread detail — the full conversation with delivery ticks, the lead's answers, HubSpot status, and the 24-hour window. Alerts say why the bot stopped and offer the fix: mark as attended (clears `needsHuman`), resume, or retry HubSpot. Pause / resume and delete. The panel still does not send WhatsApp.
 4. Conocimiento — upload (drag and drop), list, preview the extracted text, replace, and delete files for the operator’s company, with a meter of the space used. Not a “sync sheet now” button.
 5. Integraciones — the operator sets the Anthropic API key, Meta access token, HubSpot access token, and form-lead secret for their company. Write-only fields, whether each is set, the last 4 characters when available, and an explicit Quitar. The platform encryption key is not on this page.
-6. Empresas — only when `GET /internal/me` says `platformAdmin`, including when `company` is null. Create a company (name, slug, first operator email) and list the companies that exist. This is the empty-database setup. No API keys, no link into another company's threads. An operator who is not an admin has no nav item; opening the URL shows that they have no access, and the API answers 403. A platform admin with no operator row does not see Conversaciones, Conocimiento, or Integraciones.
+6. Empresas — only when `GET /internal/me` says `platformAdmin`, including when `company` is null. Create a company (name, slug, first operator email) and list the companies that exist. This is the empty-database setup. No API keys. Each row has Entrar, which opens that company's panel as [support access](#support-access) with the "Viendo como administrador" bar. An operator who is not an admin has no nav item; opening the URL shows that they have no access, and the API answers 403. A platform admin with no operator row and no entered company does not see Conversaciones, Conocimiento, or Integraciones.
 
 The panel does not send messages. Advisors answer from their own WhatsApp.
 
-One shared backoffice for all companies: one Vercel app, one URL. The operator’s company comes from their login (`Operator.companyId`), and the backend filters every request by it. No per-company subdomain, branding, or company switcher in v1. A platform admin can list companies and create one without belonging to a company. They open threads only when their login has an operator row, and then only for that company. Later options on the same app: a subdomain per client and per-company branding.
+One shared backoffice for all companies: one Vercel app, one URL. The operator’s company comes from their login (`Operator.companyId`), and the backend filters every request by it. No per-company subdomain, branding, or company switcher for operators in v1. A platform admin can list companies and create one without belonging to a company, and enter any of them through support access. Later options on the same app: a subdomain per client and per-company branding.
 
 React Query with polling (every 10 seconds on lists, 5 on an open conversation) is enough at this volume. No realtime subscription in v1.
 
@@ -328,7 +339,7 @@ Shadcn with Luis's preset `b1Z5bafVA` and the `dashboard-01` layout. Per-company
 ## Privacy
 
 - Conversations contain personal data. Follow Uruguay’s data protection law (Ley 18.331).
-- Do not log company secrets, message bodies, or phone numbers in plain text. The secrets API never returns a full secret.
+- Do not log company secrets, message bodies, or phone numbers in plain text. The secrets API never returns a full secret. The support-access audit stores method and path, never request bodies.
 - Support deleting a lead’s thread and messages on request.
 - Outbound templates only go to leads who gave their phone in a form or wrote first.
 

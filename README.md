@@ -5,7 +5,7 @@ WhatsApp lead assistant for real-estate developers. It greets leads, asks three 
 | Folder | What it is |
 | --- | --- |
 | `backend/` | Express 5 + Prisma 7 (Postgres). WhatsApp webhook, conversation engine, Anthropic, HubSpot, knowledge uploads. Ships as a Docker image. |
-| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations, pause/resume, knowledge files, company secrets, and (for a platform admin) creating a company. |
+| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations, pause/resume, knowledge files, company secrets, and (for a platform admin) creating a company and entering one through support access. |
 | `docs/` | Design, proposals, meeting notes. |
 
 ## Run it locally
@@ -31,7 +31,9 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
-Sign in at http://localhost:3000 as that email (development login, no password). The panel opens **Empresas**. The list is empty. Create the company (for Altamira: name Altamira, identifier altamira) and the first operator's email. That writes the company, its slug, a starter config, and the operator. It does not ask for API keys. The new row shows in the list. This login still cannot open conversations, because it is not an operator.
+Sign in at http://localhost:3000 as that email (development login, no password). The panel opens **Empresas**. The list is empty. Create the company (for Altamira: name Altamira, identifier altamira) and the first operator's email. That writes the company, its slug, a starter config, and the operator. It does not ask for API keys. The new row shows in the list.
+
+**Entrar** on a row opens that company's panel as the admin (support access), with no operator row there. A bar at the top says "Viendo como administrador: Altamira", and **Volver a Empresas** leaves. The panel sends `X-Company-Id` on every request; the API honors it only for emails on `PLATFORM_ADMIN_EMAILS`, and every write made that way is recorded in the `AdminAuditEntry` table.
 
 Sign in as the operator email you just typed. The sidebar is Conversaciones, Conocimiento, and Integraciones. Empresas is not there, and `/companies` says there is no access. **Integraciones** is where that company sets its Anthropic, Meta, HubSpot, and form-lead secrets. The page shows whether each one is set and the last 4 characters; it never shows the full value. Leaving a field empty does not clear it.
 
@@ -79,7 +81,7 @@ Still placeholders in `backend/prisma/seed-data/altamira.ts`: the welcome templa
 ## Tests
 
 ```bash
-cd backend && npm test          # 148 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
+cd backend && npm test          # 155 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
 cd backoffice && npm run lint && npm run typecheck && npm run build
 ```
 
