@@ -351,7 +351,26 @@ export function ConfigForm({ config }: { config: CompanyConfig }) {
         </Section>
       </div>
 
-      <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background/95 px-4 py-3 shadow-sm backdrop-blur">
+      {/* Actions on the left: toasts appear bottom-right and would cover them. */}
+      <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border bg-background/95 px-4 py-3 shadow-sm backdrop-blur">
+        <div className="flex gap-2">
+          <Button type="submit" disabled={!dirty || save.isPending}>
+            {save.isPending ? <Spinner /> : null}
+            Guardar configuración
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!dirty || save.isPending}
+            onClick={() => {
+              setDraft(initial);
+              setErrors({});
+              setFormError(null);
+            }}
+          >
+            Descartar cambios
+          </Button>
+        </div>
         <p
           role={formError ? "alert" : undefined}
           className={
@@ -365,24 +384,6 @@ export function ConfigForm({ config }: { config: CompanyConfig }) {
               ? "Hay cambios sin guardar."
               : "Cada vez que guardás queda una versión que podés restaurar.")}
         </p>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!dirty || save.isPending}
-            onClick={() => {
-              setDraft(initial);
-              setErrors({});
-              setFormError(null);
-            }}
-          >
-            Descartar cambios
-          </Button>
-          <Button type="submit" disabled={!dirty || save.isPending}>
-            {save.isPending ? <Spinner /> : null}
-            Guardar configuración
-          </Button>
-        </div>
       </div>
     </form>
   );

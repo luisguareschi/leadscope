@@ -90,7 +90,11 @@ export function InstructionsCard({
             </FieldDescription>
             <FieldError>{error}</FieldError>
           </Field>
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={!dirty || save.isPending}>
+              {save.isPending ? <Spinner /> : null}
+              Guardar instrucciones
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -101,10 +105,6 @@ export function InstructionsCard({
               }}
             >
               Descartar cambios
-            </Button>
-            <Button type="submit" disabled={!dirty || save.isPending}>
-              {save.isPending ? <Spinner /> : null}
-              Guardar instrucciones
             </Button>
           </div>
         </form>
