@@ -15,7 +15,7 @@ import { useMe, useSecrets } from "@/lib/queries";
 export default function IntegrationsPage() {
   const me = useMe();
   const query = useSecrets();
-  const company = me.data?.company.name;
+  const company = me.data?.company?.name;
 
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">

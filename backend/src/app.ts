@@ -1,6 +1,7 @@
 import cors from "cors";
 import express, { type Express } from "express";
 import type { AppContext } from "./context.js";
+import { companiesRoutes } from "./features/companies/companies.routes.js";
 import { formLeadsRoutes } from "./features/form-leads/form-leads.routes.js";
 import { knowledgeRoutes } from "./features/knowledge/knowledge.routes.js";
 import { meRoutes } from "./features/me/me.routes.js";
@@ -8,7 +9,8 @@ import { secretsRoutes } from "./features/secrets/secrets.routes.js";
 import { threadsRoutes } from "./features/threads/threads.routes.js";
 import { whatsappWebhookRoutes } from "./features/whatsapp-webhook/whatsapp-webhook.routes.js";
 import { errorHandler } from "./http/error-handler.js";
-import { requireOperator } from "./http/require-operator.js";
+import { requirePlatformAdmin } from "./http/platform-admin.js";
+import { requireOperator, requireSession } from "./http/require-operator.js";
 
 export function createApp(ctx: AppContext): Express {
   const app = express();
@@ -48,11 +50,12 @@ export function createApp(ctx: AppContext): Express {
     }),
   );
   backoffice.use(express.json({ limit: "100kb" }));
-  backoffice.use(requireOperator(ctx));
+  backoffice.use(requireSession(ctx));
   backoffice.use("/me", meRoutes(ctx));
-  backoffice.use("/threads", threadsRoutes(ctx));
-  backoffice.use("/knowledge", knowledgeRoutes(ctx));
-  backoffice.use("/secrets", secretsRoutes(ctx));
+  backoffice.use("/threads", requireOperator(), threadsRoutes(ctx));
+  backoffice.use("/knowledge", requireOperator(), knowledgeRoutes(ctx));
+  backoffice.use("/secrets", requireOperator(), secretsRoutes(ctx));
+  backoffice.use("/companies", requirePlatformAdmin(ctx), companiesRoutes(ctx));
   app.use("/internal", backoffice);
 
   app.use(errorHandler(ctx));

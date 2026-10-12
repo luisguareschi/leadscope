@@ -28,6 +28,11 @@ const envSchema = z
     SUPABASE_JWT_SECRET: optionalString,
     SUPABASE_SERVICE_ROLE_KEY: optionalString,
     BACKOFFICE_ORIGIN: z.string().default("http://localhost:3000"),
+    /**
+     * Comma-separated emails that may create companies. Checked against the signed-in
+     * Supabase email. Empty means no one. Do not hardcode a person here.
+     */
+    PLATFORM_ADMIN_EMAILS: z.string().default(""),
     ALLOW_FAKE_INTEGRATIONS: booleanFlag.default(false),
     ANTHROPIC_API_KEY: optionalString,
     REPLY_DEBOUNCE_MS: z.coerce.number().int().min(0).default(3500),

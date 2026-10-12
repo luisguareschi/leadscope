@@ -13,6 +13,9 @@ import type {
   ChatMessage,
   KnowledgeFile,
   KnowledgeList,
+  CompaniesList,
+  CompanySummary,
+  CreateCompanyInput,
   Me,
   SecretName,
   SecretStatus,
@@ -49,17 +52,20 @@ export function useApi() {
 
 export function useMe() {
   const api = useApi();
+  const { email, status } = useAuth();
   return useQuery({
-    queryKey: ["me"],
+    queryKey: ["me", email],
+    enabled: status === "signed_in" && Boolean(email),
     queryFn: () => api<Me>("/internal/me"),
     staleTime: 5 * 60_000,
   });
 }
 
-export function useThreadsSummary() {
+export function useThreadsSummary(enabled = true) {
   const api = useApi();
   return useQuery({
     queryKey: ["threads", "summary"],
+    enabled,
     queryFn: () => api<ThreadsSummary>("/internal/threads/summary"),
     refetchInterval: LIST_POLL_MS,
   });
@@ -194,6 +200,28 @@ export function useSetSecret() {
         body: JSON.stringify({ value }),
       }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["secrets"] }),
+  });
+}
+
+export function useCompanies(enabled: boolean) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["companies"],
+    enabled,
+    queryFn: () => api<CompaniesList>("/internal/companies"),
+  });
+}
+
+export function useCreateCompany() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateCompanyInput) =>
+      api<{ company: CompanySummary }>("/internal/companies", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["companies"] }),
   });
 }
 

@@ -1,5 +1,7 @@
 /**
- * Gives someone access to a company's backoffice:
+ * Local fixture only. A production setup does not run this. The first operator of a company is
+ * the email entered on Empresas.
+ *
  *   npm run operator:add -- <companySlug> <email> [--invite]
  * Without --invite the operator signs in once their Supabase user exists (linked by email on first
  * login). With --invite, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are used to email them an
@@ -40,6 +42,11 @@ async function inviteToSupabase(
 }
 
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "operator:add is a local fixture. A production setup does not run it. The first operator is created from Empresas.",
+    );
+  }
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: { invite: { type: "boolean", default: false } },

@@ -17,10 +17,16 @@ import {
 import { DEMO_THREADS } from "./seed-data/demo-threads.js";
 
 /**
- * Idempotent development seed: the Altamira company, one operator, a sample knowledge file, and
- * demo conversations. Existing secrets, files, and threads are left alone.
+ * Local fixture only: the Altamira company, one operator, a sample knowledge file, and demo
+ * conversations. A production setup does not run this. The first company is created from
+ * Empresas. Existing secrets, files, and threads are left alone.
  */
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "db:seed is a local fixture. A production setup does not run it. Create the company from Empresas.",
+    );
+  }
   const env = loadEnv();
   const db = createPrisma(env.DATABASE_URL);
   const key = parseEncryptionKey(env.SECRETS_ENCRYPTION_KEY);

@@ -21,7 +21,13 @@ import {
 import { useAuth } from "@/lib/auth";
 import { initials } from "@/lib/format";
 
-export function NavUser({ email }: { email: string }) {
+export function NavUser({
+  email,
+  label = "Operador",
+}: {
+  email: string;
+  label?: string;
+}) {
   const { isMobile } = useSidebar();
   const { signOut, email: sessionEmail } = useAuth();
   const router = useRouter();
@@ -42,7 +48,7 @@ export function NavUser({ email }: { email: string }) {
               </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">Operador</span>
+              <span className="truncate font-medium">{label}</span>
               <span className="truncate text-xs text-foreground/70">
                 {shown}
               </span>

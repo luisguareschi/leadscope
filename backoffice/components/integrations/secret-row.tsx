@@ -79,7 +79,11 @@ export function SecretRow({ secret }: { secret: SecretStatus }) {
             <FieldLabel htmlFor={inputId}>{copy.title}</FieldLabel>
             <Badge
               variant={secret.set ? "secondary" : "outline"}
-              className={cn(secret.set ? "bg-green-500 text-white" : "")}
+              className={cn(
+                secret.set
+                  ? "bg-green-500 text-white"
+                  : "bg-red-500 text-white",
+              )}
             >
               {secret.set ? "Configurada" : "Sin configurar"}
             </Badge>
