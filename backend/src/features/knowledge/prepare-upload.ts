@@ -34,6 +34,7 @@ export function cleanFilename(raw: string): string {
   const base = raw.split(/[\\/]/).pop() ?? raw;
   return (
     base
+      // eslint-disable-next-line no-control-regex -- drop ASCII control characters from filenames
       .replace(/[\u0000-\u001f]/g, "")
       .trim()
       .slice(0, 200) || "archivo"

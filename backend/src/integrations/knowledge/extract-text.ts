@@ -74,12 +74,15 @@ function xmlToText(xml: string, paragraphTag: RegExp): string {
 
 /** Trims lines, drops control characters, and collapses runs of blank lines. */
 export function normalizeText(text: string): string {
-  return text
-    .replace(/\r\n?/g, "\n")
-    .replace(/[^\S\n\t]+$/gm, "")
-    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return (
+    text
+      .replace(/\r\n?/g, "\n")
+      .replace(/[^\S\n\t]+$/gm, "")
+      // eslint-disable-next-line no-control-regex -- drop ASCII controls, keep tab and newline
+      .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+  );
 }
 
 async function extractPdf(data: Buffer): Promise<string> {
