@@ -77,8 +77,11 @@ export type KnowledgeList = {
 
 export type Me = {
   operator: { email: string } | null;
+  /** The company the panel works in: the operator's own, or the one a platform admin entered. */
   company: { name: string; slug: string } | null;
   platformAdmin: boolean;
+  /** A platform admin entered this company from Empresas. */
+  supportAccess: boolean;
 };
 
 export type CompanySummary = {

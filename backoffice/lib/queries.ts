@@ -9,6 +9,7 @@ import {
 import { useCallback } from "react";
 import { ApiError, apiFetch } from "./api";
 import { useAuth } from "./auth";
+import { COMPANY_ID_HEADER, supportCompanyIdFor } from "./support";
 import type {
   ChatMessage,
   KnowledgeFile,
@@ -31,7 +32,7 @@ export const LIST_POLL_MS = 10_000;
 export const THREAD_POLL_MS = 5_000;
 
 export function useApi() {
-  const { getToken, signOut } = useAuth();
+  const { getToken, signOut, email } = useAuth();
   return useCallback(
     async <T>(path: string, init?: RequestInit): Promise<T> => {
       const token = await getToken();
@@ -39,14 +40,21 @@ export function useApi() {
         await signOut();
         throw new ApiError(401, "Tu sesión terminó. Volvé a entrar.");
       }
+      const companyId = supportCompanyIdFor(email);
       try {
-        return await apiFetch<T>(path, token, init);
+        return await apiFetch<T>(path, token, {
+          ...init,
+          headers: {
+            ...(companyId ? { [COMPANY_ID_HEADER]: companyId } : {}),
+            ...init?.headers,
+          },
+        });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) await signOut();
         throw error;
       }
     },
-    [getToken, signOut],
+    [getToken, signOut, email],
   );
 }
 
