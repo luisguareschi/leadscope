@@ -71,15 +71,10 @@ export function useThreadsSummary(enabled = true) {
   });
 }
 
-export function useThreads(
-  status: ThreadStatusFilter,
-  search: string,
-  enabled = true,
-) {
+export function useThreads(status: ThreadStatusFilter, search: string) {
   const api = useApi();
   return useInfiniteQuery({
     queryKey: ["threads", "list", status, search],
-    enabled,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) => {
       const params = new URLSearchParams({ status, limit: "50" });
@@ -92,11 +87,10 @@ export function useThreads(
   });
 }
 
-export function useThread(id: string, enabled = true) {
+export function useThread(id: string) {
   const api = useApi();
   return useQuery({
     queryKey: ["threads", "detail", id],
-    enabled,
     queryFn: () =>
       api<{ thread: Thread; messages: ChatMessage[] }>(
         `/internal/threads/${id}`,
@@ -135,11 +129,10 @@ export function useDeleteThread() {
   });
 }
 
-export function useKnowledgeFiles(enabled = true) {
+export function useKnowledgeFiles() {
   const api = useApi();
   return useQuery({
     queryKey: ["knowledge"],
-    enabled,
     queryFn: () => api<KnowledgeList>("/internal/knowledge/files"),
   });
 }
@@ -189,11 +182,10 @@ export function useDeleteKnowledgeFile() {
   });
 }
 
-export function useSecrets(enabled = true) {
+export function useSecrets() {
   const api = useApi();
   return useQuery({
     queryKey: ["secrets"],
-    enabled,
     queryFn: () => api<SecretsList>("/internal/secrets"),
   });
 }

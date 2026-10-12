@@ -12,24 +12,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api";
-import { useCompanyPages } from "@/lib/company-access";
 import { formatPhone } from "@/lib/format";
 import { useThread } from "@/lib/queries";
 
 export default function ThreadPage() {
   const { id } = useParams<{ id: string }>();
-  const companyPages = useCompanyPages();
-  const query = useThread(id, companyPages.enabled);
-
-  if (companyPages.blocked) {
-    return (
-      <div className="flex flex-1 items-center justify-center py-24">
-        <Spinner className="size-6 text-muted-foreground" />
-      </div>
-    );
-  }
+  const query = useThread(id);
 
   const back = (
     <Button

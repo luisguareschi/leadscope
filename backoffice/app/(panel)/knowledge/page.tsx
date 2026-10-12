@@ -21,24 +21,13 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
-import { useCompanyPages } from "@/lib/company-access";
 import { useKnowledgeFiles } from "@/lib/queries";
 import type { KnowledgeFile } from "@/lib/types";
 
 export default function KnowledgePage() {
-  const companyPages = useCompanyPages();
-  const query = useKnowledgeFiles(companyPages.enabled);
+  const query = useKnowledgeFiles();
   const [preview, setPreview] = useState<KnowledgeFile | null>(null);
   const accept = query.data?.acceptedExtensions ?? [];
-
-  if (companyPages.blocked) {
-    return (
-      <div className="flex flex-1 items-center justify-center py-24">
-        <Spinner className="size-6 text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">

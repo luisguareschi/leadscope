@@ -9,13 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { isCompanyLessAdmin } from "@/lib/company-access";
 import { useAuth } from "@/lib/auth";
-import { useMe } from "@/lib/queries";
 
 export default function LoginPage() {
   const { mode, status, signIn, requestPasswordReset } = useAuth();
-  const me = useMe();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,9 +20,8 @@ export default function LoginPage() {
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
-    if (status !== "signed_in" || me.isPending) return;
-    router.replace(isCompanyLessAdmin(me.data) ? "/companies" : "/threads");
-  }, [status, me.isPending, me.data, router]);
+    if (status === "signed_in") router.replace("/threads");
+  }, [status, router]);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
