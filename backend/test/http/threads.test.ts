@@ -59,6 +59,7 @@ describe("backoffice auth", () => {
     expect(response.body).toEqual({
       operator: { email: "operador@test.com" },
       company: { name: "altamira", slug: "altamira" },
+      platformAdmin: false,
     });
   });
 });

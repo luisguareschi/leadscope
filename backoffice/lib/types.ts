@@ -78,6 +78,23 @@ export type KnowledgeList = {
 export type Me = {
   operator: { email: string };
   company: { name: string; slug: string };
+  platformAdmin: boolean;
+};
+
+export type CompanySummary = {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  operators: { email: string }[];
+};
+
+export type CompaniesList = { companies: CompanySummary[] };
+
+export type CreateCompanyInput = {
+  name: string;
+  slug: string;
+  operatorEmail: string;
 };
 
 export type SecretName =

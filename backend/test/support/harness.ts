@@ -86,9 +86,13 @@ export async function createCompany(
 export type TestContext = AppContext & { llm: ScriptedLlm };
 
 export function createTestContext(
-  options: { integrations?: Partial<Integrations>; now?: () => Date } = {},
+  options: {
+    integrations?: Partial<Integrations>;
+    now?: () => Date;
+    env?: Record<string, string>;
+  } = {},
 ): TestContext {
-  const env = testEnv();
+  const env = testEnv(options.env);
   const llm = scriptedLlm();
   const base = createIntegrations(env, { llmFor: () => llm });
   const ctx = createContext(env, {

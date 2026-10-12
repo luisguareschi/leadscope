@@ -6,7 +6,10 @@ import { HttpError } from "../lib/http-error.js";
 export type OperatorAuth = {
   operatorId: string;
   companyId: string;
+  /** Email stored on the operator row. */
   email: string;
+  /** Email on the signed-in session: the Supabase JWT, or the `dev:` token. */
+  sessionEmail: string;
 };
 
 type RequestWithOperator = Request & { operator?: OperatorAuth };
@@ -52,14 +55,16 @@ export function requireOperator(ctx: AppContext): RequestHandler {
   async function resolve(token: string): Promise<OperatorAuth | null> {
     if (ctx.env.AUTH_MODE === "dev") {
       if (!token.startsWith("dev:")) return null;
+      const sessionEmail = token.slice(4).trim().toLowerCase();
       const operator = await ctx.db.operator.findUnique({
-        where: { email: token.slice(4).trim().toLowerCase() },
+        where: { email: sessionEmail },
       });
       return operator
         ? {
             operatorId: operator.id,
             companyId: operator.companyId,
             email: operator.email,
+            sessionEmail,
           }
         : null;
     }
@@ -69,7 +74,9 @@ export function requireOperator(ctx: AppContext): RequestHandler {
       where: { supabaseUserId: payload.sub },
     });
     const email =
-      typeof payload.email === "string" ? payload.email.toLowerCase() : null;
+      typeof payload.email === "string"
+        ? payload.email.trim().toLowerCase()
+        : null;
     if (!operator && email) {
       // First login of an operator Luis created by email: link the Supabase user to that row.
       const invited = await ctx.db.operator.findUnique({ where: { email } });
@@ -85,6 +92,7 @@ export function requireOperator(ctx: AppContext): RequestHandler {
           operatorId: operator.id,
           companyId: operator.companyId,
           email: operator.email,
+          sessionEmail: email ?? operator.email,
         }
       : null;
   }

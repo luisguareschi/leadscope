@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   BookOpenTextIcon,
+  Building2Icon,
   KeyRoundIcon,
   MessagesSquareIcon,
   RadarIcon,
@@ -34,6 +35,15 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     },
     { title: "Conocimiento", url: "/knowledge", icon: <BookOpenTextIcon /> },
     { title: "Integraciones", url: "/integrations", icon: <KeyRoundIcon /> },
+    ...(me.data?.platformAdmin
+      ? [
+          {
+            title: "Empresas",
+            url: "/companies",
+            icon: <Building2Icon />,
+          },
+        ]
+      : []),
   ];
 
   return (

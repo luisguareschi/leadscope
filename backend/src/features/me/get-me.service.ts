@@ -1,4 +1,5 @@
 import type { AppContext } from "../../context.js";
+import { isPlatformAdmin } from "../../http/platform-admin.js";
 import type { OperatorAuth } from "../../http/require-operator.js";
 
 export async function getMe(ctx: AppContext, operator: OperatorAuth) {
@@ -6,5 +7,9 @@ export async function getMe(ctx: AppContext, operator: OperatorAuth) {
     where: { id: operator.companyId },
     select: { name: true, slug: true },
   });
-  return { operator: { email: operator.email }, company };
+  return {
+    operator: { email: operator.email },
+    company,
+    platformAdmin: isPlatformAdmin(ctx.env, operator.sessionEmail),
+  };
 }
