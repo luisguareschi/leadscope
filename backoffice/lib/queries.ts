@@ -52,8 +52,10 @@ export function useApi() {
 
 export function useMe() {
   const api = useApi();
+  const { email, status } = useAuth();
   return useQuery({
-    queryKey: ["me"],
+    queryKey: ["me", email],
+    enabled: status === "signed_in" && Boolean(email),
     queryFn: () => api<Me>("/internal/me"),
     staleTime: 5 * 60_000,
   });
