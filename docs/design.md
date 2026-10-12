@@ -104,7 +104,7 @@ Operators edit all of this in Configuración (see [Company settings](#company-se
 - Forbidden topics (for Altamira: future rental yield, guaranteed returns).
 - Knowledge limits (`knowledge.*`): 60,000 characters of extracted text per file, 150,000 per company (about 40k tokens of prompt), and 15 MB per original upload. Brochure PDFs are large because of their images, so the upload cap is generous and the text caps do the real work.
 - CRM adapter type and property names.
-- WhatsApp template names. (The phone number id is a column on the company, not config.)
+- WhatsApp template names. The phone number id is a unique column on the company, not config, because the webhook finds the company by it. Configuración edits it next to the welcome template; each change is kept as a version with who and when.
 - Business hours, used when offering a call time.
 - The fixed lines the engine sends (`messages.*`), the reply cap, and the model settings.
 
@@ -136,7 +136,7 @@ A fresh database has no companies and no operators. `db:seed` and `operator:add`
 
 A signed-in Supabase user whose email is on `PLATFORM_ADMIN_EMAILS` can open Empresas and call `GET /internal/me`, `GET /internal/companies`, and `POST /internal/companies` with no operator row. The check is the session email (the JWT, or the dev token). It is not hardcoded. Company routes (threads, knowledge, secrets) need a company: the login's operator row, or support access below. With neither, the panel sends the admin to Empresas and hides the company pages.
 
-Creating a company writes the company row, the slug, a starter config (display name, the three questions, default knowledge limits, no welcome template), and the first operator email. That is how the first company, including Altamira, is created. It does not collect API keys and does not set a WhatsApp phone number id. The same page lists existing companies (name, slug, operator emails), each with Entrar. The operator created there signs in afterwards and only sees their company. They set secrets on Integraciones. An operator whose email is not on the list gets no nav item and 403 on the company routes.
+Creating a company writes the company row, the slug, a starter config (display name, the three questions, default knowledge limits, no welcome template), and the first operator email. That is how the first company, including Altamira, is created. It does not collect API keys and does not set a WhatsApp phone number id; the company sets that in Configuración → WhatsApp. The same page lists existing companies (name, slug, operator emails), each with Entrar. The operator created there signs in afterwards and only sees their company. They set secrets on Integraciones. An operator whose email is not on the list gets no nav item and 403 on the company routes.
 
 ### Support access
 

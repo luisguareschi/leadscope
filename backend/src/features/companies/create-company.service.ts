@@ -23,9 +23,10 @@ function uniqueFields(error: unknown): string {
 }
 
 /**
- * Company row, slug, starter config and instructions (each saved as its first version), and the
- * first operator. Secrets stay empty; that company's operator sets them later from Integraciones.
- * Does not move an email that already belongs to a company.
+ * Company row, slug, starter config and instructions, no WhatsApp number yet (each saved as its
+ * first version), and the first operator. Secrets stay empty; that company's operator sets them
+ * later from Integraciones, and the number from Configuración. Does not move an email that
+ * already belongs to a company.
  */
 export async function createCompany(
   ctx: AppContext,
@@ -63,6 +64,11 @@ export async function createCompany(
           create: [
             { kind: "config", config, createdByEmail: adminEmail },
             { kind: "instructions", instructions, createdByEmail: adminEmail },
+            {
+              kind: "whatsappPhoneNumberId",
+              whatsappPhoneNumberId: null,
+              createdByEmail: adminEmail,
+            },
           ],
         },
       },

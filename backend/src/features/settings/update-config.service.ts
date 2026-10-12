@@ -5,18 +5,23 @@ import { getSettings } from "./get-settings.service.js";
 import {
   assertKnowledgeLimitsFit,
   saveCompanySettings,
+  type SettingsChange,
 } from "./save-settings.js";
 
-/** Saves the whole company config, keeping the previous one as a version. */
+/**
+ * Saves the whole company config and, when given, the WhatsApp phone number id, together. Each
+ * part that changed keeps its previous value as a version. `undefined` leaves the id as it is.
+ */
 export async function updateConfig(
   ctx: AppContext,
   access: CompanyAccess,
   config: CompanyConfig,
+  whatsappPhoneNumberId: string | null | undefined,
 ) {
   await assertKnowledgeLimitsFit(ctx, access.companyId, config.knowledge);
-  const changed = await saveCompanySettings(ctx, access, {
-    kind: "config",
-    config,
-  });
+  const changes: SettingsChange[] = [{ kind: "config", config }];
+  if (whatsappPhoneNumberId !== undefined)
+    changes.push({ kind: "whatsappPhoneNumberId", whatsappPhoneNumberId });
+  const changed = await saveCompanySettings(ctx, access, changes);
   return { changed, settings: await getSettings(ctx, access.companyId) };
 }

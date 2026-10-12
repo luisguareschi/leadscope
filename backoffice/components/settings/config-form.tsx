@@ -59,8 +59,17 @@ function Section({
   );
 }
 
-export function ConfigForm({ config }: { config: CompanyConfig }) {
-  const initial = useMemo(() => toDraft(config), [config]);
+export function ConfigForm({
+  config,
+  whatsappPhoneNumberId,
+}: {
+  config: CompanyConfig;
+  whatsappPhoneNumberId: string | null;
+}) {
+  const initial = useMemo(
+    () => toDraft(config, whatsappPhoneNumberId),
+    [config, whatsappPhoneNumberId],
+  );
   const [draft, setDraft] = useState(initial);
   const [errors, setErrors] = useState<
     Partial<Record<keyof ConfigDraft, string>>
@@ -136,27 +145,35 @@ export function ConfigForm({ config }: { config: CompanyConfig }) {
   // callbacks passed to mutate() are dropped once the component unmounts.
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    save.mutateAsync(fromDraft(draft)).then(
-      (result) =>
-        toast.success(
-          result.changed
-            ? "Configuración guardada. El asistente la usa desde la próxima respuesta."
-            : "No había cambios para guardar.",
-        ),
-      (error: Error) => {
-        if (!(error instanceof ApiError) || !error.fields) {
-          toast.error(error.message);
-          return;
-        }
-        const next = errorsByField(error.fields);
-        setErrors(next);
-        setFormError(error.message);
-        const first = (
-          Object.keys(FIELD_PATHS) as Array<keyof ConfigDraft>
-        ).find((key) => next[key]);
-        if (first) document.getElementById(`config-${first}`)?.focus();
-      },
-    );
+    const phoneNumberId = draft.phoneNumberId.trim();
+    save
+      .mutateAsync({
+        config: fromDraft(draft),
+        ...(phoneNumberId !== initial.phoneNumberId
+          ? { whatsappPhoneNumberId: phoneNumberId || null }
+          : {}),
+      })
+      .then(
+        (result) =>
+          toast.success(
+            result.changed
+              ? "Configuración guardada. El asistente la usa desde la próxima respuesta."
+              : "No había cambios para guardar.",
+          ),
+        (error: Error) => {
+          if (!(error instanceof ApiError) || !error.fields) {
+            toast.error(error.message);
+            return;
+          }
+          const next = errorsByField(error.fields);
+          setErrors(next);
+          setFormError(error.message);
+          const first = (
+            Object.keys(FIELD_PATHS) as Array<keyof ConfigDraft>
+          ).find((key) => next[key]);
+          if (first) document.getElementById(`config-${first}`)?.focus();
+        },
+      );
   };
 
   return (
@@ -258,8 +275,15 @@ export function ConfigForm({ config }: { config: CompanyConfig }) {
         <div className="flex flex-col gap-4">
           <Section
             title="WhatsApp"
-            description="La plantilla aprobada por Meta que reciben los leads que llegan por un formulario."
+            description="El número oficial que atiende el asistente, y la plantilla que reciben los leads que llegan por un formulario."
           >
+            {field("phoneNumberId", "Phone number ID", {
+              mono: true,
+              inputMode: "numeric",
+              maxLength: 64,
+              description:
+                "El identificador del número en Meta (WhatsApp Manager → Configuración de la API), no el número de teléfono. Vacío: la empresa todavía no tiene número y los mensajes que lleguen no se asignan a nadie.",
+            })}
             <Field orientation="horizontal">
               <Switch
                 id="config-welcomeEnabled"

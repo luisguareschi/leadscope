@@ -169,6 +169,21 @@ export const editableConfigSchema = z.strictObject({
   }),
 }) satisfies z.ZodType<CompanyConfig>;
 
+/**
+ * Meta's Phone number ID for the company's WhatsApp number: digits only. It lives on the Company
+ * column, not in the config, because inbound webhooks find the company by it. Empty means no number.
+ */
+export const whatsappPhoneNumberIdSchema = z
+  .string()
+  .trim()
+  .max(64, "Máximo 64 dígitos.")
+  .regex(
+    /^\d*$/,
+    "Son solo números: el identificador del número que muestra Meta, no el número de teléfono.",
+  )
+  .nullable()
+  .transform((value) => value || null);
+
 function spanishIssue(issue: z.core.$ZodRawIssue): string {
   switch (issue.code) {
     case "invalid_type":

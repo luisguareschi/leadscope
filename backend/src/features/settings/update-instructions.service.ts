@@ -9,9 +9,8 @@ export async function updateInstructions(
   access: CompanyAccess,
   instructions: string,
 ) {
-  const changed = await saveCompanySettings(ctx, access, {
-    kind: "instructions",
-    instructions,
-  });
+  const changed = await saveCompanySettings(ctx, access, [
+    { kind: "instructions", instructions },
+  ]);
   return { changed, settings: await getSettings(ctx, access.companyId) };
 }

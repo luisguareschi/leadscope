@@ -53,19 +53,29 @@ import type { SettingsVersion } from "@/lib/types";
 const KIND_LABEL: Record<SettingsVersion["kind"], string> = {
   config: "Configuración",
   instructions: "Instrucciones",
+  whatsappPhoneNumberId: "Número de WhatsApp",
+};
+
+/** How each kind reads inside a sentence. */
+const KIND_PHRASE: Record<SettingsVersion["kind"], string> = {
+  config: "la configuración",
+  instructions: "las instrucciones",
+  whatsappPhoneNumberId: "el número de WhatsApp",
 };
 
 function contentOf(version: SettingsVersion): string {
-  return version.kind === "instructions"
-    ? version.instructions || "(sin instrucciones)"
-    : JSON.stringify(version.config, null, 2);
+  if (version.kind === "instructions")
+    return version.instructions || "(sin instrucciones)";
+  if (version.kind === "whatsappPhoneNumberId")
+    return version.whatsappPhoneNumberId ?? "(sin número)";
+  return JSON.stringify(version.config, null, 2);
 }
 
+/** A version that no longer passes says why; a number another company took says only that. */
 function restoreError(error: Error): string {
-  if (!(error instanceof ApiError) || !error.fields) return error.message;
-  return `${error.message} ${Object.entries(error.fields)
-    .map(([field, message]) => `${field}: ${message}`)
-    .join(" ")}`;
+  if (!(error instanceof ApiError) || error.code !== "invalid_version")
+    return error.message;
+  return [error.message, ...Object.values(error.fields ?? {})].join(" ");
 }
 
 export function VersionsCard() {
@@ -83,7 +93,7 @@ export function VersionsCard() {
         setViewing(null);
         toast.success(
           result.changed
-            ? `Restauraste ${KIND_LABEL[version.kind].toLowerCase()} del ${formatDateTime(version.createdAt)}. El asistente la usa desde la próxima respuesta.`
+            ? `Restauraste ${KIND_PHRASE[version.kind]} del ${formatDateTime(version.createdAt)}. Ya está en uso.`
             : "Esa versión ya es la que está en uso.",
         );
       },
@@ -96,9 +106,10 @@ export function VersionsCard() {
         <CardHeader className="border-b pb-4">
           <CardTitle>Versiones</CardTitle>
           <CardDescription>
-            Cada vez que se guarda la configuración o las instrucciones queda
-            una versión. Restaurar una la vuelve a guardar como versión nueva;
-            la que está en uso queda en el historial.
+            Cada vez que se guarda la configuración, las instrucciones o el
+            número de WhatsApp queda una versión. Restaurar una la vuelve a
+            guardar como versión nueva; la que está en uso queda en el
+            historial.
           </CardDescription>
         </CardHeader>
         {query.isError ? (
@@ -121,7 +132,8 @@ export function VersionsCard() {
               </EmptyMedia>
               <EmptyTitle>Todavía no hay versiones</EmptyTitle>
               <EmptyDescription>
-                Aparecen cuando se guarda la configuración o las instrucciones.
+                Aparecen cuando se guarda la configuración, las instrucciones o
+                el número de WhatsApp.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -251,13 +263,12 @@ export function VersionsCard() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              ¿Restaurar{" "}
-              {confirming ? KIND_LABEL[confirming.kind].toLowerCase() : null}{" "}
-              del {confirming ? formatDateTime(confirming.createdAt) : null}?
+              ¿Restaurar {confirming ? KIND_PHRASE[confirming.kind] : null} del{" "}
+              {confirming ? formatDateTime(confirming.createdAt) : null}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Se guarda como una versión nueva y el asistente la usa desde la
-              próxima respuesta. Lo que está en uso ahora queda en el historial.
+              Se guarda como una versión nueva y queda en uso enseguida. Lo que
+              está en uso ahora queda en el historial.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

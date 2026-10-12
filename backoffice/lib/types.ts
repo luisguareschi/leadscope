@@ -151,9 +151,15 @@ export type CompanyConfig = {
 export type CompanySettings = {
   config: CompanyConfig;
   instructions: string;
+  /** Meta's Phone number ID of the company's WhatsApp number. Null until it has one. */
+  whatsappPhoneNumberId: string | null;
   /** Read-only: written in code and filled in with the config. */
   platformRules: string;
-  currentVersions: { config: string | null; instructions: string | null };
+  currentVersions: {
+    config: string | null;
+    instructions: string | null;
+    whatsappPhoneNumberId: string | null;
+  };
   limits: { instructionsMaxChars: number };
 };
 
@@ -164,7 +170,7 @@ export type SettingsSaveResult = {
 
 export type SettingsVersion = {
   id: string;
-  kind: "config" | "instructions";
+  kind: "config" | "instructions" | "whatsappPhoneNumberId";
   createdAt: string;
   /** Null for the version that existed before versioning. */
   createdByEmail: string | null;
@@ -174,6 +180,7 @@ export type SettingsVersion = {
   current: boolean;
   config: CompanyConfig | null;
   instructions: string | null;
+  whatsappPhoneNumberId: string | null;
 };
 
 export type PromptPreview = {

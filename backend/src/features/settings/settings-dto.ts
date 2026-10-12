@@ -15,6 +15,10 @@ export function toSettingsVersionDto(
     current,
     config: version.kind === "config" ? version.config : null,
     instructions: version.kind === "instructions" ? version.instructions : null,
+    whatsappPhoneNumberId:
+      version.kind === "whatsappPhoneNumberId"
+        ? version.whatsappPhoneNumberId
+        : null,
   };
 }
 

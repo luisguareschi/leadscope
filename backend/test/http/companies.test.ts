@@ -86,9 +86,10 @@ describe("platform admin companies", () => {
       expect.arrayContaining([
         { kind: "config", createdByEmail: "admin@example.com" },
         { kind: "instructions", createdByEmail: "admin@example.com" },
+        { kind: "whatsappPhoneNumberId", createdByEmail: "admin@example.com" },
       ]),
     );
-    expect(row.settingsVersions).toHaveLength(2);
+    expect(row.settingsVersions).toHaveLength(3);
     expect(row.encryptedSecrets).toBeNull();
     expect(row.whatsappPhoneNumberId).toBeNull();
     expect(row.threads).toEqual([]);

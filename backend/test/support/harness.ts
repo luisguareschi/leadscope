@@ -75,13 +75,14 @@ export async function createCompany(
   const slug = options.slug ?? "test-co";
   const config = parseCompanyConfig({ ...baseConfig, ...options.config });
   const instructions = options.instructions ?? "";
+  const whatsappPhoneNumberId = options.phoneNumberId ?? `PNID-${slug}`;
   return db.company.create({
     data: {
       slug,
       name: slug,
       config,
       instructions,
-      whatsappPhoneNumberId: options.phoneNumberId ?? `PNID-${slug}`,
+      whatsappPhoneNumberId,
       encryptedSecrets: encryptSecrets(
         options.secrets ?? { formLeadSecret: "form-secret" },
         parseEncryptionKey(TEST_ENCRYPTION_KEY),
@@ -90,6 +91,11 @@ export async function createCompany(
         create: [
           { kind: "config", config, createdAt: CREATED_AT },
           { kind: "instructions", instructions, createdAt: CREATED_AT },
+          {
+            kind: "whatsappPhoneNumberId",
+            whatsappPhoneNumberId,
+            createdAt: CREATED_AT,
+          },
         ],
       },
     },

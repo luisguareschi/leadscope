@@ -75,6 +75,15 @@ async function settingsOf(companyId: string) {
   };
 }
 
+async function phoneNumberIdOf(companyId: string) {
+  return (
+    await db.company.findUniqueOrThrow({
+      where: { id: companyId },
+      select: { whatsappPhoneNumberId: true },
+    })
+  ).whatsappPhoneNumberId;
+}
+
 async function currentConfig(auth: Record<string, string>) {
   const response = await request(app)
     .get("/internal/settings")
@@ -241,7 +250,7 @@ describe("company settings", () => {
       await db.companySettingsVersion.count({
         where: { companyId: altamiraId },
       }),
-    ).toBe(2);
+    ).toBe(3);
   });
 
   it("keeps an operator inside their own company, even with another company's header", async () => {
@@ -518,5 +527,214 @@ describe("company settings", () => {
     await processThread(ctx, recorded.threadId);
     expect(ctx.llm.calls).toHaveLength(1);
     expect(ctx.llm.calls[0]?.system).toBe(prompt.body.system);
+  });
+});
+
+describe("WhatsApp phone number id", () => {
+  const save = (auth: Record<string, string>, body: Record<string, unknown>) =>
+    request(app).put("/internal/settings/config").set(auth).send(body);
+
+  it("sets it, rejects one another company has, and clears it", async () => {
+    await db.company.update({
+      where: { id: otraId },
+      data: { whatsappPhoneNumberId: "200000000000002" },
+    });
+    const config = await currentConfig(operator);
+    expect(
+      (await request(app).get("/internal/settings").set(operator)).body
+        .whatsappPhoneNumberId,
+    ).toBe("PNID-altamira");
+
+    at("15:10");
+    const saved = await save(operator, {
+      ...config,
+      whatsappPhoneNumberId: " 100000000000001 ",
+    }).expect(200);
+    expect(saved.body.changed).toBe(true);
+    expect(saved.body.settings.whatsappPhoneNumberId).toBe("100000000000001");
+    expect(await phoneNumberIdOf(altamiraId)).toBe("100000000000001");
+    expect(
+      (await recordInboundMessage(ctx, inbound("100000000000001"))).status,
+    ).toBe("recorded");
+    expect(
+      (await recordInboundMessage(ctx, inbound("PNID-altamira"))).status,
+    ).toBe("unknown_company");
+    const versions = await request(app)
+      .get("/internal/settings/versions")
+      .set(operator)
+      .expect(200);
+    expect(versions.body.versions[0]).toMatchObject({
+      kind: "whatsappPhoneNumberId",
+      whatsappPhoneNumberId: "100000000000001",
+      createdByEmail: "operador@altamira.uy",
+      viaSupport: false,
+      current: true,
+    });
+    expect(
+      await db.companySettingsVersion.count({
+        where: { companyId: altamiraId, kind: "config" },
+      }),
+    ).toBe(1);
+
+    at("15:20");
+    const duplicate = await save(operator, {
+      ...config,
+      tone: "No se guarda: el número está repetido.",
+      whatsappPhoneNumberId: "200000000000002",
+    }).expect(409);
+    expect(duplicate.body.error).toEqual({
+      code: "phone_number_id_taken",
+      message: "Ese identificador de WhatsApp ya está asignado a otra empresa.",
+      fields: {
+        whatsappPhoneNumberId:
+          "Ya lo usa otra empresa. Cada número de WhatsApp va con una sola empresa.",
+      },
+    });
+    expect(await phoneNumberIdOf(altamiraId)).toBe("100000000000001");
+    expect(await phoneNumberIdOf(otraId)).toBe("200000000000002");
+    expect((await settingsOf(altamiraId)).config.tone).toBe(config.tone);
+
+    const notAnId = await save(operator, {
+      ...config,
+      whatsappPhoneNumberId: "+598 99 123 456",
+    }).expect(400);
+    expect(Object.keys(notAnId.body.error.fields)).toEqual([
+      "whatsappPhoneNumberId",
+    ]);
+
+    await save(operator, { ...config, tone: "Otro tono." }).expect(200);
+    expect(await phoneNumberIdOf(altamiraId)).toBe("100000000000001");
+
+    at("15:30");
+    const cleared = await save(operator, {
+      ...config,
+      tone: "Otro tono.",
+      whatsappPhoneNumberId: "",
+    }).expect(200);
+    expect(cleared.body.settings.whatsappPhoneNumberId).toBeNull();
+    expect(await phoneNumberIdOf(altamiraId)).toBeNull();
+    expect(
+      (await recordInboundMessage(ctx, inbound("100000000000001"))).status,
+    ).toBe("unknown_company");
+    const after = await request(app)
+      .get("/internal/settings/versions")
+      .set(operator)
+      .expect(200);
+    expect(after.body.versions[0]).toMatchObject({
+      kind: "whatsappPhoneNumberId",
+      whatsappPhoneNumberId: null,
+      current: true,
+    });
+  });
+
+  it("gives one of two companies saving the same number at once a 409, not a 500", async () => {
+    const otraOperator = { Authorization: "Bearer dev:operador@otra.uy" };
+    const [altamiraConfig, otraConfig] = await Promise.all([
+      currentConfig(operator),
+      currentConfig(otraOperator),
+    ]);
+    const responses = await Promise.all([
+      save(operator, {
+        ...altamiraConfig,
+        whatsappPhoneNumberId: "400000000000004",
+      }),
+      save(otraOperator, {
+        ...otraConfig,
+        whatsappPhoneNumberId: "400000000000004",
+      }),
+    ]);
+    expect(responses.map((response) => response.status).sort()).toEqual([
+      200, 409,
+    ]);
+    expect(
+      await db.company.count({
+        where: { whatsappPhoneNumberId: "400000000000004" },
+      }),
+    ).toBe(1);
+  });
+
+  it("lets a platform admin set it through support access, and audits the write", async () => {
+    const config = await currentConfig({ ...admin, ...enter(otraId) });
+    await save(
+      { ...admin, ...enter(otraId) },
+      {
+        ...config,
+        whatsappPhoneNumberId: "300000000000003",
+      },
+    ).expect(200);
+    expect(await phoneNumberIdOf(otraId)).toBe("300000000000003");
+    expect(await phoneNumberIdOf(altamiraId)).toBe("PNID-altamira");
+
+    const version = await db.companySettingsVersion.findFirstOrThrow({
+      where: { companyId: otraId, kind: "whatsappPhoneNumberId" },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(version).toMatchObject({
+      whatsappPhoneNumberId: "300000000000003",
+      createdByEmail: "admin@example.com",
+      viaSupport: true,
+    });
+    await vi.waitFor(async () => {
+      expect(
+        await db.adminAuditEntry.findMany({
+          where: { companyId: otraId },
+          select: { adminEmail: true, action: true, status: true },
+        }),
+      ).toEqual([
+        {
+          adminEmail: "admin@example.com",
+          action: "PUT /internal/settings/config",
+          status: 200,
+        },
+      ]);
+    });
+  });
+
+  it("restores an earlier number, unless another company has it now", async () => {
+    const config = await currentConfig(operator);
+    at("15:10");
+    await save(operator, {
+      ...config,
+      whatsappPhoneNumberId: "100000000000001",
+    }).expect(200);
+    at("15:20");
+    await save(operator, {
+      ...config,
+      whatsappPhoneNumberId: "100000000000009",
+    }).expect(200);
+    const numbers = await db.companySettingsVersion.findMany({
+      where: { companyId: altamiraId, kind: "whatsappPhoneNumberId" },
+      orderBy: { createdAt: "asc" },
+    });
+    const [legacy, first, second] = numbers;
+
+    at("15:30");
+    const restored = await request(app)
+      .post(`/internal/settings/versions/${first!.id}/restore`)
+      .set(operator)
+      .expect(200);
+    expect(restored.body.settings.whatsappPhoneNumberId).toBe(
+      "100000000000001",
+    );
+    expect(await phoneNumberIdOf(altamiraId)).toBe("100000000000001");
+
+    await db.company.update({
+      where: { id: otraId },
+      data: { whatsappPhoneNumberId: "100000000000009" },
+    });
+    const taken = await request(app)
+      .post(`/internal/settings/versions/${second!.id}/restore`)
+      .set(operator)
+      .expect(409);
+    expect(taken.body.error.code).toBe("phone_number_id_taken");
+    expect(await phoneNumberIdOf(altamiraId)).toBe("100000000000001");
+
+    const stale = await request(app)
+      .post(`/internal/settings/versions/${legacy!.id}/restore`)
+      .set(operator)
+      .expect(422);
+    expect(Object.keys(stale.body.error.fields)).toEqual([
+      "whatsappPhoneNumberId",
+    ]);
   });
 });

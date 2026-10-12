@@ -179,26 +179,29 @@ model LlmUsage {
 enum SettingsKind {
   config
   instructions
+  whatsappPhoneNumberId
 }
 
-/// One saved version of a company's config or instructions. The newest of each kind matches the
-/// Company row; restoring an older one saves it again as a new version.
+/// One saved version of a company's config, instructions, or WhatsApp phone number id. The newest
+/// of each kind matches the Company row; restoring an older one saves it again as a new version.
 model CompanySettingsVersion {
-  id             String       @id @default(cuid())
-  companyId      String
-  kind           SettingsKind
+  id                    String       @id @default(cuid())
+  companyId             String
+  kind                  SettingsKind
   /// Set when kind is config. Validated by `companyConfigSchema`.
-  config         Json?
+  config                Json?
   /// Set when kind is instructions.
-  instructions   String?      @db.Text
+  instructions          String?      @db.Text
+  /// When kind is whatsappPhoneNumberId: the value of `Company.whatsappPhoneNumberId`. Null means no number.
+  whatsappPhoneNumberId String?
   /// Signed-in email of whoever saved it. Null for the version that existed before versioning.
-  createdByEmail String?
+  createdByEmail        String?
   /// Saved by a platform admin through support access.
-  viaSupport     Boolean      @default(false)
+  viaSupport            Boolean      @default(false)
   /// The version this one restored, when it was a restore.
-  restoredFromId String?
-  createdAt      DateTime     @default(now())
-  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  restoredFromId        String?
+  createdAt             DateTime     @default(now())
+  company               Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId, kind, createdAt])
 }

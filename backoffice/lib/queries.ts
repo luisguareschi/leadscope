@@ -281,12 +281,22 @@ function useSettingsMutation<T>(
   });
 }
 
+/** Leaving `whatsappPhoneNumberId` out keeps the stored one; null clears it. */
 export function useSaveConfig() {
-  return useSettingsMutation((api, config: CompanyConfig) =>
-    api<SettingsSaveResult>("/internal/settings/config", {
-      method: "PUT",
-      body: JSON.stringify(config),
-    }),
+  return useSettingsMutation(
+    (
+      api,
+      input: { config: CompanyConfig; whatsappPhoneNumberId?: string | null },
+    ) =>
+      api<SettingsSaveResult>("/internal/settings/config", {
+        method: "PUT",
+        body: JSON.stringify({
+          ...input.config,
+          ...(input.whatsappPhoneNumberId !== undefined
+            ? { whatsappPhoneNumberId: input.whatsappPhoneNumberId }
+            : {}),
+        }),
+      }),
   );
 }
 

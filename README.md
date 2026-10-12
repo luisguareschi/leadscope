@@ -75,7 +75,7 @@ When a company has no key for an integration and `ALLOW_FAKE_INTEGRATIONS=true` 
 | Integration | Fake | Real once you set |
 | --- | --- | --- |
 | Anthropic | scripted replies that walk the three questions | `anthropicApiKey` on the company, from Integraciones |
-| WhatsApp | sends recorded in memory | `metaAccessToken` (Integraciones) + the company's phone number id |
+| WhatsApp | sends recorded in memory | `metaAccessToken` (Integraciones) + the company's phone number id (Configuración → WhatsApp) |
 | HubSpot | contacts kept in memory | `hubspotAccessToken` (Integraciones), and `crm.transcriptProperty` in the config |
 
 Still placeholders for Altamira: the welcome template name, the HubSpot property name, and business hours. They are set in Configuración (the local fixture's copies are in `backend/prisma/seed-data/altamira.ts`). The sample knowledge file is fictional.
@@ -83,7 +83,7 @@ Still placeholders for Altamira: the welcome template name, the HubSpot property
 ## Tests
 
 ```bash
-cd backend && npm test          # 165 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
+cd backend && npm test          # 169 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
 cd backoffice && npm run lint && npm run typecheck && npm run build
 ```
 
@@ -95,7 +95,7 @@ CI runs both on every pull request.
 2. **Backend.** Deploy `backend/Dockerfile` as one always-on instance (Fly, Railway, or Render) with: `NODE_ENV=production`, `DATABASE_URL` (pooled), `DIRECT_URL`, `SECRETS_ENCRYPTION_KEY` (`openssl rand -base64 32`), `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`, `AUTH_MODE=supabase`, `SUPABASE_URL` (the same project URL as the backoffice's `NEXT_PUBLIC_SUPABASE_URL`, no path), `BACKOFFICE_ORIGIN` (the backoffice origin, exactly), `PLATFORM_ADMIN_EMAILS` (comma-separated signed-in emails that may create companies), and optionally `SENTRY_DSN` and `SUPABASE_JWT_SECRET` (only for an older project that still signs access tokens with HS256). Current Supabase projects sign sessions with ES256; the backend reads the JWKS from `SUPABASE_URL`. The container applies migrations on start and does not seed. The database stays empty of companies and operators.
 3. **First company.** Sign in to the backoffice as the allowlisted user and open Empresas. Create the company and the first operator email (Altamira: name Altamira, identifier altamira). That is the whole setup. Do not run `npm run db:seed` or `npm run operator:add`. In Supabase Authentication, create the user for that operator email so they can sign in. They see only their company.
 4. **Secrets.** Each company sets its own in the panel: sign in as an operator of that company and open Integraciones. The fields are the Anthropic API key, the Meta access token, the HubSpot access token, and the form-lead secret. The page shows whether each one is set and the last 4 characters. It never shows the full value, and an empty field does not clear a secret (use Quitar). The platform encryption key (`SECRETS_ENCRYPTION_KEY`) stays a server environment variable. For debugging from a checkout, `npm run company:secret` still writes the same fields (`-` reads the value from stdin; `--delete` removes one): `npm run company:secret -- altamira anthropicApiKey -`.
-5. **Meta.** Webhook URL `https://<backend>/webhooks/whatsapp`, the verify token, and a subscription to `messages`.
+5. **Meta.** Webhook URL `https://<backend>/webhooks/whatsapp`, the verify token, and a subscription to `messages`. Then put the number's Phone number ID (WhatsApp Manager → API setup) in Configuración → WhatsApp, as an operator of the company or as a platform admin through Entrar. Each id belongs to one company; until it is set, messages to that number reach no company.
 6. **HubSpot.** Create the long-text property and put its internal name in Configuración → HubSpot (`crm.transcriptProperty`). Add a workflow "Send a webhook" to `POST https://<backend>/hooks/crm/form-lead/altamira` with the header `X-LeadScope-Secret`.
 7. **Backoffice on Vercel.** Root directory `backoffice`; set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_AUTH_MODE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 

@@ -77,8 +77,9 @@ function SettingsView() {
         <TabsContent value="assistant" keepMounted className="pt-2">
           {data ? (
             <ConfigForm
-              key={data.currentVersions.config ?? "config"}
+              key={`${data.currentVersions.config}:${data.currentVersions.whatsappPhoneNumberId}`}
               config={data.config}
+              whatsappPhoneNumberId={data.whatsappPhoneNumberId}
             />
           ) : (
             <Skeleton className="h-96 w-full rounded-xl" />

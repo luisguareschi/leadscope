@@ -20,14 +20,23 @@ import {
 } from "./seed-data/altamira.js";
 import { DEMO_THREADS } from "./seed-data/demo-threads.js";
 
-/** Keeps the newest settings version equal to what the seed just wrote. */
+/** Keeps the newest settings version of each kind equal to what the seed just wrote. */
 async function recordSeedVersions(
   db: Db,
-  companyId: string,
-  config: CompanyConfig,
-  instructions: string,
+  company: {
+    id: string;
+    config: CompanyConfig;
+    instructions: string;
+    whatsappPhoneNumberId: string | null;
+  },
 ) {
-  const latest = (kind: "config" | "instructions") =>
+  const {
+    id: companyId,
+    config,
+    instructions,
+    whatsappPhoneNumberId,
+  } = company;
+  const latest = (kind: "config" | "instructions" | "whatsappPhoneNumberId") =>
     db.companySettingsVersion.findFirst({
       where: { companyId, kind },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -46,6 +55,15 @@ async function recordSeedVersions(
   if (lastInstructions?.instructions !== instructions) {
     await db.companySettingsVersion.create({
       data: { companyId, kind: "instructions", instructions },
+    });
+  }
+  const lastPhoneNumberId = await latest("whatsappPhoneNumberId");
+  if (
+    !lastPhoneNumberId ||
+    lastPhoneNumberId.whatsappPhoneNumberId !== whatsappPhoneNumberId
+  ) {
+    await db.companySettingsVersion.create({
+      data: { companyId, kind: "whatsappPhoneNumberId", whatsappPhoneNumberId },
     });
   }
 }
@@ -99,7 +117,12 @@ async function main() {
         : {}),
     },
   });
-  await recordSeedVersions(db, company.id, config, altamiraInstructions);
+  await recordSeedVersions(db, {
+    id: company.id,
+    config,
+    instructions: altamiraInstructions,
+    whatsappPhoneNumberId: company.whatsappPhoneNumberId,
+  });
 
   await db.operator.upsert({
     where: { email: operatorEmail },

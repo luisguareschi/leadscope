@@ -1,12 +1,23 @@
 import type { RequestHandler } from "express";
-import { parseEditableConfig } from "../../companies/editable-config.js";
+import { parseSettingsInput } from "../../companies/editable-config.js";
 import type { AppContext } from "../../context.js";
 import { companyAccessOf } from "../../http/company-access.js";
+import { updateConfigBodySchema } from "./settings-params.js";
 import { updateConfig } from "./update-config.service.js";
 
 export function updateConfigController(ctx: AppContext): RequestHandler {
   return async (req, res) => {
-    const config = parseEditableConfig(req.body);
-    res.json(await updateConfig(ctx, companyAccessOf(req), config));
+    const { whatsappPhoneNumberId, ...config } = parseSettingsInput(
+      updateConfigBodySchema,
+      req.body,
+    );
+    res.json(
+      await updateConfig(
+        ctx,
+        companyAccessOf(req),
+        config,
+        whatsappPhoneNumberId,
+      ),
+    );
   };
 }
