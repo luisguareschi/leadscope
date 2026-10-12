@@ -7,6 +7,8 @@ export class ApiError extends Error {
     readonly status: number,
     message: string,
     readonly code?: string,
+    /** Per-field messages, keyed by the field's dotted path (e.g. "questions.budget"). */
+    readonly fields?: Record<string, string>,
   ) {
     super(message);
   }
@@ -34,13 +36,18 @@ export async function apiFetch<T>(
   }
   if (response.status === 204) return undefined as T;
   const json = (await response.json().catch(() => null)) as {
-    error?: { message?: string; code?: string };
+    error?: {
+      message?: string;
+      code?: string;
+      fields?: Record<string, string>;
+    };
   } | null;
   if (!response.ok) {
     throw new ApiError(
       response.status,
       json?.error?.message ?? "Ocurrió un error inesperado.",
       json?.error?.code,
+      json?.error?.fields,
     );
   }
   return json as T;
