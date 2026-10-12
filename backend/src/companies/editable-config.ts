@@ -21,12 +21,12 @@ const optional = (max: number) =>
     .string()
     .trim()
     .max(max, `Máximo ${count(max)} caracteres.`);
-const integer = (min: number, max: number, unit = "") =>
+const integer = (min: number, max: number) =>
   z
     .number()
     .int("Tiene que ser un número entero.")
-    .min(min, `El mínimo es ${count(min)}${unit}.`)
-    .max(max, `El máximo es ${count(max)}${unit}.`);
+    .min(min, `El mínimo es ${count(min)}.`)
+    .max(max, `El máximo es ${count(max)}.`);
 
 function isLocale(value: string): boolean {
   try {
@@ -111,7 +111,11 @@ export const editableConfigSchema = z.strictObject({
       ),
     temperature: z.number().min(0, "El mínimo es 0.").max(1, "El máximo es 1."),
     historyLimit: integer(4, 200),
-    timeoutMs: integer(1_000, 60_000),
+    timeoutMs: z
+      .number()
+      .int("Tiene que ser un número entero.")
+      .min(1_000, "El mínimo es 1 segundo.")
+      .max(60_000, "El máximo es 60 segundos."),
   }),
   knowledge: z
     .strictObject({
@@ -168,8 +172,8 @@ export const editableConfigSchema = z.strictObject({
 function spanishIssue(issue: z.core.$ZodRawIssue): string {
   switch (issue.code) {
     case "invalid_type":
-      return issue.input === undefined
-        ? "Falta este campo."
+      return issue.input === undefined || issue.input === null
+        ? "Completá este campo."
         : "Valor inválido.";
     case "unrecognized_keys":
       return "Este campo no se puede guardar desde Configuración.";
