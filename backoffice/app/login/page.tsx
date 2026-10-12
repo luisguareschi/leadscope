@@ -45,18 +45,24 @@ export default function LoginPage() {
       await requestPasswordReset(email);
       toast.success("Te enviamos un email para elegir una contraseña nueva.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo enviar el email.");
+      setError(
+        cause instanceof Error ? cause.message : "No se pudo enviar el email.",
+      );
     }
   }
 
   return (
-    <AuthCard title="Entrá al panel" description="Conversaciones del asistente de WhatsApp.">
+    <AuthCard
+      title="Entrá al panel"
+      description="Conversaciones del asistente de WhatsApp."
+    >
       <form onSubmit={onSubmit}>
         <FieldGroup>
           {mode === "dev" ? (
             <Alert>
               <AlertDescription>
-                Modo desarrollo: entrá con el email de un operador, sin contraseña (por ejemplo operador@example.com).
+                Modo desarrollo: entrá con el email de un operador, sin
+                contraseña (por ejemplo operador@example.com).
               </AlertDescription>
             </Alert>
           ) : null}

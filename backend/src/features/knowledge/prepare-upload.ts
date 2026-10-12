@@ -1,10 +1,18 @@
 import type { LoadedCompany } from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
-import { extractKnowledgeText, KnowledgeExtractionError } from "../../integrations/knowledge/extract-text.js";
+import {
+  extractKnowledgeText,
+  KnowledgeExtractionError,
+} from "../../integrations/knowledge/extract-text.js";
 import { sha256Hex } from "../../lib/crypto.js";
 import { HttpError } from "../../lib/http-error.js";
 
-export type UploadedFile = { originalname: string; mimetype: string; size: number; buffer: Buffer };
+export type UploadedFile = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
 
 export type PreparedKnowledgeFile = {
   name: string;
@@ -17,12 +25,20 @@ export type PreparedKnowledgeFile = {
   charCount: number;
 };
 
-const formatNumber = (value: number) => new Intl.NumberFormat("es-UY").format(value);
-const megabytes = (bytes: number) => `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`;
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("es-UY").format(value);
+const megabytes = (bytes: number) =>
+  `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`;
 
 export function cleanFilename(raw: string): string {
   const base = raw.split(/[\\/]/).pop() ?? raw;
-  return base.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 200) || "archivo";
+  return (
+    base
+      // eslint-disable-next-line no-control-regex -- drop ASCII control characters from filenames
+      .replace(/[\u0000-\u001f]/g, "")
+      .trim()
+      .slice(0, 200) || "archivo"
+  );
 }
 
 /** Extracts the text and checks the per-file limits. Nothing is stored yet. */
@@ -30,10 +46,15 @@ export async function prepareKnowledgeFile(
   company: LoadedCompany,
   file: UploadedFile | undefined,
 ): Promise<PreparedKnowledgeFile> {
-  if (!file) throw new HttpError(400, "Elegí un archivo para subir.", "missing_file");
+  if (!file)
+    throw new HttpError(400, "Elegí un archivo para subir.", "missing_file");
   const limits = company.config.knowledge;
   if (file.size > limits.maxFileBytes) {
-    throw new HttpError(413, `El archivo supera el máximo de ${megabytes(limits.maxFileBytes)}.`, "file_too_large");
+    throw new HttpError(
+      413,
+      `El archivo supera el máximo de ${megabytes(limits.maxFileBytes)}.`,
+      "file_too_large",
+    );
   }
   const name = cleanFilename(file.originalname);
   let extracted;
@@ -41,7 +62,11 @@ export async function prepareKnowledgeFile(
     extracted = await extractKnowledgeText(name, file.buffer);
   } catch (error) {
     if (error instanceof KnowledgeExtractionError) {
-      throw new HttpError(error.code === "unsupported_format" ? 415 : 422, error.message, error.code);
+      throw new HttpError(
+        error.code === "unsupported_format" ? 415 : 422,
+        error.message,
+        error.code,
+      );
     }
     throw error;
   }
@@ -72,7 +97,10 @@ export async function assertFitsCompanyTotal(
   replacingId: string | null,
 ): Promise<void> {
   const others = await ctx.db.knowledgeFile.aggregate({
-    where: { companyId: company.id, ...(replacingId ? { NOT: { id: replacingId } } : {}) },
+    where: {
+      companyId: company.id,
+      ...(replacingId ? { NOT: { id: replacingId } } : {}),
+    },
     _sum: { charCount: true },
   });
   const used = others._sum.charCount ?? 0;

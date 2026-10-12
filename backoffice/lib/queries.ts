@@ -1,6 +1,11 @@
 "use client";
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useCallback } from "react";
 import { ApiError, apiFetch } from "./api";
 import { useAuth } from "./auth";
@@ -9,6 +14,9 @@ import type {
   KnowledgeFile,
   KnowledgeList,
   Me,
+  SecretName,
+  SecretStatus,
+  SecretsList,
   Thread,
   ThreadsPage,
   ThreadsSummary,
@@ -22,7 +30,7 @@ export const THREAD_POLL_MS = 5_000;
 export function useApi() {
   const { getToken, signOut } = useAuth();
   return useCallback(
-    async <T,>(path: string, init?: RequestInit): Promise<T> => {
+    async <T>(path: string, init?: RequestInit): Promise<T> => {
       const token = await getToken();
       if (!token) {
         await signOut();
@@ -41,7 +49,11 @@ export function useApi() {
 
 export function useMe() {
   const api = useApi();
-  return useQuery({ queryKey: ["me"], queryFn: () => api<Me>("/internal/me"), staleTime: 5 * 60_000 });
+  return useQuery({
+    queryKey: ["me"],
+    queryFn: () => api<Me>("/internal/me"),
+    staleTime: 5 * 60_000,
+  });
 }
 
 export function useThreadsSummary() {
@@ -73,19 +85,27 @@ export function useThread(id: string) {
   const api = useApi();
   return useQuery({
     queryKey: ["threads", "detail", id],
-    queryFn: () => api<{ thread: Thread; messages: ChatMessage[] }>(`/internal/threads/${id}`),
+    queryFn: () =>
+      api<{ thread: Thread; messages: ChatMessage[] }>(
+        `/internal/threads/${id}`,
+      ),
     refetchInterval: THREAD_POLL_MS,
-    retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 2,
+    retry: (count, error) =>
+      !(error instanceof ApiError && error.status === 404) && count < 2,
   });
 }
 
-export type ThreadAction = "pause" | "resume" | "clear-needs-human" | "crm-sync";
+export type ThreadAction =
+  "pause" | "resume" | "clear-needs-human" | "crm-sync";
 
 export function useThreadAction(id: string) {
   const api = useApi();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (action: ThreadAction) => api<{ thread: Thread }>(`/internal/threads/${id}/${action}`, { method: "POST" }),
+    mutationFn: (action: ThreadAction) =>
+      api<{ thread: Thread }>(`/internal/threads/${id}/${action}`, {
+        method: "POST",
+      }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["threads"] }),
   });
 }
@@ -94,7 +114,8 @@ export function useDeleteThread() {
   const api = useApi();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api<void>(`/internal/threads/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) =>
+      api<void>(`/internal/threads/${id}`, { method: "DELETE" }),
     onSuccess: (_data, id) => {
       client.removeQueries({ queryKey: ["threads", "detail", id] });
       return client.invalidateQueries({ queryKey: ["threads"] });
@@ -104,7 +125,10 @@ export function useDeleteThread() {
 
 export function useKnowledgeFiles() {
   const api = useApi();
-  return useQuery({ queryKey: ["knowledge"], queryFn: () => api<KnowledgeList>("/internal/knowledge/files") });
+  return useQuery({
+    queryKey: ["knowledge"],
+    queryFn: () => api<KnowledgeList>("/internal/knowledge/files"),
+  });
 }
 
 export function useKnowledgeFileText(id: string | null) {
@@ -112,7 +136,10 @@ export function useKnowledgeFileText(id: string | null) {
   return useQuery({
     queryKey: ["knowledge", "file", id],
     enabled: id !== null,
-    queryFn: () => api<{ file: KnowledgeFile & { text: string } }>(`/internal/knowledge/files/${id}`),
+    queryFn: () =>
+      api<{ file: KnowledgeFile & { text: string } }>(
+        `/internal/knowledge/files/${id}`,
+      ),
   });
 }
 
@@ -126,8 +153,14 @@ export function useUploadKnowledgeFile() {
       const body = new FormData();
       body.append("file", file);
       return replaceId
-        ? api<UploadResult>(`/internal/knowledge/files/${replaceId}`, { method: "PUT", body })
-        : api<UploadResult>("/internal/knowledge/files", { method: "POST", body });
+        ? api<UploadResult>(`/internal/knowledge/files/${replaceId}`, {
+            method: "PUT",
+            body,
+          })
+        : api<UploadResult>("/internal/knowledge/files", {
+            method: "POST",
+            body,
+          });
     },
     onSuccess: () => client.invalidateQueries({ queryKey: ["knowledge"] }),
   });
@@ -137,7 +170,41 @@ export function useDeleteKnowledgeFile() {
   const api = useApi();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api<void>(`/internal/knowledge/files/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) =>
+      api<void>(`/internal/knowledge/files/${id}`, { method: "DELETE" }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["knowledge"] }),
+  });
+}
+
+export function useSecrets() {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["secrets"],
+    queryFn: () => api<SecretsList>("/internal/secrets"),
+  });
+}
+
+export function useSetSecret() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ name, value }: { name: SecretName; value: string }) =>
+      api<{ secret: SecretStatus }>(`/internal/secrets/${name}`, {
+        method: "PUT",
+        body: JSON.stringify({ value }),
+      }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["secrets"] }),
+  });
+}
+
+export function useClearSecret() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (name: SecretName) =>
+      api<{ secret: SecretStatus }>(`/internal/secrets/${name}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["secrets"] }),
   });
 }

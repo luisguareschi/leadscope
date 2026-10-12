@@ -20,7 +20,10 @@ export class FakeCrm implements Crm {
 
   async upsertLead(lead: CrmLead) {
     const existing = this.contacts.get(lead.phone);
-    const id = existing?.id ?? lead.existingContactId ?? `fake-contact-${this.contacts.size + 1}`;
+    const id =
+      existing?.id ??
+      lead.existingContactId ??
+      `fake-contact-${this.contacts.size + 1}`;
     this.contacts.set(lead.phone, { id, lead });
     return { contactId: id };
   }

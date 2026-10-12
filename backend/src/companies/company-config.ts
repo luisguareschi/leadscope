@@ -51,12 +51,29 @@ export const companyConfigSchema = z.object({
       historyLimit: z.number().int().min(4).max(200).default(40),
       timeoutMs: z.number().int().min(1000).default(25_000),
     })
-    .default({ model: "claude-haiku-4-5", temperature: 0.4, historyLimit: 40, timeoutMs: 25_000 }),
+    .default({
+      model: "claude-haiku-4-5",
+      temperature: 0.4,
+      historyLimit: 40,
+      timeoutMs: 25_000,
+    }),
   knowledge: z
     .object({
-      maxFileBytes: z.number().int().positive().default(DEFAULT_KNOWLEDGE_LIMITS.maxFileBytes),
-      maxCharsPerFile: z.number().int().positive().default(DEFAULT_KNOWLEDGE_LIMITS.maxCharsPerFile),
-      maxCharsTotal: z.number().int().positive().default(DEFAULT_KNOWLEDGE_LIMITS.maxCharsTotal),
+      maxFileBytes: z
+        .number()
+        .int()
+        .positive()
+        .default(DEFAULT_KNOWLEDGE_LIMITS.maxFileBytes),
+      maxCharsPerFile: z
+        .number()
+        .int()
+        .positive()
+        .default(DEFAULT_KNOWLEDGE_LIMITS.maxCharsPerFile),
+      maxCharsTotal: z
+        .number()
+        .int()
+        .positive()
+        .default(DEFAULT_KNOWLEDGE_LIMITS.maxCharsTotal),
     })
     .default(DEFAULT_KNOWLEDGE_LIMITS),
   crm: z

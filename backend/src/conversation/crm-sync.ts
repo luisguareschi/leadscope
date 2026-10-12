@@ -13,8 +13,14 @@ function backoffMs(attempts: number): number {
  * Writes the thread's pending CRM action (contact upsert + summary). Call it while holding the
  * thread lease. A failure is recorded on the thread and retried later by the sweeper.
  */
-export async function syncThreadToCrm(ctx: AppContext, threadId: string): Promise<"synced" | "failed" | "nothing"> {
-  const thread = await ctx.db.thread.findUnique({ where: { id: threadId }, include: { company: true } });
+export async function syncThreadToCrm(
+  ctx: AppContext,
+  threadId: string,
+): Promise<"synced" | "failed" | "nothing"> {
+  const thread = await ctx.db.thread.findUnique({
+    where: { id: threadId },
+    include: { company: true },
+  });
   if (!thread?.crmPendingAction) return "nothing";
   const action = thread.crmPendingAction;
   try {
@@ -24,7 +30,13 @@ export async function syncThreadToCrm(ctx: AppContext, threadId: string): Promis
       orderBy: [{ sentAt: "asc" }, { createdAt: "asc" }],
       select: { direction: true, type: true, body: true, sentAt: true },
     });
-    const summary = buildCrmSummary({ action, thread, messages, config: company.config, now: ctx.now() });
+    const summary = buildCrmSummary({
+      action,
+      thread,
+      messages,
+      config: company.config,
+      now: ctx.now(),
+    });
     const { contactId } = await ctx.integrations.crmFor(company).upsertLead({
       phone: thread.phone,
       name: thread.name,
@@ -47,7 +59,10 @@ export async function syncThreadToCrm(ctx: AppContext, threadId: string): Promis
   } catch (error) {
     const attempts = thread.crmAttempts + 1;
     const message = error instanceof Error ? error.message : String(error);
-    ctx.logger.error({ err: error, threadId, companyId: thread.companyId, attempts }, "crm sync failed");
+    ctx.logger.error(
+      { err: error, threadId, companyId: thread.companyId, attempts },
+      "crm sync failed",
+    );
     await ctx.db.thread.update({
       where: { id: threadId },
       data: {

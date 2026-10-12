@@ -1,7 +1,21 @@
 import { RadarIcon } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
-export function AuthCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+export function AuthCard({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex min-h-svh items-center justify-center bg-muted/40 p-6">
       <div className="flex w-full max-w-sm flex-col gap-6">

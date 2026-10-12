@@ -32,10 +32,15 @@ const formLeadSchema = z
   })
   .loose()
   .transform((body) => ({
-    phone: body.phone || body.mobilephone || body.hs_whatsapp_phone_number || "",
+    phone:
+      body.phone || body.mobilephone || body.hs_whatsapp_phone_number || "",
     email: body.email?.toLowerCase() || null,
-    name: body.name || [body.firstname, body.lastname].filter(Boolean).join(" ") || null,
-    crmContactId: body.crmContactId || body.hs_object_id || body.objectId || null,
+    name:
+      body.name ||
+      [body.firstname, body.lastname].filter(Boolean).join(" ") ||
+      null,
+    crmContactId:
+      body.crmContactId || body.hs_object_id || body.objectId || null,
   }));
 
 export type FormLeadResult = {
@@ -46,7 +51,12 @@ export type FormLeadResult = {
 async function upsertFormThread(
   ctx: AppContext,
   companyId: string,
-  lead: { phone: string; email: string | null; name: string | null; crmContactId: string | null },
+  lead: {
+    phone: string;
+    email: string | null;
+    name: string | null;
+    crmContactId: string | null;
+  },
 ) {
   const upsert = () =>
     ctx.db.thread.upsert({
@@ -78,7 +88,9 @@ export async function createFormLead(
   ctx: AppContext,
   input: { companySlug: string; secret: string | undefined; body: unknown },
 ): Promise<FormLeadResult> {
-  const row = await ctx.db.company.findUnique({ where: { slug: input.companySlug } });
+  const row = await ctx.db.company.findUnique({
+    where: { slug: input.companySlug },
+  });
   if (!row) throw notFound("Empresa no encontrada");
   const company = loadCompany(row, ctx.encryptionKey);
   const expected = company.secrets.formLeadSecret;
@@ -89,47 +101,73 @@ export async function createFormLead(
   const parsed = formLeadSchema.safeParse(input.body ?? {});
   if (!parsed.success) throw badRequest("Invalid form-lead payload");
   const phone = toE164(parsed.data.phone, company.config.defaultCountry);
-  if (!phone) throw badRequest("A valid phone number is required", "invalid_phone");
+  if (!phone)
+    throw badRequest("A valid phone number is required", "invalid_phone");
 
-  const thread = await upsertFormThread(ctx, company.id, { ...parsed.data, phone });
-
-  const leased = await withThreadLease(ctx, thread.id, async (): Promise<FormLeadResult> => {
-    const messageCount = await ctx.db.message.count({ where: { threadId: thread.id } });
-    if (messageCount > 0) return { threadId: thread.id, welcome: "already_in_conversation" };
-    const template = company.config.whatsapp.welcomeTemplate;
-    if (!template) return { threadId: thread.id, welcome: "no_template" };
-
-    let waMessageId: string;
-    try {
-      ({ waMessageId } = await ctx.integrations
-        .channelFor(company)
-        .sendTemplate({ to: thread.waId, name: template.name, language: template.language }));
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      throw new HttpError(502, `WhatsApp did not send the welcome template: ${reason}`, "whatsapp_error");
-    }
-    const body = template.bodyPreview || `[Plantilla de bienvenida: ${template.name}]`;
-    const sentAt = ctx.now();
-    await ctx.db.$transaction([
-      ctx.db.message.create({
-        data: {
-          companyId: company.id,
-          threadId: thread.id,
-          direction: "outbound",
-          type: "template",
-          body,
-          waMessageId,
-          status: "sent",
-          sentAt,
-        },
-      }),
-      ctx.db.thread.update({
-        where: { id: thread.id },
-        data: { state: "qualify", lastMessageAt: sentAt, lastMessagePreview: messagePreview("template", body) },
-      }),
-    ]);
-    return { threadId: thread.id, welcome: "sent" };
+  const thread = await upsertFormThread(ctx, company.id, {
+    ...parsed.data,
+    phone,
   });
+
+  const leased = await withThreadLease(
+    ctx,
+    thread.id,
+    async (): Promise<FormLeadResult> => {
+      const messageCount = await ctx.db.message.count({
+        where: { threadId: thread.id },
+      });
+      if (messageCount > 0)
+        return { threadId: thread.id, welcome: "already_in_conversation" };
+      const template = company.config.whatsapp.welcomeTemplate;
+      if (!template) return { threadId: thread.id, welcome: "no_template" };
+
+      let waMessageId: string;
+      try {
+        ({ waMessageId } = await ctx.integrations
+          .channelFor(company)
+          .sendTemplate({
+            to: thread.waId,
+            name: template.name,
+            language: template.language,
+          }));
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new HttpError(
+          502,
+          `WhatsApp did not send the welcome template: ${reason}`,
+          "whatsapp_error",
+        );
+      }
+      const body =
+        template.bodyPreview || `[Plantilla de bienvenida: ${template.name}]`;
+      const sentAt = ctx.now();
+      await ctx.db.$transaction([
+        ctx.db.message.create({
+          data: {
+            companyId: company.id,
+            threadId: thread.id,
+            direction: "outbound",
+            type: "template",
+            body,
+            waMessageId,
+            status: "sent",
+            sentAt,
+          },
+        }),
+        ctx.db.thread.update({
+          where: { id: thread.id },
+          data: {
+            state: "qualify",
+            lastMessageAt: sentAt,
+            lastMessagePreview: messagePreview("template", body),
+          },
+        }),
+      ]);
+      return { threadId: thread.id, welcome: "sent" };
+    },
+  );
   // Another delivery of the same form lead holds the thread right now; it will send the welcome.
-  return leased.claimed ? leased.result : { threadId: thread.id, welcome: "already_in_conversation" };
+  return leased.claimed
+    ? leased.result
+    : { threadId: thread.id, welcome: "already_in_conversation" };
 }

@@ -4,7 +4,8 @@ import { verifyWebhookSubscription } from "./verify-webhook.service.js";
 
 export function verifyWebhookController(ctx: AppContext): RequestHandler {
   return (req, res) => {
-    const text = (value: unknown) => (typeof value === "string" ? value : undefined);
+    const text = (value: unknown) =>
+      typeof value === "string" ? value : undefined;
     const challenge = verifyWebhookSubscription(ctx, {
       mode: text(req.query["hub.mode"]),
       token: text(req.query["hub.verify_token"]),

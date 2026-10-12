@@ -5,7 +5,7 @@ WhatsApp lead assistant for real-estate developers. It greets leads, asks three 
 | Folder | What it is |
 | --- | --- |
 | `backend/` | Express 5 + Prisma 7 (Postgres). WhatsApp webhook, conversation engine, Anthropic, HubSpot, knowledge uploads. Ships as a Docker image. |
-| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations, pause/resume, knowledge files. |
+| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations, pause/resume, knowledge files, company secrets. |
 | `docs/` | Design, proposals, meeting notes. |
 
 ## Run it locally
@@ -30,7 +30,7 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
-Sign in at http://localhost:3000 as `operador@example.com` (development login, no password).
+Sign in at http://localhost:3000 as `operador@example.com` (development login, no password). **Integraciones**, in the sidebar, is where that company sets its Anthropic, Meta, HubSpot, and form-lead secrets. The page shows whether each one is set and the last 4 characters; it never shows the full value. Leaving a field empty does not clear it.
 
 The demo conversations use fake numbers (+598 99 000 001–007) and cover every status: qualifying, scheduling a call, handed off with a failed HubSpot write, waiting for an advisor, paused, closed, and a form lead.
 
@@ -43,7 +43,7 @@ cd backend
 npm run chat                         # or: npm run chat -- --phone +59899555123 --name "Ana"
 ```
 
-Type as the lead. `/audio` sends a voice note, `/estado` shows what the bot extracted, `/reset` starts over. Without an Anthropic key it uses a scripted stand-in; put a key in `ANTHROPIC_API_KEY` in `backend/.env` (development only) or on the company (below) to talk to `claude-haiku-4-5` with the real prompt. The conversation appears in the panel like any other.
+Type as the lead. `/audio` sends a voice note, `/estado` shows what the bot extracted, `/reset` starts over. Without an Anthropic key it uses a scripted stand-in; put a key in `ANTHROPIC_API_KEY` in `backend/.env` (development only) or set the company's Anthropic key in Integraciones to talk to `claude-haiku-4-5` with the real prompt. The conversation appears in the panel like any other.
 
 **As Meta would.** With the backend running, post a signed webhook; the reply arrives after the debounce (3.5 s) and shows in the panel:
 
@@ -65,16 +65,16 @@ When a company has no key for an integration and `ALLOW_FAKE_INTEGRATIONS=true` 
 
 | Integration | Fake | Real once you set |
 | --- | --- | --- |
-| Anthropic | scripted replies that walk the three questions | `anthropicApiKey` on the company |
-| WhatsApp | sends recorded in memory | `metaAccessToken` + the company's phone number id |
-| HubSpot | contacts kept in memory | `hubspotAccessToken`, and `crm.transcriptProperty` in the config |
+| Anthropic | scripted replies that walk the three questions | `anthropicApiKey` on the company, from Integraciones |
+| WhatsApp | sends recorded in memory | `metaAccessToken` (Integraciones) + the company's phone number id |
+| HubSpot | contacts kept in memory | `hubspotAccessToken` (Integraciones), and `crm.transcriptProperty` in the config |
 
 Still placeholders in `backend/prisma/seed-data/altamira.ts`: the welcome template name, the HubSpot property name, and business hours. The sample knowledge file is fictional.
 
 ## Tests
 
 ```bash
-cd backend && npm test          # 135 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
+cd backend && npm test          # 141 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
 cd backoffice && npm run lint && npm run typecheck && npm run build
 ```
 
@@ -85,8 +85,7 @@ CI runs both on every pull request.
 1. **Supabase (us-east-1).** Turn off public signups. Note the pooled URL (port 6543, `?pgbouncer=true`), the direct URL (5432), the project URL, and the anon key. In Auth → URL configuration, set the site URL to the backoffice and allow `<backoffice>/auth/set-password` as a redirect.
 2. **Backend.** Deploy `backend/Dockerfile` as one always-on instance (Fly, Railway, or Render) with: `NODE_ENV=production`, `DATABASE_URL` (pooled), `DIRECT_URL`, `SECRETS_ENCRYPTION_KEY` (`openssl rand -base64 32`), `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`, `AUTH_MODE=supabase`, `SUPABASE_URL`, `BACKOFFICE_ORIGIN`, and optionally `SENTRY_DSN`. The container applies migrations on start.
 3. **Company.** From a checkout pointed at production: `NODE_ENV=production SEED_WHATSAPP_PHONE_NUMBER_ID=<id> SEED_OPERATOR_EMAIL=<email> npm run db:seed` (no demo data in production). Edit the config in `prisma/seed-data/altamira.ts` and re-run the seed to change it; secrets are kept.
-4. **Secrets**, encrypted on the company row (`-` reads the value from stdin, so it stays out of shell history):
-   `npm run company:secret -- altamira anthropicApiKey -`, then `metaAccessToken`, `hubspotAccessToken`, `formLeadSecret`.
+4. **Secrets.** Each company sets its own in the panel: sign in as an operator of that company and open Integraciones. The fields are the Anthropic API key, the Meta access token, the HubSpot access token, and the form-lead secret. The page shows whether each one is set and the last 4 characters. It never shows the full value, and an empty field does not clear a secret (use Quitar). The platform encryption key (`SECRETS_ENCRYPTION_KEY`) stays a server environment variable. For debugging from a checkout, `npm run company:secret` still writes the same fields (`-` reads the value from stdin; `--delete` removes one): `npm run company:secret -- altamira anthropicApiKey -`.
 5. **Operators.** `npm run operator:add -- altamira persona@altamira.uy --invite` emails a Supabase invitation (needs `SUPABASE_SERVICE_ROLE_KEY`).
 6. **Meta.** Webhook URL `https://<backend>/webhooks/whatsapp`, the verify token, and a subscription to `messages`.
 7. **HubSpot.** Create the long-text property and put its internal name in `crm.transcriptProperty`. Add a workflow "Send a webhook" to `POST https://<backend>/hooks/crm/form-lead/altamira` with the header `X-LeadScope-Secret`.

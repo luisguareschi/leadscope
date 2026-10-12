@@ -1,4 +1,7 @@
-import { DEFAULT_KNOWLEDGE_LIMITS, type CompanyConfigInput } from "../../src/companies/company-config.js";
+import {
+  DEFAULT_KNOWLEDGE_LIMITS,
+  type CompanyConfigInput,
+} from "../../src/companies/company-config.js";
 
 /**
  * Altamira's company config. Seed data only: the application reads it from the Company row.
@@ -14,7 +17,8 @@ export const altamiraConfig: CompanyConfigInput = {
   // Week 1: the hours Altamira's advisors make calls.
   businessHours: "",
   questions: {
-    interest: "¿Qué estás buscando? Por ejemplo, si es para vivir o para invertir, y cuántos dormitorios.",
+    interest:
+      "¿Qué estás buscando? Por ejemplo, si es para vivir o para invertir, y cuántos dormitorios.",
     budget: "¿Con qué presupuesto aproximado contás?",
     knowsProjects: "¿Ya conocés nuestros proyectos?",
   },
@@ -39,12 +43,19 @@ export const altamiraConfig: CompanyConfigInput = {
     ],
   },
   messages: {
-    fallback: "Gracias por escribirnos. En breve te contacta un asesor de Altamira para ayudarte.",
-    needsHuman: "Esa consulta la tiene que ver un asesor. Ya le pasé tu mensaje y te va a contactar a la brevedad.",
+    fallback:
+      "Gracias por escribirnos. En breve te contacta un asesor de Altamira para ayudarte.",
+    needsHuman:
+      "Esa consulta la tiene que ver un asesor. Ya le pasé tu mensaje y te va a contactar a la brevedad.",
     nonText: "Por ahora solo puedo leer mensajes de texto. ¿Me lo escribís?",
   },
   maxReplyChars: 600,
-  llm: { model: "claude-haiku-4-5", temperature: 0.4, historyLimit: 40, timeoutMs: 25_000 },
+  llm: {
+    model: "claude-haiku-4-5",
+    temperature: 0.4,
+    historyLimit: 40,
+    timeoutMs: 25_000,
+  },
   knowledge: DEFAULT_KNOWLEDGE_LIMITS,
   // Week 1: the internal name of the HubSpot long-text property that receives the summary.
   crm: { provider: "hubspot", transcriptProperty: "" },
@@ -53,7 +64,8 @@ export const altamiraConfig: CompanyConfigInput = {
     welcomeTemplate: {
       name: "bienvenida_formulario",
       language: "es",
-      bodyPreview: "¡Hola! Gracias por tu interés en Altamira. Soy el asistente virtual. ¿Qué estás buscando?",
+      bodyPreview:
+        "¡Hola! Gracias por tu interés en Altamira. Soy el asistente virtual. ¿Qué estás buscando?",
     },
   },
 };

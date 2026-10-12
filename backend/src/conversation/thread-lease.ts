@@ -13,13 +13,19 @@ export async function withThreadLease<T>(
 ): Promise<{ claimed: true; result: T } | { claimed: false }> {
   const now = ctx.now();
   const claim = await ctx.db.thread.updateMany({
-    where: { id: threadId, OR: [{ processingUntil: null }, { processingUntil: { lt: now } }] },
+    where: {
+      id: threadId,
+      OR: [{ processingUntil: null }, { processingUntil: { lt: now } }],
+    },
     data: { processingUntil: new Date(now.getTime() + LEASE_MS) },
   });
   if (claim.count === 0) return { claimed: false };
   try {
     return { claimed: true, result: await work() };
   } finally {
-    await ctx.db.thread.updateMany({ where: { id: threadId }, data: { processingUntil: null } });
+    await ctx.db.thread.updateMany({
+      where: { id: threadId },
+      data: { processingUntil: null },
+    });
   }
 }

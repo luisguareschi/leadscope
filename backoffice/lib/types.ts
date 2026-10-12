@@ -1,5 +1,7 @@
-export type ThreadState = "greeting" | "qualify" | "answer" | "handoff" | "closed";
-export type ThreadStatusFilter = "all" | "active" | "handoff" | "needs_human" | "paused" | "closed";
+export type ThreadState =
+  "greeting" | "qualify" | "answer" | "handoff" | "closed";
+export type ThreadStatusFilter =
+  "all" | "active" | "handoff" | "needs_human" | "paused" | "closed";
 export type CrmStatus = "none" | "pending" | "synced" | "failed";
 
 export type Thread = {
@@ -64,8 +66,31 @@ export type KnowledgeFile = {
 
 export type KnowledgeList = {
   files: KnowledgeFile[];
-  usage: { usedChars: number; maxFileBytes: number; maxCharsPerFile: number; maxCharsTotal: number };
+  usage: {
+    usedChars: number;
+    maxFileBytes: number;
+    maxCharsPerFile: number;
+    maxCharsTotal: number;
+  };
   acceptedExtensions: string[];
 };
 
-export type Me = { operator: { email: string }; company: { name: string; slug: string } };
+export type Me = {
+  operator: { email: string };
+  company: { name: string; slug: string };
+};
+
+export type SecretName =
+  | "anthropicApiKey"
+  | "metaAccessToken"
+  | "hubspotAccessToken"
+  | "formLeadSecret";
+
+/** Write-only status. `last4` is absent when showing it would reveal the whole secret. */
+export type SecretStatus = {
+  name: SecretName;
+  set: boolean;
+  last4: string | null;
+};
+
+export type SecretsList = { secrets: SecretStatus[] };

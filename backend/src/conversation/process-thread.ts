@@ -1,9 +1,18 @@
 import { loadCompany, type LoadedCompany } from "../companies/load-company.js";
 import type { AppContext } from "../context.js";
 import { buildChatTurns } from "../engine/history.js";
-import { buildSystemPrompt, buildTurnContext, type KnowledgeDocument } from "../engine/prompt.js";
+import {
+  buildSystemPrompt,
+  buildTurnContext,
+  type KnowledgeDocument,
+} from "../engine/prompt.js";
 import { decideTurn } from "../engine/turn.js";
-import type { CrmActionKind, TurnDecision, TurnInput, TurnRules } from "../engine/types.js";
+import type {
+  CrmActionKind,
+  TurnDecision,
+  TurnInput,
+  TurnRules,
+} from "../engine/types.js";
 import type { Thread } from "../generated/prisma/client.js";
 import type { Channel } from "../integrations/whatsapp/channel.js";
 import type { LlmUsageRecord } from "../llm/types.js";
@@ -28,7 +37,10 @@ function rulesFor(company: LoadedCompany): TurnRules {
   };
 }
 
-async function loadKnowledge(ctx: AppContext, companyId: string): Promise<KnowledgeDocument[]> {
+async function loadKnowledge(
+  ctx: AppContext,
+  companyId: string,
+): Promise<KnowledgeDocument[]> {
   return ctx.db.knowledgeFile.findMany({
     where: { companyId },
     orderBy: { name: "asc" },
@@ -61,16 +73,31 @@ async function askModel(
       messages: buildChatTurns(recent.reverse(), config.llm.historyLimit),
       scenario: { thread, config, documents },
     });
-    return { input: { kind: "model", output: result.output }, usage: result.usage };
+    return {
+      input: { kind: "model", output: result.output },
+      usage: result.usage,
+    };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    ctx.logger.error({ err: error, threadId: thread.id, companyId: company.id }, "model call failed");
-    return { input: { kind: "model_failure", reason: reason.slice(0, 200) }, usage: null };
+    ctx.logger.error(
+      { err: error, threadId: thread.id, companyId: company.id },
+      "model call failed",
+    );
+    return {
+      input: { kind: "model_failure", reason: reason.slice(0, 200) },
+      usage: null,
+    };
   }
 }
 
-async function runTurn(ctx: AppContext, threadId: string): Promise<TurnOutcome> {
-  const thread = await ctx.db.thread.findUnique({ where: { id: threadId }, include: { company: true } });
+async function runTurn(
+  ctx: AppContext,
+  threadId: string,
+): Promise<TurnOutcome> {
+  const thread = await ctx.db.thread.findUnique({
+    where: { id: threadId },
+    include: { company: true },
+  });
   if (!thread) return "no_pending";
   const pending = await ctx.db.message.findMany({
     where: { threadId, direction: "inbound", handledAt: null },
@@ -80,7 +107,10 @@ async function runTurn(ctx: AppContext, threadId: string): Promise<TurnOutcome> 
   if (pending.length === 0) return "no_pending";
   const pendingIds = pending.map((message) => message.id);
   const markHandled = () =>
-    ctx.db.message.updateMany({ where: { id: { in: pendingIds } }, data: { handledAt: ctx.now() } });
+    ctx.db.message.updateMany({
+      where: { id: { in: pendingIds } },
+      data: { handledAt: ctx.now() },
+    });
 
   if (thread.paused || thread.needsHuman) {
     await markHandled();
@@ -88,7 +118,10 @@ async function runTurn(ctx: AppContext, threadId: string): Promise<TurnOutcome> 
   }
   if (!isWithinReplyWindow(thread.lastInboundAt, ctx.now())) {
     await markHandled();
-    ctx.logger.warn({ threadId, companyId: thread.companyId }, "reply window closed; not answering");
+    ctx.logger.warn(
+      { threadId, companyId: thread.companyId },
+      "reply window closed; not answering",
+    );
     return "window_closed";
   }
 
@@ -97,7 +130,10 @@ async function runTurn(ctx: AppContext, threadId: string): Promise<TurnOutcome> 
   try {
     channel = ctx.integrations.channelFor(company);
   } catch (error) {
-    ctx.logger.error({ err: error, threadId, companyId: company.id }, "whatsapp channel unavailable");
+    ctx.logger.error(
+      { err: error, threadId, companyId: company.id },
+      "whatsapp channel unavailable",
+    );
     await markHandled();
     await ctx.db.thread.update({
       where: { id: threadId },
@@ -117,14 +153,23 @@ async function runTurn(ctx: AppContext, threadId: string): Promise<TurnOutcome> 
   let waMessageId: string | null = null;
   let sendError: string | null = null;
   try {
-    ({ waMessageId } = await channel.sendText({ to: thread.waId, body: decision.reply }));
+    ({ waMessageId } = await channel.sendText({
+      to: thread.waId,
+      body: decision.reply,
+    }));
   } catch (error) {
     sendError = error instanceof Error ? error.message : String(error);
-    ctx.logger.error({ err: error, threadId, companyId: company.id }, "whatsapp send failed");
+    ctx.logger.error(
+      { err: error, threadId, companyId: company.id },
+      "whatsapp send failed",
+    );
   }
 
-  const needsHumanReason = sendError ? `send_failed: ${sendError.slice(0, 200)}` : decision.needsHuman?.reason;
-  const crmAction: CrmActionKind | null = decision.crm ?? (sendError ? "needs_human" : null);
+  const needsHumanReason = sendError
+    ? `send_failed: ${sendError.slice(0, 200)}`
+    : decision.needsHuman?.reason;
+  const crmAction: CrmActionKind | null =
+    decision.crm ?? (sendError ? "needs_human" : null);
   const sentAt = ctx.now();
 
   await ctx.db.$transaction([
@@ -140,7 +185,10 @@ async function runTurn(ctx: AppContext, threadId: string): Promise<TurnOutcome> 
         sentAt,
       },
     }),
-    ctx.db.message.updateMany({ where: { id: { in: pendingIds } }, data: { handledAt: sentAt } }),
+    ctx.db.message.updateMany({
+      where: { id: { in: pendingIds } },
+      data: { handledAt: sentAt },
+    }),
     ctx.db.thread.update({
       where: { id: threadId },
       data: {
@@ -149,11 +197,21 @@ async function runTurn(ctx: AppContext, threadId: string): Promise<TurnOutcome> 
         ...(needsHumanReason ? { needsHuman: true, needsHumanReason } : {}),
         lastMessageAt: sentAt,
         lastMessagePreview: messagePreview("text", decision.reply),
-        ...(crmAction ? { crmPendingAction: crmAction, crmAttempts: 0, crmNextAttemptAt: null } : {}),
+        ...(crmAction
+          ? {
+              crmPendingAction: crmAction,
+              crmAttempts: 0,
+              crmNextAttemptAt: null,
+            }
+          : {}),
       },
     }),
     ...(usage
-      ? [ctx.db.llmUsage.create({ data: { companyId: company.id, threadId, ...usage } })]
+      ? [
+          ctx.db.llmUsage.create({
+            data: { companyId: company.id, threadId, ...usage },
+          }),
+        ]
       : []),
   ]);
 
@@ -162,12 +220,20 @@ async function runTurn(ctx: AppContext, threadId: string): Promise<TurnOutcome> 
 }
 
 /** One bot turn for a thread: answers every inbound message that has not been handled yet. */
-export async function processThread(ctx: AppContext, threadId: string): Promise<TurnOutcome> {
-  const leased = await withThreadLease(ctx, threadId, () => runTurn(ctx, threadId));
+export async function processThread(
+  ctx: AppContext,
+  threadId: string,
+): Promise<TurnOutcome> {
+  const leased = await withThreadLease(ctx, threadId, () =>
+    runTurn(ctx, threadId),
+  );
   return leased.claimed ? leased.result : "busy";
 }
 
 /** Retries a failed CRM write, holding the lease so it never overlaps a turn. */
-export async function retryCrmSync(ctx: AppContext, threadId: string): Promise<void> {
+export async function retryCrmSync(
+  ctx: AppContext,
+  threadId: string,
+): Promise<void> {
   await withThreadLease(ctx, threadId, () => syncThreadToCrm(ctx, threadId));
 }

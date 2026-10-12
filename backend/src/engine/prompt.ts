@@ -17,7 +17,10 @@ const QUESTION_ORDER = ["interest", "budget", "knowsProjects"] as const;
 type QuestionKey = (typeof QUESTION_ORDER)[number];
 
 function escapeAttribute(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
 }
 
 function isoDay(date: Date): string {
@@ -25,7 +28,8 @@ function isoDay(date: Date): string {
 }
 
 export function formatKnowledge(documents: KnowledgeDocument[]): string {
-  if (documents.length === 0) return "<knowledge>\n(No documents uploaded yet.)\n</knowledge>";
+  if (documents.length === 0)
+    return "<knowledge>\n(No documents uploaded yet.)\n</knowledge>";
   const body = documents
     .map(
       (doc) =>
@@ -36,7 +40,10 @@ export function formatKnowledge(documents: KnowledgeDocument[]): string {
 }
 
 /** The static part of the system prompt. Identical across turns until config or knowledge change, so it is cached. */
-export function buildSystemPrompt(config: CompanyConfig, documents: KnowledgeDocument[]): string {
+export function buildSystemPrompt(
+  config: CompanyConfig,
+  documents: KnowledgeDocument[],
+): string {
   const company = config.displayName;
   const forbidden = config.forbiddenTopics.describe;
   const sections = [
@@ -87,7 +94,10 @@ function known(value: string | boolean | null): string {
   return value;
 }
 
-export function nextStepFor(thread: ThreadSnapshot, config: CompanyConfig): string {
+export function nextStepFor(
+  thread: ThreadSnapshot,
+  config: CompanyConfig,
+): string {
   const fields = fieldsOf(thread);
   const missing = missingQuestions(fields);
   const nextQuestion = missing[0] ? `"${config.questions[missing[0]]}"` : null;
@@ -108,7 +118,11 @@ export function nextStepFor(thread: ThreadSnapshot, config: CompanyConfig): stri
   return `The lead came back to the conversation. Answer their questions from <knowledge>. When it fits naturally, ask the next missing question: ${nextQuestion ?? "when an advisor can call them"}.`;
 }
 
-export function formatLocalTime(now: Date, timezone: string, locale: string): string {
+export function formatLocalTime(
+  now: Date,
+  timezone: string,
+  locale: string,
+): string {
   try {
     return new Intl.DateTimeFormat(locale, {
       timeZone: timezone,
@@ -121,13 +135,19 @@ export function formatLocalTime(now: Date, timezone: string, locale: string): st
 }
 
 /** The per-turn part of the system prompt: what we know about the lead and what to do next. */
-export function buildTurnContext(thread: PromptThread, config: CompanyConfig, now: Date): string {
+export function buildTurnContext(
+  thread: PromptThread,
+  config: CompanyConfig,
+  now: Date,
+): string {
   const fields = fieldsOf(thread);
   const lines = [
     "<turn_context>",
     `Current time for the lead: ${formatLocalTime(now, config.timezone, config.language)} (${config.timezone}).`,
     `Business hours for calls: ${config.businessHours || "not set; do not promise a specific time slot"}.`,
-    thread.source === "form" ? "The lead came from a contact form and already received a welcome message." : "",
+    thread.source === "form"
+      ? "The lead came from a contact form and already received a welcome message."
+      : "",
     "What we know about the lead:",
     `- Name on WhatsApp: ${thread.name ?? "(unknown)"}`,
     `- Interest: ${known(fields.interest)}`,

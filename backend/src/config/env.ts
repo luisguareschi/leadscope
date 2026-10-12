@@ -4,15 +4,20 @@ import { z } from "zod";
 const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
 const optionalString = z.preprocess(emptyToUndefined, z.string().optional());
 const booleanFlag = z.preprocess(
-  (value) => (typeof value === "string" ? value.toLowerCase() === "true" : value),
+  (value) =>
+    typeof value === "string" ? value.toLowerCase() === "true" : value,
   z.boolean(),
 );
 
 const envSchema = z
   .object({
-    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    NODE_ENV: z
+      .enum(["development", "test", "production"])
+      .default("development"),
     PORT: z.coerce.number().int().positive().default(3001),
-    LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
+    LOG_LEVEL: z
+      .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
+      .default("info"),
     DATABASE_URL: z.string().min(1),
     SECRETS_ENCRYPTION_KEY: z.string().min(1),
     META_APP_SECRET: z.string().min(1),
@@ -31,7 +36,11 @@ const envSchema = z
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") return;
     if (env.AUTH_MODE === "dev") {
-      ctx.addIssue({ code: "custom", path: ["AUTH_MODE"], message: "dev auth is not allowed in production" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["AUTH_MODE"],
+        message: "dev auth is not allowed in production",
+      });
     }
     if (env.ALLOW_FAKE_INTEGRATIONS) {
       ctx.addIssue({
@@ -41,7 +50,11 @@ const envSchema = z
       });
     }
     if (env.AUTH_MODE === "supabase" && !env.SUPABASE_URL) {
-      ctx.addIssue({ code: "custom", path: ["SUPABASE_URL"], message: "required for supabase auth" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["SUPABASE_URL"],
+        message: "required for supabase auth",
+      });
     }
   });
 
@@ -50,7 +63,9 @@ export type Env = z.infer<typeof envSchema>;
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const parsed = envSchema.safeParse(source);
   if (!parsed.success) {
-    const problems = parsed.error.issues.map((issue) => `  ${issue.path.join(".")}: ${issue.message}`);
+    const problems = parsed.error.issues.map(
+      (issue) => `  ${issue.path.join(".")}: ${issue.message}`,
+    );
     throw new Error(`Invalid environment:\n${problems.join("\n")}`);
   }
   return parsed.data;

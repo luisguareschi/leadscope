@@ -1,7 +1,8 @@
 import { loadEnv, type Env } from "../../src/config/env.js";
 
 export const TEST_DATABASE_URL =
-  process.env.TEST_DATABASE_URL ?? "postgresql://leadscope:leadscope@localhost:5432/leadscope_test";
+  process.env.TEST_DATABASE_URL ??
+  "postgresql://leadscope:leadscope@localhost:5432/leadscope_test";
 
 export const TEST_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
 export const TEST_APP_SECRET = "test-app-secret";

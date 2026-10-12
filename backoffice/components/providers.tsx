@@ -9,10 +9,20 @@ import { AuthProvider } from "@/lib/auth";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
-    () => new QueryClient({ defaultOptions: { queries: { staleTime: 2_000, refetchOnWindowFocus: true } } }),
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: 2_000, refetchOnWindowFocus: true },
+        },
+      }),
   );
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="light"
+      enableSystem={false}
+      disableTransitionOnChange
+    >
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>

@@ -1,7 +1,13 @@
-import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js/max";
+import {
+  parsePhoneNumberFromString,
+  type CountryCode,
+} from "libphonenumber-js/max";
 
 function parse(value: string, defaultCountry?: string): string | null {
-  const parsed = parsePhoneNumberFromString(value, defaultCountry as CountryCode | undefined);
+  const parsed = parsePhoneNumberFromString(
+    value,
+    defaultCountry as CountryCode | undefined,
+  );
   return parsed?.isValid() ? parsed.number : null;
 }
 

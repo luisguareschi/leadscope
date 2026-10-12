@@ -8,12 +8,20 @@ const SWEEP_EVERY_MS = 30_000;
  * Picks up work the in-memory scheduler does not know about: messages that arrived just before a
  * restart, turns a crashed process left behind, and CRM writes that failed and are due again.
  */
-export async function sweepOnce(ctx: AppContext): Promise<{ scheduled: number; crmRetried: number }> {
+export async function sweepOnce(
+  ctx: AppContext,
+): Promise<{ scheduled: number; crmRetried: number }> {
   const now = ctx.now();
-  const settledBefore = new Date(now.getTime() - ctx.env.REPLY_DEBOUNCE_MS - 5_000);
+  const settledBefore = new Date(
+    now.getTime() - ctx.env.REPLY_DEBOUNCE_MS - 5_000,
+  );
 
   const unanswered = await ctx.db.message.findMany({
-    where: { direction: "inbound", handledAt: null, createdAt: { lt: settledBefore } },
+    where: {
+      direction: "inbound",
+      handledAt: null,
+      createdAt: { lt: settledBefore },
+    },
     select: { threadId: true },
     distinct: ["threadId"],
     take: 100,
@@ -30,7 +38,9 @@ export async function sweepOnce(ctx: AppContext): Promise<{ scheduled: number; c
       crmPendingAction: { not: null },
       crmAttempts: { lt: MAX_CRM_ATTEMPTS },
       AND: [
-        { OR: [{ crmNextAttemptAt: null }, { crmNextAttemptAt: { lte: now } }] },
+        {
+          OR: [{ crmNextAttemptAt: null }, { crmNextAttemptAt: { lte: now } }],
+        },
         // A lease left by a crashed process expires; a live one means a turn is writing right now.
         { OR: [{ processingUntil: null }, { processingUntil: { lt: now } }] },
       ],

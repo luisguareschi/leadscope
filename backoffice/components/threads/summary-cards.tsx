@@ -1,7 +1,19 @@
 "use client";
 
-import { HandIcon, MessageCircleIcon, PauseCircleIcon, PhoneCallIcon } from "lucide-react";
-import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  HandIcon,
+  MessageCircleIcon,
+  PauseCircleIcon,
+  PhoneCallIcon,
+} from "lucide-react";
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { ThreadsSummary, ThreadStatusFilter } from "@/lib/types";
@@ -12,10 +24,30 @@ const CARDS: Array<{
   hint: string;
   icon: React.ReactNode;
 }> = [
-  { status: "active", title: "En curso", hint: "El asistente está calificando o respondiendo", icon: <MessageCircleIcon /> },
-  { status: "handoff", title: "Derivadas", hint: "Esperan la llamada de un asesor", icon: <PhoneCallIcon /> },
-  { status: "needs_human", title: "Requieren asesor", hint: "El asistente se detuvo y espera a una persona", icon: <HandIcon /> },
-  { status: "paused", title: "Pausadas", hint: "Un asesor tomó la conversación", icon: <PauseCircleIcon /> },
+  {
+    status: "active",
+    title: "En curso",
+    hint: "El asistente está calificando o respondiendo",
+    icon: <MessageCircleIcon />,
+  },
+  {
+    status: "handoff",
+    title: "Derivadas",
+    hint: "Esperan la llamada de un asesor",
+    icon: <PhoneCallIcon />,
+  },
+  {
+    status: "needs_human",
+    title: "Requieren asesor",
+    hint: "El asistente se detuvo y espera a una persona",
+    icon: <HandIcon />,
+  },
+  {
+    status: "paused",
+    title: "Pausadas",
+    hint: "Un asesor tomó la conversación",
+    icon: <PauseCircleIcon />,
+  },
 ];
 
 export function SummaryCards({
@@ -55,18 +87,25 @@ export function SummaryCards({
                     attention && "text-amber-700 dark:text-amber-300",
                   )}
                 >
-                  {count === undefined ? <Skeleton className="h-8 w-12" /> : count}
+                  {count === undefined ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    count
+                  )}
                 </CardTitle>
                 <CardAction
                   className={cn(
                     "rounded-lg bg-muted p-2 text-muted-foreground [&_svg]:size-4",
-                    attention && "bg-amber-500/15 text-amber-800 dark:text-amber-300",
+                    attention &&
+                      "bg-amber-500/15 text-amber-800 dark:text-amber-300",
                   )}
                 >
                   {card.icon}
                 </CardAction>
               </CardHeader>
-              <CardFooter className="text-sm text-muted-foreground">{card.hint}</CardFooter>
+              <CardFooter className="text-sm text-muted-foreground">
+                {card.hint}
+              </CardFooter>
             </Card>
           </button>
         );

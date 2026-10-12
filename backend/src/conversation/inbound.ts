@@ -1,5 +1,8 @@
 import type { AppContext } from "../context.js";
-import type { InboundMessage, StatusUpdate } from "../integrations/whatsapp/webhook-payload.js";
+import type {
+  InboundMessage,
+  StatusUpdate,
+} from "../integrations/whatsapp/webhook-payload.js";
 import { waIdToE164 } from "../lib/phone.js";
 import { isUniqueViolation } from "../lib/prisma.js";
 
@@ -25,7 +28,10 @@ export type RecordResult =
   | { status: "recorded"; threadId: string; needsReply: boolean }
   | { status: "duplicate" | "unknown_company" | "invalid_phone" };
 
-async function recordOnce(ctx: AppContext, message: InboundMessage): Promise<RecordResult> {
+async function recordOnce(
+  ctx: AppContext,
+  message: InboundMessage,
+): Promise<RecordResult> {
   const company = await ctx.db.company.findUnique({
     where: { whatsappPhoneNumberId: message.phoneNumberId },
     select: { id: true },
@@ -70,17 +76,26 @@ async function recordOnce(ctx: AppContext, message: InboundMessage): Promise<Rec
         handledAt: botSilent ? ctx.now() : null,
       },
     });
-    return { status: "recorded" as const, threadId: thread.id, needsReply: !botSilent };
+    return {
+      status: "recorded" as const,
+      threadId: thread.id,
+      needsReply: !botSilent,
+    };
   });
 }
 
 /** Stores one inbound WhatsApp message. Safe to call twice with the same Meta delivery. */
-export async function recordInboundMessage(ctx: AppContext, message: InboundMessage): Promise<RecordResult> {
+export async function recordInboundMessage(
+  ctx: AppContext,
+  message: InboundMessage,
+): Promise<RecordResult> {
   try {
     return await recordOnce(ctx, message);
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
-    const existing = await ctx.db.message.findUnique({ where: { waMessageId: message.waMessageId } });
+    const existing = await ctx.db.message.findUnique({
+      where: { waMessageId: message.waMessageId },
+    });
     if (existing) return { status: "duplicate" };
     // Two first messages from the same new lead raced on the thread insert. The thread exists now.
     return recordOnce(ctx, message);
@@ -90,7 +105,10 @@ export async function recordInboundMessage(ctx: AppContext, message: InboundMess
 const STATUS_RANK = ["sent", "delivered", "read"];
 
 /** Applies a Meta delivery receipt without moving a status backwards (receipts can arrive out of order). */
-export async function applyStatusUpdate(ctx: AppContext, update: StatusUpdate): Promise<void> {
+export async function applyStatusUpdate(
+  ctx: AppContext,
+  update: StatusUpdate,
+): Promise<void> {
   const rank = STATUS_RANK.indexOf(update.status);
   if (update.status !== "failed" && rank === -1) return;
   const lower = rank === -1 ? undefined : STATUS_RANK.slice(0, rank);

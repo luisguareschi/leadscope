@@ -1,4 +1,7 @@
-import { encryptSecrets, decryptSecrets } from "../src/companies/company-secrets.js";
+import {
+  encryptSecrets,
+  decryptSecrets,
+} from "../src/companies/company-secrets.js";
 import { parseCompanyConfig } from "../src/companies/company-config.js";
 import { loadEnv } from "../src/config/env.js";
 import { MAX_CRM_ATTEMPTS } from "../src/conversation/crm-sync.js";
@@ -6,7 +9,11 @@ import { messagePreview } from "../src/conversation/inbound.js";
 import { parseEncryptionKey } from "../src/lib/crypto.js";
 import { e164ToWaId } from "../src/lib/phone.js";
 import { createPrisma } from "../src/lib/prisma.js";
-import { altamiraConfig, SAMPLE_KNOWLEDGE, SAMPLE_KNOWLEDGE_NAME } from "./seed-data/altamira.js";
+import {
+  altamiraConfig,
+  SAMPLE_KNOWLEDGE,
+  SAMPLE_KNOWLEDGE_NAME,
+} from "./seed-data/altamira.js";
 import { DEMO_THREADS } from "./seed-data/demo-threads.js";
 
 /**
@@ -17,14 +24,20 @@ async function main() {
   const env = loadEnv();
   const db = createPrisma(env.DATABASE_URL);
   const key = parseEncryptionKey(env.SECRETS_ENCRYPTION_KEY);
-  const phoneNumberIdOverride = process.env.SEED_WHATSAPP_PHONE_NUMBER_ID || undefined;
+  const phoneNumberIdOverride =
+    process.env.SEED_WHATSAPP_PHONE_NUMBER_ID || undefined;
   const phoneNumberId = phoneNumberIdOverride ?? "DEV_PHONE_NUMBER_ID";
-  const operatorEmail = (process.env.SEED_OPERATOR_EMAIL || "operador@example.com").toLowerCase();
+  const operatorEmail = (
+    process.env.SEED_OPERATOR_EMAIL || "operador@example.com"
+  ).toLowerCase();
   const withDemoData = env.NODE_ENV !== "production";
 
   const existing = await db.company.findUnique({ where: { slug: "altamira" } });
-  const secrets = existing ? decryptSecrets(existing.encryptedSecrets, key) : {};
-  if (!secrets.formLeadSecret && withDemoData) secrets.formLeadSecret = "dev-form-secret";
+  const secrets = existing
+    ? decryptSecrets(existing.encryptedSecrets, key)
+    : {};
+  if (!secrets.formLeadSecret && withDemoData)
+    secrets.formLeadSecret = "dev-form-secret";
 
   const company = await db.company.upsert({
     where: { slug: "altamira" },
@@ -38,7 +51,9 @@ async function main() {
     update: {
       config: parseCompanyConfig(altamiraConfig),
       encryptedSecrets: encryptSecrets(secrets, key),
-      ...(phoneNumberIdOverride ? { whatsappPhoneNumberId: phoneNumberIdOverride } : {}),
+      ...(phoneNumberIdOverride
+        ? { whatsappPhoneNumberId: phoneNumberIdOverride }
+        : {}),
     },
   });
 
@@ -48,7 +63,10 @@ async function main() {
     update: {},
   });
 
-  if (withDemoData && (await db.knowledgeFile.count({ where: { companyId: company.id } })) === 0) {
+  if (
+    withDemoData &&
+    (await db.knowledgeFile.count({ where: { companyId: company.id } })) === 0
+  ) {
     await db.knowledgeFile.create({
       data: {
         companyId: company.id,
@@ -65,15 +83,23 @@ async function main() {
   }
 
   let demoThreads = 0;
-  if (withDemoData && (await db.thread.count({ where: { companyId: company.id } })) === 0) {
+  if (
+    withDemoData &&
+    (await db.thread.count({ where: { companyId: company.id } })) === 0
+  ) {
     const now = Date.now();
     const at = (minutesAgo: number) => new Date(now - minutesAgo * 60_000);
     // The bot answers a few seconds after the lead, never at the same instant.
     const sentAt = (message: { from: "lead" | "bot"; minutesAgo: number }) =>
-      new Date(at(message.minutesAgo).getTime() + (message.from === "bot" ? 20_000 : 0));
+      new Date(
+        at(message.minutesAgo).getTime() +
+          (message.from === "bot" ? 20_000 : 0),
+      );
     for (const demo of DEMO_THREADS) {
       const last = demo.messages.at(-1)!;
-      const lastInbound = [...demo.messages].reverse().find((message) => message.from === "lead");
+      const lastInbound = [...demo.messages]
+        .reverse()
+        .find((message) => message.from === "lead");
       const crm = demo.crm;
       await db.thread.create({
         data: {
@@ -98,7 +124,8 @@ async function main() {
           createdAt: sentAt(demo.messages[0]!),
           crmContactId: crm?.synced ? `demo-${demo.phone.slice(-3)}` : null,
           crmSyncedAt: crm?.synced ? at(last.minutesAgo) : null,
-          crmPendingAction: crm && !crm.synced ? (crm.action ?? "handoff") : null,
+          crmPendingAction:
+            crm && !crm.synced ? (crm.action ?? "handoff") : null,
           crmLastError: crm?.error ?? null,
           crmAttempts: crm && !crm.synced ? MAX_CRM_ATTEMPTS : 0,
           messages: {
@@ -109,7 +136,8 @@ async function main() {
               body: message.text,
               waMessageId: `wamid.demo.${demo.phone.slice(-3)}.${index}`,
               status: message.from === "bot" ? "read" : null,
-              handledAt: message.from === "lead" ? at(message.minutesAgo) : null,
+              handledAt:
+                message.from === "lead" ? at(message.minutesAgo) : null,
               sentAt: sentAt(message),
             })),
           },

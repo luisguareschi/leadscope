@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { decryptSecrets, encryptSecrets } from "../../src/companies/company-secrets.js";
+import {
+  decryptSecrets,
+  encryptSecrets,
+} from "../../src/companies/company-secrets.js";
 import { loadEnv } from "../../src/config/env.js";
 import { decrypt, encrypt, parseEncryptionKey } from "../../src/lib/crypto.js";
 import { toE164, waIdToE164 } from "../../src/lib/phone.js";
@@ -38,21 +41,39 @@ describe("secrets encryption", () => {
   it("refuses a tampered payload or the wrong key", () => {
     const payload = encrypt("secret", key);
     const [version, iv, tag, data] = payload.split(".");
-    const tampered = [version, iv, tag, Buffer.from("other").toString("base64")].join(".");
+    const tampered = [
+      version,
+      iv,
+      tag,
+      Buffer.from("other").toString("base64"),
+    ].join(".");
     expect(() => decrypt(tampered, key)).toThrow();
-    expect(() => decrypt(payload, parseEncryptionKey(Buffer.alloc(32, 2).toString("base64")))).toThrow();
+    expect(() =>
+      decrypt(
+        payload,
+        parseEncryptionKey(Buffer.alloc(32, 2).toString("base64")),
+      ),
+    ).toThrow();
     expect(data).toBeTruthy();
   });
 
   it("stores company secrets as one encrypted blob", () => {
-    const blob = encryptSecrets({ anthropicApiKey: "sk-ant", hubspotAccessToken: "pat" }, key);
+    const blob = encryptSecrets(
+      { anthropicApiKey: "sk-ant", hubspotAccessToken: "pat" },
+      key,
+    );
     expect(blob).not.toContain("sk-ant");
-    expect(decryptSecrets(blob, key)).toEqual({ anthropicApiKey: "sk-ant", hubspotAccessToken: "pat" });
+    expect(decryptSecrets(blob, key)).toEqual({
+      anthropicApiKey: "sk-ant",
+      hubspotAccessToken: "pat",
+    });
     expect(decryptSecrets(null, key)).toEqual({});
   });
 
   it("insists on a 32-byte key", () => {
-    expect(() => parseEncryptionKey(Buffer.alloc(16).toString("base64"))).toThrow("32 bytes");
+    expect(() =>
+      parseEncryptionKey(Buffer.alloc(16).toString("base64")),
+    ).toThrow("32 bytes");
   });
 });
 
@@ -65,15 +86,31 @@ describe("environment", () => {
   };
 
   it("refuses dev auth and fake integrations in production", () => {
-    expect(() => loadEnv({ ...base, NODE_ENV: "production", AUTH_MODE: "dev" })).toThrow("dev auth is not allowed");
     expect(() =>
-      loadEnv({ ...base, NODE_ENV: "production", ALLOW_FAKE_INTEGRATIONS: "true", SUPABASE_URL: "https://x.supabase.co" }),
+      loadEnv({ ...base, NODE_ENV: "production", AUTH_MODE: "dev" }),
+    ).toThrow("dev auth is not allowed");
+    expect(() =>
+      loadEnv({
+        ...base,
+        NODE_ENV: "production",
+        ALLOW_FAKE_INTEGRATIONS: "true",
+        SUPABASE_URL: "https://x.supabase.co",
+      }),
     ).toThrow("fake integrations are not allowed");
-    expect(() => loadEnv({ ...base, NODE_ENV: "production" })).toThrow("SUPABASE_URL");
+    expect(() => loadEnv({ ...base, NODE_ENV: "production" })).toThrow(
+      "SUPABASE_URL",
+    );
   });
 
   it("accepts a production config", () => {
-    const env = loadEnv({ ...base, NODE_ENV: "production", SUPABASE_URL: "https://x.supabase.co" });
-    expect(env).toMatchObject({ AUTH_MODE: "supabase", ALLOW_FAKE_INTEGRATIONS: false });
+    const env = loadEnv({
+      ...base,
+      NODE_ENV: "production",
+      SUPABASE_URL: "https://x.supabase.co",
+    });
+    expect(env).toMatchObject({
+      AUTH_MODE: "supabase",
+      ALLOW_FAKE_INTEGRATIONS: false,
+    });
   });
 });

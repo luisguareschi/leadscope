@@ -8,7 +8,11 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth";
 
-export default function PanelLayout({ children }: { children: React.ReactNode }) {
+export default function PanelLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { status } = useAuth();
   const router = useRouter();
 
@@ -36,7 +40,9 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <div className="@container/main flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">{children}</div>
+        <div className="@container/main flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

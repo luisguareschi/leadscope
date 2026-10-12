@@ -2,7 +2,11 @@ const LOCALE = "es-UY";
 
 const relative = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
 const numberFormat = new Intl.NumberFormat(LOCALE);
-const timeFormat = new Intl.DateTimeFormat(LOCALE, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const timeFormat = new Intl.DateTimeFormat(LOCALE, {
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
 const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
   day: "2-digit",
   month: "2-digit",
@@ -11,11 +15,22 @@ const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
   minute: "2-digit",
   hourCycle: "h23",
 });
-const shortDateFormat = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short" });
-const longDateFormat = new Intl.DateTimeFormat(LOCALE, { weekday: "long", day: "numeric", month: "long" });
+const shortDateFormat = new Intl.DateTimeFormat(LOCALE, {
+  day: "numeric",
+  month: "short",
+});
+const longDateFormat = new Intl.DateTimeFormat(LOCALE, {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
 
 function startOfDay(date: Date): number {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  ).getTime();
 }
 
 /** "hace 5 minutos", "ayer", "3 oct" */
@@ -27,7 +42,8 @@ export function formatRelative(value: string | null, now = new Date()): string {
   const minutes = Math.round(seconds / 60);
   if (Math.abs(minutes) < 60) return relative.format(minutes, "minute");
   const hours = Math.round(minutes / 60);
-  if (Math.abs(hours) < 24 && startOfDay(date) === startOfDay(now)) return relative.format(hours, "hour");
+  if (Math.abs(hours) < 24 && startOfDay(date) === startOfDay(now))
+    return relative.format(hours, "hour");
   const days = Math.round((startOfDay(date) - startOfDay(now)) / 86_400_000);
   if (days === -1) return "ayer";
   return shortDateFormat.format(date);
@@ -56,7 +72,8 @@ export function formatNumber(value: number): string {
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${numberFormat.format(Math.round(bytes / 102.4) / 10)} KB`;
+  if (bytes < 1024 * 1024)
+    return `${numberFormat.format(Math.round(bytes / 102.4) / 10)} KB`;
   return `${numberFormat.format(Math.round(bytes / (1024 * 102.4)) / 10)} MB`;
 }
 

@@ -12,7 +12,11 @@ export function knowledgeRoutes(ctx: AppContext): Router {
   router.get("/files", listKnowledgeFilesController(ctx));
   router.get("/files/:id", getKnowledgeFileController(ctx));
   router.post("/files", singleFileUpload, uploadKnowledgeFileController(ctx));
-  router.put("/files/:id", singleFileUpload, replaceKnowledgeFileController(ctx));
+  router.put(
+    "/files/:id",
+    singleFileUpload,
+    replaceKnowledgeFileController(ctx),
+  );
   router.delete("/files/:id", deleteKnowledgeFileController(ctx));
   return router;
 }
