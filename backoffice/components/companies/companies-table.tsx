@@ -29,7 +29,7 @@ export function CompaniesTable({ companies }: { companies: CompanySummary[] }) {
           </EmptyMedia>
           <EmptyTitle>Todavía no hay empresas</EmptyTitle>
           <EmptyDescription>
-            Cuando crees una, aparece en esta lista.
+            Creá la primera con el formulario. Quedan la empresa y su operador.
           </EmptyDescription>
         </EmptyHeader>
       </Empty>

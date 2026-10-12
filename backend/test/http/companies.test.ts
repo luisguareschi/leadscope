@@ -173,3 +173,81 @@ describe("platform admin companies", () => {
     ).toBeNull();
   });
 });
+
+describe("empty database", () => {
+  it("lets an allowlisted admin with no operator create the first company", async () => {
+    await resetDb();
+    app = createApp(
+      createTestContext({
+        env: { PLATFORM_ADMIN_EMAILS: "admin@example.com" },
+      }),
+    );
+    expect(await db.company.count()).toBe(0);
+    expect(await db.operator.count()).toBe(0);
+
+    const me = await request(app)
+      .get("/internal/me")
+      .set(adminAuth)
+      .expect(200);
+    expect(me.body).toEqual({
+      operator: null,
+      company: null,
+      platformAdmin: true,
+    });
+
+    await request(app).get("/internal/threads").set(adminAuth).expect(403);
+
+    const created = await request(app)
+      .post("/internal/companies")
+      .set(adminAuth)
+      .send({
+        name: "Altamira",
+        slug: "altamira",
+        operatorEmail: "operador@altamira.uy",
+      })
+      .expect(201);
+    expect(created.body.company).toMatchObject({
+      name: "Altamira",
+      slug: "altamira",
+      operators: [{ email: "operador@altamira.uy" }],
+    });
+
+    const listed = await request(app)
+      .get("/internal/companies")
+      .set(adminAuth)
+      .expect(200);
+    expect(listed.body.companies).toHaveLength(1);
+    expect(listed.body.companies[0].slug).toBe("altamira");
+    expect(
+      await db.operator.findUnique({ where: { email: "admin@example.com" } }),
+    ).toBeNull();
+
+    const operatorAuth = {
+      Authorization: "Bearer dev:operador@altamira.uy",
+    };
+    const operatorMe = await request(app)
+      .get("/internal/me")
+      .set(operatorAuth)
+      .expect(200);
+    expect(operatorMe.body).toEqual({
+      operator: { email: "operador@altamira.uy" },
+      company: { name: "Altamira", slug: "altamira" },
+      platformAdmin: false,
+    });
+    await request(app).get("/internal/companies").set(operatorAuth).expect(403);
+
+    const stranger = { Authorization: "Bearer dev:nadie@example.com" };
+    await request(app).get("/internal/me").set(stranger).expect(403);
+    await request(app).get("/internal/companies").set(stranger).expect(403);
+    await request(app)
+      .post("/internal/companies")
+      .set(stranger)
+      .send({
+        name: "Otra",
+        slug: "otra",
+        operatorEmail: "otro@example.com",
+      })
+      .expect(403);
+    expect(await db.company.count()).toBe(1);
+  });
+});

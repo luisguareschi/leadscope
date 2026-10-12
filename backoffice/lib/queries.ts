@@ -61,10 +61,11 @@ export function useMe() {
   });
 }
 
-export function useThreadsSummary() {
+export function useThreadsSummary(enabled = true) {
   const api = useApi();
   return useQuery({
     queryKey: ["threads", "summary"],
+    enabled,
     queryFn: () => api<ThreadsSummary>("/internal/threads/summary"),
     refetchInterval: LIST_POLL_MS,
   });

@@ -61,8 +61,7 @@ export default function LoginPage() {
           {mode === "dev" ? (
             <Alert>
               <AlertDescription>
-                Modo desarrollo: entrá con el email de un operador, sin
-                contraseña (por ejemplo operador@example.com).
+                Modo desarrollo: entrá con un email, sin contraseña.
               </AlertDescription>
             </Alert>
           ) : null}

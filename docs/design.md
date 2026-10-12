@@ -57,7 +57,7 @@ The engine never imports HubSpot, Google, or Meta directly. It talks to small in
 | Backoffice | Next.js 16 + shadcn (preset `b1Z5bafVA`: base-vega style on Base UI, blue theme) + Tailwind 4 + React Query, client-first | UI and routing only. Pages are client components, data via React Query against the backend. Cache Components are off. Layout from the shadcn `dashboard-01` block. |
 | Database | Supabase Postgres | Managed Postgres. |
 | ORM | Prisma 7 with the `pg` driver adapter | Schema and all queries from the backend. Runtime uses the Supabase pooled connection; migrations use the direct connection (`prisma.config.ts`). |
-| Auth | Supabase Auth (browser client in the backoffice) | Email login for operators. Public signup off; Luis creates accounts. The backoffice sends the Supabase JWT to the backend; the backend verifies it and resolves the operator’s company. `PLATFORM_ADMIN_EMAILS` is the allowlist of signed-in emails that may create companies. |
+| Auth | Supabase Auth (browser client in the backoffice) | Email login. Public signup off. The backoffice sends the Supabase JWT to the backend. An operator row maps the login to one company. A signed-in email on `PLATFORM_ADMIN_EMAILS` can open Empresas with no operator row and no companies. |
 | LLM | Anthropic (`claude-haiku-4-5` to start) | Already agreed with Altamira. Each company uses its own API key. One `complete()` wrapper so a later provider swap is one file. No fine-tune. No multi-provider framework. |
 | WhatsApp | Meta Cloud API | Official API number per company. |
 | CRM | HubSpot API (first adapter) | Direct API. No Zapier / Make / n8n. No HubSpot native AI. |
@@ -117,11 +117,13 @@ Platform secrets (database URLs, encryption key, Supabase URL and keys, Meta app
 
 ### Creating a company
 
-The seed is the bootstrap: Altamira, its config, and the first login. After that, a platform admin creates the next company from Empresas in the panel. The API checks the signed-in Supabase email (in development, the `dev:` token email) against `PLATFORM_ADMIN_EMAILS`, a comma-separated environment variable. The address is not hardcoded. An operator whose email is not on the list gets no nav item and 403 on `GET` and `POST /internal/companies`.
+A fresh database has no companies and no operators. `db:seed` and `operator:add` are local fixtures only (demo threads, a sample file). A production setup does not run them. The container applies migrations and starts; it does not seed.
 
-Creating a company writes the company row, the slug, a starter config (display name, the three questions, default knowledge limits, no welcome template), and the first operator email. It does not collect API keys, does not set a WhatsApp phone number id, and does not copy Altamira's seed copy or demo threads. That operator sets secrets later on Integraciones. The same page lists existing companies (name, slug, operator emails). It does not open another company's threads; thread routes stay filtered by the signed-in operator's company.
+A signed-in Supabase user whose email is on `PLATFORM_ADMIN_EMAILS` can open Empresas and call `GET /internal/me`, `GET /internal/companies`, and `POST /internal/companies` with no operator row. The check is the session email (the JWT, or the dev token). It is not hardcoded. Company routes (threads, knowledge, secrets) still require an operator, so this login cannot open a company's threads. The panel sends them to Empresas and hides the company pages until they have an operator row.
 
-The admin email must also be an operator, because the panel login resolves an operator row. `npm run operator:add` still adds further operators to a company that already exists.
+Creating a company writes the company row, the slug, a starter config (display name, the three questions, default knowledge limits, no welcome template), and the first operator email. That is how the first company, including Altamira, is created. It does not collect API keys and does not set a WhatsApp phone number id. The same page lists existing companies (name, slug, operator emails). The operator created there signs in afterwards and only sees their company. They set secrets on Integraciones. An operator whose email is not on the list gets no nav item and 403 on the company routes.
+
+`prisma/seed-data/altamira.ts` is the local fixture's copy. Production does not apply it.
 
 ### Not in v1
 
@@ -272,9 +274,9 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 
 - `GET/POST /webhooks/whatsapp` — Meta verification and inbound events. Company resolved from `phone_number_id`. Verified with Meta’s signature.
 - `POST /hooks/crm/form-lead/:companySlug` — form-lead trigger from the company’s CRM workflow. Secret in `X-LeadScope-Secret` (or `Authorization: Bearer`). Accepts HubSpot's "Send a webhook" body as is (`phone` / `mobilephone`, `email`, `firstname`, `lastname`, `hs_object_id`). Sends the welcome template only to a thread with no messages yet.
-- `GET /internal/me` — the operator, their company, and `platformAdmin` (true when the signed-in email is on `PLATFORM_ADMIN_EMAILS`).
-- `GET /internal/companies` — platform admin only. Companies (name, slug, operator emails, created at). No secrets, no threads.
-- `POST /internal/companies` — platform admin only. Body `{ name, slug, operatorEmail }`. Writes the company, starter config, and first operator. 409 if the slug or email is taken. Extra fields, including API keys, are ignored.
+- `GET /internal/me` — the signed-in email. With an operator row: that operator, their company, and `platformAdmin`. A platform admin with no operator row gets `operator: null`, `company: null`, and `platformAdmin: true`. Anyone else with no operator row gets 403.
+- `GET /internal/companies` — platform admin only, with or without an operator row. Companies (name, slug, operator emails, created at). No secrets, no threads.
+- `POST /internal/companies` — platform admin only, with or without an operator row. Body `{ name, slug, operatorEmail }`. Writes the company, starter config, and first operator. 409 if the slug or email is taken. Extra fields, including API keys, are ignored.
 - `GET /internal/threads?status=&search=&cursor=` — the operator's company threads, newest activity first, 50 per page.
 - `GET /internal/threads/summary` — counts per status (they add up to the total).
 - `GET /internal/threads/:id` — thread + messages.
@@ -286,7 +288,7 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 - `DELETE /internal/secrets/:name` — clear that one secret. There is no company id on these routes.
 - `GET /health`.
 
-Auth: Supabase JWT on `/internal/*` (JWKS, or the legacy HS256 secret), mapped to `Operator.companyId`; an operator row created by email is linked to its Supabase user on first login. `AUTH_MODE=dev` accepts `dev:<email>` and is refused in production. CORS allows only the backoffice origin. Every query filters by the operator's company, and another company's id is a 404. Secret writes use that same company and ignore any company id in the body. `/internal/companies` also requires the signed-in email on `PLATFORM_ADMIN_EMAILS`; anyone else gets 403. Listing companies does not grant access to their threads.
+Auth: Supabase JWT on `/internal/*` (JWKS, or the legacy HS256 secret). An operator row is linked to its Supabase user on first login and scopes threads, knowledge, and secrets to that company. `AUTH_MODE=dev` accepts `dev:<email>` and is refused in production. CORS allows only the backoffice origin. Every company query filters by the operator's company, and another company's id is a 404. Secret writes use that same company and ignore any company id in the body. `/internal/me` and `/internal/companies` also accept a signed-in email on `PLATFORM_ADMIN_EMAILS` when no operator row exists. Anyone else on those company routes gets 403. Listing companies does not grant access to their threads.
 
 LLM: one module, `backend/src/llm/anthropic.ts`, that takes the two system blocks + messages and returns the parsed fields. Prompt building lives in `engine/`, not inside the model call.
 
@@ -301,11 +303,11 @@ Pages:
 3. Thread detail — the full conversation with delivery ticks, the lead's answers, HubSpot status, and the 24-hour window. Alerts say why the bot stopped and offer the fix: mark as attended (clears `needsHuman`), resume, or retry HubSpot. Pause / resume and delete. The panel still does not send WhatsApp.
 4. Conocimiento — upload (drag and drop), list, preview the extracted text, replace, and delete files for the operator’s company, with a meter of the space used. Not a “sync sheet now” button.
 5. Integraciones — the operator sets the Anthropic API key, Meta access token, HubSpot access token, and form-lead secret for their company. Write-only fields, whether each is set, the last 4 characters when available, and an explicit Quitar. The platform encryption key is not on this page.
-6. Empresas — only when `GET /internal/me` says `platformAdmin`. Create a company (name, slug, first operator email) and list the companies that exist. No API keys, no link into another company's threads. An operator who is not an admin has no nav item; opening the URL shows that they have no access, and the API answers 403.
+6. Empresas — only when `GET /internal/me` says `platformAdmin`, including when `company` is null. Create a company (name, slug, first operator email) and list the companies that exist. This is the empty-database setup. No API keys, no link into another company's threads. An operator who is not an admin has no nav item; opening the URL shows that they have no access, and the API answers 403. A platform admin with no operator row does not see Conversaciones, Conocimiento, or Integraciones.
 
 The panel does not send messages. Advisors answer from their own WhatsApp.
 
-One shared backoffice for all companies: one Vercel app, one URL. The operator’s company comes from their login (`Operator.companyId`), and the backend filters every request by it. No per-company subdomain, branding, or company switcher in v1. A platform admin can list companies and create one; they still only open threads for the company on their operator row. Later options on the same app: a subdomain per client and per-company branding.
+One shared backoffice for all companies: one Vercel app, one URL. The operator’s company comes from their login (`Operator.companyId`), and the backend filters every request by it. No per-company subdomain, branding, or company switcher in v1. A platform admin can list companies and create one without belonging to a company. They open threads only when their login has an operator row, and then only for that company. Later options on the same app: a subdomain per client and per-company branding.
 
 React Query with polling (every 10 seconds on lists, 5 on an open conversation) is enough at this volume. No realtime subscription in v1.
 
@@ -317,7 +319,7 @@ Shadcn with Luis's preset `b1Z5bafVA` and the `dashboard-01` layout. Per-company
 - **Backoffice:** Vercel.
 - **Backend:** Docker image of the Express app, running as one always-on container (Fly.io, Railway, Render, or similar). Supabase Edge Functions are not the app runtime. Supabase stays Postgres and Auth. The host account is still open; the image is the artifact.
 - **Single instance:** the sweeper runs inside the container. Keep one instance until work moves to a proper queue; the thread lease covers the short overlap during a deploy.
-- **Setup scripts** (`backend/scripts`): `company:secret` is a debug write of one encrypted company secret (operators set secrets in Integraciones), `operator:add` creates an operator (optionally sending a Supabase invitation), `chat` talks to the assistant from the terminal, and `webhook:send` posts a signed test webhook. The seed applies Altamira's config from `prisma/seed-data/` and is the first bootstrap. Later companies are created in the panel.
+- **Setup scripts** (`backend/scripts`): `company:secret` is a debug write of one encrypted company secret (operators set secrets in Integraciones), `chat` talks to the assistant from the terminal, and `webhook:send` posts a signed test webhook. `db:seed` and `operator:add` are local fixtures only (demo company, sample file, demo threads, an extra operator). A production setup does not run them. The first company and its first operator are created from Empresas.
 - **Environments:** staging and production, each with its own database and a test WhatsApp number in staging. Prompt changes go to staging first.
 - **Platform secrets (env only, never committed):** database URLs (pooled + direct), Supabase URL and keys, secrets encryption key, Meta app secret and webhook verify token, and `PLATFORM_ADMIN_EMAILS`. A Google service account is later, with Drive / Sheets, not v1.
 - **Monitoring:** structured logs, error alerts (Sentry or similar), and `LlmUsage` for cost per company.

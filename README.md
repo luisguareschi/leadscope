@@ -18,10 +18,11 @@ docker compose up -d
 cd backend
 cp .env.example .env
 npm install
-npm run db:migrate
-npm run db:seed      # Altamira, operador@example.com, a sample knowledge file, 7 demo conversations
+npm run db:migrate   # empty database: no companies, no operators
 npm run dev          # http://localhost:3001
 ```
+
+In `backend/.env`, set `PLATFORM_ADMIN_EMAILS` to the email that may create companies (comma-separated; nothing is hardcoded), then restart the API. That login does not need an operator row.
 
 ```bash
 cd backoffice
@@ -30,23 +31,15 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
-Sign in at http://localhost:3000 as `operador@example.com` (development login, no password). **Integraciones**, in the sidebar, is where that company sets its Anthropic, Meta, HubSpot, and form-lead secrets. The page shows whether each one is set and the last 4 characters; it never shows the full value. Leaving a field empty does not clear it.
+Sign in at http://localhost:3000 as that email (development login, no password). The panel opens **Empresas**. The list is empty. Create the company (for Altamira: name Altamira, identifier altamira) and the first operator's email. That writes the company, its slug, a starter config, and the operator. It does not ask for API keys. The new row shows in the list. This login still cannot open conversations, because it is not an operator.
 
-**Empresas** is only for a platform admin. In `backend/.env`, set `PLATFORM_ADMIN_EMAILS` to a comma-separated list of signed-in emails (nothing is hardcoded). That person must also be an operator, or they cannot sign in. For a local try, add a second login and allowlist only that one:
+Sign in as the operator email you just typed. The sidebar is Conversaciones, Conocimiento, and Integraciones. Empresas is not there, and `/companies` says there is no access. **Integraciones** is where that company sets its Anthropic, Meta, HubSpot, and form-lead secrets. The page shows whether each one is set and the last 4 characters; it never shows the full value. Leaving a field empty does not clear it.
 
-```bash
-cd backend
-# PLATFORM_ADMIN_EMAILS=admin@example.com   in .env, then restart the API
-npm run operator:add -- altamira admin@example.com
-```
-
-Sign in as `admin@example.com` and open Empresas. The form creates the company, its slug, a starter config, and the first operator email. It does not ask for API keys. The list shows companies that already exist, and it does not open their conversations. Sign in as `operador@example.com` and Empresas is not in the sidebar; opening `/companies` says there is no access, and the API answers 403.
-
-The seed stays the way to create the first company (Altamira and the first login). Companies after that are created in the panel.
-
-The demo conversations use fake numbers (+598 99 000 001–007) and cover every status: qualifying, scheduling a call, handed off with a failed HubSpot write, waiting for an advisor, paused, closed, and a form lead.
+`npm run db:seed` and `npm run operator:add` are local fixtures only. A production setup does not run them. The seed loads a sample knowledge file and 7 demo conversations on fake numbers (+598 99 000 001–007): qualifying, scheduling a call, handed off with a failed HubSpot write, waiting for an advisor, paused, closed, and a form lead. Use it only when you want that fixture in a development database.
 
 ## Talk to the assistant
+
+The examples below assume the local seed fixture (`npm run db:seed` in a development database), which creates Altamira and the dev form secret. A production setup does not run that command.
 
 **From the terminal (recommended for prompt work).** Runs the real engine and knowledge with WhatsApp faked:
 
@@ -86,7 +79,7 @@ Still placeholders in `backend/prisma/seed-data/altamira.ts`: the welcome templa
 ## Tests
 
 ```bash
-cd backend && npm test          # 144 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
+cd backend && npm test          # 145 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
 cd backoffice && npm run lint && npm run typecheck && npm run build
 ```
 
@@ -94,12 +87,12 @@ CI runs both on every pull request.
 
 ## Going live
 
-1. **Supabase (us-east-1).** Turn off public signups. Note the pooled URL (port 6543, `?pgbouncer=true`), the direct URL (5432), the project URL, and the anon key. In Auth → URL configuration, set the site URL to the backoffice and allow `<backoffice>/auth/set-password` as a redirect.
-2. **Backend.** Deploy `backend/Dockerfile` as one always-on instance (Fly, Railway, or Render) with: `NODE_ENV=production`, `DATABASE_URL` (pooled), `DIRECT_URL`, `SECRETS_ENCRYPTION_KEY` (`openssl rand -base64 32`), `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`, `AUTH_MODE=supabase`, `SUPABASE_URL`, `BACKOFFICE_ORIGIN`, `PLATFORM_ADMIN_EMAILS` (comma-separated signed-in emails that may create companies), and optionally `SENTRY_DSN`. The container applies migrations on start.
-3. **First company.** The seed is only the bootstrap: Altamira, its config, and the first login. From a checkout pointed at production: `NODE_ENV=production SEED_WHATSAPP_PHONE_NUMBER_ID=<id> SEED_OPERATOR_EMAIL=<email> npm run db:seed` (no demo data in production). Edit the config in `prisma/seed-data/altamira.ts` and re-run the seed to change Altamira's config; secrets are kept. Put that login's email on `PLATFORM_ADMIN_EMAILS` if that person should create later companies. Do not put Altamira staff on the list.
-4. **Later companies.** Sign in as someone on `PLATFORM_ADMIN_EMAILS` and open Empresas. The page writes the company, its slug, a starter config, and the first operator email. It does not ask for API keys. Companies after the bootstrap are created there, not by re-running the seed.
-5. **Secrets.** Each company sets its own in the panel: sign in as an operator of that company and open Integraciones. The fields are the Anthropic API key, the Meta access token, the HubSpot access token, and the form-lead secret. The page shows whether each one is set and the last 4 characters. It never shows the full value, and an empty field does not clear a secret (use Quitar). The platform encryption key (`SECRETS_ENCRYPTION_KEY`) stays a server environment variable. For debugging from a checkout, `npm run company:secret` still writes the same fields (`-` reads the value from stdin; `--delete` removes one): `npm run company:secret -- altamira anthropicApiKey -`.
-6. **More operators.** `npm run operator:add -- altamira persona@altamira.uy --invite` emails a Supabase invitation (needs `SUPABASE_SERVICE_ROLE_KEY`). The first operator of a new company is the email typed on Empresas.
-7. **Meta.** Webhook URL `https://<backend>/webhooks/whatsapp`, the verify token, and a subscription to `messages`.
-8. **HubSpot.** Create the long-text property and put its internal name in `crm.transcriptProperty`. Add a workflow "Send a webhook" to `POST https://<backend>/hooks/crm/form-lead/altamira` with the header `X-LeadScope-Secret`.
-9. **Backoffice on Vercel.** Root directory `backoffice`; set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_AUTH_MODE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+1. **Supabase (us-east-1).** Turn off public signups. Note the pooled URL (port 6543, `?pgbouncer=true`), the direct URL (5432), the project URL, and the anon key. In Auth → URL configuration, set the site URL to the backoffice and allow `<backoffice>/auth/set-password` as a redirect. In Authentication, create the user whose email will be on `PLATFORM_ADMIN_EMAILS`. Do not run `db:seed` or `operator:add`.
+2. **Backend.** Deploy `backend/Dockerfile` as one always-on instance (Fly, Railway, or Render) with: `NODE_ENV=production`, `DATABASE_URL` (pooled), `DIRECT_URL`, `SECRETS_ENCRYPTION_KEY` (`openssl rand -base64 32`), `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`, `AUTH_MODE=supabase`, `SUPABASE_URL`, `BACKOFFICE_ORIGIN`, `PLATFORM_ADMIN_EMAILS` (comma-separated signed-in emails that may create companies), and optionally `SENTRY_DSN`. The container applies migrations on start and does not seed. The database stays empty of companies and operators.
+3. **First company.** Sign in to the backoffice as the allowlisted user and open Empresas. Create the company and the first operator email (Altamira: name Altamira, identifier altamira). That is the whole setup. Do not run `npm run db:seed` or `npm run operator:add`. In Supabase Authentication, create the user for that operator email so they can sign in. They see only their company.
+4. **Secrets.** Each company sets its own in the panel: sign in as an operator of that company and open Integraciones. The fields are the Anthropic API key, the Meta access token, the HubSpot access token, and the form-lead secret. The page shows whether each one is set and the last 4 characters. It never shows the full value, and an empty field does not clear a secret (use Quitar). The platform encryption key (`SECRETS_ENCRYPTION_KEY`) stays a server environment variable. For debugging from a checkout, `npm run company:secret` still writes the same fields (`-` reads the value from stdin; `--delete` removes one): `npm run company:secret -- altamira anthropicApiKey -`.
+5. **Meta.** Webhook URL `https://<backend>/webhooks/whatsapp`, the verify token, and a subscription to `messages`.
+6. **HubSpot.** Create the long-text property and put its internal name in `crm.transcriptProperty`. Add a workflow "Send a webhook" to `POST https://<backend>/hooks/crm/form-lead/altamira` with the header `X-LeadScope-Secret`.
+7. **Backoffice on Vercel.** Root directory `backoffice`; set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_AUTH_MODE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+
+`db:seed` and `operator:add` refuse to run when `NODE_ENV=production`. They are local fixtures, not the setup.

@@ -12,10 +12,25 @@ export type OperatorAuth = {
   sessionEmail: string;
 };
 
-type RequestWithOperator = Request & { operator?: OperatorAuth };
+/** A verified panel login. `operator` is null when that email has no operator row yet. */
+export type PanelSession = {
+  sessionEmail: string;
+  operator: OperatorAuth | null;
+};
+
+type RequestWithSession = Request & {
+  session?: PanelSession;
+  operator?: OperatorAuth;
+};
+
+export function sessionOf(req: Request): PanelSession {
+  const session = (req as RequestWithSession).session;
+  if (!session) throw new HttpError(401, "No autenticado", "unauthorized");
+  return session;
+}
 
 export function operatorOf(req: Request): OperatorAuth {
-  const operator = (req as RequestWithOperator).operator;
+  const operator = (req as RequestWithSession).operator;
   if (!operator) throw new HttpError(401, "No autenticado", "unauthorized");
   return operator;
 }
@@ -45,28 +60,39 @@ function createSupabaseVerifier(ctx: AppContext) {
   };
 }
 
+const noPanelAccess = {
+  error: {
+    code: "forbidden",
+    message: "Este usuario no tiene acceso al panel",
+  },
+} as const;
+
 /**
- * Resolves the operator (and so the company) behind a backoffice request. Every `/internal` query
- * filters by this company. Dev mode accepts `dev:<email>` and is refused in production by env validation.
+ * Verifies the panel login and attaches the session. A platform admin may have no operator row.
+ * Dev mode accepts `dev:<email>` and is refused in production by env validation.
  */
-export function requireOperator(ctx: AppContext): RequestHandler {
+export function requireSession(ctx: AppContext): RequestHandler {
   const verifySupabase = createSupabaseVerifier(ctx);
 
-  async function resolve(token: string): Promise<OperatorAuth | null> {
+  async function resolve(token: string): Promise<PanelSession | null> {
     if (ctx.env.AUTH_MODE === "dev") {
       if (!token.startsWith("dev:")) return null;
       const sessionEmail = token.slice(4).trim().toLowerCase();
+      if (!sessionEmail) return null;
       const operator = await ctx.db.operator.findUnique({
         where: { email: sessionEmail },
       });
-      return operator
-        ? {
-            operatorId: operator.id,
-            companyId: operator.companyId,
-            email: operator.email,
-            sessionEmail,
-          }
-        : null;
+      return {
+        sessionEmail,
+        operator: operator
+          ? {
+              operatorId: operator.id,
+              companyId: operator.companyId,
+              email: operator.email,
+              sessionEmail,
+            }
+          : null,
+      };
     }
     const payload = await verifySupabase(token);
     if (!payload.sub) return null;
@@ -78,7 +104,7 @@ export function requireOperator(ctx: AppContext): RequestHandler {
         ? payload.email.trim().toLowerCase()
         : null;
     if (!operator && email) {
-      // First login of an operator Luis created by email: link the Supabase user to that row.
+      // First login of an operator created by email: link the Supabase user to that row.
       const invited = await ctx.db.operator.findUnique({ where: { email } });
       if (invited && !invited.supabaseUserId) {
         operator = await ctx.db.operator.update({
@@ -87,14 +113,19 @@ export function requireOperator(ctx: AppContext): RequestHandler {
         });
       }
     }
-    return operator
-      ? {
-          operatorId: operator.id,
-          companyId: operator.companyId,
-          email: operator.email,
-          sessionEmail: email ?? operator.email,
-        }
-      : null;
+    const sessionEmail = email ?? operator?.email ?? null;
+    if (!sessionEmail) return null;
+    return {
+      sessionEmail,
+      operator: operator
+        ? {
+            operatorId: operator.id,
+            companyId: operator.companyId,
+            email: operator.email,
+            sessionEmail,
+          }
+        : null,
+    };
   }
 
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -105,25 +136,33 @@ export function requireOperator(ctx: AppContext): RequestHandler {
         .json({ error: { code: "unauthorized", message: "No autenticado" } });
       return;
     }
-    let operator: OperatorAuth | null;
+    let session: PanelSession | null;
     try {
-      operator = await resolve(token);
+      session = await resolve(token);
     } catch {
       res.status(401).json({
         error: { code: "unauthorized", message: "Sesión inválida o vencida" },
       });
       return;
     }
-    if (!operator) {
-      res.status(403).json({
-        error: {
-          code: "forbidden",
-          message: "Este usuario no tiene acceso al panel",
-        },
-      });
+    if (!session) {
+      res.status(403).json(noPanelAccess);
       return;
     }
-    (req as RequestWithOperator).operator = operator;
+    const withSession = req as RequestWithSession;
+    withSession.session = session;
+    if (session.operator) withSession.operator = session.operator;
+    next();
+  };
+}
+
+/** Company routes. A signed-in platform admin with no operator row stops here. */
+export function requireOperator(): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!sessionOf(req).operator) {
+      res.status(403).json(noPanelAccess);
+      return;
+    }
     next();
   };
 }

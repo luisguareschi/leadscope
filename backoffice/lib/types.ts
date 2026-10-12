@@ -76,8 +76,8 @@ export type KnowledgeList = {
 };
 
 export type Me = {
-  operator: { email: string };
-  company: { name: string; slug: string };
+  operator: { email: string } | null;
+  company: { name: string; slug: string } | null;
   platformAdmin: boolean;
 };
 

@@ -23,18 +23,31 @@ import { useMe, useThreadsSummary } from "@/lib/queries";
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const me = useMe();
-  const summary = useThreadsSummary();
+  const hasCompany = Boolean(me.data?.company);
+  const summary = useThreadsSummary(hasCompany);
 
   const items = [
-    {
-      title: "Conversaciones",
-      url: "/threads",
-      icon: <MessagesSquareIcon />,
-      badge: summary.data?.needs_human || undefined,
-      badgeLabel: "conversaciones que requieren un asesor",
-    },
-    { title: "Conocimiento", url: "/knowledge", icon: <BookOpenTextIcon /> },
-    { title: "Integraciones", url: "/integrations", icon: <KeyRoundIcon /> },
+    ...(hasCompany
+      ? [
+          {
+            title: "Conversaciones",
+            url: "/threads",
+            icon: <MessagesSquareIcon />,
+            badge: summary.data?.needs_human || undefined,
+            badgeLabel: "conversaciones que requieren un asesor",
+          },
+          {
+            title: "Conocimiento",
+            url: "/knowledge",
+            icon: <BookOpenTextIcon />,
+          },
+          {
+            title: "Integraciones",
+            url: "/integrations",
+            icon: <KeyRoundIcon />,
+          },
+        ]
+      : []),
     ...(me.data?.platformAdmin
       ? [
           {
@@ -51,7 +64,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href="/threads" />}>
+            <SidebarMenuButton
+              size="lg"
+              render={<Link href={hasCompany ? "/threads" : "/companies"} />}
+            >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <RadarIcon className="size-4" />
               </div>
@@ -60,7 +76,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   LeadScope
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {me.data?.company.name ?? " "}
+                  {me.data?.company?.name ??
+                    (me.data?.platformAdmin ? "Plataforma" : " ")}
                 </span>
               </div>
             </SidebarMenuButton>
@@ -71,7 +88,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={items} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser email={me.data?.operator.email ?? ""} />
+        <NavUser
+          email={me.data?.operator?.email ?? ""}
+          label={hasCompany ? "Operador" : "Administración"}
+        />
       </SidebarFooter>
     </Sidebar>
   );

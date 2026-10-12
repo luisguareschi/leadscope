@@ -58,9 +58,9 @@ export default function CompaniesPage() {
         <Building2Icon />
         <AlertTitle>Empresas de la plataforma</AlertTitle>
         <AlertDescription>
-          Creá la empresa y el primer operador. Las claves las carga esa persona
-          en Integraciones. Esta pantalla no abre las conversaciones de otra
-          empresa.
+          Creá la empresa y el primer operador. Si la lista está vacía, esta es
+          la primera. Las claves las carga esa persona en Integraciones. Esta
+          pantalla no abre las conversaciones de otra empresa.
         </AlertDescription>
       </Alert>
 
