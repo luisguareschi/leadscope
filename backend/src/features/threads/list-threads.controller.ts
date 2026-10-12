@@ -1,7 +1,7 @@
 import type { RequestHandler } from "express";
 import { z } from "zod";
 import type { AppContext } from "../../context.js";
-import { operatorOf } from "../../http/require-operator.js";
+import { companyAccessOf } from "../../http/company-access.js";
 import { parseInput } from "../../http/validate.js";
 import { listThreads } from "./list-threads.service.js";
 
@@ -16,7 +16,7 @@ const querySchema = z.object({
 
 export function listThreadsController(ctx: AppContext): RequestHandler {
   return async (req, res) => {
-    const { companyId } = operatorOf(req);
+    const { companyId } = companyAccessOf(req);
     res.json(
       await listThreads(ctx, companyId, parseInput(querySchema, req.query)),
     );

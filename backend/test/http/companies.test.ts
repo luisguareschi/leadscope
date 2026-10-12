@@ -193,6 +193,7 @@ describe("empty database", () => {
       operator: null,
       company: null,
       platformAdmin: true,
+      supportAccess: false,
     });
 
     await request(app).get("/internal/threads").set(adminAuth).expect(403);
@@ -233,6 +234,7 @@ describe("empty database", () => {
       operator: { email: "operador@altamira.uy" },
       company: { name: "Altamira", slug: "altamira" },
       platformAdmin: false,
+      supportAccess: false,
     });
     await request(app).get("/internal/companies").set(operatorAuth).expect(403);
 

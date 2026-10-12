@@ -1,6 +1,6 @@
 import type { RequestHandler } from "express";
 import type { AppContext } from "../../context.js";
-import { operatorOf } from "../../http/require-operator.js";
+import { companyAccessOf } from "../../http/company-access.js";
 import { parseInput } from "../../http/validate.js";
 import { badRequest } from "../../lib/http-error.js";
 import {
@@ -12,7 +12,7 @@ import { setSecret } from "./set-secret.service.js";
 
 export function setSecretController(ctx: AppContext): RequestHandler {
   return async (req, res) => {
-    const { companyId } = operatorOf(req);
+    const { companyId } = companyAccessOf(req);
     const { name } = parseInput(secretParamsSchema, req.params);
     if (!isCompanySecretName(name))
       throw badRequest("Secreto desconocido.", "invalid_input");

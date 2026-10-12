@@ -60,6 +60,7 @@ describe("backoffice auth", () => {
       operator: { email: "operador@test.com" },
       company: { name: "altamira", slug: "altamira" },
       platformAdmin: false,
+      supportAccess: false,
     });
   });
 });

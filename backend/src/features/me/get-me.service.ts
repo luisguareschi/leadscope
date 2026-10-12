@@ -1,27 +1,33 @@
 import type { AppContext } from "../../context.js";
+import type { CompanyAccess } from "../../http/company-access.js";
 import { isPlatformAdmin } from "../../http/platform-admin.js";
-import type { PanelSession } from "../../http/require-operator.js";
+import type { PanelSession } from "../../http/require-session.js";
 import { HttpError } from "../../lib/http-error.js";
 
-export async function getMe(ctx: AppContext, session: PanelSession) {
+/** `company` is the one the panel works in: the operator's own, or the one a platform admin entered. */
+export async function getMe(
+  ctx: AppContext,
+  session: PanelSession,
+  access: CompanyAccess | null,
+) {
   const platformAdmin = isPlatformAdmin(ctx.env, session.sessionEmail);
-  if (!session.operator) {
-    if (!platformAdmin) {
-      throw new HttpError(
-        403,
-        "Este usuario no tiene acceso al panel",
-        "forbidden",
-      );
-    }
-    return { operator: null, company: null, platformAdmin: true };
+  if (!access && !platformAdmin) {
+    throw new HttpError(
+      403,
+      "Este usuario no tiene acceso al panel",
+      "forbidden",
+    );
   }
-  const company = await ctx.db.company.findUniqueOrThrow({
-    where: { id: session.operator.companyId },
-    select: { name: true, slug: true },
-  });
+  const company = access
+    ? await ctx.db.company.findUniqueOrThrow({
+        where: { id: access.companyId },
+        select: { name: true, slug: true },
+      })
+    : null;
   return {
-    operator: { email: session.operator.email },
+    operator: session.operator ? { email: session.operator.email } : null,
     company,
     platformAdmin,
+    supportAccess: access?.support ?? false,
   };
 }

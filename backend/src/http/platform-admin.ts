@@ -1,7 +1,7 @@
 import type { RequestHandler } from "express";
 import type { Env } from "../config/env.js";
 import type { AppContext } from "../context.js";
-import { sessionOf } from "./require-operator.js";
+import { sessionOf } from "./require-session.js";
 
 /** Comma-separated allowlist. Comparison is trimmed and lower-case. An empty list means nobody. */
 export function platformAdminEmails(raw: string): Set<string> {
