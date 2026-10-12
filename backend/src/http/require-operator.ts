@@ -1,7 +1,8 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import { createRemoteJWKSet, errors, type JWTPayload } from "jose";
 import type { AppContext } from "../context.js";
 import { HttpError } from "../lib/http-error.js";
+import { verifySupabaseAccessToken } from "./supabase-jwt.js";
 
 export type OperatorAuth = {
   operatorId: string;
@@ -52,12 +53,16 @@ function createSupabaseVerifier(ctx: AppContext) {
     ? new TextEncoder().encode(SUPABASE_JWT_SECRET)
     : null;
 
-  return async (token: string): Promise<JWTPayload> => {
-    const options = { issuer, audience: "authenticated" };
-    if (secret) return (await jwtVerify(token, secret, options)).payload;
-    if (jwks) return (await jwtVerify(token, jwks, options)).payload;
-    throw new Error("Supabase auth is not configured");
-  };
+  return (token: string): Promise<JWTPayload> =>
+    verifySupabaseAccessToken(token, { issuer, secret, jwks });
+}
+
+function isRejectedSupabaseSession(error: unknown): boolean {
+  return (
+    error instanceof errors.JOSEError ||
+    (error instanceof Error &&
+      error.message === "Supabase auth is not configured")
+  );
 }
 
 const noPanelAccess = {
@@ -139,7 +144,10 @@ export function requireSession(ctx: AppContext): RequestHandler {
     let session: PanelSession | null;
     try {
       session = await resolve(token);
-    } catch {
+    } catch (error) {
+      // Only a rejected Supabase JWT. A missing operator row is not an error here.
+      if (!isRejectedSupabaseSession(error)) throw error;
+      ctx.logger.warn({ err: error }, "supabase session rejected");
       res.status(401).json({
         error: { code: "unauthorized", message: "Sesión inválida o vencida" },
       });
