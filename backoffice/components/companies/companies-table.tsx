@@ -1,6 +1,7 @@
 "use client";
 
-import { Building2Icon } from "lucide-react";
+import { Building2Icon, LogInIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Empty,
   EmptyDescription,
@@ -16,10 +17,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAuth } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
+import { enterCompany } from "@/lib/support";
 import type { CompanySummary } from "@/lib/types";
 
 export function CompaniesTable({ companies }: { companies: CompanySummary[] }) {
+  const { email } = useAuth();
+
   if (companies.length === 0) {
     return (
       <Empty className="border-0">
@@ -43,8 +48,11 @@ export function CompaniesTable({ companies }: { companies: CompanySummary[] }) {
           <TableHead className="pl-4 lg:pl-6">Empresa</TableHead>
           <TableHead>Identificador</TableHead>
           <TableHead className="hidden sm:table-cell">Operadores</TableHead>
-          <TableHead className="hidden pr-4 text-right md:table-cell lg:pr-6">
+          <TableHead className="hidden text-right md:table-cell">
             Creada
+          </TableHead>
+          <TableHead className="w-24 pr-4 lg:pr-6">
+            <span className="sr-only">Acciones</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -62,8 +70,22 @@ export function CompaniesTable({ companies }: { companies: CompanySummary[] }) {
                 ? company.operators.map((operator) => operator.email).join(", ")
                 : "—"}
             </TableCell>
-            <TableCell className="hidden pr-4 text-right text-muted-foreground md:table-cell lg:pr-6">
+            <TableCell className="hidden text-right text-muted-foreground md:table-cell">
               {formatDateTime(company.createdAt)}
+            </TableCell>
+            <TableCell className="pr-4 text-right lg:pr-6">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!email}
+                onClick={() => {
+                  if (email) enterCompany(company.id, email);
+                }}
+                aria-label={`Entrar a ${company.name}`}
+              >
+                <LogInIcon />
+                Entrar
+              </Button>
             </TableCell>
           </TableRow>
         ))}

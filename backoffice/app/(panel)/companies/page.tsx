@@ -59,8 +59,9 @@ export default function CompaniesPage() {
         <AlertTitle>Empresas de la plataforma</AlertTitle>
         <AlertDescription>
           Creá la empresa y el primer operador. Si la lista está vacía, esta es
-          la primera. Las claves las carga esa persona en Integraciones. Esta
-          pantalla no abre las conversaciones de otra empresa.
+          la primera. Las claves las carga esa persona en Integraciones. Con
+          Entrar abrís el panel de una empresa como administrador, sin ser su
+          operador. Lo que cambies ahí queda registrado.
         </AlertDescription>
       </Alert>
 
@@ -70,7 +71,7 @@ export default function CompaniesPage() {
           <CardHeader className="border-b pb-4">
             <CardTitle>Empresas</CardTitle>
             <CardDescription>
-              Las que ya existen. El nombre no abre sus conversaciones.
+              Las que ya existen. Entrar abre su panel como administrador.
             </CardDescription>
           </CardHeader>
           {query.isError ? (

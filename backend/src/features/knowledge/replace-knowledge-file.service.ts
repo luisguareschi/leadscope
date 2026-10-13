@@ -1,6 +1,6 @@
 import { loadCompanyById } from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
-import type { OperatorAuth } from "../../http/require-operator.js";
+import type { CompanyAccess } from "../../http/company-access.js";
 import { HttpError, notFound } from "../../lib/http-error.js";
 import { toKnowledgeFileDto } from "./knowledge-dto.js";
 import {
@@ -12,17 +12,17 @@ import {
 /** Swaps a specific file for a new version, which may have a different name. */
 export async function replaceKnowledgeFile(
   ctx: AppContext,
-  operator: OperatorAuth,
+  access: CompanyAccess,
   fileId: string,
   file: UploadedFile | undefined,
 ) {
   const current = await ctx.db.knowledgeFile.findFirst({
-    where: { id: fileId, companyId: operator.companyId },
+    where: { id: fileId, companyId: access.companyId },
   });
   if (!current) throw notFound("Archivo no encontrado");
   const company = await loadCompanyById(
     ctx.db,
-    operator.companyId,
+    access.companyId,
     ctx.encryptionKey,
   );
   const prepared = await prepareKnowledgeFile(company, file);
@@ -43,7 +43,7 @@ export async function replaceKnowledgeFile(
 
   const saved = await ctx.db.knowledgeFile.update({
     where: { id: current.id },
-    data: { uploadedById: operator.operatorId, ...prepared },
+    data: { uploadedById: access.operatorId, ...prepared },
     include: { uploadedBy: { select: { email: true } } },
   });
   return { file: toKnowledgeFileDto(saved), replaced: true };

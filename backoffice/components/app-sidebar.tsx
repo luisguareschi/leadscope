@@ -24,6 +24,7 @@ import { useMe, useThreadsSummary } from "@/lib/queries";
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const me = useMe();
   const hasCompany = Boolean(me.data?.company);
+  const supportAccess = me.data?.supportAccess === true;
   const summary = useThreadsSummary(hasCompany);
 
   const items = [
@@ -48,7 +49,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           },
         ]
       : []),
-    ...(me.data?.platformAdmin
+    // Inside a company, the support bar is the way back to Empresas.
+    ...(me.data?.platformAdmin && !supportAccess
       ? [
           {
             title: "Empresas",
@@ -90,7 +92,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <NavUser
           email={me.data?.operator?.email ?? ""}
-          label={hasCompany ? "Operador" : "Administración"}
+          label={hasCompany && !supportAccess ? "Operador" : "Administración"}
         />
       </SidebarFooter>
     </Sidebar>

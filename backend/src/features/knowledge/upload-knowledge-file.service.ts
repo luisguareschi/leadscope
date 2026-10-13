@@ -1,6 +1,6 @@
 import { loadCompanyById } from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
-import type { OperatorAuth } from "../../http/require-operator.js";
+import type { CompanyAccess } from "../../http/company-access.js";
 import { toKnowledgeFileDto } from "./knowledge-dto.js";
 import {
   assertFitsCompanyTotal,
@@ -11,12 +11,12 @@ import {
 /** Stores an uploaded file's text. A file with the same name (any case) replaces the previous version. */
 export async function uploadKnowledgeFile(
   ctx: AppContext,
-  operator: OperatorAuth,
+  access: CompanyAccess,
   file: UploadedFile | undefined,
 ) {
   const company = await loadCompanyById(
     ctx.db,
-    operator.companyId,
+    access.companyId,
     ctx.encryptionKey,
   );
   const prepared = await prepareKnowledgeFile(company, file);
@@ -38,10 +38,10 @@ export async function uploadKnowledgeFile(
     },
     create: {
       companyId: company.id,
-      uploadedById: operator.operatorId,
+      uploadedById: access.operatorId,
       ...prepared,
     },
-    update: { uploadedById: operator.operatorId, ...prepared },
+    update: { uploadedById: access.operatorId, ...prepared },
     include: { uploadedBy: { select: { email: true } } },
   });
   return { file: toKnowledgeFileDto(saved), replaced: existing !== null };

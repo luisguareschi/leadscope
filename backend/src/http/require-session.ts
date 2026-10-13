@@ -19,21 +19,12 @@ export type PanelSession = {
   operator: OperatorAuth | null;
 };
 
-type RequestWithSession = Request & {
-  session?: PanelSession;
-  operator?: OperatorAuth;
-};
+type RequestWithSession = Request & { session?: PanelSession };
 
 export function sessionOf(req: Request): PanelSession {
   const session = (req as RequestWithSession).session;
   if (!session) throw new HttpError(401, "No autenticado", "unauthorized");
   return session;
-}
-
-export function operatorOf(req: Request): OperatorAuth {
-  const operator = (req as RequestWithSession).operator;
-  if (!operator) throw new HttpError(401, "No autenticado", "unauthorized");
-  return operator;
 }
 
 function bearerToken(req: Request): string | null {
@@ -65,7 +56,7 @@ function isRejectedSupabaseSession(error: unknown): boolean {
   );
 }
 
-const noPanelAccess = {
+export const noPanelAccess = {
   error: {
     code: "forbidden",
     message: "Este usuario no tiene acceso al panel",
@@ -157,20 +148,7 @@ export function requireSession(ctx: AppContext): RequestHandler {
       res.status(403).json(noPanelAccess);
       return;
     }
-    const withSession = req as RequestWithSession;
-    withSession.session = session;
-    if (session.operator) withSession.operator = session.operator;
-    next();
-  };
-}
-
-/** Company routes. A signed-in platform admin with no operator row stops here. */
-export function requireOperator(): RequestHandler {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!sessionOf(req).operator) {
-      res.status(403).json(noPanelAccess);
-      return;
-    }
+    (req as RequestWithSession).session = session;
     next();
   };
 }

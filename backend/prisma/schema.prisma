@@ -26,6 +26,7 @@ model Company {
   threads               Thread[]
   messages              Message[]
   llmUsages             LlmUsage[]
+  adminAuditEntries     AdminAuditEntry[]
 }
 
 /// Maps a backoffice login to the one company it belongs to.
@@ -168,6 +169,22 @@ model LlmUsage {
   createdAt        DateTime @default(now())
   company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   thread           Thread?  @relation(fields: [threadId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+}
+
+/// A write a platform admin made inside a company through support access (`X-Company-Id`).
+/// Stored before the write runs, so no support write goes unrecorded.
+model AdminAuditEntry {
+  id         String   @id @default(cuid())
+  companyId  String
+  adminEmail String
+  /// Method and path, e.g. "POST /internal/threads/<id>/pause". Request bodies are never stored.
+  action     String
+  /// HTTP status of the response. Null until it is sent, or if the browser left before it.
+  status     Int?
+  createdAt  DateTime @default(now())
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId, createdAt])
 }
