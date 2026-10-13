@@ -39,11 +39,12 @@ export function formatKnowledge(documents: KnowledgeDocument[]): string {
   return `<knowledge>\n${body}\n</knowledge>`;
 }
 
-/** The static part of the system prompt. Identical across turns until config or knowledge change, so it is cached. */
-export function buildSystemPrompt(
-  config: CompanyConfig,
-  documents: KnowledgeDocument[],
-): string {
+/**
+ * The rules every company's assistant follows, filled in with that company's config. They live in
+ * code because the engine depends on them (the submit_turn fields, the three-answers handoff, the
+ * needs_human line, the 24-hour window), so the panel shows them read-only.
+ */
+export function buildPlatformRules(config: CompanyConfig): string {
   const company = config.displayName;
   const forbidden = config.forbiddenTopics.describe;
   const sections = [
@@ -55,7 +56,7 @@ export function buildSystemPrompt(
    - Budget: ${config.questions.budget}
    - Knows the projects: ${config.questions.knowsProjects}
 3. Answer the lead's questions using only the documents in <knowledge>.
-4. Once the three answers are known, ask when an advisor can call them, then confirm an advisor will call.
+4. Once the three answers are known, ask when an advisor can call them, then confirm an advisor will call. The lead goes to an advisor only after all three answers are known.
 You do not book visits, negotiate, reserve units, or replace the sales team.`,
     `# How you write
 - Write in ${config.language}. ${config.tone}
@@ -70,18 +71,53 @@ You do not book visits, negotiate, reserve units, or replace the sales team.`,
     forbidden.length > 0
       ? `# Topics you must never discuss
 ${forbidden.map((topic) => `- ${topic}`).join("\n")}
-Do not estimate, project, compare, or imply anything about them, even if the lead insists. If the lead asks about one, set intent to needs_human so a person answers.`
+Do not estimate, project, compare, or imply anything about them, even if the lead insists. If the lead asks about one, set intent to needs_human so a person answers. A reply that mentions one is not sent: the lead receives "${config.messages.fallback}" instead and a person takes over.`
       : "",
+    `# When a person takes over
+When you set intent to needs_human, your reply is not sent. The lead receives "${config.messages.needsHuman}" and the conversation waits until a person from ${company} has dealt with it.`,
+    `# WhatsApp's 24-hour window
+You can only reply within 24 hours of the lead's last message, and you never write first. Do not promise to write back later or to follow up; an advisor will call.`,
     `# Returning your turn
 Always call the submit_turn tool exactly once.
 - reply: the WhatsApp message to send.
 - interest, budget, callTime: only what the lead said in their own messages, in a few words (for example "2 dormitorios para vivir", "hasta USD 150.000", "mañana después de las 18"). Use null when this turn does not add or change it.
 - knowsProjects: true if the lead says they already know ${company}'s projects, false if they say they do not, otherwise null.
 - intent: "not_interested" if the lead is not interested, wrote by mistake, or asks you to stop; "needs_human" as described above, or for complaints and existing purchases; "qualified" once the three answers are known and they accept a call; otherwise "continue".`,
-    config.about ? `# About ${company}\n${config.about}` : "",
-    formatKnowledge(documents),
   ];
   return sections.filter(Boolean).join("\n\n");
+}
+
+/** The company's own instructions, after the platform rules, which win if the two disagree. */
+export function formatCompanyInstructions(
+  config: CompanyConfig,
+  instructions: string,
+): string {
+  const text = instructions.trim();
+  if (!text) return "";
+  const company = config.displayName;
+  return `# Instructions from ${company}
+${company} wrote the instructions below. Follow them, except where they contradict the rules above: the rules above always win.
+<company_instructions>
+${text}
+</company_instructions>`;
+}
+
+/**
+ * The static part of the system prompt: platform rules, company instructions, then knowledge.
+ * Identical across turns until config, instructions, or knowledge change, so it is cached.
+ */
+export function buildSystemPrompt(input: {
+  config: CompanyConfig;
+  instructions: string;
+  documents: KnowledgeDocument[];
+}): string {
+  return [
+    buildPlatformRules(input.config),
+    formatCompanyInstructions(input.config, input.instructions),
+    formatKnowledge(input.documents),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 function missingQuestions(fields: LeadFields): QuestionKey[] {

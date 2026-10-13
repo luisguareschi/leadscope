@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** Hard ceiling for any upload. A company's own `knowledge.maxFileBytes` cannot go above it. */
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
 export const DEFAULT_KNOWLEDGE_LIMITS = {
   /** Raw upload size. PDFs with images are large even when their text is small. */
   maxFileBytes: 15 * 1024 * 1024,
@@ -15,8 +18,6 @@ export const companyConfigSchema = z.object({
   language: z.string().min(1),
   /** How the assistant writes, in the company's own words. */
   tone: z.string().min(1),
-  /** Extra context about the company the assistant can rely on. */
-  about: z.string().default(""),
   timezone: z.string().default("America/Montevideo"),
   /** ISO country used to read phone numbers typed without a country code. */
   defaultCountry: z.string().length(2).default("UY"),

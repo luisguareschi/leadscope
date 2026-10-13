@@ -11,22 +11,25 @@ datasource db {
 
 /// One row per client company. Company-specific behavior lives in `config`, never in code.
 model Company {
-  id                    String          @id @default(cuid())
-  slug                  String          @unique
+  id                    String                   @id @default(cuid())
+  slug                  String                   @unique
   name                  String
   /// Validated by `companyConfigSchema` (src/companies/company-config.ts).
   config                Json
+  /// The company's own words for the assistant. The prompt puts them after the platform rules.
+  instructions          String                   @default("") @db.Text
   /// AES-256-GCM ciphertext of the company's API keys. See src/lib/crypto.ts.
   encryptedSecrets      String?
-  whatsappPhoneNumberId String?         @unique
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  whatsappPhoneNumberId String?                  @unique
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
   operators             Operator[]
   knowledgeFiles        KnowledgeFile[]
   threads               Thread[]
   messages              Message[]
   llmUsages             LlmUsage[]
   adminAuditEntries     AdminAuditEntry[]
+  settingsVersions      CompanySettingsVersion[]
 }
 
 /// Maps a backoffice login to the one company it belongs to.
@@ -171,6 +174,36 @@ model LlmUsage {
   thread           Thread?  @relation(fields: [threadId], references: [id], onDelete: SetNull)
 
   @@index([companyId, createdAt])
+}
+
+enum SettingsKind {
+  config
+  instructions
+  whatsappPhoneNumberId
+}
+
+/// One saved version of a company's config, instructions, or WhatsApp phone number id. The newest
+/// of each kind matches the Company row; restoring an older one saves it again as a new version.
+model CompanySettingsVersion {
+  id                    String       @id @default(cuid())
+  companyId             String
+  kind                  SettingsKind
+  /// Set when kind is config. Validated by `companyConfigSchema`.
+  config                Json?
+  /// Set when kind is instructions.
+  instructions          String?      @db.Text
+  /// When kind is whatsappPhoneNumberId: the value of `Company.whatsappPhoneNumberId`. Null means no number.
+  whatsappPhoneNumberId String?
+  /// Signed-in email of whoever saved it. Null for the version that existed before versioning.
+  createdByEmail        String?
+  /// Saved by a platform admin through support access.
+  viaSupport            Boolean      @default(false)
+  /// The version this one restored, when it was a restore.
+  restoredFromId        String?
+  createdAt             DateTime     @default(now())
+  company               Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, kind, createdAt])
 }
 
 /// A write a platform admin made inside a company through support access (`X-Company-Id`).

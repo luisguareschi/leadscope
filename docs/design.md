@@ -30,8 +30,8 @@ Backend source layout:
 ```
 backend/src/
   features/<resource>/        one controller + one service per endpoint, plus a routes file per resource
-                              (threads, knowledge, secrets, companies, me, whatsapp-webhook, form-leads). Services call Prisma directly.
-  engine/                     pure: turn decisions (states, qualify gate), prompt building, history, guardrails
+                              (threads, knowledge, secrets, settings, companies, me, whatsapp-webhook, form-leads). Services call Prisma directly.
+  engine/                     pure: turn decisions (states, qualify gate), prompt building (platform rules + company instructions + knowledge), history, guardrails
   conversation/               the pipeline: record inbound, reply scheduler, one bot turn, CRM sync, sweeper, lease
   integrations/
     whatsapp/                 Meta Cloud API: webhook parsing, signature, send text/template, fake channel
@@ -39,7 +39,7 @@ backend/src/
     knowledge/                text extraction from uploaded files
     registry.ts               picks the real adapter or the fake per company
   llm/                        complete() around Anthropic (tool use), and the local fake
-  companies/                  company config schema, starter config for a new company, encrypted secrets, loading a company
+  companies/                  company config schema (and the stricter one for saving), starter config and instructions, encrypted secrets, loading a company
   http/                       session auth, platform-admin allowlist, company access (support access + audit), input validation, error handler
   lib/                        env-free helpers: Prisma client, logger, crypto, phone numbers
 backend/prisma/               schema, migrations, development seed (Altamira's config lives in seed-data/)
@@ -82,7 +82,7 @@ flowchart LR
 3. When a reply is needed, the engine loads the company config and the extracted text of that company’s uploaded files, builds the system prompt + knowledge block + recent messages, and calls Anthropic.
 4. The model returns structured output: the reply text plus any extracted fields (see [Conversation](#conversation)). The engine updates the thread state from those fields, runs the guardrails, then sends the reply.
 5. On handoff or close, the engine upserts the CRM contact and writes the transcript.
-6. Operators open the backoffice, sign in with Supabase Auth, and call the backend (with the JWT) to list their company’s threads, pause one, upload, replace, and delete knowledge files, or set and clear that company's integration secrets.
+6. Operators open the backoffice, sign in with Supabase Auth, and call the backend (with the JWT) to list their company’s threads, pause one, upload, replace, and delete knowledge files, set and clear that company's integration secrets, or edit its settings and instructions.
 
 ## Multi-company
 
@@ -96,14 +96,29 @@ One shared deployment for all companies. Every company-owned row has a `companyI
 
 ### What lives in company config (not in code)
 
-- Display name and brand voice notes.
+Operators edit all of this in Configuración (see [Company settings](#company-settings)).
+
+- Display name.
 - Language and tone (for Altamira: Uruguayan Spanish with “vos”).
 - The qualifying questions.
 - Forbidden topics (for Altamira: future rental yield, guaranteed returns).
 - Knowledge limits (`knowledge.*`): 60,000 characters of extracted text per file, 150,000 per company (about 40k tokens of prompt), and 15 MB per original upload. Brochure PDFs are large because of their images, so the upload cap is generous and the text caps do the real work.
 - CRM adapter type and property names.
-- WhatsApp phone number id and template names.
+- WhatsApp template names. The phone number id is a unique column on the company, not config, because the webhook finds the company by it. Configuración edits it next to the welcome template; each change is kept as a version with who and when.
 - Business hours, used when offering a call time.
+- The fixed lines the engine sends (`messages.*`), the reply cap, and the model settings.
+
+The company's own instructions (free text, `Company.instructions`) sit next to the config. Altamira's "about" line moved there from the config.
+
+### Company settings
+
+Configuración is one page for any operator of the company; there are no admin or member roles in the MVP. A platform admin uses it through support access, and those writes are audited like any other.
+
+- **Asistente** edits the whole config. Before saving, the API checks it with a stricter schema than the one that loads it: required texts and lengths, a timezone and language the runtime knows, a country libphonenumber supports, patterns that compile the way the guardrail compiles them, a Meta template name and language code, a HubSpot internal property name, a `claude-…` model id, bounded numbers, and knowledge limits that still fit the files already uploaded. Unknown keys are rejected. Errors come back per field, in Spanish.
+- **Instrucciones y prompt** edits the company instructions (up to 20,000 characters), shows the platform rules read-only, and shows the full prompt the model would receive on the next turn: the cached block (platform rules, instructions, knowledge), the per-turn context for a first-time lead, and the `submit_turn` tool. The preview and the engine build the cached block with the same function.
+- **Versiones** lists every save of the config or the instructions, newest first, with who saved it, when, and whether it came through support access. Restoring a version re-checks it against today's rules and saves it again as a new version; the one in use stays in the history. Saving or restoring what is already there writes nothing.
+
+Every company has a first version of each: the migration writes one for existing companies, and Empresas writes one when it creates a company.
 
 ### Secrets per company
 
@@ -121,7 +136,7 @@ A fresh database has no companies and no operators. `db:seed` and `operator:add`
 
 A signed-in Supabase user whose email is on `PLATFORM_ADMIN_EMAILS` can open Empresas and call `GET /internal/me`, `GET /internal/companies`, and `POST /internal/companies` with no operator row. The check is the session email (the JWT, or the dev token). It is not hardcoded. Company routes (threads, knowledge, secrets) need a company: the login's operator row, or support access below. With neither, the panel sends the admin to Empresas and hides the company pages.
 
-Creating a company writes the company row, the slug, a starter config (display name, the three questions, default knowledge limits, no welcome template), and the first operator email. That is how the first company, including Altamira, is created. It does not collect API keys and does not set a WhatsApp phone number id. The same page lists existing companies (name, slug, operator emails), each with Entrar. The operator created there signs in afterwards and only sees their company. They set secrets on Integraciones. An operator whose email is not on the list gets no nav item and 403 on the company routes.
+Creating a company writes the company row, the slug, a starter config (display name, the three questions, default knowledge limits, no welcome template), and the first operator email. That is how the first company, including Altamira, is created. It does not collect API keys and does not set a WhatsApp phone number id; the company sets that in Configuración → WhatsApp. The same page lists existing companies (name, slug, operator emails), each with Entrar. The operator created there signs in afterwards and only sees their company. They set secrets on Integraciones. An operator whose email is not on the list gets no nav item and 403 on the company routes.
 
 ### Support access
 
@@ -158,26 +173,28 @@ flowchart TD
   upload[Operator upload in the backoffice] --> extract[Extract text on upload]
   extract --> files[(Uploaded file text in Postgres)]
   web[Allowlisted public pages, optional] --> notes[siteNotes]
-  promptBase[Base prompt in code] --> build[Build messages for Anthropic]
-  companyConfig[Company config] --> build
+  promptBase[Platform rules in code] --> build[Build messages for Anthropic]
+  companyConfig[Company config] --> promptBase
+  instructions[Company instructions] --> build
   files --> build
   notes --> build
   thread[Thread state + recent messages] --> build
   build --> llm[Anthropic]
 ```
 
-Four pieces, kept separate on purpose:
+Five pieces, kept separate on purpose:
 
-1. **Base prompt (in code)** — generic behavior shared by every company: answer only from the knowledge block, one question at a time, hand off when unsure, return the structured fields. Edited by Luis.
-2. **Company config** — the company-specific parts filled into that prompt: name, tone, questions, forbidden topics.
-3. **Uploaded files** — the commercial source. Price-from, typology, delivery, and orientation come from the extracted text. Re-uploading a file replaces its previous version. If the operator does not re-upload, prices go stale. Full inventory and unit-level availability stay with the advisor and are not dumped in chat.
-4. **Allowlisted public pages → `siteNotes`** — optional and secondary. Stable facts only (address, amenities, neighborhood). A scheduled fetch can strip the HTML to plain text. Skip it when no allowlist is set. The bot does not open URLs while chatting.
+1. **Platform rules (in code)** — behavior shared by every company and anything the engine depends on: answer only from the knowledge block, one question at a time, the `submit_turn` fields the engine parses, the lead goes to an advisor only after the three answers, `needs_human` means the fixed line goes out and the bot waits, and replies only inside WhatsApp's 24-hour window with no follow-ups. Edited by Luis. Configuración shows them read-only.
+2. **Company config** — the company-specific parts filled into those rules: name, language, tone, questions, forbidden topics, the fixed lines.
+3. **Company instructions** — free text the company writes in its own words, placed right after the platform rules. The prompt says the platform rules win if the two disagree, and the engine enforces the parts that matter in code anyway (state, guardrails, window).
+4. **Uploaded files** — the commercial source. Price-from, typology, delivery, and orientation come from the extracted text. Re-uploading a file replaces its previous version. If the operator does not re-upload, prices go stale. Full inventory and unit-level availability stay with the advisor and are not dumped in chat.
+5. **Allowlisted public pages → `siteNotes`** — optional and secondary. Stable facts only (address, amenities, neighborhood). A scheduled fetch can strip the HTML to plain text. Skip it when no allowlist is set. The bot does not open URLs while chatting.
 
 At reply time the backend:
 
 1. Loads the extracted text of that company’s uploaded files, plus site notes when they exist.
 2. Formats them into a short **knowledge block** (structured text, not a vector search).
-3. Sends to Anthropic: system prompt (base + company config + knowledge block, cached) and the conversation turns.
+3. Sends to Anthropic: system prompt (platform rules filled from the config + company instructions + knowledge block, cached) and the conversation turns.
 4. The model answers only from that. If a fact is not in the block, it says it does not know and offers the advisor.
 
 Google Drive / Sheets sync, and a Connect Google OAuth flow, are later. MCP is not the plan. Still no RAG.
@@ -204,7 +221,7 @@ Every model call returns, through Anthropic tool use:
 
 The engine moves the state from those fields. The model never sets the state directly. `qualified` is accepted but moves nothing on its own: the stored answers are the gate.
 
-The system prompt has two blocks. The first (base rules, company config, all knowledge documents) is identical across turns, so it carries Anthropic's cache breakpoint. The second is per turn: the lead's local time, business hours, what is already known, and the next step the engine wants (for example, "ask the next missing question: …"). History is the last 40 messages. The call has a 25-second timeout; an invalid tool call is retried once before it counts as a model failure.
+The system prompt has two blocks. The first (platform rules filled from the company config, the company instructions, all knowledge documents) is identical across turns, so it carries Anthropic's cache breakpoint. The second is per turn: the lead's local time, business hours, what is already known, and the next step the engine wants (for example, "ask the next missing question: …"). History is the last 40 messages. The call has a 25-second timeout; an invalid tool call is retried once before it counts as a model failure.
 
 ### States
 
@@ -273,7 +290,8 @@ How the advisor is notified (owner, task, or both) and the exact property names 
 
 Every table below except `Company` has `companyId`. The schema is `backend/prisma/schema.prisma`.
 
-- **Company** — slug, name, config (JSON, validated by `companyConfigSchema`), encrypted secrets, WhatsApp phone number id.
+- **Company** — slug, name, config (JSON, validated by `companyConfigSchema`), instructions (free text), encrypted secrets, WhatsApp phone number id.
+- **CompanySettingsVersion** — one saved config or instructions: kind, the value, who saved it (`createdByEmail`, null for the first version), whether it came through support access, the version it restored (if any), and when. The newest of each kind is what the Company row holds.
 - **Operator** — email, Supabase Auth user id (linked on first login), companyId. Maps a login to a company.
 - **KnowledgeFile** — name, lower-cased name (unique per company, so the same name replaces), format, MIME type, size, SHA-256, extracted text, character count, uploaded by.
 - **Thread** — lead phone (E.164) and WhatsApp id, WhatsApp name, form email, source (`whatsapp` / `form`), state, `paused`, `needsHuman` + reason, the four lead fields, last inbound at (24-hour window), last message at + preview (for the list), processing lease, CRM contact id and outbox (`crmPendingAction`, attempts, next attempt, last error, synced at). Unique on (companyId, phone).
@@ -297,6 +315,12 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 - `GET /internal/secrets` — whether each company secret is set, and the last 4 characters when that does not reveal the whole value.
 - `PUT /internal/secrets/:name` — replace one secret (`anthropicApiKey`, `metaAccessToken`, `hubspotAccessToken`, `formLeadSecret`). Body `{ "value" }`. An empty value is rejected.
 - `DELETE /internal/secrets/:name` — clear that one secret. There is no company id on these routes.
+- `GET /internal/settings` — config, instructions, the platform rules rendered with that config (read-only), and the current version ids.
+- `PUT /internal/settings/config` — the whole config. Validated before saving; a 400 carries `error.fields` keyed by dotted path. Unknown keys, including any attempt at the platform rules, are rejected.
+- `PUT /internal/settings/instructions` — body `{ instructions }` and nothing else.
+- `GET /internal/settings/versions` — config and instruction versions, newest first, with who, when, support access, and which is in use.
+- `POST /internal/settings/versions/:id/restore` — save that version again as a new one. 422 if it no longer passes validation.
+- `GET /internal/settings/prompt` — the cached system block the engine would send, the turn context for a first-time lead, the `submit_turn` tool, the model, and the knowledge totals.
 - `GET /health`.
 
 Auth: Supabase JWT on `/internal/*`. Current projects sign access tokens with ES256; the backend verifies those with the project's JWKS (`SUPABASE_URL`). The legacy `SUPABASE_JWT_SECRET` is used only for HS256 tokens, so a configured secret does not reject an ES256 session. `Sesión inválida o vencida` is that verification failing (signature, expiry, issuer, or audience), not a missing operator row. An operator row is linked to its Supabase user on first login and scopes threads, knowledge, and secrets to that company. `AUTH_MODE=dev` accepts `dev:<email>` and is refused in production. CORS allows only the backoffice origin and the headers `Authorization`, `Content-Type`, and `X-Company-Id`. Every company query filters by the request's company, and another company's id is a 404. That company is the operator's, or, for a signed-in email on `PLATFORM_ADMIN_EMAILS` that sends `X-Company-Id`, the one in the header (see [Support access](#support-access)). The header is ignored for everyone else. Secret writes use that same company and ignore any company id in the body. `/internal/me` and `/internal/companies` also accept a platform admin with no operator row. Anyone else on `/internal/companies` gets 403.
@@ -314,7 +338,8 @@ Pages:
 3. Thread detail — the full conversation with delivery ticks, the lead's answers, HubSpot status, and the 24-hour window. Alerts say why the bot stopped and offer the fix: mark as attended (clears `needsHuman`), resume, or retry HubSpot. Pause / resume and delete. The panel still does not send WhatsApp.
 4. Conocimiento — upload (drag and drop), list, preview the extracted text, replace, and delete files for the operator’s company, with a meter of the space used. Not a “sync sheet now” button.
 5. Integraciones — the operator sets the Anthropic API key, Meta access token, HubSpot access token, and form-lead secret for their company. Write-only fields, whether each is set, the last 4 characters when available, and an explicit Quitar. The platform encryption key is not on this page.
-6. Empresas — only when `GET /internal/me` says `platformAdmin`, including when `company` is null. Create a company (name, slug, first operator email) and list the companies that exist. This is the empty-database setup. No API keys. Each row has Entrar, which opens that company's panel as [support access](#support-access) with the "Viendo como administrador" bar. An operator who is not an admin has no nav item; opening the URL shows that they have no access, and the API answers 403. A platform admin with no operator row and no entered company does not see Conversaciones, Conocimiento, or Integraciones.
+6. Configuración — three tabs: Asistente (the config form, with errors next to each field and one save for the whole config), Instrucciones y prompt (company instructions, the read-only platform rules, and the full prompt), and Versiones (history with restore). See [Company settings](#company-settings).
+7. Empresas — only when `GET /internal/me` says `platformAdmin`, including when `company` is null. Create a company (name, slug, first operator email) and list the companies that exist. This is the empty-database setup. No API keys. Each row has Entrar, which opens that company's panel as [support access](#support-access) with the "Viendo como administrador" bar. An operator who is not an admin has no nav item; opening the URL shows that they have no access, and the API answers 403. A platform admin with no operator row and no entered company does not see Conversaciones, Conocimiento, or Integraciones.
 
 The panel does not send messages. Advisors answer from their own WhatsApp.
 
@@ -366,8 +391,8 @@ Google Drive / Sheets sync and a Connect Google OAuth flow are later, not v1. MC
 
 ## Open at kickoff
 
-- HubSpot property names, and how advisors are notified (owner, task, or both).
-- Business-hours text, and the approved welcome template's name and wording.
+- HubSpot property names, and how advisors are notified (owner, task, or both). The property name is set in Configuración.
+- Business-hours text, and the approved welcome template's name and wording. Both are set in Configuración once Altamira confirms them.
 - HubSpot workflow for the form-lead trigger.
 - WhatsApp number, Meta Business access and verification, welcome template approval.
 - Allowlist of public URLs for site notes.

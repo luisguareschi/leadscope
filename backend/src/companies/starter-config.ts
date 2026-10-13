@@ -14,7 +14,6 @@ export function starterCompanyConfig(displayName: string): CompanyConfigInput {
     displayName: name,
     language: "es",
     tone: "Español claro y profesional. Cálido, sin emojis salvo que el lead los use.",
-    about: `${name} es una desarrolladora inmobiliaria.`,
     timezone: "America/Montevideo",
     defaultCountry: "UY",
     businessHours: "",
@@ -46,4 +45,9 @@ export function starterCompanyConfig(displayName: string): CompanyConfigInput {
     crm: { provider: "hubspot", transcriptProperty: "" },
     whatsapp: { welcomeTemplate: null },
   };
+}
+
+/** The company instructions a new company starts with. Its operators rewrite them in Configuración. */
+export function starterInstructions(displayName: string): string {
+  return `${displayName.trim()} es una desarrolladora inmobiliaria.`;
 }

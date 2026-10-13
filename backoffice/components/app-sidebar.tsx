@@ -7,6 +7,7 @@ import {
   KeyRoundIcon,
   MessagesSquareIcon,
   RadarIcon,
+  SlidersHorizontalIcon,
 } from "lucide-react";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -46,6 +47,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             title: "Integraciones",
             url: "/integrations",
             icon: <KeyRoundIcon />,
+          },
+          {
+            title: "Configuración",
+            url: "/settings",
+            icon: <SlidersHorizontalIcon />,
           },
         ]
       : []),

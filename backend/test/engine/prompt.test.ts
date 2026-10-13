@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseCompanyConfig } from "../../src/companies/company-config.js";
 import { buildChatTurns } from "../../src/engine/history.js";
 import {
+  buildPlatformRules,
   buildSystemPrompt,
   buildTurnContext,
   formatKnowledge,
@@ -22,24 +23,59 @@ const empty = {
 
 describe("buildSystemPrompt", () => {
   it("puts the company's questions, forbidden topics, and every document in the prompt", () => {
-    const prompt = buildSystemPrompt(config, [
-      {
-        name: "precios.xlsx",
-        updatedAt: new Date("2026-10-01"),
-        text: "Torre Sur desde USD 150.000",
-      },
-      {
-        name: 'faq "v2".md',
-        updatedAt: new Date("2026-10-05"),
-        text: "Entrega: 2027",
-      },
-    ]);
+    const prompt = buildSystemPrompt({
+      config,
+      instructions: "",
+      documents: [
+        {
+          name: "precios.xlsx",
+          updatedAt: new Date("2026-10-01"),
+          text: "Torre Sur desde USD 150.000",
+        },
+        {
+          name: 'faq "v2".md',
+          updatedAt: new Date("2026-10-05"),
+          text: "Entrega: 2027",
+        },
+      ],
+    });
     expect(prompt).toContain("¿Con qué presupuesto contás?");
     expect(prompt).toContain("- Rentabilidad futura");
     expect(prompt).toContain(
       '<document name="precios.xlsx" updated="2026-10-01">\nTorre Sur desde USD 150.000\n</document>',
     );
     expect(prompt).toContain('name="faq &quot;v2&quot;.md"');
+    expect(prompt).not.toContain("<company_instructions>");
+  });
+
+  it("puts the platform rules first, then the company instructions, then knowledge", () => {
+    const prompt = buildSystemPrompt({
+      config,
+      instructions: "  Mencioná siempre la Torre Sur.  ",
+      documents: [],
+    });
+    const rules = buildPlatformRules(config);
+    expect(prompt.startsWith(rules)).toBe(true);
+    expect(prompt).toContain(
+      "<company_instructions>\nMencioná siempre la Torre Sur.\n</company_instructions>",
+    );
+    expect(prompt).toContain("the rules above always win");
+    expect(prompt.indexOf("<company_instructions>")).toBeLessThan(
+      prompt.indexOf("<knowledge>\n"),
+    );
+  });
+
+  it("states the rules the engine depends on, with the company's own fixed lines", () => {
+    const rules = buildPlatformRules(config);
+    expect(rules).toContain("Always call the submit_turn tool exactly once.");
+    expect(rules).toContain(
+      "The lead goes to an advisor only after all three answers are known.",
+    );
+    expect(rules).toContain(
+      'The lead receives "Un asesor te va a responder eso."',
+    );
+    expect(rules).toContain("within 24 hours of the lead's last message");
+    expect(rules).toContain('receives "Te va a contactar un asesor." instead');
   });
 
   it("says so when there are no documents", () => {

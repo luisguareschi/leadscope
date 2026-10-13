@@ -8,7 +8,11 @@ export function errorHandler(ctx: AppContext): ErrorRequestHandler {
   return (error, req, res, _next) => {
     if (error instanceof HttpError) {
       res.status(error.status).json({
-        error: { code: error.code ?? "error", message: error.message },
+        error: {
+          code: error.code ?? "error",
+          message: error.message,
+          ...(error.fields ? { fields: error.fields } : {}),
+        },
       });
       return;
     }

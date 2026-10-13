@@ -11,7 +11,6 @@ export const altamiraConfig: CompanyConfigInput = {
   displayName: "Altamira",
   language: "es-UY",
   tone: 'Español de Uruguay, con voseo ("contame", "¿tenés…?"). Cálido, claro y profesional. Sin emojis salvo que el lead los use.',
-  about: "Altamira es una desarrolladora inmobiliaria en Uruguay.",
   timezone: "America/Montevideo",
   defaultCountry: "UY",
   // Week 1: the hours Altamira's advisors make calls.
@@ -69,6 +68,10 @@ export const altamiraConfig: CompanyConfigInput = {
     },
   },
 };
+
+/** Altamira's company instructions: the part of the prompt its operators edit in Configuración. */
+export const altamiraInstructions =
+  "Altamira es una desarrolladora inmobiliaria en Uruguay.";
 
 export const SAMPLE_KNOWLEDGE_NAME = "proyectos-ejemplo.md";
 

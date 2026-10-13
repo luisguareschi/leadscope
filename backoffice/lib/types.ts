@@ -114,3 +114,79 @@ export type SecretStatus = {
 };
 
 export type SecretsList = { secrets: SecretStatus[] };
+
+/** Mirrors the backend's `CompanyConfig` (companies/company-config.ts). */
+export type CompanyConfig = {
+  displayName: string;
+  language: string;
+  tone: string;
+  timezone: string;
+  defaultCountry: string;
+  businessHours: string;
+  questions: { interest: string; budget: string; knowsProjects: string };
+  forbiddenTopics: { describe: string[]; patterns: string[] };
+  messages: { fallback: string; needsHuman: string; nonText: string };
+  maxReplyChars: number;
+  llm: {
+    model: string;
+    temperature: number;
+    historyLimit: number;
+    timeoutMs: number;
+  };
+  knowledge: {
+    maxFileBytes: number;
+    maxCharsPerFile: number;
+    maxCharsTotal: number;
+  };
+  crm: { provider: "hubspot"; transcriptProperty: string };
+  whatsapp: {
+    welcomeTemplate: {
+      name: string;
+      language: string;
+      bodyPreview: string;
+    } | null;
+  };
+};
+
+export type CompanySettings = {
+  config: CompanyConfig;
+  instructions: string;
+  /** Meta's Phone number ID of the company's WhatsApp number. Null until it has one. */
+  whatsappPhoneNumberId: string | null;
+  /** Read-only: written in code and filled in with the config. */
+  platformRules: string;
+  currentVersions: {
+    config: string | null;
+    instructions: string | null;
+    whatsappPhoneNumberId: string | null;
+  };
+  limits: { instructionsMaxChars: number };
+};
+
+export type SettingsSaveResult = {
+  changed: boolean;
+  settings: CompanySettings;
+};
+
+export type SettingsVersion = {
+  id: string;
+  kind: "config" | "instructions" | "whatsappPhoneNumberId";
+  createdAt: string;
+  /** Null for the version that existed before versioning. */
+  createdByEmail: string | null;
+  viaSupport: boolean;
+  restoredFromId: string | null;
+  /** The one the company runs on now. */
+  current: boolean;
+  config: CompanyConfig | null;
+  instructions: string | null;
+  whatsappPhoneNumberId: string | null;
+};
+
+export type PromptPreview = {
+  model: string;
+  system: string;
+  turnContext: string;
+  tool: { name: string; description: string; input_schema: unknown };
+  knowledge: { files: number; chars: number };
+};

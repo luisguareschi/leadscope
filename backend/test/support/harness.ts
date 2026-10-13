@@ -28,7 +28,7 @@ export function testDb(): Db {
 
 export async function resetDb(db: Db = testDb()): Promise<void> {
   await db.$executeRawUnsafe(
-    'TRUNCATE "AdminAuditEntry", "LlmUsage", "Message", "Thread", "KnowledgeFile", "Operator", "Company" RESTART IDENTITY CASCADE',
+    'TRUNCATE "CompanySettingsVersion", "AdminAuditEntry", "LlmUsage", "Message", "Thread", "KnowledgeFile", "Operator", "Company" RESTART IDENTITY CASCADE',
   );
 }
 
@@ -59,26 +59,45 @@ export const baseConfig: CompanyConfigInput = {
   },
 };
 
+/** When test companies got their first settings versions: before any test clock. */
+const CREATED_AT = new Date("2026-01-01T00:00:00Z");
+
 export async function createCompany(
   db: Db,
   options: {
     slug?: string;
     phoneNumberId?: string;
     config?: Partial<CompanyConfigInput>;
+    instructions?: string;
     secrets?: CompanySecrets;
   } = {},
 ) {
   const slug = options.slug ?? "test-co";
+  const config = parseCompanyConfig({ ...baseConfig, ...options.config });
+  const instructions = options.instructions ?? "";
+  const whatsappPhoneNumberId = options.phoneNumberId ?? `PNID-${slug}`;
   return db.company.create({
     data: {
       slug,
       name: slug,
-      config: parseCompanyConfig({ ...baseConfig, ...options.config }),
-      whatsappPhoneNumberId: options.phoneNumberId ?? `PNID-${slug}`,
+      config,
+      instructions,
+      whatsappPhoneNumberId,
       encryptedSecrets: encryptSecrets(
         options.secrets ?? { formLeadSecret: "form-secret" },
         parseEncryptionKey(TEST_ENCRYPTION_KEY),
       ),
+      settingsVersions: {
+        create: [
+          { kind: "config", config, createdAt: CREATED_AT },
+          { kind: "instructions", instructions, createdAt: CREATED_AT },
+          {
+            kind: "whatsappPhoneNumberId",
+            whatsappPhoneNumberId,
+            createdAt: CREATED_AT,
+          },
+        ],
+      },
     },
   });
 }

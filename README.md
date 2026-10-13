@@ -5,7 +5,7 @@ WhatsApp lead assistant for real-estate developers. It greets leads, asks three 
 | Folder | What it is |
 | --- | --- |
 | `backend/` | Express 5 + Prisma 7 (Postgres). WhatsApp webhook, conversation engine, Anthropic, HubSpot, knowledge uploads. Ships as a Docker image. |
-| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations, pause/resume, knowledge files, company secrets, and (for a platform admin) creating a company and entering one through support access. |
+| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations, pause/resume, knowledge files, company secrets, company settings and instructions, and (for a platform admin) creating a company and entering one through support access. |
 | `docs/` | Design, proposals, meeting notes. |
 
 ## Run it locally
@@ -35,7 +35,9 @@ Sign in at http://localhost:3000 as that email (development login, no password).
 
 **Entrar** on a row opens that company's panel as the admin (support access), with no operator row there. A bar at the top says "Viendo como administrador: Altamira", and **Volver a Empresas** leaves. The panel sends `X-Company-Id` on every request; the API honors it only for emails on `PLATFORM_ADMIN_EMAILS`, and every write made that way is recorded in the `AdminAuditEntry` table.
 
-Sign in as the operator email you just typed. The sidebar is Conversaciones, Conocimiento, and Integraciones. Empresas is not there, and `/companies` says there is no access. **Integraciones** is where that company sets its Anthropic, Meta, HubSpot, and form-lead secrets. The page shows whether each one is set and the last 4 characters; it never shows the full value. Leaving a field empty does not clear it.
+Sign in as the operator email you just typed. The sidebar is Conversaciones, Conocimiento, Integraciones, and Configuración. Empresas is not there, and `/companies` says there is no access. **Integraciones** is where that company sets its Anthropic, Meta, HubSpot, and form-lead secrets. The page shows whether each one is set and the last 4 characters; it never shows the full value. Leaving a field empty does not clear it.
+
+**Configuración** edits the company config (tone, the three questions, forbidden topics, fixed messages, business hours, welcome template, HubSpot property, model and limits) and the company instructions. The platform rules the engine depends on are shown read-only, with the full prompt the model would receive. Every save keeps a version (who and when), and **Versiones** restores any of them.
 
 `npm run db:seed` and `npm run operator:add` are local fixtures only. A production setup does not run them. The seed loads a sample knowledge file and 7 demo conversations on fake numbers (+598 99 000 001–007): qualifying, scheduling a call, handed off with a failed HubSpot write, waiting for an advisor, paused, closed, and a form lead. Use it only when you want that fixture in a development database.
 
@@ -73,15 +75,15 @@ When a company has no key for an integration and `ALLOW_FAKE_INTEGRATIONS=true` 
 | Integration | Fake | Real once you set |
 | --- | --- | --- |
 | Anthropic | scripted replies that walk the three questions | `anthropicApiKey` on the company, from Integraciones |
-| WhatsApp | sends recorded in memory | `metaAccessToken` (Integraciones) + the company's phone number id |
+| WhatsApp | sends recorded in memory | `metaAccessToken` (Integraciones) + the company's phone number id (Configuración → WhatsApp) |
 | HubSpot | contacts kept in memory | `hubspotAccessToken` (Integraciones), and `crm.transcriptProperty` in the config |
 
-Still placeholders in `backend/prisma/seed-data/altamira.ts`: the welcome template name, the HubSpot property name, and business hours. The sample knowledge file is fictional.
+Still placeholders for Altamira: the welcome template name, the HubSpot property name, and business hours. They are set in Configuración (the local fixture's copies are in `backend/prisma/seed-data/altamira.ts`). The sample knowledge file is fictional.
 
 ## Tests
 
 ```bash
-cd backend && npm test          # 155 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
+cd backend && npm test          # 169 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
 cd backoffice && npm run lint && npm run typecheck && npm run build
 ```
 
@@ -93,8 +95,8 @@ CI runs both on every pull request.
 2. **Backend.** Deploy `backend/Dockerfile` as one always-on instance (Fly, Railway, or Render) with: `NODE_ENV=production`, `DATABASE_URL` (pooled), `DIRECT_URL`, `SECRETS_ENCRYPTION_KEY` (`openssl rand -base64 32`), `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`, `AUTH_MODE=supabase`, `SUPABASE_URL` (the same project URL as the backoffice's `NEXT_PUBLIC_SUPABASE_URL`, no path), `BACKOFFICE_ORIGIN` (the backoffice origin, exactly), `PLATFORM_ADMIN_EMAILS` (comma-separated signed-in emails that may create companies), and optionally `SENTRY_DSN` and `SUPABASE_JWT_SECRET` (only for an older project that still signs access tokens with HS256). Current Supabase projects sign sessions with ES256; the backend reads the JWKS from `SUPABASE_URL`. The container applies migrations on start and does not seed. The database stays empty of companies and operators.
 3. **First company.** Sign in to the backoffice as the allowlisted user and open Empresas. Create the company and the first operator email (Altamira: name Altamira, identifier altamira). That is the whole setup. Do not run `npm run db:seed` or `npm run operator:add`. In Supabase Authentication, create the user for that operator email so they can sign in. They see only their company.
 4. **Secrets.** Each company sets its own in the panel: sign in as an operator of that company and open Integraciones. The fields are the Anthropic API key, the Meta access token, the HubSpot access token, and the form-lead secret. The page shows whether each one is set and the last 4 characters. It never shows the full value, and an empty field does not clear a secret (use Quitar). The platform encryption key (`SECRETS_ENCRYPTION_KEY`) stays a server environment variable. For debugging from a checkout, `npm run company:secret` still writes the same fields (`-` reads the value from stdin; `--delete` removes one): `npm run company:secret -- altamira anthropicApiKey -`.
-5. **Meta.** Webhook URL `https://<backend>/webhooks/whatsapp`, the verify token, and a subscription to `messages`.
-6. **HubSpot.** Create the long-text property and put its internal name in `crm.transcriptProperty`. Add a workflow "Send a webhook" to `POST https://<backend>/hooks/crm/form-lead/altamira` with the header `X-LeadScope-Secret`.
+5. **Meta.** Webhook URL `https://<backend>/webhooks/whatsapp`, the verify token, and a subscription to `messages`. Then put the number's Phone number ID (WhatsApp Manager → API setup) in Configuración → WhatsApp, as an operator of the company or as a platform admin through Entrar. Each id belongs to one company; until it is set, messages to that number reach no company.
+6. **HubSpot.** Create the long-text property and put its internal name in Configuración → HubSpot (`crm.transcriptProperty`). Add a workflow "Send a webhook" to `POST https://<backend>/hooks/crm/form-lead/altamira` with the header `X-LeadScope-Secret`.
 7. **Backoffice on Vercel.** Root directory `backoffice`; set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_AUTH_MODE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
 `db:seed` and `operator:add` refuse to run when `NODE_ENV=production`. They are local fixtures, not the setup.

@@ -2,19 +2,71 @@ import {
   encryptSecrets,
   decryptSecrets,
 } from "../src/companies/company-secrets.js";
-import { parseCompanyConfig } from "../src/companies/company-config.js";
+import {
+  parseCompanyConfig,
+  type CompanyConfig,
+} from "../src/companies/company-config.js";
 import { loadEnv } from "../src/config/env.js";
 import { MAX_CRM_ATTEMPTS } from "../src/conversation/crm-sync.js";
 import { messagePreview } from "../src/conversation/inbound.js";
 import { parseEncryptionKey } from "../src/lib/crypto.js";
 import { e164ToWaId } from "../src/lib/phone.js";
-import { createPrisma } from "../src/lib/prisma.js";
+import { createPrisma, type Db } from "../src/lib/prisma.js";
 import {
   altamiraConfig,
+  altamiraInstructions,
   SAMPLE_KNOWLEDGE,
   SAMPLE_KNOWLEDGE_NAME,
 } from "./seed-data/altamira.js";
 import { DEMO_THREADS } from "./seed-data/demo-threads.js";
+
+/** Keeps the newest settings version of each kind equal to what the seed just wrote. */
+async function recordSeedVersions(
+  db: Db,
+  company: {
+    id: string;
+    config: CompanyConfig;
+    instructions: string;
+    whatsappPhoneNumberId: string | null;
+  },
+) {
+  const {
+    id: companyId,
+    config,
+    instructions,
+    whatsappPhoneNumberId,
+  } = company;
+  const latest = (kind: "config" | "instructions" | "whatsappPhoneNumberId") =>
+    db.companySettingsVersion.findFirst({
+      where: { companyId, kind },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    });
+  const lastConfig = await latest("config");
+  if (
+    !lastConfig?.config ||
+    JSON.stringify(parseCompanyConfig(lastConfig.config)) !==
+      JSON.stringify(config)
+  ) {
+    await db.companySettingsVersion.create({
+      data: { companyId, kind: "config", config },
+    });
+  }
+  const lastInstructions = await latest("instructions");
+  if (lastInstructions?.instructions !== instructions) {
+    await db.companySettingsVersion.create({
+      data: { companyId, kind: "instructions", instructions },
+    });
+  }
+  const lastPhoneNumberId = await latest("whatsappPhoneNumberId");
+  if (
+    !lastPhoneNumberId ||
+    lastPhoneNumberId.whatsappPhoneNumberId !== whatsappPhoneNumberId
+  ) {
+    await db.companySettingsVersion.create({
+      data: { companyId, kind: "whatsappPhoneNumberId", whatsappPhoneNumberId },
+    });
+  }
+}
 
 /**
  * Local fixture only: the Altamira company, one operator, a sample knowledge file, and demo
@@ -45,22 +97,31 @@ async function main() {
   if (!secrets.formLeadSecret && withDemoData)
     secrets.formLeadSecret = "dev-form-secret";
 
+  const config = parseCompanyConfig(altamiraConfig);
   const company = await db.company.upsert({
     where: { slug: "altamira" },
     create: {
       slug: "altamira",
       name: "Altamira",
-      config: parseCompanyConfig(altamiraConfig),
+      config,
+      instructions: altamiraInstructions,
       whatsappPhoneNumberId: phoneNumberId,
       encryptedSecrets: encryptSecrets(secrets, key),
     },
     update: {
-      config: parseCompanyConfig(altamiraConfig),
+      config,
+      instructions: altamiraInstructions,
       encryptedSecrets: encryptSecrets(secrets, key),
       ...(phoneNumberIdOverride
         ? { whatsappPhoneNumberId: phoneNumberIdOverride }
         : {}),
     },
+  });
+  await recordSeedVersions(db, {
+    id: company.id,
+    config,
+    instructions: altamiraInstructions,
+    whatsappPhoneNumberId: company.whatsappPhoneNumberId,
   });
 
   await db.operator.upsert({

@@ -9,6 +9,7 @@ export type LoadedCompany = {
   name: string;
   whatsappPhoneNumberId: string | null;
   config: CompanyConfig;
+  instructions: string;
   secrets: CompanySecrets;
 };
 
@@ -33,6 +34,7 @@ export function loadCompany(
     name: row.name,
     whatsappPhoneNumberId: row.whatsappPhoneNumberId,
     config: parseCompanyConfig(row.config),
+    instructions: row.instructions,
     secrets: decryptSecrets(row.encryptedSecrets, encryptionKey),
   };
 }

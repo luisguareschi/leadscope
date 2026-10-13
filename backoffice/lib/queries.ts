@@ -15,12 +15,17 @@ import type {
   KnowledgeFile,
   KnowledgeList,
   CompaniesList,
+  CompanyConfig,
+  CompanySettings,
   CompanySummary,
   CreateCompanyInput,
   Me,
+  PromptPreview,
   SecretName,
   SecretStatus,
   SecretsList,
+  SettingsSaveResult,
+  SettingsVersion,
   Thread,
   ThreadsPage,
   ThreadsSummary,
@@ -231,6 +236,88 @@ export function useCreateCompany() {
       }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["companies"] }),
   });
+}
+
+export function useSettings() {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["settings"],
+    queryFn: () => api<CompanySettings>("/internal/settings"),
+  });
+}
+
+export function useSettingsVersions() {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["settings", "versions"],
+    queryFn: () =>
+      api<{ versions: SettingsVersion[] }>("/internal/settings/versions"),
+  });
+}
+
+export function usePromptPreview() {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["settings", "prompt"],
+    queryFn: () => api<PromptPreview>("/internal/settings/prompt"),
+  });
+}
+
+/** Saving or restoring refreshes the settings, their versions, and the assembled prompt. */
+function useSettingsMutation<T>(
+  request: (
+    api: ReturnType<typeof useApi>,
+    input: T,
+  ) => Promise<SettingsSaveResult>,
+) {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: T) => request(api, input),
+    onSuccess: (result) => {
+      client.setQueryData(["settings"], result.settings);
+      return client.invalidateQueries({ queryKey: ["settings"] });
+    },
+  });
+}
+
+/** Leaving `whatsappPhoneNumberId` out keeps the stored one; null clears it. */
+export function useSaveConfig() {
+  return useSettingsMutation(
+    (
+      api,
+      input: { config: CompanyConfig; whatsappPhoneNumberId?: string | null },
+    ) =>
+      api<SettingsSaveResult>("/internal/settings/config", {
+        method: "PUT",
+        body: JSON.stringify({
+          ...input.config,
+          ...(input.whatsappPhoneNumberId !== undefined
+            ? { whatsappPhoneNumberId: input.whatsappPhoneNumberId }
+            : {}),
+        }),
+      }),
+  );
+}
+
+export function useSaveInstructions() {
+  return useSettingsMutation((api, instructions: string) =>
+    api<SettingsSaveResult>("/internal/settings/instructions", {
+      method: "PUT",
+      body: JSON.stringify({ instructions }),
+    }),
+  );
+}
+
+export function useRestoreSettingsVersion() {
+  return useSettingsMutation((api, versionId: string) =>
+    api<SettingsSaveResult>(
+      `/internal/settings/versions/${versionId}/restore`,
+      {
+        method: "POST",
+      },
+    ),
+  );
 }
 
 export function useClearSecret() {
