@@ -93,7 +93,7 @@ function SettingsView() {
           });
         }}
       >
-        <TabsList className="max-w-full justify-start overflow-x-auto">
+        <TabsList>
           {tabs.map((item) => (
             <TabsTrigger key={item.value} value={item.value}>
               {item.label}

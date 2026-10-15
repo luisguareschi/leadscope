@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
+import { cn } from "cn";
+import { Button } from "@/components/ui/button";
 import {
   Combobox,
   ComboboxContent,
@@ -8,6 +10,7 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
+  ComboboxTrigger,
 } from "@/components/ui/combobox";
 
 export type SearchableOption = {
@@ -29,8 +32,8 @@ function matches(option: SearchableOption, query: string): boolean {
 }
 
 /**
- * A select you can type into. A saved value that is not in `options` is kept as the first option,
- * so opening the form never changes what is stored.
+ * A select whose list has a search box. A saved value that is not in `options` is kept as the
+ * first option, so opening the form never changes what is stored.
  */
 export function SearchableSelect({
   id,
@@ -71,13 +74,28 @@ export function SearchableSelect({
       filter={matches}
       autoHighlight
     >
-      <ComboboxInput
-        id={id}
-        placeholder={placeholder ?? "Buscá…"}
-        aria-invalid={invalid ? true : undefined}
-        className={mono ? "w-full font-mono text-xs" : "w-full"}
-      />
+      <ComboboxTrigger
+        render={
+          <Button
+            id={id}
+            variant="outline"
+            aria-invalid={invalid ? true : undefined}
+            className="w-full justify-between font-normal"
+          />
+        }
+      >
+        <span
+          className={cn(
+            "truncate",
+            mono && "font-mono text-xs",
+            !selected && "text-muted-foreground",
+          )}
+        >
+          {selected?.label ?? placeholder ?? "Elegí una opción"}
+        </span>
+      </ComboboxTrigger>
       <ComboboxContent>
+        <ComboboxInput showTrigger={false} placeholder="Buscar…" />
         <ComboboxEmpty>No hay coincidencias.</ComboboxEmpty>
         <ComboboxList>
           {(option: SearchableOption) => (
