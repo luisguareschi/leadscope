@@ -23,8 +23,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
-import { useSaveConfig } from "@/lib/queries";
+import { useSaveConfig, useSettingsOptions } from "@/lib/queries";
 import type { CompanyConfig } from "@/lib/types";
+import { SearchableSelect, type SearchableOption } from "./searchable-select";
 import {
   errorsByField,
   FIELD_PATHS,
@@ -76,6 +77,27 @@ export function ConfigForm({
   >({});
   const [formError, setFormError] = useState<string | null>(null);
   const save = useSaveConfig();
+  const options = useSettingsOptions();
+  const choices = useMemo(() => {
+    const data = options.data;
+    return {
+      languages: (data?.languages ?? []).map((option) => ({
+        ...option,
+        detail: option.value,
+      })),
+      timezones: data?.timezones ?? [],
+      countries: (data?.countries ?? []).map((option) => ({
+        value: option.value,
+        label: option.label,
+        detail: `${option.value} · +${option.callingCode}`,
+      })),
+      models: (data?.models.options ?? []).map((option) => ({
+        value: option.value,
+        label: option.legacy ? `${option.label} (anterior)` : option.label,
+        detail: option.value,
+      })),
+    };
+  }, [options.data]);
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
 
   const set = <K extends keyof ConfigDraft>(key: K, value: ConfigDraft[K]) => {
@@ -141,6 +163,33 @@ export function ConfigForm({
     );
   };
 
+  const select = (
+    key: "language" | "timezone" | "defaultCountry" | "model",
+    label: string,
+    choices: SearchableOption[],
+    options: { description?: ReactNode; mono?: boolean } = {},
+  ) => {
+    const id = `config-${key}`;
+    const error = errors[key];
+    return (
+      <Field data-invalid={error ? true : undefined}>
+        <FieldLabel htmlFor={id}>{label}</FieldLabel>
+        <SearchableSelect
+          id={id}
+          value={draft[key]}
+          onValueChange={(value) => set(key, value)}
+          options={choices}
+          invalid={Boolean(error)}
+          mono={options.mono}
+        />
+        {options.description ? (
+          <FieldDescription>{options.description}</FieldDescription>
+        ) : null}
+        <FieldError>{error}</FieldError>
+      </Field>
+    );
+  };
+
   // A save re-keys this form with the new version, so the outcome is read from the promise:
   // callbacks passed to mutate() are dropped once the component unmounts.
   const onSubmit = (event: FormEvent) => {
@@ -186,18 +235,23 @@ export function ConfigForm({
           {field("displayName", "Nombre que usa el asistente", {
             maxLength: 80,
           })}
-          {field("language", "Idioma", {
+          {select("language", "Idioma", choices.languages, {
             description:
-              "Código de idioma, por ejemplo es-UY. Define el idioma de las respuestas y el formato de las fechas.",
+              "Define el idioma de las respuestas y el formato de las fechas.",
           })}
-          {field("timezone", "Zona horaria", {
-            description: "Por ejemplo America/Montevideo.",
-          })}
-          {field("defaultCountry", "País de los teléfonos", {
-            maxLength: 2,
+          {select("timezone", "Zona horaria", choices.timezones, {
             description:
-              "Para leer números escritos sin código de país. Por ejemplo UY.",
+              "Para la hora que ve el asistente y el horario de llamadas.",
           })}
+          {select(
+            "defaultCountry",
+            "País de los teléfonos",
+            choices.countries,
+            {
+              description:
+                "Para leer números escritos sin código de país. Por ejemplo, 099 123 456 en Uruguay es +598 99 123 456.",
+            },
+          )}
           {field("businessHours", "Horario para llamadas", {
             maxLength: 300,
             description:
@@ -338,9 +392,11 @@ export function ConfigForm({
           title="Avanzado"
           description="Modelo y límites. Cambiarlos afecta el costo y la calidad de las respuestas."
         >
-          {field("model", "Modelo de Anthropic", {
-            mono: true,
-            description: "Por defecto claude-haiku-4-5.",
+          {select("model", "Modelo de Anthropic", choices.models, {
+            description:
+              options.data?.models.source === "anthropic"
+                ? "Los modelos que ofrece la cuenta de Anthropic de la empresa. Por defecto claude-haiku-4-5."
+                : "Los modelos actuales de Claude y los anteriores que siguen disponibles. Con la clave de Anthropic cargada, se listan los de su cuenta. Por defecto claude-haiku-4-5.",
           })}
           <div className="grid gap-5 @lg/field-group:grid-cols-3">
             {field("temperature", "Temperatura", {

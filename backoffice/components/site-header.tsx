@@ -7,7 +7,6 @@ import { useMe } from "@/lib/queries";
 
 function titleFor(pathname: string, platformAdmin: boolean): string {
   if (pathname.startsWith("/knowledge")) return "Conocimiento";
-  if (pathname.startsWith("/integrations")) return "Integraciones";
   if (pathname.startsWith("/settings")) return "Configuración";
   if (pathname.startsWith("/companies"))
     return platformAdmin ? "Empresas" : "Sin acceso";

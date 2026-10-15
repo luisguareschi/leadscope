@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   BookOpenTextIcon,
   Building2Icon,
-  KeyRoundIcon,
   MessagesSquareIcon,
   RadarIcon,
   SlidersHorizontalIcon,
@@ -42,11 +41,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             title: "Conocimiento",
             url: "/knowledge",
             icon: <BookOpenTextIcon />,
-          },
-          {
-            title: "Integraciones",
-            url: "/integrations",
-            icon: <KeyRoundIcon />,
           },
           {
             title: "Configuración",

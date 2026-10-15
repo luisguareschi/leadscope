@@ -10,16 +10,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMe, useSecrets } from "@/lib/queries";
+import { useSecrets } from "@/lib/queries";
 
-export default function IntegrationsPage() {
-  const me = useMe();
+/** Configuración → Integraciones. Write-only: the full value never comes back to the browser. */
+export function IntegrationsSection({ companyName }: { companyName?: string }) {
   const query = useSecrets();
-  const company = me.data?.company?.name;
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <Alert className="border-primary/30 bg-primary/5">
+    <div className="flex flex-col gap-4">
+      <Alert>
         <KeyRoundIcon />
         <AlertTitle>Cada empresa carga sus propias claves</AlertTitle>
         <AlertDescription>
@@ -40,7 +39,7 @@ export default function IntegrationsPage() {
         <CardHeader className="border-b pb-4">
           <CardTitle>Integraciones</CardTitle>
           <CardDescription>
-            {company ? `Claves de ${company}. ` : null}
+            {companyName ? `Claves de ${companyName}. ` : null}
             Anthropic responde, Meta es WhatsApp, HubSpot guarda el contacto, y
             el secreto del formulario autentica los leads que llegan desde un
             flujo.

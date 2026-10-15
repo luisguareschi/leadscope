@@ -13,6 +13,7 @@ import {
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { toastInvite } from "@/lib/invite";
 import { useCreateCompany } from "@/lib/queries";
 
 function slugify(name: string): string {
@@ -47,8 +48,10 @@ export function CreateCompanyForm() {
           setSlugEdited(false);
           setOperatorEmail("");
           toast.success(
-            `${result.company.name} quedó creada. El operador carga las claves en Integraciones.`,
+            `${result.company.name} quedó creada. El operador carga las claves en Configuración.`,
           );
+          const [operator] = result.company.operators;
+          if (operator) toastInvite(operator.email, result.invite);
         },
         onError: (error) => toast.error(error.message),
       },
@@ -113,8 +116,9 @@ export function CreateCompanyForm() {
               onChange={(event) => setOperatorEmail(event.target.value)}
             />
             <FieldDescription>
-              Tiene que ser un email nuevo. Esa persona entra al panel de esta
-              empresa y carga las claves en Integraciones.
+              Tiene que ser un email nuevo. Le llega una invitación para elegir
+              su contraseña; entra al panel de esta empresa y carga las claves
+              en Configuración.
             </FieldDescription>
           </Field>
           <Button type="submit" disabled={create.isPending} className="w-fit">

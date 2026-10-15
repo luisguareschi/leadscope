@@ -1,15 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { Building2Icon, ShieldIcon } from "lucide-react";
 import { CompaniesTable } from "@/components/companies/companies-table";
 import { CreateCompanyForm } from "@/components/companies/create-company-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
+  CardAction,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Switch } from "@/components/ui/switch";
 import {
   Empty,
   EmptyDescription,
@@ -23,7 +27,8 @@ import { useCompanies, useMe } from "@/lib/queries";
 export default function CompaniesPage() {
   const me = useMe();
   const isAdmin = me.data?.platformAdmin === true;
-  const query = useCompanies(isAdmin);
+  const [showArchived, setShowArchived] = useState(false);
+  const query = useCompanies(isAdmin, showArchived ? "all" : "active");
 
   if (me.isPending) {
     return (
@@ -58,10 +63,10 @@ export default function CompaniesPage() {
         <Building2Icon />
         <AlertTitle>Empresas de la plataforma</AlertTitle>
         <AlertDescription>
-          Creá la empresa y el primer operador. Si la lista está vacía, esta es
-          la primera. Las claves las carga esa persona en Integraciones. Con
-          Entrar abrís el panel de una empresa como administrador, sin ser su
-          operador. Lo que cambies ahí queda registrado.
+          Creá la empresa y el primer operador, que recibe la invitación por
+          email. Las claves las carga esa persona en Configuración. Con Entrar
+          abrís el panel de una empresa como administrador, sin ser su operador.
+          Lo que cambies ahí o acá queda registrado.
         </AlertDescription>
       </Alert>
 
@@ -71,8 +76,24 @@ export default function CompaniesPage() {
           <CardHeader className="border-b pb-4">
             <CardTitle>Empresas</CardTitle>
             <CardDescription>
-              Las que ya existen. Entrar abre su panel como administrador.
+              Entrar abre su panel como administrador. En el menú están los
+              operadores, archivar y eliminar.
             </CardDescription>
+            <CardAction>
+              <Field orientation="horizontal">
+                <Switch
+                  id="companies-show-archived"
+                  checked={showArchived}
+                  onCheckedChange={setShowArchived}
+                />
+                <FieldLabel
+                  htmlFor="companies-show-archived"
+                  className="font-normal whitespace-nowrap"
+                >
+                  Mostrar archivadas
+                </FieldLabel>
+              </Field>
+            </CardAction>
           </CardHeader>
           {query.isError ? (
             <div className="p-4 lg:p-6">
@@ -87,7 +108,10 @@ export default function CompaniesPage() {
               <Skeleton className="h-9 w-full" />
             </div>
           ) : query.data ? (
-            <CompaniesTable companies={query.data.companies} />
+            <CompaniesTable
+              companies={query.data.companies}
+              showingArchived={showArchived}
+            />
           ) : null}
         </Card>
       </div>

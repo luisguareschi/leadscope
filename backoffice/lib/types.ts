@@ -89,15 +89,70 @@ export type CompanySummary = {
   name: string;
   slug: string;
   createdAt: string;
-  operators: { email: string }[];
+  /** Set while archived: its operators cannot sign in and the bot ignores its number. */
+  archivedAt: string | null;
+  operators: { id: string; email: string; archived: boolean }[];
 };
 
 export type CompaniesList = { companies: CompanySummary[] };
+
+export type CompanyListStatus = "active" | "archived" | "all";
+
+export type Operator = {
+  id: string;
+  email: string;
+  createdAt: string;
+  archivedAt: string | null;
+  /** Linked to a Supabase user (invited or already existing). */
+  hasLogin: boolean;
+  invitedAt: string | null;
+  /** Why the last invitation failed. Null once one succeeds. */
+  inviteError: string | null;
+  /** On PLATFORM_ADMIN_EMAILS: deleting the operator keeps their Supabase user. */
+  platformAdmin: boolean;
+};
+
+/**
+ * `sent`: invitation email. `linked`: the email already had a Supabase account, linked with no
+ * email. `reset_sent`: a resend for such an account, which gets the password-reset email.
+ */
+export type InviteOutcome =
+  | { status: "sent" | "linked" | "reset_sent" }
+  | { status: "failed"; message: string };
+
+export type OperatorWrite = { operator: Operator; invite: InviteOutcome };
+
+export type AuthUserRemoval =
+  | { status: "removed" | "kept_platform_admin" | "kept_operator" | "none" }
+  | { status: "failed"; message: string };
+
+export type DeleteCompanyResult = {
+  deleted: { id: string; slug: string };
+  authUsers: { removed: number; kept: number; failed: string[] };
+};
+
+export type SelectOption = { value: string; label: string };
+
+export type SettingsOptions = {
+  languages: SelectOption[];
+  timezones: SelectOption[];
+  countries: Array<SelectOption & { callingCode: string }>;
+  models: {
+    /** `anthropic`: listed with the company's key. `fallback`: the fixed list. */
+    source: "anthropic" | "fallback";
+    options: Array<SelectOption & { legacy: boolean }>;
+  };
+};
 
 export type CreateCompanyInput = {
   name: string;
   slug: string;
   operatorEmail: string;
+};
+
+export type CreateCompanyResult = {
+  company: CompanySummary;
+  invite: InviteOutcome | null;
 };
 
 export type SecretName =
