@@ -26,7 +26,10 @@ export function messagePreview(type: string, body: string): string {
 
 export type RecordResult =
   | { status: "recorded"; threadId: string; needsReply: boolean }
-  | { status: "duplicate" | "unknown_company" | "invalid_phone" };
+  | {
+      status:
+        "duplicate" | "unknown_company" | "archived_company" | "invalid_phone";
+    };
 
 async function recordOnce(
   ctx: AppContext,
@@ -34,9 +37,11 @@ async function recordOnce(
 ): Promise<RecordResult> {
   const company = await ctx.db.company.findUnique({
     where: { whatsappPhoneNumberId: message.phoneNumberId },
-    select: { id: true },
+    select: { id: true, archivedAt: true },
   });
   if (!company) return { status: "unknown_company" };
+  // Archived: the number is ignored, as if it belonged to no company. Nothing is stored.
+  if (company.archivedAt) return { status: "archived_company" };
   const phone = waIdToE164(message.from);
   if (!phone) return { status: "invalid_phone" };
 

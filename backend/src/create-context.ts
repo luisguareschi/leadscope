@@ -3,6 +3,10 @@ import type { AppContext } from "./context.js";
 import { processThread } from "./conversation/process-thread.js";
 import { ReplyScheduler } from "./conversation/reply-scheduler.js";
 import {
+  createAuthAdmin,
+  type AuthAdmin,
+} from "./integrations/auth/auth-admin.js";
+import {
   createIntegrations,
   type Integrations,
 } from "./integrations/registry.js";
@@ -13,6 +17,7 @@ import { createPrisma, type Db } from "./lib/prisma.js";
 export type ContextOptions = {
   db?: Db;
   integrations?: Integrations;
+  authAdmin?: AuthAdmin;
   logger?: Logger;
   now?: () => Date;
 };
@@ -27,6 +32,7 @@ export function createContext(
     db: options.db ?? createPrisma(env.DATABASE_URL),
     encryptionKey: parseEncryptionKey(env.SECRETS_ENCRYPTION_KEY),
     integrations: options.integrations ?? createIntegrations(env),
+    authAdmin: options.authAdmin ?? createAuthAdmin(env),
     logger,
     now: options.now ?? (() => new Date()),
   } as AppContext;

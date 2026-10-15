@@ -1,6 +1,6 @@
 /**
- * Local fixture only. A production setup does not run this. The first operator of a company is
- * the email entered on Empresas.
+ * Local fixture only. A production setup does not run this. Operators are added from Empresas,
+ * which also creates their Supabase user and emails the invitation.
  *
  *   npm run operator:add -- <companySlug> <email> [--invite]
  * Without --invite the operator signs in once their Supabase user exists (linked by email on first
@@ -9,42 +9,16 @@
  */
 import { parseArgs } from "node:util";
 import { loadEnv } from "../src/config/env.js";
+import {
+  createSupabaseAuthAdmin,
+  setPasswordUrl,
+} from "../src/integrations/auth/auth-admin.js";
 import { createPrisma } from "../src/lib/prisma.js";
-
-async function inviteToSupabase(
-  url: string,
-  serviceRoleKey: string,
-  email: string,
-  redirectTo: string,
-): Promise<string> {
-  const response = await fetch(
-    `${url.replace(/\/$/, "")}/auth/v1/invite?redirect_to=${encodeURIComponent(redirectTo)}`,
-    {
-      method: "POST",
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email }),
-    },
-  );
-  const json = (await response.json().catch(() => ({}))) as {
-    id?: string;
-    msg?: string;
-    message?: string;
-  };
-  if (!response.ok || !json.id)
-    throw new Error(
-      `Supabase invite failed: ${json.msg ?? json.message ?? response.status}`,
-    );
-  return json.id;
-}
 
 async function main() {
   if (process.env.NODE_ENV === "production") {
     throw new Error(
-      "operator:add is a local fixture. A production setup does not run it. The first operator is created from Empresas.",
+      "operator:add is a local fixture. A production setup does not run it. Operators are added from Empresas.",
     );
   }
   const { values, positionals } = parseArgs({
@@ -69,19 +43,23 @@ async function main() {
         "--invite needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY",
       );
     }
-    supabaseUserId = await inviteToSupabase(
-      env.SUPABASE_URL,
-      env.SUPABASE_SERVICE_ROLE_KEY,
-      email,
-      `${env.BACKOFFICE_ORIGIN}/auth/set-password`,
-    );
+    const invited = await createSupabaseAuthAdmin({
+      url: env.SUPABASE_URL,
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    }).invite(email, setPasswordUrl(env));
+    supabaseUserId = invited.userId;
   }
   const operator = await db.operator.upsert({
     where: { email },
-    create: { email, companyId: company.id, supabaseUserId },
+    create: {
+      email,
+      companyId: company.id,
+      supabaseUserId,
+      ...(supabaseUserId ? { invitedAt: new Date() } : {}),
+    },
     update: {
       companyId: company.id,
-      ...(supabaseUserId ? { supabaseUserId } : {}),
+      ...(supabaseUserId ? { supabaseUserId, invitedAt: new Date() } : {}),
     },
   });
   console.log(

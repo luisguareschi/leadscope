@@ -6,6 +6,7 @@ import {
 import type { AppContext } from "../../context.js";
 import { conflict } from "../../lib/http-error.js";
 import { isUniqueViolation } from "../../lib/prisma.js";
+import { inviteOperator } from "../operators/invite-operator.js";
 import { companySelect, toCompanyDto } from "./company-dto.js";
 
 export type CreateCompanyInput = {
@@ -24,9 +25,9 @@ function uniqueFields(error: unknown): string {
 
 /**
  * Company row, slug, starter config and instructions, no WhatsApp number yet (each saved as its
- * first version), and the first operator. Secrets stay empty; that company's operator sets them
- * later from Integraciones, and the number from Configuración. Does not move an email that
- * already belongs to a company.
+ * first version), and the first operator, who gets the Supabase invitation like any operator added
+ * later. Secrets stay empty; that company's operator sets them later from Configuración. Does not
+ * move an email that already belongs to a company.
  */
 export async function createCompany(
   ctx: AppContext,
@@ -74,7 +75,11 @@ export async function createCompany(
       },
       select: companySelect,
     });
-    return toCompanyDto(company);
+    const [operator] = company.operators;
+    const invite = operator
+      ? await inviteOperator(ctx, operator, { resend: false })
+      : null;
+    return { company: toCompanyDto(company), invite };
   } catch (error) {
     const fields = uniqueFields(error);
     if (fields.includes("slug"))

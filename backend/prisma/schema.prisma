@@ -21,6 +21,8 @@ model Company {
   /// AES-256-GCM ciphertext of the company's API keys. See src/lib/crypto.ts.
   encryptedSecrets      String?
   whatsappPhoneNumberId String?                  @unique
+  /// Set while archived: its operators cannot use the panel and the bot does not answer its number.
+  archivedAt            DateTime?
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   operators             Operator[]
@@ -38,6 +40,12 @@ model Operator {
   companyId      String
   email          String          @unique
   supabaseUserId String?         @unique
+  /// Set while archived: this login cannot use the panel.
+  archivedAt     DateTime?
+  /// Last time Supabase accepted an invitation (or password-reset) email for this operator.
+  invitedAt      DateTime?
+  /// Why the last invitation failed, in Spanish. Cleared when one succeeds.
+  inviteError    String?
   createdAt      DateTime        @default(now())
   company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   uploads        KnowledgeFile[]
@@ -206,18 +214,21 @@ model CompanySettingsVersion {
   @@index([companyId, kind, createdAt])
 }
 
-/// A write a platform admin made inside a company through support access (`X-Company-Id`).
-/// Stored before the write runs, so no support write goes unrecorded.
+/// A write a platform admin made inside a company through support access (`X-Company-Id`), or to
+/// a company from Empresas (archive, restore, delete, operators). Stored before the write runs, so
+/// no admin write goes unrecorded. Survives the company's deletion.
 model AdminAuditEntry {
-  id         String   @id @default(cuid())
-  companyId  String
-  adminEmail String
+  id          String   @id @default(cuid())
+  /// Null once the company is deleted; `companySlug` still says which one it was.
+  companyId   String?
+  companySlug String
+  adminEmail  String
   /// Method and path, e.g. "POST /internal/threads/<id>/pause". Request bodies are never stored.
-  action     String
+  action      String
   /// HTTP status of the response. Null until it is sent, or if the browser left before it.
-  status     Int?
-  createdAt  DateTime @default(now())
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status      Int?
+  createdAt   DateTime @default(now())
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@index([companyId, createdAt])
 }

@@ -8,11 +8,8 @@ import { createCompany } from "./create-company.service.js";
 export function createCompanyController(ctx: AppContext): RequestHandler {
   return async (req, res) => {
     const input = parseInput(createCompanyBodySchema, req.body);
-    const company = await createCompany(
-      ctx,
-      input,
-      sessionOf(req).sessionEmail,
-    );
-    res.status(201).json({ company });
+    res
+      .status(201)
+      .json(await createCompany(ctx, input, sessionOf(req).sessionEmail));
   };
 }

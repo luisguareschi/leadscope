@@ -25,6 +25,12 @@ export async function receiveWebhook(
         "webhook for a phone number id with no company",
       );
     }
+    if (result.status === "archived_company") {
+      ctx.logger.info(
+        { phoneNumberId: message.phoneNumberId },
+        "webhook for an archived company; ignored",
+      );
+    }
   }
   for (const status of statuses) await applyStatusUpdate(ctx, status);
   return { threadIds: [...threadIds] };
