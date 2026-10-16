@@ -2,7 +2,7 @@ import type { AppContext } from "../context.js";
 import type {
   InboundMessage,
   StatusUpdate,
-} from "../integrations/whatsapp/webhook-payload.js";
+} from "../integrations/whatsapp/messages.js";
 import { waIdToE164 } from "../lib/phone.js";
 import { isUniqueViolation } from "../lib/prisma.js";
 
@@ -89,7 +89,7 @@ async function recordOnce(
   });
 }
 
-/** Stores one inbound WhatsApp message. Safe to call twice with the same Meta delivery. */
+/** Stores one inbound WhatsApp message. Safe to call twice with the same delivery. */
 export async function recordInboundMessage(
   ctx: AppContext,
   message: InboundMessage,
@@ -109,9 +109,13 @@ export async function recordInboundMessage(
 
 const STATUS_RANK = ["sent", "delivered", "read"];
 
-/** Applies a Meta delivery receipt without moving a status backwards (receipts can arrive out of order). */
+/**
+ * Applies a delivery receipt to one company's message without moving a status backwards
+ * (receipts can arrive out of order).
+ */
 export async function applyStatusUpdate(
   ctx: AppContext,
+  companyId: string,
   update: StatusUpdate,
 ): Promise<void> {
   const rank = STATUS_RANK.indexOf(update.status);
@@ -119,6 +123,7 @@ export async function applyStatusUpdate(
   const lower = rank === -1 ? undefined : STATUS_RANK.slice(0, rank);
   await ctx.db.message.updateMany({
     where: {
+      companyId,
       waMessageId: update.waMessageId,
       ...(lower ? { OR: [{ status: null }, { status: { in: lower } }] } : {}),
     },

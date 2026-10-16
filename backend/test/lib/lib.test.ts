@@ -81,8 +81,6 @@ describe("environment", () => {
   const base = {
     DATABASE_URL: "postgresql://x",
     SECRETS_ENCRYPTION_KEY: "k",
-    META_APP_SECRET: "s",
-    META_WEBHOOK_VERIFY_TOKEN: "t",
   };
 
   it("refuses dev auth and fake integrations in production", () => {
