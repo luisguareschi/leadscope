@@ -3,12 +3,13 @@ import express, { type Express } from "express";
 import type { AppContext } from "./context.js";
 import { companiesRoutes } from "./features/companies/companies.routes.js";
 import { formLeadsRoutes } from "./features/form-leads/form-leads.routes.js";
+import { kapsoWebhookRoutes } from "./features/kapso-webhook/kapso-webhook.routes.js";
 import { knowledgeRoutes } from "./features/knowledge/knowledge.routes.js";
 import { meRoutes } from "./features/me/me.routes.js";
 import { secretsRoutes } from "./features/secrets/secrets.routes.js";
 import { settingsRoutes } from "./features/settings/settings.routes.js";
 import { threadsRoutes } from "./features/threads/threads.routes.js";
-import { whatsappWebhookRoutes } from "./features/whatsapp-webhook/whatsapp-webhook.routes.js";
+import { whatsappConnectionRoutes } from "./features/whatsapp-connection/whatsapp-connection.routes.js";
 import {
   COMPANY_ID_HEADER,
   requireCompanyAccess,
@@ -44,8 +45,8 @@ export function createApp(ctx: AppContext): Express {
     res.json({ ok: true });
   });
 
-  // Called by Meta and by the company's CRM, not by the browser: no CORS, their own verification.
-  app.use("/webhooks/whatsapp", whatsappWebhookRoutes(ctx));
+  // Called by Kapso and by the company's CRM, not by the browser: no CORS, their own verification.
+  app.use("/webhooks/kapso", kapsoWebhookRoutes(ctx));
   app.use("/hooks/crm/form-lead", formLeadsRoutes(ctx));
 
   const backoffice = express.Router();
@@ -63,6 +64,7 @@ export function createApp(ctx: AppContext): Express {
   backoffice.use("/knowledge", company, knowledgeRoutes(ctx));
   backoffice.use("/secrets", company, secretsRoutes(ctx));
   backoffice.use("/settings", company, settingsRoutes(ctx));
+  backoffice.use("/whatsapp", company, whatsappConnectionRoutes(ctx));
   backoffice.use("/companies", requirePlatformAdmin(ctx), companiesRoutes(ctx));
   app.use("/internal", backoffice);
 

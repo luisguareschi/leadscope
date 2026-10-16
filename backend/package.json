@@ -25,6 +25,7 @@
     "chat": "tsx scripts/chat.ts",
     "webhook:send": "tsx scripts/send-test-webhook.ts",
     "company:secret": "tsx scripts/set-company-secret.ts",
+    "secrets:prune": "tsx scripts/prune-legacy-secrets.ts",
     "operator:add": "tsx scripts/add-operator.ts"
   },
   "dependencies": {

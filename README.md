@@ -4,7 +4,7 @@ WhatsApp lead assistant for real-estate developers. It greets leads, asks three 
 
 | Folder | What it is |
 | --- | --- |
-| `backend/` | Express 5 + Prisma 7 (Postgres). WhatsApp webhook, conversation engine, Anthropic, HubSpot, knowledge uploads. Ships as a Docker image. |
+| `backend/` | Express 5 + Prisma 7 (Postgres). WhatsApp through Kapso (webhook and sends), conversation engine, Anthropic, HubSpot, knowledge uploads. Ships as a Docker image. |
 | `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations, pause/resume, knowledge files, company settings, instructions, and secrets, and (for a platform admin) creating, archiving, and deleting companies, managing their operators, and entering one through support access. |
 | `docs/` | Design, proposals, meeting notes. |
 
@@ -39,7 +39,7 @@ The menu on each row has **Operadores** (add and invite, resend the invitation, 
 
 Sign in as the operator email you just typed. The sidebar is Conversaciones, Conocimiento, and Configuración. Empresas is not there, and `/companies` says there is no access.
 
-**Configuración** edits the company config (tone, the three questions, forbidden topics, fixed messages, business hours, welcome template, HubSpot property, model and limits) and the company instructions. Idioma, Zona horaria, País de los teléfonos, and Modelo de Anthropic are searchable lists; the models come from Anthropic's API when the company has its key, and from a fixed list otherwise. The platform rules the engine depends on are shown read-only, with the full prompt the model would receive. Every save keeps a version (who and when), and **Versiones** restores any of them. **Integraciones** (a tab of Configuración; the old `/integrations` URL redirects there) is where that company sets its Anthropic, Meta, HubSpot, and form-lead secrets. It shows whether each one is set and the last 4 characters; it never shows the full value. Leaving a field empty does not clear it. A platform admin inside the company through Entrar also sees an **Operadores** tab.
+**Configuración** edits the company config (tone, the three questions, forbidden topics, fixed messages, business hours, welcome template, HubSpot property, model and limits) and the company instructions. Idioma, Zona horaria, País de los teléfonos, and Modelo de Anthropic are searchable lists; the models come from Anthropic's API when the company has its key, and from a fixed list otherwise. The platform rules the engine depends on are shown read-only, with the full prompt the model would receive. Every save keeps a version (who and when), and **Versiones** restores any of them. **Integraciones** (a tab of Configuración; the old `/integrations` URL redirects there) is where that company connects WhatsApp through Kapso (a step-by-step guide, the exact webhook URL with a copy button, the Kapso API key and webhook secret, and **Probar conexión**) and sets its Anthropic, HubSpot, and form-lead secrets. It shows whether each one is set and the last 4 characters; it never shows the full value. Leaving a field empty does not clear it. A platform admin inside the company through Entrar also sees an **Operadores** tab.
 
 `npm run db:seed` and `npm run operator:add` are local fixtures only. A production setup does not run them. The seed loads a sample knowledge file and 7 demo conversations on fake numbers (+598 99 000 001–007): qualifying, scheduling a call, handed off with a failed HubSpot write, waiting for an advisor, paused, closed, and a form lead. Use it only when you want that fixture in a development database.
 
@@ -56,7 +56,7 @@ npm run chat                         # or: npm run chat -- --phone +59899555123 
 
 Type as the lead. `/audio` sends a voice note, `/estado` shows what the bot extracted, `/reset` starts over. Without an Anthropic key it uses a scripted stand-in; put a key in `ANTHROPIC_API_KEY` in `backend/.env` (development only) or set the company's Anthropic key in Configuración → Integraciones to talk to `claude-haiku-4-5` with the real prompt. The conversation appears in the panel like any other.
 
-**As Meta would.** With the backend running, post a signed webhook; the reply arrives after the debounce (3.5 s) and shows in the panel:
+**As Kapso would.** With the backend running, post a signed Kapso webhook; the reply arrives after the debounce (3.5 s) and shows in the panel. See [Local testing without Kapso](#local-testing-without-kapso) for the options and a hand-made `curl`:
 
 ```bash
 npm run webhook:send -- "Hola, busco un 2 dormitorios" --from 59899000999 --name Ana
@@ -77,7 +77,7 @@ When a company has no key for an integration and `ALLOW_FAKE_INTEGRATIONS=true` 
 | Integration | Fake | Real once you set |
 | --- | --- | --- |
 | Anthropic | scripted replies that walk the three questions | `anthropicApiKey` on the company, from Configuración → Integraciones |
-| WhatsApp | sends recorded in memory | `metaAccessToken` (Configuración → Integraciones) + the company's phone number id (Configuración → WhatsApp) |
+| WhatsApp | sends recorded in memory (`FakeChannel`) | `kapsoApiKey` (Configuración → Integraciones) + the company's phone number id (Configuración → Asistente → WhatsApp). Inbound also needs `kapsoWebhookSecret`. |
 | HubSpot | contacts kept in memory | `hubspotAccessToken` (Configuración → Integraciones), and `crm.transcriptProperty` in the config |
 
 Still placeholders for Altamira: the welcome template name, the HubSpot property name, and business hours. They are set in Configuración (the local fixture's copies are in `backend/prisma/seed-data/altamira.ts`). The sample knowledge file is fictional.
@@ -85,7 +85,7 @@ Still placeholders for Altamira: the welcome template name, the HubSpot property
 ## Tests
 
 ```bash
-cd backend && npm test          # 193 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
+cd backend && npm test          # 222 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
 cd backoffice && npm run lint && npm run typecheck && npm run build
 ```
 
@@ -101,11 +101,60 @@ CI runs both on every pull request.
    ```
 
    Supabase ignores a `redirectTo` that is not on that list and sends the link to the Site URL instead (that is how an invitation ends up on `http://localhost:3000/#access_token=...`). In Authentication, create the user whose email will be on `PLATFORM_ADMIN_EMAILS`. Do not run `db:seed` or `operator:add`.
-2. **Backend.** Deploy `backend/Dockerfile` as one always-on instance (Fly, Railway, or Render) with: `NODE_ENV=production`, `DATABASE_URL` (pooled), `DIRECT_URL`, `SECRETS_ENCRYPTION_KEY` (`openssl rand -base64 32`), `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`, `AUTH_MODE=supabase`, `SUPABASE_URL` (the same project URL as the backoffice's `NEXT_PUBLIC_SUPABASE_URL`, no path), `BACKOFFICE_ORIGIN` (comma-separated panel origins; one `*` may stand for part of the first host label, https only, never a dot: `https://leadscope-backoffice.onrender.com,https://leadscope-backoffice-pr-*.onrender.com`; confirm the real preview hostname from one Render preview. It is the CORS allowlist, and invitation links go to the panel that sent the request when it matches, otherwise to the first exact entry. `*` alone opens CORS to any site and invitations then fail, so list the origins), `PLATFORM_ADMIN_EMAILS` (comma-separated signed-in emails that may create companies), `SUPABASE_SERVICE_ROLE_KEY` (the service role key: the API uses it to create operators' Supabase users, send their invitation, and remove a deleted operator's user; without it adding an operator saves the row and shows that the invitation failed), and optionally `SENTRY_DSN` and `SUPABASE_JWT_SECRET` (only for an older project that still signs access tokens with HS256). Current Supabase projects sign sessions with ES256; the backend reads the JWKS from `SUPABASE_URL`. The container applies migrations on start and does not seed. The database stays empty of companies and operators.
+2. **Backend.** Deploy `backend/Dockerfile` as one always-on instance (Fly, Railway, or Render) with: `NODE_ENV=production`, `DATABASE_URL` (pooled), `DIRECT_URL`, `SECRETS_ENCRYPTION_KEY` (`openssl rand -base64 32`), `AUTH_MODE=supabase`, `SUPABASE_URL` (the same project URL as the backoffice's `NEXT_PUBLIC_SUPABASE_URL`, no path), `BACKOFFICE_ORIGIN` (comma-separated panel origins; one `*` may stand for part of the first host label, https only, never a dot: `https://leadscope-backoffice.onrender.com,https://leadscope-backoffice-pr-*.onrender.com`; confirm the real preview hostname from one Render preview. It is the CORS allowlist, and invitation links go to the panel that sent the request when it matches, otherwise to the first exact entry. `*` alone opens CORS to any site and invitations then fail, so list the origins), `PLATFORM_ADMIN_EMAILS` (comma-separated signed-in emails that may create companies), `SUPABASE_SERVICE_ROLE_KEY` (the service role key: the API uses it to create operators' Supabase users, send their invitation, and remove a deleted operator's user; without it adding an operator saves the row and shows that the invitation failed), and optionally `SENTRY_DSN` and `SUPABASE_JWT_SECRET` (only for an older project that still signs access tokens with HS256). Current Supabase projects sign sessions with ES256; the backend reads the JWKS from `SUPABASE_URL`. The container applies migrations on start and does not seed. The database stays empty of companies and operators. There is no platform-wide WhatsApp setting: a deployment from before Kapso can delete `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`, and `META_GRAPH_VERSION` (nothing reads them).
 3. **First company.** Sign in to the backoffice as the allowlisted user and open Empresas. Create the company and the first operator email (Altamira: name Altamira, identifier altamira). That operator gets Supabase's invitation email and picks a password on `/auth/set-password`; if the email already had a Supabase user, it is linked instead. If the invitation fails, the panel says why and Operadores → Reenviar invitación tries again. That is the whole setup. Do not run `npm run db:seed` or `npm run operator:add`. They see only their company. Add more operators from the same Operadores menu.
-4. **Secrets.** Each company sets its own in the panel: sign in as an operator of that company and open Configuración → Integraciones. The fields are the Anthropic API key, the Meta access token, the HubSpot access token, and the form-lead secret. The page shows whether each one is set and the last 4 characters. It never shows the full value, and an empty field does not clear a secret (use Quitar). The platform encryption key (`SECRETS_ENCRYPTION_KEY`) stays a server environment variable. For debugging from a checkout, `npm run company:secret` still writes the same fields (`-` reads the value from stdin; `--delete` removes one): `npm run company:secret -- altamira anthropicApiKey -`.
-5. **Meta.** Webhook URL `https://<backend>/webhooks/whatsapp`, the verify token, and a subscription to `messages`. Then put the number's Phone number ID (WhatsApp Manager → API setup) in Configuración → WhatsApp, as an operator of the company or as a platform admin through Entrar. Each id belongs to one company; until it is set, messages to that number reach no company.
+4. **Secrets.** Each company sets its own in the panel: sign in as an operator of that company and open Configuración → Integraciones. The fields are the Kapso API key, the Kapso webhook secret, the Anthropic API key, the HubSpot access token, and the form-lead secret. The page shows whether each one is set and the last 4 characters. It never shows the full value, and an empty field does not clear a secret (use Quitar). The platform encryption key (`SECRETS_ENCRYPTION_KEY`) stays a server environment variable. For debugging from a checkout, `npm run company:secret` still writes the same fields (`-` reads the value from stdin; `--delete` removes one): `npm run company:secret -- altamira anthropicApiKey -`. A company saved before Kapso may still carry an unused Meta token inside its encrypted secrets; it is ignored and dropped on the next secret save, or right away with `npm run secrets:prune -- --apply` (without `--apply` it only lists the companies).
+5. **WhatsApp through Kapso.** Follow [WhatsApp through Kapso](#whatsapp-through-kapso) for each company, as an operator of the company or as a platform admin through Entrar. Each phone number id belongs to one company; until it is set, messages to that number reach no company.
 6. **HubSpot.** Create the long-text property and put its internal name in Configuración → HubSpot (`crm.transcriptProperty`). Add a workflow "Send a webhook" to `POST https://<backend>/hooks/crm/form-lead/altamira` with the header `X-LeadScope-Secret`.
 7. **Backoffice on Vercel.** Root directory `backoffice`; set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_AUTH_MODE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
 `db:seed` and `operator:add` refuse to run when `NODE_ENV=production`. They are local fixtures, not the setup.
+
+## WhatsApp through Kapso
+
+LeadScope talks to the official WhatsApp Cloud API through [Kapso](https://docs.kapso.ai), a Business Solution Provider. Each company has its own Kapso project and its own number. The panel walks an operator through the same steps in Spanish (Configuración → Integraciones → WhatsApp con Kapso).
+
+Conditions (from the provider due diligence):
+
+- **Use the company's own number.** Never a Kapso-provided number (Instant setup): Kapso only licenses those and can reclaim them.
+- **Keep the WhatsApp Business Account in the company's own Meta Business portfolio.** Pick that portfolio in Meta's signup screen.
+- **Pay Meta by card, directly.** Add the company's card in Meta's Billing Hub for that WhatsApp account before connecting, and do not turn on "Use Kapso credits". Kapso documents that a WABA that used its credit line cannot later switch to a card, and the credit line blocks moving to another provider until Kapso revokes it.
+- **Message retention 30 days.** Kapso keeps every message forever by default and on the Free plan. On a paid plan set Project settings → Message retention to 30 days. LeadScope and HubSpot already keep the transcript.
+
+Steps for a new company:
+
+1. **Kapso project.** Create one at [app.kapso.ai](https://app.kapso.ai) for this company. Free (2,000 messages/month, 1 number) is enough to test; production needs Pro for the retention window.
+2. **Connect the number.** Connected numbers → Connect new number → **WhatsApp Business App** (Coexistence: the team keeps using the phone app on that number) or **Bring your own SIM** (the number becomes API-only). Meta's embedded signup opens; sign in with a Facebook user that administers the company's portfolio and choose that portfolio. Do not choose "Use a display name with a virtual number instead". ([Connect WhatsApp](https://docs.kapso.ai/docs/how-to/whatsapp/connect-whatsapp))
+3. **Phone number ID.** Copy it from the connected number in Kapso (digits; it is Meta's id) into Configuración → Asistente → WhatsApp.
+4. **API key.** Kapso → Integrations → API keys → new key. Paste it in Integraciones → *Clave de API de Kapso*.
+5. **Webhook.** On the connected number, add a webhook of kind **Kapso** (payload v2) pointing at `https://<backend>/webhooks/kapso/<company-slug>` (the panel shows the exact URL with a copy button). Events: `whatsapp.message.received` (required) and `whatsapp.message.sent`, `.delivered`, `.read`, `.failed` (delivery ticks in the panel). Buffering is optional; LeadScope already waits `REPLY_DEBOUNCE_MS` and answers a burst once. The same webhook can be created with the API (`POST https://api.kapso.ai/platform/v1/whatsapp/phone_numbers/{phone_number_id}/webhooks`, header `X-API-Key`) or `kapso whatsapp webhooks new`.
+6. **Webhook secret.** Kapso signs every delivery with the webhook's `secret_key`. Put the same value in Integraciones → *Clave secreta del webhook* (the **Generar** button makes a random one in the browser to paste into Kapso first). Until it is set, LeadScope answers every delivery with 401.
+7. **Probar conexión.** Checks the three saved values, then calls Kapso's [phone health](https://docs.kapso.ai/api/platform/v1/phone-numbers/check-phone-health) and [list webhooks](https://docs.kapso.ai/api/platform/v1/webhooks/list-webhooks) for that number: the number must be healthy, and an active v2 Kapso webhook must point at this company's URL with `whatsapp.message.received` and (when Kapso returns it) the same secret. Then send a WhatsApp from another phone and watch it in Conversaciones.
+
+How it works: inbound deliveries are verified with the company's secret (`X-Webhook-Signature`, hex HMAC-SHA256 of the raw body), only events for the company's own phone number id are stored, and the 200 goes back after they are stored. Duplicates are dropped by WhatsApp message id. Outbound text, the welcome template, and read receipts go to `https://api.kapso.ai/meta/whatsapp/v24.0/{phone_number_id}/messages` with `X-API-Key`; the body is Meta's Cloud API body. Kapso's API is the only provider that ships; a second one would implement `Channel` (`backend/src/integrations/whatsapp/channel.ts`) and its own webhook route.
+
+Not handled yet: inbound messages that carry only a business-scoped user id and no phone number (Meta's username rollout) are logged and skipped, because threads are keyed by phone. Messages the team sends from the WhatsApp Business App (Coexistence) do not pause the bot.
+
+### Local testing without Kapso
+
+With `ALLOW_FAKE_INTEGRATIONS=true` and no `kapsoApiKey`, the company's sends go to an in-memory fake channel (`FakeChannel`), and the conversation shows in the panel. The local seed gives Altamira the webhook secret `dev-kapso-webhook-secret` and phone number id `DEV_PHONE_NUMBER_ID`.
+
+```bash
+cd backend
+npm run webhook:send -- "Hola, busco un 2 dormitorios"           # one message
+npm run webhook:send -- "y con garage" --batch                   # Kapso's buffered envelope
+npm run webhook:send -- --type audio                             # non-text: the bot asks to type it
+npm run webhook:send -- "Hola" --company otra --secret <secret>  # another company
+```
+
+The script reads the company's secret and phone number id from the database unless `--secret` and `--phone-number-id` are given. To sign one by hand:
+
+```bash
+BODY='{"message":{"id":"wamid.manual.1","timestamp":"'$(date +%s)'","type":"text","from":"59899000999","text":{"body":"Hola"},"kapso":{"direction":"inbound","origin":"cloud_api"}},"conversation":{"contact_name":"Ana","phone_number":"59899000999","phone_number_id":"DEV_PHONE_NUMBER_ID"},"phone_number_id":"DEV_PHONE_NUMBER_ID"}'
+SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac dev-kapso-webhook-secret | sed 's/^.* //')
+curl -X POST localhost:3001/webhooks/kapso/altamira \
+  -H "Content-Type: application/json" -H "X-Webhook-Event: whatsapp.message.received" \
+  -H "X-Webhook-Signature: $SIG" -d "$BODY"
+```
+
+A wrong signature returns 401 and stores nothing. To try the real Kapso flow from a laptop, expose the backend with `ngrok http 3001` or `cloudflared tunnel --url http://localhost:3001` and use that HTTPS URL in Kapso. Kapso's [Sandbox](https://docs.kapso.ai/docs/how-to/whatsapp/use-sandbox-for-testing) number can send text to your own phone but not templates.

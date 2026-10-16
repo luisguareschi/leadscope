@@ -1,7 +1,6 @@
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../../src/app.js";
-import { signWebhookBody } from "../../src/integrations/whatsapp/signature.js";
 import {
   createCompany,
   createTestContext,
@@ -9,7 +8,11 @@ import {
   testDb,
   type TestContext,
 } from "../support/harness.js";
-import { TEST_APP_SECRET } from "../support/test-env.js";
+import {
+  kapsoMessageReceived,
+  kapsoStatus,
+  postKapsoWebhook,
+} from "../support/kapso-webhooks.js";
 
 const db = testDb();
 let ctx: TestContext;
@@ -25,74 +28,58 @@ beforeEach(async () => {
 // Replies run in the background after the 200; finish them before the next test truncates the tables.
 afterEach(() => ctx.replies.drain());
 
-function whatsappPayload(text: string, id = `wamid.${Date.now()}`) {
-  return JSON.stringify({
-    entry: [
-      {
-        changes: [
-          {
-            field: "messages",
-            value: {
-              metadata: { phone_number_id: "PNID" },
-              contacts: [{ wa_id: "59899111222", profile: { name: "Ana" } }],
-              messages: [
-                {
-                  from: "59899111222",
-                  id,
-                  timestamp: String(Math.floor(Date.now() / 1000)),
-                  type: "text",
-                  text: { body: text },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    ],
-  });
-}
+const received = (text: string, overrides: { id?: string } = {}) =>
+  kapsoMessageReceived({ phoneNumberId: "PNID", text, ...overrides });
 
 const postWebhook = (
-  body: string,
-  signature = signWebhookBody(body, TEST_APP_SECRET),
-) =>
-  request(app)
-    .post("/webhooks/whatsapp")
-    .set({
-      "Content-Type": "application/json",
-      "X-Hub-Signature-256": signature,
-    })
-    .send(body);
+  payload: unknown,
+  options?: Parameters<typeof postKapsoWebhook>[3],
+) => postKapsoWebhook(app, "altamira", payload, options);
 
-describe("WhatsApp webhook", () => {
-  it("answers Meta's verification handshake only with the right token", async () => {
-    const ok = await request(app)
-      .get("/webhooks/whatsapp")
-      .query({
-        "hub.mode": "subscribe",
-        "hub.verify_token": "test-verify-token",
-        "hub.challenge": "1234",
-      })
-      .expect(200);
-    expect(ok.text).toBe("1234");
-    await request(app)
-      .get("/webhooks/whatsapp")
-      .query({
-        "hub.mode": "subscribe",
-        "hub.verify_token": "wrong",
-        "hub.challenge": "1234",
-      })
-      .expect(403);
-  });
-
-  it("rejects a payload without Meta's signature", async () => {
-    await postWebhook(whatsappPayload("Hola"), "sha256=forged").expect(401);
+describe("Kapso webhook", () => {
+  it("rejects a forged, missing, or other-secret signature and stores nothing", async () => {
+    const body = JSON.stringify(received("Hola"));
+    await postWebhook(body, { signature: "0".repeat(64) }).expect(401);
+    await postWebhook(body, { signature: "" }).expect(401);
+    await postWebhook(body, { secret: "someone-elses-secret" }).expect(401);
+    const tampered = await postWebhook(body, {
+      signature: "sha256=" + "a".repeat(64),
+    }).expect(401);
+    expect(tampered.body.error.code).toBe("invalid_signature");
     expect(await db.message.count()).toBe(0);
   });
 
+  it("refuses every delivery while the company has no webhook secret", async () => {
+    await createCompany(db, {
+      slug: "sin-secreto",
+      phoneNumberId: "PNID-2",
+      secrets: { formLeadSecret: "x" },
+    });
+    await postKapsoWebhook(
+      app,
+      "sin-secreto",
+      kapsoMessageReceived({ phoneNumberId: "PNID-2" }),
+    ).expect(401);
+    expect(await db.message.count()).toBe(0);
+  });
+
+  it("answers 404 for a company that does not exist", async () => {
+    await postKapsoWebhook(
+      app,
+      "nadie",
+      kapsoMessageReceived({ phoneNumberId: "PNID" }),
+    ).expect(404);
+  });
+
   it("stores the message before answering 200, then replies after the debounce", async () => {
-    await postWebhook(whatsappPayload("Hola")).expect(200, { ok: true });
-    expect(await db.message.count({ where: { direction: "inbound" } })).toBe(1);
+    await postWebhook(received("Hola")).expect(200, { ok: true });
+    const stored = await db.message.findMany({
+      where: { direction: "inbound" },
+    });
+    expect(stored).toMatchObject([{ type: "text", body: "Hola" }]);
+    expect(
+      await db.thread.findFirstOrThrow({ select: { phone: true, name: true } }),
+    ).toEqual({ phone: "+59899111222", name: "Ana" });
 
     await ctx.replies.drain();
     const outbound = await db.message.findMany({
@@ -101,35 +88,163 @@ describe("WhatsApp webhook", () => {
     expect(outbound.map((message) => message.body)).toEqual([
       "Respuesta de prueba.",
     ]);
+    expect(ctx.integrations.fakes.channel.sent).toMatchObject([
+      { to: "59899111222", kind: "text", body: "Respuesta de prueba." },
+    ]);
+  });
+
+  it("ignores a second delivery of the same message", async () => {
+    const payload = received("Hola", { id: "wamid.same" });
+    await postWebhook(payload).expect(200);
+    await postWebhook(payload).expect(200);
+    await ctx.replies.drain();
+    expect(await db.message.count({ where: { direction: "inbound" } })).toBe(1);
+    expect(ctx.integrations.fakes.channel.sent).toHaveLength(1);
+  });
+
+  it("reads a buffered batch and answers the burst once", async () => {
+    await postWebhook({
+      type: "whatsapp.message.received",
+      batch: true,
+      data: [received("Hola"), received("busco un 2 dormitorios")],
+      batch_info: { size: 2, window_ms: 5000 },
+    }).expect(200);
+    await ctx.replies.drain();
+    expect(
+      (
+        await db.message.findMany({
+          where: { direction: "inbound" },
+          orderBy: { sentAt: "asc" },
+        })
+      ).map((message) => message.body),
+    ).toEqual(["Hola", "busco un 2 dormitorios"]);
+    expect(ctx.integrations.fakes.channel.sent).toHaveLength(1);
+  });
+
+  it("asks a lead who sends only audio to type it", async () => {
+    await postWebhook(
+      kapsoMessageReceived({
+        phoneNumberId: "PNID",
+        message: { type: "audio", audio: { id: "media" }, text: undefined },
+      }),
+    ).expect(200);
+    await ctx.replies.drain();
+    expect(
+      ctx.integrations.fakes.channel.sent.map((sent) => sent.body),
+    ).toEqual(["¿Me lo escribís?"]);
+  });
+
+  it("does not store history backfills, Business App echoes, or messages with no phone number", async () => {
+    await postWebhook(
+      kapsoMessageReceived({
+        phoneNumberId: "PNID",
+        message: {
+          kapso: { direction: "inbound", origin: "history_sync" },
+        },
+      }),
+    ).expect(200);
+    await postWebhook(
+      kapsoMessageReceived({
+        phoneNumberId: "PNID",
+        message: { kapso: { direction: "outbound", origin: "business_app" } },
+      }),
+    ).expect(200);
+    const bsuidOnly = kapsoMessageReceived({ phoneNumberId: "PNID" });
+    delete (bsuidOnly.message as { from?: string }).from;
+    delete (bsuidOnly.conversation as { phone_number?: string }).phone_number;
+    await postWebhook(bsuidOnly).expect(200);
+    expect(await db.message.count()).toBe(0);
   });
 
   it("applies delivery receipts without moving a status backwards", async () => {
-    const body = whatsappPayload("Hola");
-    await postWebhook(body).expect(200);
+    await postWebhook(received("Hola")).expect(200);
     await ctx.replies.drain();
     const sent = await db.message.findFirstOrThrow({
       where: { direction: "outbound" },
     });
     const receipt = (status: string) =>
-      JSON.stringify({
-        entry: [
-          {
-            changes: [
-              {
-                value: {
-                  metadata: { phone_number_id: "PNID" },
-                  statuses: [{ id: sent.waMessageId, status }],
-                },
-              },
-            ],
-          },
-        ],
-      });
-    await postWebhook(receipt("read")).expect(200);
-    await postWebhook(receipt("delivered")).expect(200);
+      postWebhook(
+        kapsoStatus({
+          phoneNumberId: "PNID",
+          waMessageId: sent.waMessageId!,
+          status,
+        }),
+        { event: `whatsapp.message.${status}` },
+      ).expect(200);
+    await receipt("read");
+    await receipt("delivered");
     expect(
       (await db.message.findUniqueOrThrow({ where: { id: sent.id } })).status,
     ).toBe("read");
+  });
+});
+
+describe("Kapso webhook routing", () => {
+  beforeEach(async () => {
+    await createCompany(db, {
+      slug: "otra",
+      phoneNumberId: "PNID-OTRA",
+      secrets: { kapsoWebhookSecret: "otra-secret" },
+    });
+  });
+
+  it("stores each delivery under the company its URL and number belong to", async () => {
+    await postWebhook(received("Hola Altamira")).expect(200);
+    await postKapsoWebhook(
+      app,
+      "otra",
+      kapsoMessageReceived({ phoneNumberId: "PNID-OTRA", text: "Hola Otra" }),
+      { secret: "otra-secret" },
+    ).expect(200);
+    const threads = await db.thread.findMany({
+      include: { company: { select: { slug: true } }, messages: true },
+      orderBy: { createdAt: "asc" },
+    });
+    expect(
+      threads.map((thread) => ({
+        company: thread.company.slug,
+        bodies: thread.messages
+          .filter((message) => message.direction === "inbound")
+          .map((message) => message.body),
+      })),
+    ).toEqual([
+      { company: "altamira", bodies: ["Hola Altamira"] },
+      { company: "otra", bodies: ["Hola Otra"] },
+    ]);
+  });
+
+  it("ignores events for another company's number, even when correctly signed", async () => {
+    // Altamira's own secret, Altamira's URL, but the other company's number.
+    await postWebhook(
+      kapsoMessageReceived({ phoneNumberId: "PNID-OTRA", text: "colado" }),
+    ).expect(200);
+    // The other company's secret is not accepted on Altamira's URL.
+    await postWebhook(received("Hola"), { secret: "otra-secret" }).expect(401);
+    expect(await db.message.count()).toBe(0);
+  });
+
+  it("does not let one company's webhook change another company's receipts", async () => {
+    await postKapsoWebhook(
+      app,
+      "otra",
+      kapsoMessageReceived({ phoneNumberId: "PNID-OTRA" }),
+      { secret: "otra-secret" },
+    ).expect(200);
+    await ctx.replies.drain();
+    const theirs = await db.message.findFirstOrThrow({
+      where: { direction: "outbound" },
+    });
+    await postWebhook(
+      kapsoStatus({
+        phoneNumberId: "PNID",
+        waMessageId: theirs.waMessageId!,
+        status: "read",
+      }),
+      { event: "whatsapp.message.read" },
+    ).expect(200);
+    expect(
+      (await db.message.findUniqueOrThrow({ where: { id: theirs.id } })).status,
+    ).toBe("sent");
   });
 });
 
@@ -195,7 +310,7 @@ describe("form-lead hook", () => {
   });
 
   it("matches the WhatsApp thread when the lead already wrote", async () => {
-    await postWebhook(whatsappPayload("Hola")).expect(200);
+    await postWebhook(received("Hola")).expect(200);
     const response = await request(app)
       .post(hook)
       .set("X-LeadScope-Secret", "form-secret")

@@ -2,7 +2,6 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../../src/app.js";
 import { processThread } from "../../src/conversation/process-thread.js";
-import { signWebhookBody } from "../../src/integrations/whatsapp/signature.js";
 import {
   createCompany,
   createTestContext,
@@ -11,7 +10,10 @@ import {
   type TestContext,
 } from "../support/harness.js";
 import { fakeSupabase } from "../support/fake-supabase.js";
-import { TEST_APP_SECRET } from "../support/test-env.js";
+import {
+  kapsoMessageReceived,
+  postKapsoWebhook,
+} from "../support/kapso-webhooks.js";
 
 const db = testDb();
 let ctx: TestContext;
@@ -43,42 +45,12 @@ beforeEach(async () => {
 
 afterEach(() => ctx.replies.drain());
 
-let messageCounter = 0;
-
 function postWhatsapp(text: string) {
-  messageCounter += 1;
-  const body = JSON.stringify({
-    entry: [
-      {
-        changes: [
-          {
-            field: "messages",
-            value: {
-              metadata: { phone_number_id: "PNID" },
-              contacts: [{ wa_id: "59899111222", profile: { name: "Ana" } }],
-              messages: [
-                {
-                  from: "59899111222",
-                  id: `wamid.lifecycle.${Date.now()}.${messageCounter}`,
-                  timestamp: String(Math.floor(Date.now() / 1000)),
-                  type: "text",
-                  text: { body: text },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    ],
-  });
-  return request(app)
-    .post("/webhooks/whatsapp")
-    .set({
-      "Content-Type": "application/json",
-      "X-Hub-Signature-256": signWebhookBody(body, TEST_APP_SECRET),
-    })
-    .send(body)
-    .expect(200);
+  return postKapsoWebhook(
+    app,
+    "altamira",
+    kapsoMessageReceived({ phoneNumberId: "PNID", text }),
+  ).expect(200);
 }
 
 const slugs = (body: { companies: Array<{ slug: string }> }) =>

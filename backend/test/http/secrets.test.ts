@@ -98,7 +98,8 @@ describe("company secrets", () => {
       .expect(200);
     expect(listed.body.secrets).toEqual([
       { name: "anthropicApiKey", set: true, last4: "22bb" },
-      { name: "metaAccessToken", set: false, last4: null },
+      { name: "kapsoApiKey", set: false, last4: null },
+      { name: "kapsoWebhookSecret", set: false, last4: null },
       { name: "hubspotAccessToken", set: false, last4: null },
       { name: "formLeadSecret", set: true, last4: "77xy" },
     ]);
@@ -111,12 +112,12 @@ describe("company secrets", () => {
   it("does not reveal a secret short enough that the last 4 would be the whole value", async () => {
     const short = "ab12";
     const saved = await request(app)
-      .put("/internal/secrets/metaAccessToken")
+      .put("/internal/secrets/kapsoWebhookSecret")
       .set(ownAuth)
       .send({ value: short })
       .expect(200);
     expect(saved.body.secret).toEqual({
-      name: "metaAccessToken",
+      name: "kapsoWebhookSecret",
       set: true,
       last4: null,
     });
@@ -128,10 +129,10 @@ describe("company secrets", () => {
       .expect(200);
     expect(
       listed.body.secrets.find(
-        (secret: { name: string }) => secret.name === "metaAccessToken",
+        (secret: { name: string }) => secret.name === "kapsoWebhookSecret",
       ),
     ).toEqual({
-      name: "metaAccessToken",
+      name: "kapsoWebhookSecret",
       set: true,
       last4: null,
     });
@@ -241,6 +242,11 @@ describe("company secrets", () => {
       .send({ value: "nope" })
       .expect(400);
     expect(unknown.body.error.code).toBe("invalid_input");
+    await request(app)
+      .put("/internal/secrets/metaAccessToken")
+      .set(ownAuth)
+      .send({ value: "EAAG-old-meta-token" })
+      .expect(400);
     expect((await storedSecrets("altamira")).secrets).toEqual({
       formLeadSecret: OWN_FORM,
     });

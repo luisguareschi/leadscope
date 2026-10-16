@@ -17,7 +17,7 @@ Altamira Uruguay is the first client. Volume they reported: about 15–20 leads/
 One repo, two apps. No Turborepo.
 
 ```
-backend/      TypeScript HTTP service (Express). WhatsApp webhook, conversation engine, CRM, knowledge uploads.
+backend/      TypeScript HTTP service (Express). Kapso WhatsApp webhook, conversation engine, CRM, knowledge uploads.
 backoffice/   Next.js (client-side), shadcn (preset b1Z5bafVA), Tailwind, React Query. Threads, pause, knowledge files, company secrets.
 docs/         Proposal, meeting notes, this design.
 docker-compose.yml   Local Postgres (plus a test database).
@@ -30,11 +30,11 @@ Backend source layout:
 ```
 backend/src/
   features/<resource>/        one controller + one service per endpoint, plus a routes file per resource
-                              (threads, knowledge, secrets, settings, companies, me, whatsapp-webhook, form-leads). Services call Prisma directly.
+                              (threads, knowledge, secrets, settings, companies, me, kapso-webhook, whatsapp-connection, form-leads). Services call Prisma directly.
   engine/                     pure: turn decisions (states, qualify gate), prompt building (platform rules + company instructions + knowledge), history, guardrails
   conversation/               the pipeline: record inbound, reply scheduler, one bot turn, CRM sync, sweeper, lease
   integrations/
-    whatsapp/                 Meta Cloud API: webhook parsing, signature, send text/template, fake channel
+    whatsapp/                 Channel interface and fake channel; kapso/: webhook parsing, signature, send text/template, connection check
     crm/                      Crm interface, HubSpot adapter, fake CRM
     knowledge/                text extraction from uploaded files
     registry.ts               picks the real adapter or the fake per company
@@ -46,7 +46,7 @@ backend/prisma/               schema, migrations, development seed (Altamira's c
 backend/scripts/              terminal chat, signed test webhook, debug company secret, add an operator
 ```
 
-The engine never imports HubSpot, Google, or Meta directly. It talks to small interfaces (`Crm`, `Channel`, `LlmClient`). Adding a second CRM means a new adapter folder, not a rewrite.
+The engine never imports HubSpot, Google, Kapso, or Meta directly. It talks to small interfaces (`Crm`, `Channel`, `LlmClient`). Adding a second CRM means a new adapter folder, not a rewrite.
 
 ## Stack
 
@@ -59,7 +59,7 @@ The engine never imports HubSpot, Google, or Meta directly. It talks to small in
 | ORM | Prisma 7 with the `pg` driver adapter | Schema and all queries from the backend. Runtime uses the Supabase pooled connection; migrations use the direct connection (`prisma.config.ts`). |
 | Auth | Supabase Auth (browser client in the backoffice) | Email login. Public signup off. The backoffice sends the Supabase JWT to the backend. An operator row maps the login to one company. A signed-in email on `PLATFORM_ADMIN_EMAILS` can open Empresas with no operator row and no companies. |
 | LLM | Anthropic (`claude-haiku-4-5` to start) | Already agreed with Altamira. Each company uses its own API key. One `complete()` wrapper so a later provider swap is one file. No fine-tune. No multi-provider framework. |
-| WhatsApp | Meta Cloud API | Official API number per company. |
+| WhatsApp | Official WhatsApp Cloud API through Kapso (a Business Solution Provider) | The company's own number in its own Kapso project and its own Meta Business portfolio. Meta Cloud API direct was dropped in Oct 2026: the client did not want to set up and maintain a Meta app. See [WhatsApp through Kapso](#whatsapp-through-kapso). |
 | CRM | HubSpot API (first adapter) | Direct API. No Zapier / Make / n8n. No HubSpot native AI. |
 | Knowledge | Files operators upload in the backoffice | PDF, Word (DOCX, DOC), Excel (XLSX, XLS), OpenDocument (ODT, ODS), PowerPoint (PPTX), CSV/TSV, plain text, Markdown, HTML, JSON. Text is extracted on upload, stored per company, and injected into the prompt. No RAG. Google Drive / Sheets is later. |
 
@@ -67,7 +67,7 @@ The engine never imports HubSpot, Google, or Meta directly. It talks to small in
 
 ```mermaid
 flowchart LR
-  wa[WhatsApp] --> api[backend]
+  wa[WhatsApp] --> kapso[Kapso] --> api[backend]
   hsForm[HubSpot form workflow] --> api
   site[Public pages, optional] --> api
   api --> db[(Supabase Postgres)]
@@ -77,12 +77,22 @@ flowchart LR
   office --> auth[Supabase Auth]
 ```
 
-1. Meta posts an inbound message to the backend webhook. The backend finds the company from the WhatsApp `phone_number_id`, stores the message, and returns 200 right away.
+1. Kapso posts an inbound message to the company's webhook (`/webhooks/kapso/<slug>`). The backend verifies it with that company's webhook secret, checks the `phone_number_id` is the company's number, stores the message, and returns 200 right away.
 2. Processing happens after the response. Messages for one thread are handled one at a time, and a short wait (a few seconds) groups messages a lead sends in a row into one reply.
 3. When a reply is needed, the engine loads the company config and the extracted text of that company’s uploaded files, builds the system prompt + knowledge block + recent messages, and calls Anthropic.
 4. The model returns structured output: the reply text plus any extracted fields (see [Conversation](#conversation)). The engine updates the thread state from those fields, runs the guardrails, then sends the reply.
 5. On handoff or close, the engine upserts the CRM contact and writes the transcript.
 6. Operators open the backoffice, sign in with Supabase Auth, and call the backend (with the JWT) to list their company’s threads, pause one, upload, replace, and delete knowledge files, set and clear that company's integration secrets, or edit its settings and instructions.
+
+### WhatsApp through Kapso
+
+Kapso is a Business Solution Provider for the official WhatsApp Cloud API (docs: https://docs.kapso.ai). The client did not want to set up and maintain a Meta developer app, so v1 uses Kapso instead of Meta Cloud API direct. The channel stays behind `Channel` (`integrations/whatsapp/channel.ts`); another provider would be a new adapter folder next to `kapso/` with its own webhook route.
+
+- **Per company:** one Kapso project, the company's own number connected through Meta's embedded signup (Coexistence with the WhatsApp Business app, or a dedicated number), the WABA in the company's own Meta Business portfolio, Meta paid by card in the company's own WhatsApp account (not Kapso credits: a WABA on Kapso's credit line cannot switch to a card later and blocks a move to another provider until Kapso revokes it), and message retention at 30 days on a paid Kapso plan. Never a Kapso-provided number: those are licensed and can be reclaimed.
+- **Values in LeadScope:** the phone number id (Meta's id, which Kapso shows; unique column on the company), `kapsoApiKey` (project API key), and `kapsoWebhookSecret` (the webhook's `secret_key`). The panel shows the webhook URL for the company and runs a connection check.
+- **Inbound:** a Kapso webhook of kind `kapso`, payload v2, at `/webhooks/kapso/<slug>`, events `whatsapp.message.received` plus the four status events. Batched (buffered) deliveries are read too. History-sync backfills, outbound echoes, and messages another app handles are not answered. A message with only a business-scoped user id (no phone number) is logged and skipped, because threads are keyed by phone.
+- **Outbound:** `POST https://api.kapso.ai/meta/whatsapp/v24.0/{phone_number_id}/messages` with `X-API-Key`, Meta's body for text, the welcome template, and mark-as-read with the typing indicator. Kapso's own refusals (`insufficient_credits`, `thread_not_owner`, the 24-hour window) surface as channel errors like Meta's did.
+- **Cost:** Kapso Free (2,000 messages/month, 1 number) for testing, Pro (USD 25/month, 100,000 messages, 3 numbers) for production; Meta's fees are separate and paid by the client.
 
 ## Multi-company
 
@@ -91,7 +101,7 @@ flowchart LR
 One shared deployment for all companies. Every company-owned row has a `companyId`. Every query filters by it.
 
 - With only Altamira, this behaves like a single-client build.
-- A new client is a new `Company` row, its config, its secrets, and its WhatsApp number pointed at the same webhook. No new server or database.
+- A new client is a new `Company` row, its config, its secrets, and its WhatsApp number in its own Kapso project, with a Kapso webhook pointed at its own URL on the same backend. No new server or database.
 - Fallback: if a client ever requires its own isolated database, deploy the same Docker image a second time with its own environment. Same code, no fork.
 
 ### What lives in company config (not in code)
@@ -122,13 +132,13 @@ Every company has a first version of each: the migration writes one for existing
 
 ### Secrets per company
 
-Anthropic API key (`anthropicApiKey`), Meta access token (`metaAccessToken`), HubSpot access token (`hubspotAccessToken`), and the form-lead secret (`formLeadSecret`) are per company. They are encrypted together on the Company row with AES-256-GCM. The encryption key (`SECRETS_ENCRYPTION_KEY`) lives only in the server environment and is never entered in the panel.
+Anthropic API key (`anthropicApiKey`), Kapso API key (`kapsoApiKey`), Kapso webhook secret (`kapsoWebhookSecret`), HubSpot access token (`hubspotAccessToken`), and the form-lead secret (`formLeadSecret`) are per company. A payload saved before Kapso may still hold `metaAccessToken`; decrypting ignores it, the next save drops it, and `npm run secrets:prune -- --apply` removes it everywhere. They are encrypted together on the Company row with AES-256-GCM. The encryption key (`SECRETS_ENCRYPTION_KEY`) lives only in the server environment and is never entered in the panel.
 
 An operator sets these for their own company from Configuración → Integraciones in the backoffice. The API is write-only: it reports whether each secret is set and, when the value is longer than 4 characters, the last 4. It never returns the full secret. Saving a value replaces that one secret. An empty value is rejected, so it cannot wipe a secret; Quitar clears one on purpose. The company id comes from the operator's session, so one company cannot read or write another's keys. The only exception is a platform admin in [support access](#support-access), whose writes are recorded.
 
 `npm run company:secret` still writes the same fields from a checkout, for debugging. It is not how a company sets them.
 
-Platform secrets (database URLs, encryption key, Supabase URL and keys, Meta app secret, webhook verify token) stay in environment variables. No Vault in v1. Google access is not a v1 secret. Drive / Sheets sync and a Connect Google OAuth flow are later. MCP is not the plan.
+Platform secrets (database URLs, encryption key, Supabase URL and keys) stay in environment variables. WhatsApp has no platform-wide secret: there is no Meta app, so no app secret or verify token. No Vault in v1. Google access is not a v1 secret. Drive / Sheets sync and a Connect Google OAuth flow are later. MCP is not the plan.
 
 ### Creating a company
 
@@ -282,7 +292,7 @@ A lead who just asks for a person is not stopped: the bot says an advisor will c
 
 ### Processing
 
-- The webhook verifies Meta's signature, stores the messages (and delivery receipts), and only then answers 200. If the database is down, Meta retries instead of the message being lost.
+- The webhook verifies Kapso's signature with the company's secret, stores the messages (and delivery receipts), and only then answers 200. If the database is down, Kapso retries (twice, over about 50 seconds) instead of the message being lost. After many failures in 15 minutes Kapso pauses the webhook and emails the project members; it has to be turned back on in Kapso.
 - Replies wait 3.5 s after the lead's last message (at most 15 s from the first) so a burst gets one answer. One turn per thread at a time; a message that arrives mid-turn gets its own turn right after.
 - A database lease on the thread stops two containers (for example during a deploy) from answering the same lead.
 - A sweeper runs on start and every 30 s: it schedules messages no turn has handled (after a restart) and retries CRM writes that are due.
@@ -320,7 +330,8 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 
 ## Backend surface
 
-- `GET/POST /webhooks/whatsapp` — Meta verification and inbound events. Company resolved from `phone_number_id`. Verified with Meta’s signature.
+- `POST /webhooks/kapso/:companySlug` — Kapso v2 events (`whatsapp.message.received`, and `whatsapp.message.sent/delivered/read/failed` for receipts), single or batched. Verified with the company's `kapsoWebhookSecret` (`X-Webhook-Signature`, hex HMAC-SHA256 of the raw body); 401 without a valid signature or while the company has no secret, 404 for an unknown slug, 200 and nothing stored for an archived company. Events whose `phone_number_id` is not the company's number are ignored.
+- `GET /internal/whatsapp/connection-check` — Probar conexión: the company's saved phone number id, Kapso key, and webhook secret, then Kapso's phone health and webhook list for that number. Never returns a secret.
 - `POST /hooks/crm/form-lead/:companySlug` — form-lead trigger from the company’s CRM workflow. Secret in `X-LeadScope-Secret` (or `Authorization: Bearer`). Accepts HubSpot's "Send a webhook" body as is (`phone` / `mobilephone`, `email`, `firstname`, `lastname`, `hs_object_id`). Sends the welcome template only to a thread with no messages yet.
 - `GET /internal/me` — the signed-in email. With an operator row: that operator, their company, `platformAdmin`, and `supportAccess: false`. A platform admin with no operator row gets `operator: null`, `company: null`, and `platformAdmin: true`. A platform admin who sends `X-Company-Id` gets that company and `supportAccess: true`. Anyone else with no operator row gets 403.
 - `GET /internal/companies?status=active|archived|all` — platform admin only, with or without an operator row. Companies (name, slug, operators, created at, archived at); `active` by default. No secrets, no threads.
@@ -334,7 +345,7 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 - `DELETE /internal/threads/:id` — delete a lead's thread and messages on request.
 - `GET /internal/knowledge/files` (with usage and limits), `GET /internal/knowledge/files/:id` (with the text), `POST /internal/knowledge/files` (upload; same name replaces), `PUT /internal/knowledge/files/:id` (replace), `DELETE /internal/knowledge/files/:id`.
 - `GET /internal/secrets` — whether each company secret is set, and the last 4 characters when that does not reveal the whole value.
-- `PUT /internal/secrets/:name` — replace one secret (`anthropicApiKey`, `metaAccessToken`, `hubspotAccessToken`, `formLeadSecret`). Body `{ "value" }`. An empty value is rejected.
+- `PUT /internal/secrets/:name` — replace one secret (`anthropicApiKey`, `kapsoApiKey`, `kapsoWebhookSecret`, `hubspotAccessToken`, `formLeadSecret`). Body `{ "value" }`. An empty value is rejected.
 - `DELETE /internal/secrets/:name` — clear that one secret. There is no company id on these routes.
 - `GET /internal/settings` — config, instructions, the platform rules rendered with that config (read-only), and the current version ids.
 - `PUT /internal/settings/config` — the whole config. Validated before saving; a 400 carries `error.fields` keyed by dotted path. Unknown keys, including any attempt at the platform rules, are rejected.
@@ -359,7 +370,7 @@ Pages:
 2. Conversaciones — four count cards (en curso, derivadas, requieren asesor, pausadas) that also filter, status tabs, search by name or phone, and the list (newest activity first) with status, last message, and HubSpot status. The sidebar shows how many threads need an advisor.
 3. Thread detail — the full conversation with delivery ticks, the lead's answers, HubSpot status, and the 24-hour window. Alerts say why the bot stopped and offer the fix: mark as attended (clears `needsHuman`), resume, or retry HubSpot. Pause / resume and delete. The panel still does not send WhatsApp.
 4. Conocimiento — upload (drag and drop), list, preview the extracted text, replace, and delete files for the operator’s company, with a meter of the space used. Not a “sync sheet now” button.
-5. Configuración — tabs: Asistente (the config form, with errors next to each field and one save for the whole config; Idioma, Zona horaria, País de los teléfonos, and Modelo de Anthropic are searchable selects, and a saved value that is not in the list stays selectable), Instrucciones y prompt (company instructions, the read-only platform rules, and the full prompt), Integraciones (the Anthropic API key, Meta access token, HubSpot access token, and form-lead secret: write-only fields, whether each is set, the last 4 characters when available, and an explicit Quitar; the platform encryption key is not here), Versiones (history with restore), and, only for a platform admin in support access, Operadores. See [Company settings](#company-settings). The old `/integrations` URL redirects to `/settings?tab=integrations`.
+5. Configuración — tabs: Asistente (the config form, with errors next to each field and one save for the whole config; Idioma, Zona horaria, País de los teléfonos, and Modelo de Anthropic are searchable selects, and a saved value that is not in the list stays selectable), Instrucciones y prompt (company instructions, the read-only platform rules, and the full prompt), Integraciones (WhatsApp con Kapso: a Spanish step-by-step guide with the company's webhook URL and a copy button, the Kapso API key and webhook secret, and Probar conexión; then the Anthropic API key, HubSpot access token, and form-lead secret: write-only fields, whether each is set, the last 4 characters when available, and an explicit Quitar; the platform encryption key is not here), Versiones (history with restore), and, only for a platform admin in support access, Operadores. See [Company settings](#company-settings). The old `/integrations` URL redirects to `/settings?tab=integrations`.
 6. Empresas — only when `GET /internal/me` says `platformAdmin`, including when `company` is null. Create a company (name, slug, first operator email) and list the companies that exist, with Mostrar archivadas. This is the empty-database setup. No API keys. Each row's menu has Operadores, Archivar / Restaurar, and Eliminar (type the slug). Each active row has Entrar, which opens that company's panel as [support access](#support-access) with the "Viendo como administrador" bar. An operator who is not an admin has no nav item; opening the URL shows that they have no access, and the API answers 403. A platform admin with no operator row and no entered company does not see Conversaciones, Conocimiento, or Configuración.
 
 The panel does not send messages. Advisors answer from their own WhatsApp.
@@ -378,7 +389,7 @@ Shadcn with Luis's preset `b1Z5bafVA` and the `dashboard-01` layout. Per-company
 - **Single instance:** the sweeper runs inside the container. Keep one instance until work moves to a proper queue; the thread lease covers the short overlap during a deploy.
 - **Setup scripts** (`backend/scripts`): `company:secret` is a debug write of one encrypted company secret (operators set secrets in Configuración → Integraciones), `chat` talks to the assistant from the terminal, and `webhook:send` posts a signed test webhook. `db:seed` and `operator:add` are local fixtures only (demo company, sample file, demo threads, an extra operator). A production setup does not run them. The first company and its operators are created from Empresas, which also invites them.
 - **Environments:** staging and production, each with its own database and a test WhatsApp number in staging. Prompt changes go to staging first.
-- **Platform secrets (env only, never committed):** database URLs (pooled + direct), Supabase URL and keys, secrets encryption key, Meta app secret and webhook verify token, and `PLATFORM_ADMIN_EMAILS`. A Google service account is later, with Drive / Sheets, not v1.
+- **Platform secrets (env only, never committed):** database URLs (pooled + direct), Supabase URL and keys, secrets encryption key, and `PLATFORM_ADMIN_EMAILS`. A Google service account is later, with Drive / Sheets, not v1.
 - **Monitoring:** structured logs, error alerts (Sentry or similar), and `LlmUsage` for cost per company.
 - **Testing:** a set of real conversations (from Altamira’s WhatsApp Web access) replayed against the prompt after each change. This complements live tuning; it does not replace it.
 
@@ -388,6 +399,7 @@ Shadcn with Luis's preset `b1Z5bafVA` and the `dashboard-01` layout. Per-company
 - Do not log company secrets, message bodies, or phone numbers in plain text. The secrets API never returns a full secret. The support-access audit stores method and path, never request bodies.
 - Support deleting a lead’s thread and messages on request.
 - Outbound templates only go to leads who gave their phone in a form or wrote first.
+- Kapso is one more processor of message content (US hosting, support from Chile). Keep its message retention at 30 days on a paid plan and disclose it under Ley 18.331.
 
 ## Out of scope (v1)
 
@@ -401,7 +413,7 @@ Google Drive / Sheets sync and a Connect Google OAuth flow are later, not v1. MC
 
 1. Repo skeleton: `backend/` and `backoffice/`, Prisma schema with `Company`, Supabase Auth, staging deploy.
 2. Altamira `Company` row and config; knowledge file upload (extract text, store per company); Conocimiento page to upload, list, replace, and delete.
-3. WhatsApp webhook: resolve company, store messages, answer fast, per-thread processing, greeting.
+3. WhatsApp webhook (Kapso): resolve company, store messages, answer fast, per-thread processing, greeting.
 4. Engine with structured output: questions, answers from the knowledge block, guardrails, fallback.
 5. Handoff / close → HubSpot upsert + transcript.
 6. Backoffice thread list, detail, pause / resume.
@@ -415,7 +427,7 @@ Google Drive / Sheets sync and a Connect Google OAuth flow are later, not v1. MC
 - HubSpot property names, and how advisors are notified (owner, task, or both). The property name is set in Configuración.
 - Business-hours text, and the approved welcome template's name and wording. Both are set in Configuración once Altamira confirms them.
 - HubSpot workflow for the form-lead trigger.
-- WhatsApp number, Meta Business access and verification, welcome template approval.
+- WhatsApp number connected in Altamira's Kapso project (Altamira's own number, its own Meta Business portfolio, Meta paid by card), Meta business verification, welcome template approval.
 - Allowlist of public URLs for site notes.
 - Hosting account for the backend.
 - Software ownership with Altamira in the signed contract (needed for resale).

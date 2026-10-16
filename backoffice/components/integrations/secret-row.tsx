@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { CopyIcon, SparklesIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -28,9 +29,15 @@ const COPY: Record<
     title: "Clave de Anthropic",
     description: "La usa el asistente para responder.",
   },
-  metaAccessToken: {
-    title: "Token de Meta",
-    description: "Envía y recibe los mensajes de WhatsApp.",
+  kapsoApiKey: {
+    title: "Clave de API de Kapso",
+    description:
+      "Del proyecto de Kapso de esta empresa (Integrations → API keys). Envía los mensajes y prueba la conexión.",
+  },
+  kapsoWebhookSecret: {
+    title: "Clave secreta del webhook",
+    description:
+      "La misma que tiene el webhook en Kapso. Con ella LeadScope comprueba que cada aviso viene de Kapso; sin ella rechaza todos.",
   },
   hubspotAccessToken: {
     title: "Token de HubSpot",
@@ -43,9 +50,25 @@ const COPY: Record<
   },
 };
 
-export function SecretRow({ secret }: { secret: SecretStatus }) {
+/** 32 random bytes as hex, made in the browser. The server only ever receives it. */
+function randomSecret(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
+}
+
+export function SecretRow({
+  secret,
+  generate = false,
+}: {
+  secret: SecretStatus;
+  /** Offer to make a random value here, to paste into the other system before saving. */
+  generate?: boolean;
+}) {
   const copy = COPY[secret.name];
   const [draft, setDraft] = useState("");
+  const [generated, setGenerated] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const save = useSetSecret();
   const clear = useClearSecret();
@@ -60,6 +83,7 @@ export function SecretRow({ secret }: { secret: SecretStatus }) {
       {
         onSuccess: () => {
           setDraft("");
+          setGenerated(false);
           toast.success("Clave guardada.");
         },
         onError: (error) => toast.error(error.message),
@@ -101,7 +125,7 @@ export function SecretRow({ secret }: { secret: SecretStatus }) {
             <Input
               id={inputId}
               name={inputId}
-              type="password"
+              type={generated ? "text" : "password"}
               autoComplete="off"
               autoCapitalize="off"
               spellCheck={false}
@@ -111,10 +135,41 @@ export function SecretRow({ secret }: { secret: SecretStatus }) {
                   ? "Pegá un valor nuevo para reemplazarla"
                   : "Pegá el valor"
               }
-              onChange={(event) => setDraft(event.target.value)}
-              className="sm:max-w-md"
+              onChange={(event) => {
+                setDraft(event.target.value);
+                setGenerated(false);
+              }}
+              className={cn("sm:max-w-md", generated && "font-mono text-xs")}
             />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {generate && !draft ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setDraft(randomSecret());
+                    setGenerated(true);
+                  }}
+                >
+                  <SparklesIcon />
+                  Generar
+                </Button>
+              ) : null}
+              {generated && draft ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(draft).then(
+                      () => toast.success("Clave copiada. Pegala en Kapso."),
+                      () => toast.error("No se pudo copiar."),
+                    );
+                  }}
+                >
+                  <CopyIcon />
+                  Copiar
+                </Button>
+              ) : null}
               <Button type="submit" disabled={!draft.trim() || save.isPending}>
                 {save.isPending ? <Spinner /> : null}
                 Guardar
@@ -132,7 +187,9 @@ export function SecretRow({ secret }: { secret: SecretStatus }) {
             </div>
           </div>
           <FieldDescription>
-            Guardar reemplaza esta clave. Si lo dejás vacío, no cambia.
+            {generated
+              ? "Copiala y pegala en Kapso antes de guardar: después de guardarla acá no se vuelve a mostrar."
+              : "Guardar reemplaza esta clave. Si lo dejás vacío, no cambia."}
           </FieldDescription>
         </Field>
       </form>

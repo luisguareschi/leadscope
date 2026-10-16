@@ -2,6 +2,7 @@
 
 import { KeyRoundIcon } from "lucide-react";
 import { SecretRow } from "@/components/integrations/secret-row";
+import { WhatsappSetupCard } from "@/components/integrations/whatsapp-setup-card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
@@ -11,10 +12,23 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSecrets } from "@/lib/queries";
+import type { SecretName } from "@/lib/types";
+
+const WHATSAPP_SECRETS: SecretName[] = ["kapsoApiKey", "kapsoWebhookSecret"];
 
 /** Configuración → Integraciones. Write-only: the full value never comes back to the browser. */
-export function IntegrationsSection({ companyName }: { companyName?: string }) {
+export function IntegrationsSection({
+  companyName,
+  onOpenAssistant,
+}: {
+  companyName?: string;
+  /** Switches to the Asistente tab, where the WhatsApp phone number id is edited. */
+  onOpenAssistant: () => void;
+}) {
   const query = useSecrets();
+  const others = query.data?.secrets.filter(
+    (secret) => !WHATSAPP_SECRETS.includes(secret.name),
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -35,14 +49,18 @@ export function IntegrationsSection({ companyName }: { companyName?: string }) {
         </Alert>
       ) : null}
 
+      <WhatsappSetupCard
+        secrets={query.data?.secrets}
+        onOpenAssistant={onOpenAssistant}
+      />
+
       <Card className="gap-0 pb-0 shadow-xs">
         <CardHeader className="border-b pb-4">
-          <CardTitle>Integraciones</CardTitle>
+          <CardTitle>Otras integraciones</CardTitle>
           <CardDescription>
             {companyName ? `Claves de ${companyName}. ` : null}
-            Anthropic responde, Meta es WhatsApp, HubSpot guarda el contacto, y
-            el secreto del formulario autentica los leads que llegan desde un
-            flujo.
+            Anthropic responde, HubSpot guarda el contacto, y el secreto del
+            formulario autentica los leads que llegan desde un flujo.
           </CardDescription>
         </CardHeader>
         {query.isPending ? (
@@ -50,11 +68,10 @@ export function IntegrationsSection({ companyName }: { companyName?: string }) {
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
           </div>
-        ) : query.data ? (
+        ) : others ? (
           <div className="divide-y">
-            {query.data.secrets.map((secret) => (
+            {others.map((secret) => (
               <SecretRow key={secret.name} secret={secret} />
             ))}
           </div>

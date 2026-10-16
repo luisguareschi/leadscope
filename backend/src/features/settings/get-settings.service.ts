@@ -3,12 +3,18 @@ import { MAX_INSTRUCTIONS_CHARS } from "../../companies/editable-config.js";
 import type { AppContext } from "../../context.js";
 import { buildPlatformRules } from "../../engine/prompt.js";
 import { SettingsKind } from "../../generated/prisma/enums.js";
+import { kapsoWebhookPath } from "../../integrations/whatsapp/kapso/kapso-webhook-path.js";
 
 /** The company's editable settings, and the platform rules they fill in (read-only). */
 export async function getSettings(ctx: AppContext, companyId: string) {
   const company = await ctx.db.company.findUniqueOrThrow({
     where: { id: companyId },
-    select: { config: true, instructions: true, whatsappPhoneNumberId: true },
+    select: {
+      slug: true,
+      config: true,
+      instructions: true,
+      whatsappPhoneNumberId: true,
+    },
   });
   const latest = (kind: SettingsKind) =>
     ctx.db.companySettingsVersion.findFirst({
@@ -27,6 +33,8 @@ export async function getSettings(ctx: AppContext, companyId: string) {
     config,
     instructions: company.instructions,
     whatsappPhoneNumberId: company.whatsappPhoneNumberId,
+    /** Append to the backend's public URL to get the webhook URL to paste in Kapso. */
+    kapsoWebhookPath: kapsoWebhookPath(company.slug),
     platformRules: buildPlatformRules(config),
     currentVersions: {
       config: configVersion?.id ?? null,

@@ -157,7 +157,8 @@ export type CreateCompanyResult = {
 
 export type SecretName =
   | "anthropicApiKey"
-  | "metaAccessToken"
+  | "kapsoApiKey"
+  | "kapsoWebhookSecret"
   | "hubspotAccessToken"
   | "formLeadSecret";
 
@@ -206,8 +207,10 @@ export type CompanyConfig = {
 export type CompanySettings = {
   config: CompanyConfig;
   instructions: string;
-  /** Meta's Phone number ID of the company's WhatsApp number. Null until it has one. */
+  /** Phone number ID of the company's WhatsApp number (Kapso shows Meta's id). Null until it has one. */
   whatsappPhoneNumberId: string | null;
+  /** Append to the API's public URL to get the webhook URL to paste in Kapso. */
+  kapsoWebhookPath: string;
   /** Read-only: written in code and filled in with the config. */
   platformRules: string;
   currentVersions: {
@@ -244,4 +247,18 @@ export type PromptPreview = {
   turnContext: string;
   tool: { name: string; description: string; input_schema: unknown };
   knowledge: { files: number; chars: number };
+};
+
+export type ConnectionCheckStatus = "ok" | "warning" | "error" | "skipped";
+
+export type WhatsappConnectionCheck = {
+  webhookPath: string;
+  /** Every check passed, possibly with warnings. */
+  ready: boolean;
+  checks: Array<{
+    id: "phoneNumberId" | "apiKey" | "webhookSecret" | "number" | "webhook";
+    status: ConnectionCheckStatus;
+    label: string;
+    detail: string;
+  }>;
 };

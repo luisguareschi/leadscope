@@ -58,6 +58,15 @@ function SettingsView() {
       ? rawTab
       : "assistant";
   const companyName = me.data?.company?.name;
+  const selectTab = (value: Tab) => {
+    const next = new URLSearchParams(params);
+    if (value === "assistant") next.delete("tab");
+    else next.set("tab", value);
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
+  };
 
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
@@ -84,13 +93,7 @@ function SettingsView() {
       <Tabs
         value={tab}
         onValueChange={(value) => {
-          const next = new URLSearchParams(params);
-          if (value === "assistant") next.delete("tab");
-          else next.set("tab", String(value));
-          const query = next.toString();
-          router.replace(query ? `${pathname}?${query}` : pathname, {
-            scroll: false,
-          });
+          if (isTab(String(value))) selectTab(String(value) as Tab);
         }}
       >
         <TabsList>
@@ -134,7 +137,18 @@ function SettingsView() {
         </TabsContent>
 
         <TabsContent value="integrations" className="pt-2">
-          <IntegrationsSection companyName={companyName} />
+          <IntegrationsSection
+            companyName={companyName}
+            onOpenAssistant={() => {
+              selectTab("assistant");
+              // The Asistente tab stays mounted, so its WhatsApp field exists already.
+              requestAnimationFrame(() => {
+                const input = document.getElementById("config-phoneNumberId");
+                input?.scrollIntoView({ behavior: "smooth", block: "center" });
+                input?.focus({ preventScroll: true });
+              });
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="versions" className="pt-2">

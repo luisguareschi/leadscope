@@ -14,11 +14,15 @@ import {
   createIntegrations,
   type Integrations,
 } from "../../src/integrations/registry.js";
-import type { InboundMessage } from "../../src/integrations/whatsapp/webhook-payload.js";
+import type { InboundMessage } from "../../src/integrations/whatsapp/messages.js";
 import { parseEncryptionKey } from "../../src/lib/crypto.js";
 import { createPrisma, type Db } from "../../src/lib/prisma.js";
 import { scriptedLlm, type ScriptedLlm } from "./scripted-llm.js";
-import { TEST_ENCRYPTION_KEY, testEnv } from "./test-env.js";
+import {
+  TEST_ENCRYPTION_KEY,
+  TEST_KAPSO_WEBHOOK_SECRET,
+  testEnv,
+} from "./test-env.js";
 
 let sharedDb: Db | null = null;
 
@@ -85,7 +89,10 @@ export async function createCompany(
       instructions,
       whatsappPhoneNumberId,
       encryptedSecrets: encryptSecrets(
-        options.secrets ?? { formLeadSecret: "form-secret" },
+        options.secrets ?? {
+          formLeadSecret: "form-secret",
+          kapsoWebhookSecret: TEST_KAPSO_WEBHOOK_SECRET,
+        },
         parseEncryptionKey(TEST_ENCRYPTION_KEY),
       ),
       settingsVersions: {

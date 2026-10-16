@@ -5,11 +5,8 @@ import { createFakeLlm } from "../llm/fake-llm.js";
 import type { LlmClient } from "../llm/types.js";
 import { FakeCrm, type Crm } from "./crm/crm.js";
 import { createHubSpotCrm } from "./crm/hubspot.js";
-import {
-  createMetaChannel,
-  FakeChannel,
-  type Channel,
-} from "./whatsapp/channel.js";
+import { FakeChannel, type Channel } from "./whatsapp/channel.js";
+import { createKapsoChannel } from "./whatsapp/kapso/kapso-channel.js";
 
 export class MissingIntegrationError extends Error {}
 
@@ -17,6 +14,8 @@ export type Integrations = {
   llmFor(company: LoadedCompany): LlmClient;
   channelFor(company: LoadedCompany): Channel;
   crmFor(company: LoadedCompany): Crm;
+  /** Used for every Kapso call (sends and the connection check). Tests replace it. */
+  kapsoFetch: typeof fetch;
   /** Shared in-process fakes, so scripts and tests can read what was "sent". */
   fakes: { llm: LlmClient; channel: FakeChannel; crm: FakeCrm };
 };
@@ -25,6 +24,7 @@ type Overrides = Partial<{
   llmFor: Integrations["llmFor"];
   channelFor: Integrations["channelFor"];
   crmFor: Integrations["crmFor"];
+  kapsoFetch: typeof fetch;
 }>;
 
 export function createIntegrations(
@@ -37,6 +37,8 @@ export function createIntegrations(
     crm: new FakeCrm(),
   };
   const anthropicClients = new Map<string, LlmClient>();
+  const kapsoFetch: typeof fetch =
+    overrides.kapsoFetch ?? ((input, init) => fetch(input, init));
 
   function fakeOrFail<T>(fake: T, what: string, company: LoadedCompany): T {
     if (env.ALLOW_FAKE_INTEGRATIONS) return fake;
@@ -47,6 +49,7 @@ export function createIntegrations(
 
   return {
     fakes,
+    kapsoFetch,
     llmFor:
       overrides.llmFor ??
       ((company) => {
@@ -64,14 +67,14 @@ export function createIntegrations(
     channelFor:
       overrides.channelFor ??
       ((company) => {
-        const { metaAccessToken } = company.secrets;
-        if (!metaAccessToken || !company.whatsappPhoneNumberId) {
-          return fakeOrFail(fakes.channel, "WhatsApp access token", company);
+        const { kapsoApiKey } = company.secrets;
+        if (!kapsoApiKey || !company.whatsappPhoneNumberId) {
+          return fakeOrFail(fakes.channel, "Kapso API key", company);
         }
-        return createMetaChannel({
+        return createKapsoChannel({
+          apiKey: kapsoApiKey,
           phoneNumberId: company.whatsappPhoneNumberId,
-          accessToken: metaAccessToken,
-          graphVersion: env.META_GRAPH_VERSION,
+          fetchImpl: kapsoFetch,
         });
       }),
     crmFor:
