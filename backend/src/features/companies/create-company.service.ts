@@ -33,6 +33,7 @@ export async function createCompany(
   ctx: AppContext,
   input: CreateCompanyInput,
   adminEmail: string,
+  panelOrigin: string,
 ) {
   const slugTaken = await ctx.db.company.findUnique({
     where: { slug: input.slug },
@@ -77,7 +78,7 @@ export async function createCompany(
     });
     const [operator] = company.operators;
     const invite = operator
-      ? await inviteOperator(ctx, operator, { resend: false })
+      ? await inviteOperator(ctx, operator, { resend: false, panelOrigin })
       : null;
     return { company: toCompanyDto(company), invite };
   } catch (error) {

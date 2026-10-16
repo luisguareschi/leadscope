@@ -10,9 +10,10 @@
 import { parseArgs } from "node:util";
 import { loadEnv } from "../src/config/env.js";
 import {
-  createSupabaseAuthAdmin,
+  defaultPanelOrigin,
   setPasswordUrl,
-} from "../src/integrations/auth/auth-admin.js";
+} from "../src/http/panel-origin.js";
+import { createSupabaseAuthAdmin } from "../src/integrations/auth/auth-admin.js";
 import { createPrisma } from "../src/lib/prisma.js";
 
 async function main() {
@@ -43,10 +44,15 @@ async function main() {
         "--invite needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY",
       );
     }
+    const panelOrigin = defaultPanelOrigin(env);
+    if (!panelOrigin)
+      throw new Error(
+        "--invite needs BACKOFFICE_ORIGIN to list the exact panel origin",
+      );
     const invited = await createSupabaseAuthAdmin({
       url: env.SUPABASE_URL,
       serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
-    }).invite(email, setPasswordUrl(env));
+    }).invite(email, setPasswordUrl(panelOrigin));
     supabaseUserId = invited.userId;
   }
   const operator = await db.operator.upsert({

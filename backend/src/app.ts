@@ -14,6 +14,7 @@ import {
   requireCompanyAccess,
 } from "./http/company-access.js";
 import { errorHandler } from "./http/error-handler.js";
+import { backofficeCors } from "./http/panel-origin.js";
 import { requirePlatformAdmin } from "./http/platform-admin.js";
 import { requireSession } from "./http/require-session.js";
 
@@ -50,7 +51,7 @@ export function createApp(ctx: AppContext): Express {
   const backoffice = express.Router();
   backoffice.use(
     cors({
-      origin: ctx.env.BACKOFFICE_ORIGIN,
+      origin: backofficeCors(ctx.env),
       allowedHeaders: ["Authorization", "Content-Type", COMPANY_ID_HEADER],
     }),
   );

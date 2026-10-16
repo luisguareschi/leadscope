@@ -1,8 +1,6 @@
 import type { AppContext } from "../../context.js";
-import {
-  AuthAdminError,
-  setPasswordUrl,
-} from "../../integrations/auth/auth-admin.js";
+import { setPasswordUrl } from "../../http/panel-origin.js";
+import { AuthAdminError } from "../../integrations/auth/auth-admin.js";
 import { reportError } from "../../lib/monitoring.js";
 import { isUniqueViolation } from "../../lib/prisma.js";
 
@@ -16,16 +14,16 @@ export type InviteOutcome =
   | { status: "failed"; message: string };
 
 /**
- * Creates (or finds) the operator's Supabase user and emails the link to /auth/set-password.
- * Never throws for a Supabase failure: the reason is saved on the row and returned, so the panel
- * can show it and offer a resend.
+ * Creates (or finds) the operator's Supabase user and emails the link to /auth/set-password on
+ * `panelOrigin` (see `panelOriginFor`). Never throws for a Supabase failure: the reason is saved
+ * on the row and returned, so the panel can show it and offer a resend.
  */
 export async function inviteOperator(
   ctx: AppContext,
   operator: { id: string; email: string },
-  options: { resend: boolean },
+  options: { resend: boolean; panelOrigin: string },
 ): Promise<InviteOutcome> {
-  const redirectTo = setPasswordUrl(ctx.env);
+  const redirectTo = setPasswordUrl(options.panelOrigin);
   let outcome: InviteOutcome;
   let userId: string | null = null;
   try {

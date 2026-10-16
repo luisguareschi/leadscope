@@ -15,6 +15,7 @@ export async function addOperator(
   ctx: AppContext,
   companyId: string,
   email: string,
+  panelOrigin: string,
 ) {
   const taken = await ctx.db.operator.findUnique({
     where: { email },
@@ -31,7 +32,10 @@ export async function addOperator(
     if (isUniqueViolation(error)) throw emailTaken();
     throw error;
   }
-  const invite = await inviteOperator(ctx, created, { resend: false });
+  const invite = await inviteOperator(ctx, created, {
+    resend: false,
+    panelOrigin,
+  });
   const operator = await ctx.db.operator.findUniqueOrThrow({
     where: { id: created.id },
     select: operatorSelect,
