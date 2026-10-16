@@ -256,8 +256,3 @@ export function createAuthAdmin(env: Env): AuthAdmin {
     serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
   });
 }
-
-/** Where invitation and password-reset links land: the backoffice's set-password page. */
-export function setPasswordUrl(env: Pick<Env, "BACKOFFICE_ORIGIN">): string {
-  return `${env.BACKOFFICE_ORIGIN.replace(/\/$/, "")}/auth/set-password`;
-}

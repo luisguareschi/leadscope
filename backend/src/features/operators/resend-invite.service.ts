@@ -8,6 +8,7 @@ export async function resendInvite(
   ctx: AppContext,
   companyId: string,
   operatorId: string,
+  panelOrigin: string,
 ) {
   const found = await findOperator(ctx, companyId, operatorId);
   if (found.archivedAt)
@@ -15,7 +16,10 @@ export async function resendInvite(
       "El operador está archivado. Restauralo antes de reenviar la invitación.",
       "operator_archived",
     );
-  const invite = await inviteOperator(ctx, found, { resend: true });
+  const invite = await inviteOperator(ctx, found, {
+    resend: true,
+    panelOrigin,
+  });
   const operator = await ctx.db.operator.findUniqueOrThrow({
     where: { id: found.id },
     select: operatorSelect,
