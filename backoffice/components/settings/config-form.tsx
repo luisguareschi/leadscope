@@ -336,7 +336,7 @@ export function ConfigForm({
               inputMode: "numeric",
               maxLength: 64,
               description:
-                "El identificador del número en Meta (WhatsApp Manager → Configuración de la API), no el número de teléfono. Vacío: la empresa todavía no tiene número y los mensajes que lleguen no se asignan a nadie.",
+                "El Phone number ID que muestra Kapso en el número conectado (es el mismo que en Meta), no el número de teléfono. Vacío: la empresa todavía no tiene número y los mensajes que lleguen no se asignan a nadie. La guía está en Integraciones.",
             })}
             <Field orientation="horizontal">
               <Switch

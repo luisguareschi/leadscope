@@ -37,6 +37,7 @@ import type {
   ThreadsPage,
   ThreadsSummary,
   ThreadStatusFilter,
+  WhatsappConnectionCheck,
 } from "./types";
 
 /** Lists refresh every 10 s and an open conversation every 5 s; at this volume polling is enough. */
@@ -460,5 +461,14 @@ export function useClearSecret() {
         method: "DELETE",
       }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["secrets"] }),
+  });
+}
+
+/** Asks Kapso about the company's number and webhook. Run on demand: Kapso rate-limits it. */
+export function useWhatsappConnectionCheck() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: () =>
+      api<WhatsappConnectionCheck>("/internal/whatsapp/connection-check"),
   });
 }
