@@ -20,3 +20,17 @@ export const createCompanyBodySchema = z.object({
   slug: companySlugSchema,
   operatorEmail: operatorEmailSchema,
 });
+
+export const listCompaniesQuerySchema = z.object({
+  /** `active` (default) hides archived companies. */
+  status: z.enum(["active", "archived", "all"]).default("active"),
+});
+
+export const companyParamsSchema = z.object({
+  companyId: z.string().min(1),
+});
+
+/** Deleting asks for the company's slug, typed by hand. */
+export const deleteCompanyBodySchema = z.object({
+  confirmSlug: z.string().trim().toLowerCase().default(""),
+});

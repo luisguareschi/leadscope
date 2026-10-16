@@ -91,7 +91,7 @@ export async function createFormLead(
   const row = await ctx.db.company.findUnique({
     where: { slug: input.companySlug },
   });
-  if (!row) throw notFound("Empresa no encontrada");
+  if (!row || row.archivedAt) throw notFound("Empresa no encontrada");
   const company = loadCompany(row, ctx.encryptionKey);
   const expected = company.secrets.formLeadSecret;
   if (!expected || !input.secret || !safeEqual(input.secret, expected)) {

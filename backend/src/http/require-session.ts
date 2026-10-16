@@ -11,7 +11,34 @@ export type OperatorAuth = {
   email: string;
   /** Email on the signed-in session: the Supabase JWT, or the `dev:` token. */
   sessionEmail: string;
+  /** The operator row is archived. */
+  archived: boolean;
+  /** The operator's company is archived. */
+  companyArchived: boolean;
 };
+
+const operatorInclude = { company: { select: { archivedAt: true } } } as const;
+
+function toOperatorAuth(
+  operator: {
+    id: string;
+    companyId: string;
+    email: string;
+    archivedAt: Date | null;
+    company: { archivedAt: Date | null };
+  } | null,
+  sessionEmail: string,
+): OperatorAuth | null {
+  if (!operator) return null;
+  return {
+    operatorId: operator.id,
+    companyId: operator.companyId,
+    email: operator.email,
+    sessionEmail,
+    archived: operator.archivedAt !== null,
+    companyArchived: operator.company.archivedAt !== null,
+  };
+}
 
 /** A verified panel login. `operator` is null when that email has no operator row yet. */
 export type PanelSession = {
@@ -77,23 +104,15 @@ export function requireSession(ctx: AppContext): RequestHandler {
       if (!sessionEmail) return null;
       const operator = await ctx.db.operator.findUnique({
         where: { email: sessionEmail },
+        include: operatorInclude,
       });
-      return {
-        sessionEmail,
-        operator: operator
-          ? {
-              operatorId: operator.id,
-              companyId: operator.companyId,
-              email: operator.email,
-              sessionEmail,
-            }
-          : null,
-      };
+      return { sessionEmail, operator: toOperatorAuth(operator, sessionEmail) };
     }
     const payload = await verifySupabase(token);
     if (!payload.sub) return null;
     let operator = await ctx.db.operator.findUnique({
       where: { supabaseUserId: payload.sub },
+      include: operatorInclude,
     });
     const email =
       typeof payload.email === "string"
@@ -106,22 +125,13 @@ export function requireSession(ctx: AppContext): RequestHandler {
         operator = await ctx.db.operator.update({
           where: { id: invited.id },
           data: { supabaseUserId: payload.sub },
+          include: operatorInclude,
         });
       }
     }
     const sessionEmail = email ?? operator?.email ?? null;
     if (!sessionEmail) return null;
-    return {
-      sessionEmail,
-      operator: operator
-        ? {
-            operatorId: operator.id,
-            companyId: operator.companyId,
-            email: operator.email,
-            sessionEmail,
-          }
-        : null,
-    };
+    return { sessionEmail, operator: toOperatorAuth(operator, sessionEmail) };
   }
 
   return async (req: Request, res: Response, next: NextFunction) => {

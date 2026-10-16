@@ -124,7 +124,7 @@ Every company has a first version of each: the migration writes one for existing
 
 Anthropic API key (`anthropicApiKey`), Meta access token (`metaAccessToken`), HubSpot access token (`hubspotAccessToken`), and the form-lead secret (`formLeadSecret`) are per company. They are encrypted together on the Company row with AES-256-GCM. The encryption key (`SECRETS_ENCRYPTION_KEY`) lives only in the server environment and is never entered in the panel.
 
-An operator sets these for their own company from Integraciones in the backoffice. The API is write-only: it reports whether each secret is set and, when the value is longer than 4 characters, the last 4. It never returns the full secret. Saving a value replaces that one secret. An empty value is rejected, so it cannot wipe a secret; Quitar clears one on purpose. The company id comes from the operator's session, so one company cannot read or write another's keys. The only exception is a platform admin in [support access](#support-access), whose writes are recorded.
+An operator sets these for their own company from Configuración → Integraciones in the backoffice. The API is write-only: it reports whether each secret is set and, when the value is longer than 4 characters, the last 4. It never returns the full secret. Saving a value replaces that one secret. An empty value is rejected, so it cannot wipe a secret; Quitar clears one on purpose. The company id comes from the operator's session, so one company cannot read or write another's keys. The only exception is a platform admin in [support access](#support-access), whose writes are recorded.
 
 `npm run company:secret` still writes the same fields from a checkout, for debugging. It is not how a company sets them.
 
@@ -136,7 +136,26 @@ A fresh database has no companies and no operators. `db:seed` and `operator:add`
 
 A signed-in Supabase user whose email is on `PLATFORM_ADMIN_EMAILS` can open Empresas and call `GET /internal/me`, `GET /internal/companies`, and `POST /internal/companies` with no operator row. The check is the session email (the JWT, or the dev token). It is not hardcoded. Company routes (threads, knowledge, secrets) need a company: the login's operator row, or support access below. With neither, the panel sends the admin to Empresas and hides the company pages.
 
-Creating a company writes the company row, the slug, a starter config (display name, the three questions, default knowledge limits, no welcome template), and the first operator email. That is how the first company, including Altamira, is created. It does not collect API keys and does not set a WhatsApp phone number id; the company sets that in Configuración → WhatsApp. The same page lists existing companies (name, slug, operator emails), each with Entrar. The operator created there signs in afterwards and only sees their company. They set secrets on Integraciones. An operator whose email is not on the list gets no nav item and 403 on the company routes.
+Creating a company writes the company row, the slug, a starter config (display name, the three questions, default knowledge limits, no welcome template), and the first operator, who gets the Supabase invitation described below. That is how the first company, including Altamira, is created. It does not collect API keys and does not set a WhatsApp phone number id; the company sets that in Configuración → WhatsApp. The same page lists existing companies (name, slug, operator emails), each with Entrar. The operator created there sets a password from the invitation and only sees their company. They set secrets in Configuración → Integraciones. An operator whose email is not on the list gets no nav item and 403 on the company routes.
+
+### Archiving and deleting a company
+
+From Empresas a platform admin can archive, restore, or delete a company. Archived companies are hidden from the default list; Mostrar archivadas shows them with Restaurar.
+
+- **Archive** (`Company.archivedAt`) is reversible and deletes nothing. While archived, its operators get 403 `company_archived` on every panel route (the panel shows that reason), support access into it is refused, the WhatsApp webhook ignores its number (messages are not stored and get no reply, like a number with no company), a turn already queued for one of its threads is dropped, and its form-lead hook answers 404. Restoring undoes all of it; messages sent while it was archived are not recovered.
+- **Delete** is permanent and asks for the company's slug typed back (`DELETE /internal/companies/:id` with `{ confirmSlug }`; anything else is a 400 `slug_mismatch`). It removes the company and, by cascade, its operators, threads, messages, knowledge files, usage, and settings versions. Each operator's Supabase user is then removed under the same rule as deleting one operator.
+
+### Operators
+
+A platform admin manages a company's operators from Empresas (Operadores in the row's menu) or inside the company through support access (Configuración → Operadores, shown only then). Company operators do not see or call this.
+
+- **Add** saves the operator row, then calls Supabase's admin API with the service role key (`SUPABASE_SERVICE_ROLE_KEY`, server only) to create the Supabase user and email the invitation, whose link lands on `/auth/set-password`. The row is linked to that user right away. If a Supabase user with that email already exists with a password, it is linked and no email is sent. If Supabase refuses (no service role key, rate limit, bad key, network), the row stays with the reason in Spanish (`inviteError`), the panel shows it, and Reenviar invitación tries again. An email that is already an operator anywhere is a 409.
+- **Resend** sends the invitation again; for an account that already has a password, Supabase does not re-invite, so it sends the password-reset email to the same page.
+- **Archive** (`Operator.archivedAt`) blocks that login with 403 `operator_archived` on every panel route until it is restored. The Supabase user is not banned; the API is what refuses it. A platform admin whose own operator row (or company) is archived still gets Empresas.
+- **Delete** removes the operator row (files they uploaded keep the text, with no uploader). Their Supabase user is deleted too, unless that login is still an operator elsewhere or is on `PLATFORM_ADMIN_EMAILS`.
+- With `AUTH_MODE=dev` an in-memory stand-in replaces Supabase, so local runs never send email.
+
+Every write from Empresas to an existing company (archive, restore, delete, and each operator change) is recorded in `AdminAuditEntry` like a support-access write. An audit entry keeps the company's slug and survives the company's deletion (its company id becomes null).
 
 ### Support access
 
@@ -152,7 +171,7 @@ Entrar on Empresas lets a platform admin work inside one company's panel, for se
 
 ### Not in v1
 
-Self-signup, billing, a customer admin for their own company, and onboarding wizards. Integraciones is not the company-creation screen: an operator only writes secrets for the company they already belong to.
+Self-signup, billing, a customer admin for their own company, and onboarding wizards. Configuración → Integraciones is not the company-creation screen: an operator only writes secrets for the company they already belong to. Operators cannot add or remove other operators.
 
 ## Knowledge
 
@@ -290,22 +309,24 @@ How the advisor is notified (owner, task, or both) and the exact property names 
 
 Every table below except `Company` has `companyId`. The schema is `backend/prisma/schema.prisma`.
 
-- **Company** — slug, name, config (JSON, validated by `companyConfigSchema`), instructions (free text), encrypted secrets, WhatsApp phone number id.
+- **Company** — slug, name, config (JSON, validated by `companyConfigSchema`), instructions (free text), encrypted secrets, WhatsApp phone number id, archived at.
 - **CompanySettingsVersion** — one saved config or instructions: kind, the value, who saved it (`createdByEmail`, null for the first version), whether it came through support access, the version it restored (if any), and when. The newest of each kind is what the Company row holds.
-- **Operator** — email, Supabase Auth user id (linked on first login), companyId. Maps a login to a company.
+- **Operator** — email, Supabase Auth user id (linked when invited, or on first login), companyId, archived at, last invitation sent at and last invitation error. Maps a login to a company.
 - **KnowledgeFile** — name, lower-cased name (unique per company, so the same name replaces), format, MIME type, size, SHA-256, extracted text, character count, uploaded by.
 - **Thread** — lead phone (E.164) and WhatsApp id, WhatsApp name, form email, source (`whatsapp` / `form`), state, `paused`, `needsHuman` + reason, the four lead fields, last inbound at (24-hour window), last message at + preview (for the list), processing lease, CRM contact id and outbox (`crmPendingAction`, attempts, next attempt, last error, synced at). Unique on (companyId, phone).
 - **Message** — thread id, direction, WhatsApp type, body (or caption), WhatsApp message id (unique), delivery status from Meta's receipts, `handledAt` (inbound: when a turn took it), sent at.
 - **LlmUsage** — thread id, model, input/output and cache read/write tokens, latency. Used to see cost per company.
-- **AdminAuditEntry** — a write a platform admin made inside a company through support access: admin email, method and path, response status, time.
+- **AdminAuditEntry** — a write a platform admin made inside a company through support access, or to a company from Empresas: admin email, company id (null once the company is deleted) and slug, method and path, response status, time.
 
 ## Backend surface
 
 - `GET/POST /webhooks/whatsapp` — Meta verification and inbound events. Company resolved from `phone_number_id`. Verified with Meta’s signature.
 - `POST /hooks/crm/form-lead/:companySlug` — form-lead trigger from the company’s CRM workflow. Secret in `X-LeadScope-Secret` (or `Authorization: Bearer`). Accepts HubSpot's "Send a webhook" body as is (`phone` / `mobilephone`, `email`, `firstname`, `lastname`, `hs_object_id`). Sends the welcome template only to a thread with no messages yet.
 - `GET /internal/me` — the signed-in email. With an operator row: that operator, their company, `platformAdmin`, and `supportAccess: false`. A platform admin with no operator row gets `operator: null`, `company: null`, and `platformAdmin: true`. A platform admin who sends `X-Company-Id` gets that company and `supportAccess: true`. Anyone else with no operator row gets 403.
-- `GET /internal/companies` — platform admin only, with or without an operator row. Companies (name, slug, operator emails, created at). No secrets, no threads.
-- `POST /internal/companies` — platform admin only, with or without an operator row. Body `{ name, slug, operatorEmail }`. Writes the company, starter config, and first operator. 409 if the slug or email is taken. Extra fields, including API keys, are ignored.
+- `GET /internal/companies?status=active|archived|all` — platform admin only, with or without an operator row. Companies (name, slug, operators, created at, archived at); `active` by default. No secrets, no threads.
+- `POST /internal/companies` — platform admin only, with or without an operator row. Body `{ name, slug, operatorEmail }`. Writes the company, starter config, and first operator, and invites that operator. Returns the company and the invitation outcome. 409 if the slug or email is taken. Extra fields, including API keys, are ignored.
+- `POST /internal/companies/:id/archive`, `.../restore`, `DELETE /internal/companies/:id` (body `{ confirmSlug }`) — platform admin only, audited.
+- `GET|POST /internal/companies/:id/operators`, `POST .../operators/:operatorId/invite` (resend), `.../archive`, `.../restore`, `DELETE .../operators/:operatorId` — platform admin only, audited. Add and resend return `{ operator, invite }` where `invite.status` is `sent`, `linked`, `reset_sent`, or `failed` with a Spanish `message`.
 - `GET /internal/threads?status=&search=&cursor=` — the operator's company threads, newest activity first, 50 per page.
 - `GET /internal/threads/summary` — counts per status (they add up to the total).
 - `GET /internal/threads/:id` — thread + messages.
@@ -320,6 +341,7 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 - `PUT /internal/settings/instructions` — body `{ instructions }` and nothing else.
 - `GET /internal/settings/versions` — config and instruction versions, newest first, with who, when, support access, and which is in use.
 - `POST /internal/settings/versions/:id/restore` — save that version again as a new one. 422 if it no longer passes validation.
+- `GET /internal/settings/options` — choices for the Asistente selects: languages, IANA time zones with their UTC offset, countries with calling codes (from `libphonenumber-js`, the validator's own list), and Claude models (from Anthropic's Models API with the company's key, or a fixed list).
 - `GET /internal/settings/prompt` — the cached system block the engine would send, the turn context for a first-time lead, the `submit_turn` tool, the model, and the knowledge totals.
 - `GET /health`.
 
@@ -337,9 +359,8 @@ Pages:
 2. Conversaciones — four count cards (en curso, derivadas, requieren asesor, pausadas) that also filter, status tabs, search by name or phone, and the list (newest activity first) with status, last message, and HubSpot status. The sidebar shows how many threads need an advisor.
 3. Thread detail — the full conversation with delivery ticks, the lead's answers, HubSpot status, and the 24-hour window. Alerts say why the bot stopped and offer the fix: mark as attended (clears `needsHuman`), resume, or retry HubSpot. Pause / resume and delete. The panel still does not send WhatsApp.
 4. Conocimiento — upload (drag and drop), list, preview the extracted text, replace, and delete files for the operator’s company, with a meter of the space used. Not a “sync sheet now” button.
-5. Integraciones — the operator sets the Anthropic API key, Meta access token, HubSpot access token, and form-lead secret for their company. Write-only fields, whether each is set, the last 4 characters when available, and an explicit Quitar. The platform encryption key is not on this page.
-6. Configuración — three tabs: Asistente (the config form, with errors next to each field and one save for the whole config), Instrucciones y prompt (company instructions, the read-only platform rules, and the full prompt), and Versiones (history with restore). See [Company settings](#company-settings).
-7. Empresas — only when `GET /internal/me` says `platformAdmin`, including when `company` is null. Create a company (name, slug, first operator email) and list the companies that exist. This is the empty-database setup. No API keys. Each row has Entrar, which opens that company's panel as [support access](#support-access) with the "Viendo como administrador" bar. An operator who is not an admin has no nav item; opening the URL shows that they have no access, and the API answers 403. A platform admin with no operator row and no entered company does not see Conversaciones, Conocimiento, or Integraciones.
+5. Configuración — tabs: Asistente (the config form, with errors next to each field and one save for the whole config; Idioma, Zona horaria, País de los teléfonos, and Modelo de Anthropic are searchable selects, and a saved value that is not in the list stays selectable), Instrucciones y prompt (company instructions, the read-only platform rules, and the full prompt), Integraciones (the Anthropic API key, Meta access token, HubSpot access token, and form-lead secret: write-only fields, whether each is set, the last 4 characters when available, and an explicit Quitar; the platform encryption key is not here), Versiones (history with restore), and, only for a platform admin in support access, Operadores. See [Company settings](#company-settings). The old `/integrations` URL redirects to `/settings?tab=integrations`.
+6. Empresas — only when `GET /internal/me` says `platformAdmin`, including when `company` is null. Create a company (name, slug, first operator email) and list the companies that exist, with Mostrar archivadas. This is the empty-database setup. No API keys. Each row's menu has Operadores, Archivar / Restaurar, and Eliminar (type the slug). Each active row has Entrar, which opens that company's panel as [support access](#support-access) with the "Viendo como administrador" bar. An operator who is not an admin has no nav item; opening the URL shows that they have no access, and the API answers 403. A platform admin with no operator row and no entered company does not see Conversaciones, Conocimiento, or Configuración.
 
 The panel does not send messages. Advisors answer from their own WhatsApp.
 
@@ -355,7 +376,7 @@ Shadcn with Luis's preset `b1Z5bafVA` and the `dashboard-01` layout. Per-company
 - **Backoffice:** Vercel.
 - **Backend:** Docker image of the Express app, running as one always-on container (Fly.io, Railway, Render, or similar). Supabase Edge Functions are not the app runtime. Supabase stays Postgres and Auth. The host account is still open; the image is the artifact.
 - **Single instance:** the sweeper runs inside the container. Keep one instance until work moves to a proper queue; the thread lease covers the short overlap during a deploy.
-- **Setup scripts** (`backend/scripts`): `company:secret` is a debug write of one encrypted company secret (operators set secrets in Integraciones), `chat` talks to the assistant from the terminal, and `webhook:send` posts a signed test webhook. `db:seed` and `operator:add` are local fixtures only (demo company, sample file, demo threads, an extra operator). A production setup does not run them. The first company and its first operator are created from Empresas.
+- **Setup scripts** (`backend/scripts`): `company:secret` is a debug write of one encrypted company secret (operators set secrets in Configuración → Integraciones), `chat` talks to the assistant from the terminal, and `webhook:send` posts a signed test webhook. `db:seed` and `operator:add` are local fixtures only (demo company, sample file, demo threads, an extra operator). A production setup does not run them. The first company and its operators are created from Empresas, which also invites them.
 - **Environments:** staging and production, each with its own database and a test WhatsApp number in staging. Prompt changes go to staging first.
 - **Platform secrets (env only, never committed):** database URLs (pooled + direct), Supabase URL and keys, secrets encryption key, Meta app secret and webhook verify token, and `PLATFORM_ADMIN_EMAILS`. A Google service account is later, with Drive / Sheets, not v1.
 - **Monitoring:** structured logs, error alerts (Sentry or similar), and `LlmUsage` for cost per company.

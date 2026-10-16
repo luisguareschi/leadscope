@@ -3,6 +3,16 @@ import type { NextConfig } from "next";
 // The panel is client-side only: pages fetch from the Express backend with React Query.
 // Cache Components and partial prefetching only matter for server-rendered data, so they stay off.
 const nextConfig: NextConfig = {
+  // Integraciones is a section of Configuración now.
+  async redirects() {
+    return [
+      {
+        source: "/integrations",
+        destination: "/settings?tab=integrations",
+        permanent: true,
+      },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {

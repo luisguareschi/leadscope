@@ -8,6 +8,7 @@ import {
   type CompanySecrets,
 } from "../../src/companies/company-secrets.js";
 import type { AppContext } from "../../src/context.js";
+import type { AuthAdmin } from "../../src/integrations/auth/auth-admin.js";
 import { createContext } from "../../src/create-context.js";
 import {
   createIntegrations,
@@ -107,6 +108,7 @@ export type TestContext = AppContext & { llm: ScriptedLlm };
 export function createTestContext(
   options: {
     integrations?: Partial<Integrations>;
+    authAdmin?: AuthAdmin;
     now?: () => Date;
     env?: Record<string, string>;
   } = {},
@@ -117,6 +119,7 @@ export function createTestContext(
   const ctx = createContext(env, {
     db: testDb(),
     integrations: { ...base, ...options.integrations },
+    authAdmin: options.authAdmin,
     logger: pino({ level: "silent" }),
     now: options.now,
   });

@@ -11,15 +11,22 @@ import { ApiError, apiFetch } from "./api";
 import { useAuth } from "./auth";
 import { COMPANY_ID_HEADER, supportCompanyIdFor } from "./support";
 import type {
+  AuthUserRemoval,
   ChatMessage,
   KnowledgeFile,
   KnowledgeList,
   CompaniesList,
   CompanyConfig,
+  CompanyListStatus,
   CompanySettings,
   CompanySummary,
   CreateCompanyInput,
+  CreateCompanyResult,
+  DeleteCompanyResult,
   Me,
+  Operator,
+  OperatorWrite,
+  SettingsOptions,
   PromptPreview,
   SecretName,
   SecretStatus,
@@ -36,8 +43,11 @@ import type {
 export const LIST_POLL_MS = 10_000;
 export const THREAD_POLL_MS = 5_000;
 
+const BLOCKED_CODES = new Set(["operator_archived", "company_archived"]);
+
 export function useApi() {
   const { getToken, signOut, email } = useAuth();
+  const client = useQueryClient();
   return useCallback(
     async <T>(path: string, init?: RequestInit): Promise<T> => {
       const token = await getToken();
@@ -56,10 +66,18 @@ export function useApi() {
         });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) await signOut();
+        // Archived while the panel was open: /me says so, and the layout replaces the page.
+        if (
+          error instanceof ApiError &&
+          error.code &&
+          BLOCKED_CODES.has(error.code) &&
+          !path.startsWith("/internal/me")
+        )
+          void client.invalidateQueries({ queryKey: ["me"] });
         throw error;
       }
     },
-    [getToken, signOut, email],
+    [getToken, signOut, email, client],
   );
 }
 
@@ -71,6 +89,12 @@ export function useMe() {
     enabled: status === "signed_in" && Boolean(email),
     queryFn: () => api<Me>("/internal/me"),
     staleTime: 5 * 60_000,
+    retry: (count, error) =>
+      !(
+        error instanceof ApiError &&
+        error.status >= 400 &&
+        error.status < 500
+      ) && count < 3,
   });
 }
 
@@ -216,12 +240,12 @@ export function useSetSecret() {
   });
 }
 
-export function useCompanies(enabled: boolean) {
+export function useCompanies(enabled: boolean, status: CompanyListStatus) {
   const api = useApi();
   return useQuery({
-    queryKey: ["companies"],
+    queryKey: ["companies", "list", status],
     enabled,
-    queryFn: () => api<CompaniesList>("/internal/companies"),
+    queryFn: () => api<CompaniesList>(`/internal/companies?status=${status}`),
   });
 }
 
@@ -230,11 +254,118 @@ export function useCreateCompany() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateCompanyInput) =>
-      api<{ company: CompanySummary }>("/internal/companies", {
+      api<CreateCompanyResult>("/internal/companies", {
         method: "POST",
         body: JSON.stringify(input),
       }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["companies"] }),
+  });
+}
+
+export function useCompanyAction() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      companyId,
+      action,
+    }: {
+      companyId: string;
+      action: "archive" | "restore";
+    }) =>
+      api<{ company: CompanySummary }>(
+        `/internal/companies/${companyId}/${action}`,
+        { method: "POST" },
+      ),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["companies"] }),
+  });
+}
+
+export function useDeleteCompany() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      companyId,
+      confirmSlug,
+    }: {
+      companyId: string;
+      confirmSlug: string;
+    }) =>
+      api<DeleteCompanyResult>(`/internal/companies/${companyId}`, {
+        method: "DELETE",
+        body: JSON.stringify({ confirmSlug }),
+      }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["companies"] }),
+  });
+}
+
+export function useOperators(companyId: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["companies", "operators", companyId],
+    queryFn: () =>
+      api<{ operators: Operator[] }>(
+        `/internal/companies/${companyId}/operators`,
+      ),
+  });
+}
+
+/** Operator changes also refresh the company list, which shows each company's operators. */
+function useOperatorMutation<TInput, TResult>(
+  request: (api: ReturnType<typeof useApi>, input: TInput) => Promise<TResult>,
+) {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TInput) => request(api, input),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["companies"] }),
+  });
+}
+
+export function useAddOperator(companyId: string) {
+  return useOperatorMutation((api, email: string) =>
+    api<OperatorWrite>(`/internal/companies/${companyId}/operators`, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  );
+}
+
+export function useResendInvite(companyId: string) {
+  return useOperatorMutation((api, operatorId: string) =>
+    api<OperatorWrite>(
+      `/internal/companies/${companyId}/operators/${operatorId}/invite`,
+      { method: "POST" },
+    ),
+  );
+}
+
+export function useOperatorArchive(companyId: string) {
+  return useOperatorMutation(
+    (api, input: { operatorId: string; action: "archive" | "restore" }) =>
+      api<{ operator: Operator }>(
+        `/internal/companies/${companyId}/operators/${input.operatorId}/${input.action}`,
+        { method: "POST" },
+      ),
+  );
+}
+
+export function useDeleteOperator(companyId: string) {
+  return useOperatorMutation((api, operatorId: string) =>
+    api<{ authUser: AuthUserRemoval }>(
+      `/internal/companies/${companyId}/operators/${operatorId}`,
+      { method: "DELETE" },
+    ),
+  );
+}
+
+export function useSettingsOptions() {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["settings", "options"],
+    queryFn: () => api<SettingsOptions>("/internal/settings/options"),
+    staleTime: 10 * 60_000,
   });
 }
 

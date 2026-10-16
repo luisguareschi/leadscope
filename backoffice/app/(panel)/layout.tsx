@@ -28,11 +28,17 @@ export default function PanelLayout({
   const pathname = usePathname();
   const adminWithoutCompany =
     me.data?.platformAdmin === true && me.data.company == null;
-  // The company this admin entered no longer exists.
+  // The company this admin entered no longer exists, or was archived.
   const enteredCompanyGone =
     me.error instanceof ApiError &&
-    me.error.status === 404 &&
+    (me.error.status === 404 || me.error.code === "company_archived") &&
     supportCompanyIdFor(email) !== null;
+  const blockedMessage =
+    me.error instanceof ApiError &&
+    (me.error.code === "operator_archived" ||
+      me.error.code === "company_archived")
+      ? me.error.message
+      : "Este usuario no tiene acceso al panel.";
 
   useEffect(() => {
     if (status === "signed_out") router.replace("/login");
@@ -65,8 +71,8 @@ export default function PanelLayout({
   if (me.isError) {
     return (
       <div className="flex min-h-svh flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          Este usuario no tiene acceso al panel.
+        <p className="max-w-md text-sm text-muted-foreground">
+          {blockedMessage}
         </p>
         <Button
           variant="outline"

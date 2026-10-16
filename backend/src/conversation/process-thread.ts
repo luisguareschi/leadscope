@@ -24,6 +24,7 @@ export type TurnOutcome =
   | "no_pending"
   | "silenced"
   | "window_closed"
+  | "company_archived"
   | "busy";
 
 function rulesFor(company: LoadedCompany): TurnRules {
@@ -98,6 +99,10 @@ async function runTurn(
       data: { handledAt: ctx.now() },
     });
 
+  if (thread.company.archivedAt) {
+    await markHandled();
+    return "company_archived";
+  }
   if (thread.paused || thread.needsHuman) {
     await markHandled();
     return "silenced";
