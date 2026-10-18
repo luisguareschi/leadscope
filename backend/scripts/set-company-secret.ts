@@ -4,7 +4,7 @@
  *   npm run company:secret -- <companySlug> <name> <value>
  *   npm run company:secret -- <companySlug> <name> -          (reads the value from stdin)
  *   npm run company:secret -- <companySlug> <name> --delete
- * Names: anthropicApiKey, metaAccessToken, hubspotAccessToken, formLeadSecret.
+ * Names: anthropicApiKey, kapsoApiKey, kapsoWebhookSecret, hubspotAccessToken, formLeadSecret.
  */
 import { text } from "node:stream/consumers";
 import {

@@ -96,6 +96,9 @@ async function main() {
     : {};
   if (!secrets.formLeadSecret && withDemoData)
     secrets.formLeadSecret = "dev-form-secret";
+  // `npm run webhook:send` signs with this, as Kapso would with the webhook's secret key.
+  if (!secrets.kapsoWebhookSecret && withDemoData)
+    secrets.kapsoWebhookSecret = "dev-kapso-webhook-secret";
 
   const config = parseCompanyConfig(altamiraConfig);
   const company = await db.company.upsert({
