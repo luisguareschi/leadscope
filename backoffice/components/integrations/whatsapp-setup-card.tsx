@@ -193,7 +193,7 @@ export function WhatsappSetupCard({
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-6 pt-6">
-        <Alert className="border-amber-500/40 bg-amber-500/5">
+        <Alert className="border-blue-500/40 bg-blue-500/5">
           <ShieldCheckIcon />
           <AlertTitle>Antes de empezar</AlertTitle>
           <AlertDescription>
