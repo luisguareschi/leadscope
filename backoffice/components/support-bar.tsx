@@ -3,29 +3,23 @@
 import { ArrowLeftIcon, ShieldAlertIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { leaveCompany } from "@/lib/support";
+import { Card } from "./ui/card";
 
 export function SupportBar({ companyName }: { companyName: string }) {
   return (
-    <div
-      role="status"
-      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-950 md:rounded-t-xl lg:px-6 dark:text-amber-100"
-    >
-      <p className="flex min-w-0 items-center gap-2">
+    <Card className="p-3 flex flex-col gap-2">
+      <p className="flex min-w-0 items-center gap-2 font-semibold">
         <ShieldAlertIcon className="size-4 shrink-0" />
-        <span className="truncate">
-          Viendo como administrador:{" "}
-          <span className="font-semibold">{companyName}</span>
-        </span>
+        Modo Admin
       </p>
-      <Button
-        size="sm"
-        variant="outline"
-        className="border-amber-500/40 bg-background/70"
-        onClick={leaveCompany}
-      >
+      <p className="text-sm text-muted-foreground mb-2">
+        Estas viendo como administrador de{" "}
+        <span className="font-semibold text-foreground">{companyName}</span>
+      </p>
+      <Button size="sm" variant="default" onClick={leaveCompany}>
         <ArrowLeftIcon />
         Volver a Empresas
       </Button>
-    </div>
+    </Card>
   );
 }

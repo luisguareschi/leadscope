@@ -20,6 +20,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useMe, useThreadsSummary } from "@/lib/queries";
+import { SupportBar } from "./support-bar";
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const me = useMe();
@@ -90,6 +91,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={items} />
       </SidebarContent>
       <SidebarFooter>
+        {me.data?.supportAccess && me.data?.company && (
+          <SupportBar companyName={me.data?.company.name} />
+        )}
         <NavUser
           email={me.data?.operator?.email ?? ""}
           label={hasCompany && !supportAccess ? "Operador" : "Administración"}

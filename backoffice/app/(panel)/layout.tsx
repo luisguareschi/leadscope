@@ -4,7 +4,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
-import { SupportBar } from "@/components/support-bar";
 import { Button } from "@/components/ui/button";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
@@ -105,11 +104,8 @@ export default function PanelLayout({
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        {me.data.supportAccess && me.data.company ? (
-          <SupportBar companyName={me.data.company.name} />
-        ) : null}
         <SiteHeader />
-        <div className="@container/main flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
+        <div className="@container/main max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] overflow-y-auto flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
           {children}
         </div>
       </SidebarInset>
