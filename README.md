@@ -77,7 +77,7 @@ When a company has no key for an integration and `ALLOW_FAKE_INTEGRATIONS=true` 
 | Integration | Fake | Real once you set |
 | --- | --- | --- |
 | Anthropic | scripted replies that walk the three questions | `anthropicApiKey` on the company, from Configuración → Integraciones |
-| WhatsApp | sends recorded in memory (`FakeChannel`) | `kapsoApiKey` (Configuración → Integraciones) + the company's phone number id (Configuración → Asistente → WhatsApp). Inbound also needs `kapsoWebhookSecret`. |
+| WhatsApp | sends recorded in memory (`FakeChannel`) | `kapsoApiKey` (Configuración → Integraciones) + the company's phone number id (Configuración → Integraciones). Inbound also needs `kapsoWebhookSecret`. |
 | HubSpot | contacts kept in memory | `hubspotAccessToken` (Configuración → Integraciones), and `crm.transcriptProperty` in the config |
 
 Still placeholders for Altamira: the welcome template name, the HubSpot property name, and business hours. They are set in Configuración (the local fixture's copies are in `backend/prisma/seed-data/altamira.ts`). The sample knowledge file is fictional.
@@ -125,7 +125,7 @@ Steps for a new company:
 
 1. **Kapso project.** Create one at [app.kapso.ai](https://app.kapso.ai) for this company. Free (2,000 messages/month, 1 number) is enough to test; production needs Pro for the retention window.
 2. **Connect the number.** Connected numbers → Connect new number → **WhatsApp Business App** (Coexistence: the team keeps using the phone app on that number) or **Bring your own SIM** (the number becomes API-only). Meta's embedded signup opens; sign in with a Facebook user that administers the company's portfolio and choose that portfolio. Do not choose "Use a display name with a virtual number instead". ([Connect WhatsApp](https://docs.kapso.ai/docs/how-to/whatsapp/connect-whatsapp))
-3. **Phone number ID.** Copy it from the connected number in Kapso (digits; it is Meta's id) into Configuración → Asistente → WhatsApp.
+3. **Phone number ID.** Copy it from the connected number in Kapso (digits; it is Meta's id) into Configuración → Integraciones → Phone number ID.
 4. **API key.** Kapso → Integrations → API keys → new key. Paste it in Integraciones → *Clave de API de Kapso*.
 5. **Webhook.** On the connected number, add a webhook of kind **Kapso** (payload v2) pointing at `https://<backend>/webhooks/kapso/<company-slug>` (the panel shows the exact URL with a copy button). Events: `whatsapp.message.received` (required) and `whatsapp.message.sent`, `.delivered`, `.read`, `.failed` (delivery ticks in the panel). Buffering is optional; LeadScope already waits `REPLY_DEBOUNCE_MS` and answers a burst once. The same webhook can be created with the API (`POST https://api.kapso.ai/platform/v1/whatsapp/phone_numbers/{phone_number_id}/webhooks`, header `X-API-Key`) or `kapso whatsapp webhooks new`.
 6. **Webhook secret.** Kapso signs every delivery with the webhook's `secret_key`. Put the same value in Integraciones → *Clave secreta del webhook* (the **Generar** button makes a random one in the browser to paste into Kapso first). Until it is set, LeadScope answers every delivery with 401.

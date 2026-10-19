@@ -19,8 +19,6 @@ export type ConfigDraft = {
   needsHuman: string;
   fallback: string;
   nonText: string;
-  /** Not part of the config: saved to the company's `whatsappPhoneNumberId`. */
-  phoneNumberId: string;
   welcomeEnabled: boolean;
   templateName: string;
   templateLanguage: string;
@@ -52,7 +50,6 @@ export const FIELD_PATHS: Record<keyof ConfigDraft, string> = {
   needsHuman: "messages.needsHuman",
   fallback: "messages.fallback",
   nonText: "messages.nonText",
-  phoneNumberId: "whatsappPhoneNumberId",
   welcomeEnabled: "whatsapp.welcomeTemplate",
   templateName: "whatsapp.welcomeTemplate.name",
   templateLanguage: "whatsapp.welcomeTemplate.language",
@@ -88,10 +85,7 @@ const toNumber = (value: string) =>
   value.trim() === "" ? Number.NaN : Number(value.trim().replace(",", "."));
 const round = (value: number) => Math.round(value * 100) / 100;
 
-export function toDraft(
-  config: CompanyConfig,
-  phoneNumberId: string | null,
-): ConfigDraft {
+export function toDraft(config: CompanyConfig): ConfigDraft {
   const template = config.whatsapp.welcomeTemplate;
   return {
     displayName: config.displayName,
@@ -109,7 +103,6 @@ export function toDraft(
     needsHuman: config.messages.needsHuman,
     fallback: config.messages.fallback,
     nonText: config.messages.nonText,
-    phoneNumberId: phoneNumberId ?? "",
     welcomeEnabled: template !== null,
     templateName: template?.name ?? "",
     templateLanguage: template?.language ?? "es",
