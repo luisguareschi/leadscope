@@ -20,16 +20,16 @@ export function crmLabel(crm: Thread["crm"]): string {
   }
 }
 
+/** Nothing until there is a HubSpot write to report; a failure is the only loud state. */
 export function CrmIndicator({ crm }: { crm: Thread["crm"] }) {
+  if (crm.status === "none") return <span className="inline-flex size-4" />;
   const icon =
     crm.status === "synced" ? (
-      <CircleCheckIcon className="size-4 text-emerald-600" />
+      <CircleCheckIcon className="size-4 text-muted-foreground/70" />
     ) : crm.status === "failed" ? (
       <CircleAlertIcon className="size-4 text-destructive" />
-    ) : crm.status === "pending" ? (
-      <ClockIcon className="size-4 text-muted-foreground" />
     ) : (
-      <span className="text-muted-foreground">—</span>
+      <ClockIcon className="size-4 text-muted-foreground" />
     );
   return (
     <Tooltip>

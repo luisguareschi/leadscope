@@ -43,7 +43,7 @@ import { ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { useRestoreSettingsVersion, useSettingsVersions } from "@/lib/queries";
 import type { SettingsVersion } from "@/lib/types";
-import { SettingsSection } from "./settings-layout";
+import { Section } from "@/components/panel";
 
 type Kind = SettingsVersion["kind"];
 
@@ -116,7 +116,7 @@ export function VersionsCard() {
     });
 
   return (
-    <SettingsSection
+    <Section
       title="Historial"
       description="Cada vez que se guarda la configuración, las instrucciones o el número de WhatsApp queda una versión. Restaurar una la guarda como versión nueva; la actual queda en el historial."
     >
@@ -291,6 +291,6 @@ export function VersionsCard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </SettingsSection>
+    </Section>
   );
 }

@@ -1,5 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { StatusPill } from "@/components/panel";
 import { displayStatus, STATUS_META } from "@/lib/thread-status";
 import type { Thread } from "@/lib/types";
 
@@ -12,15 +11,8 @@ export function StatusBadge({
 }) {
   const meta = STATUS_META[displayStatus(thread)];
   return (
-    <Badge
-      variant="secondary"
-      className={cn(
-        "border-transparent font-medium",
-        meta.className,
-        className,
-      )}
-    >
+    <StatusPill tone={meta.tone} className={className}>
       {meta.label}
-    </Badge>
+    </StatusPill>
   );
 }

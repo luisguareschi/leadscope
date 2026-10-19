@@ -1,151 +1,140 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { toast } from "sonner";
-import { PauseIcon, PlayIcon, Trash2Icon } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Spinner } from "@/components/ui/spinner";
-import { formatDateTime, formatDayLabel, formatTime } from "@/lib/format";
-import { useDeleteThread } from "@/lib/queries";
+import type { ReactNode } from "react";
+import { CheckIcon } from "lucide-react";
+import { cn } from "cn";
+import { Panel, StatusPill, type Tone } from "@/components/panel";
+import { formatDateTime, formatPhone } from "@/lib/format";
 import type { Thread } from "@/lib/types";
 import { crmLabel } from "./crm-indicator";
-import { useThreadActionWithToast } from "./thread-alerts";
 
-function Detail({ label, value }: { label: string; value: React.ReactNode }) {
+function Group({
+  title,
+  aside,
+  children,
+}: {
+  title: string;
+  aside?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <div className="grid gap-0.5">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="text-sm break-words">
-        {value ?? <span className="text-muted-foreground">—</span>}
-      </dd>
+    <div className="flex flex-col gap-3 px-5 py-4">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-xs font-medium text-muted-foreground">{title}</h4>
+        {aside}
+      </div>
+      <div className="flex flex-col gap-3">{children}</div>
     </div>
   );
 }
 
-function replyWindowText(closesAt: string | null): string {
-  if (!closesAt) return "Cerrada (el lead no escribió todavía)";
-  if (new Date(closesAt) <= new Date()) return "Cerrada";
-  const day = formatDayLabel(closesAt);
-  const when = day === "Hoy" ? "hoy" : day === "Ayer" ? "ayer" : "mañana";
-  return `Abierta hasta ${when} a las ${formatTime(closesAt)}`;
+function Detail({
+  label,
+  value,
+  answered,
+}: {
+  label: string;
+  value: ReactNode;
+  /** Shows whether one of the three qualifying answers is in. */
+  answered?: boolean;
+}) {
+  const empty = value === null || value === undefined || value === "";
+  return (
+    <div className="flex gap-2.5">
+      {answered !== undefined ? (
+        <span
+          className={cn(
+            "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border",
+            answered
+              ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+              : "border-dashed",
+          )}
+        >
+          {answered ? <CheckIcon className="size-2.5" /> : null}
+        </span>
+      ) : null}
+      <dl className="flex min-w-0 flex-col gap-0.5">
+        <dt className="text-[13px] text-muted-foreground">{label}</dt>
+        <dd className="text-sm break-words">
+          {empty ? <span className="text-muted-foreground/70">—</span> : value}
+        </dd>
+      </dl>
+    </div>
+  );
 }
 
-export function LeadDetails({ thread }: { thread: Thread }) {
-  const router = useRouter();
-  const { run, pending } = useThreadActionWithToast(thread.id);
-  const remove = useDeleteThread();
-  const [confirming, setConfirming] = useState(false);
+const CRM_TONE: Record<Thread["crm"]["status"], Tone> = {
+  synced: "ok",
+  pending: "pending",
+  failed: "error",
+  none: "muted",
+};
 
+const CRM_SHORT: Record<Thread["crm"]["status"], string> = {
+  synced: "Guardado",
+  pending: "Guardando",
+  failed: "Falló",
+  none: "Sin guardar",
+};
+
+export function LeadDetails({ thread }: { thread: Thread }) {
   const knows =
     thread.knowsProjects === null ? null : thread.knowsProjects ? "Sí" : "No";
+  const answers = [thread.interest, thread.budget, knows].filter(
+    (value) => value !== null && value !== "",
+  ).length;
 
   return (
-    <Card className="shadow-xs">
-      <CardHeader>
-        <CardTitle>Datos del lead</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <dl className="grid gap-3">
-          <Detail label="Interés" value={thread.interest} />
-          <Detail label="Presupuesto" value={thread.budget} />
-          <Detail label="Conoce los proyectos" value={knows} />
-          <Detail label="Horario para llamar" value={thread.callTime} />
-          {thread.email ? <Detail label="Email" value={thread.email} /> : null}
-          <Detail
-            label="Origen"
-            value={thread.source === "form" ? "Formulario" : "WhatsApp"}
-          />
-        </dl>
-        <Separator />
-        <dl className="grid gap-3">
-          <Detail label="HubSpot" value={crmLabel(thread.crm)} />
-          <Detail
-            label="Ventana de respuesta de WhatsApp"
-            value={replyWindowText(thread.replyWindowClosesAt)}
-          />
-          <Detail
-            label="Primer contacto"
-            value={formatDateTime(thread.createdAt)}
-          />
-        </dl>
-        <Separator />
-        <div className="flex flex-col gap-2">
-          {thread.paused ? (
-            <Button
-              variant="outline"
-              onClick={() => run("resume")}
-              disabled={pending !== null}
-            >
-              {pending === "resume" ? <Spinner /> : <PlayIcon />}
-              Reanudar asistente
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              onClick={() => run("pause")}
-              disabled={pending !== null}
-            >
-              {pending === "pause" ? <Spinner /> : <PauseIcon />}
-              Pausar asistente
-            </Button>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Pausá cuando un asesor tome la conversación desde su WhatsApp, así
-            el asistente no se mete.
-          </p>
-          <Button
-            variant="ghost"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setConfirming(true)}
-          >
-            <Trash2Icon />
-            Eliminar conversación
-          </Button>
-        </div>
-      </CardContent>
-      <AlertDialog open={confirming} onOpenChange={setConfirming}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta conversación?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se borran la conversación y todos sus mensajes de LeadScope. Usalo
-              cuando el lead pide que borremos sus datos (Ley 18.331). El
-              contacto en HubSpot no se modifica.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={() =>
-                remove.mutate(thread.id, {
-                  onSuccess: () => {
-                    toast.success("Conversación eliminada.");
-                    router.replace("/threads");
-                  },
-                  onError: (error) => toast.error(error.message),
-                })
-              }
-            >
-              {remove.isPending ? <Spinner /> : null}
-              Eliminar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
+    <Panel title="Lead">
+      <Group
+        title="Calificación"
+        aside={
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {answers} de 3
+          </span>
+        }
+      >
+        <Detail
+          label="Qué busca"
+          value={thread.interest}
+          answered={Boolean(thread.interest)}
+        />
+        <Detail
+          label="Presupuesto"
+          value={thread.budget}
+          answered={Boolean(thread.budget)}
+        />
+        <Detail
+          label="Conoce los proyectos"
+          value={knows}
+          answered={knows !== null}
+        />
+        <Detail label="Horario para llamar" value={thread.callTime} />
+      </Group>
+      <Group title="Contacto">
+        <Detail label="Teléfono" value={formatPhone(thread.phone)} />
+        {thread.email ? <Detail label="Email" value={thread.email} /> : null}
+        <Detail
+          label="Origen"
+          value={thread.source === "form" ? "Formulario" : "WhatsApp"}
+        />
+        <Detail
+          label="Primer contacto"
+          value={formatDateTime(thread.createdAt)}
+        />
+      </Group>
+      <Group
+        title="HubSpot"
+        aside={
+          <StatusPill tone={CRM_TONE[thread.crm.status]}>
+            {CRM_SHORT[thread.crm.status]}
+          </StatusPill>
+        }
+      >
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          {crmLabel(thread.crm)}
+        </p>
+      </Group>
+    </Panel>
   );
 }

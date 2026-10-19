@@ -32,10 +32,7 @@ import {
   type ConfigSectionId,
   type SectionId,
 } from "@/components/settings/sections";
-import {
-  SettingsPanel,
-  SettingsSection,
-} from "@/components/settings/settings-layout";
+import { Section } from "@/components/panel";
 import { SettingsNav } from "@/components/settings/settings-nav";
 import { VersionsCard } from "@/components/settings/versions-card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -70,7 +67,7 @@ function Shell({
           stateOf={stateOf}
         />
       </aside>
-      <div className="@container/settings max-w-4xl min-w-0 flex-1">
+      <div className="@container/content max-w-4xl min-w-0 flex-1">
         {children}
       </div>
     </div>
@@ -150,17 +147,15 @@ function LoadedSettings({
         ) : null}
         {active === "versions" ? <VersionsCard /> : null}
         {active === "operators" && supportCompanyId ? (
-          <SettingsSection
+          <Section
             title="Operadores"
             description={`Quienes entran al panel de ${companyName ?? "esta empresa"}. Solo lo ve quien administra la plataforma.`}
           >
-            <SettingsPanel className="p-5">
-              <OperatorsPanel
-                companyId={supportCompanyId}
-                companyName={companyName ?? "esta empresa"}
-              />
-            </SettingsPanel>
-          </SettingsSection>
+            <OperatorsPanel
+              companyId={supportCompanyId}
+              companyName={companyName ?? "esta empresa"}
+            />
+          </Section>
         ) : null}
       </Shell>
     </ConfigEditorProvider>

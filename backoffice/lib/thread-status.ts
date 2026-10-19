@@ -1,3 +1,4 @@
+import type { Tone } from "@/components/panel";
 import type { Thread, ThreadStatusFilter } from "./types";
 
 export type DisplayStatus =
@@ -30,28 +31,17 @@ export function displayStatus(
   }
 }
 
-export const STATUS_META: Record<
-  DisplayStatus,
-  { label: string; className: string }
-> = {
-  needs_human: {
-    label: "Requiere asesor",
-    className: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
-  },
-  paused: { label: "Pausada", className: "bg-muted text-muted-foreground" },
-  new: { label: "Nueva", className: "bg-primary/10 text-primary" },
-  qualifying: { label: "Calificando", className: "bg-primary/10 text-primary" },
-  answering: { label: "Respondiendo", className: "bg-primary/10 text-primary" },
-  scheduling: {
-    label: "Coordinando llamada",
-    className: "bg-sky-500/15 text-sky-800 dark:text-sky-300",
-  },
-  handed_off: {
-    label: "Derivada",
-    className: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
-  },
-  closed: { label: "Cerrada", className: "bg-muted text-muted-foreground" },
-};
+export const STATUS_META: Record<DisplayStatus, { label: string; tone: Tone }> =
+  {
+    needs_human: { label: "Requiere asesor", tone: "warning" },
+    paused: { label: "Pausada", tone: "muted" },
+    new: { label: "Nueva", tone: "pending" },
+    qualifying: { label: "Calificando", tone: "pending" },
+    answering: { label: "Respondiendo", tone: "pending" },
+    scheduling: { label: "Coordinando llamada", tone: "info" },
+    handed_off: { label: "Derivada", tone: "ok" },
+    closed: { label: "Cerrada", tone: "muted" },
+  };
 
 export const FILTERS: Array<{ value: ThreadStatusFilter; label: string }> = [
   { value: "all", label: "Todas" },

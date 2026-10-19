@@ -15,12 +15,7 @@ import { toast } from "sonner";
 import { cn } from "cn";
 import { SecretRow } from "@/components/integrations/secret-row";
 import { fromDraft, toDraft } from "@/components/settings/config-draft";
-import {
-  InlineCode,
-  SettingsPanel,
-  SettingsRow,
-  StatusDot,
-} from "@/components/settings/settings-layout";
+import { InlineCode, Panel, FieldRow, StatusDot } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -136,7 +131,7 @@ function PhoneNumberIdRow({ settings }: { settings: CompanySettings }) {
   };
 
   return (
-    <SettingsRow
+    <FieldRow
       label="Phone number ID"
       hint="En Kapso, en el número conectado. Solo dígitos: no es el teléfono."
       htmlFor="whatsapp-phone-number-id"
@@ -181,7 +176,7 @@ function PhoneNumberIdRow({ settings }: { settings: CompanySettings }) {
           Sin él, los mensajes que lleguen no se asignan a esta empresa.
         </p>
       ) : null}
-    </SettingsRow>
+    </FieldRow>
   );
 }
 
@@ -256,7 +251,7 @@ export function WhatsappSetupCard({
     });
 
   return (
-    <SettingsPanel
+    <Panel
       title="WhatsApp con Kapso"
       description="La API oficial de WhatsApp, a través del proyecto de Kapso de la empresa."
       actions={
@@ -298,7 +293,7 @@ export function WhatsappSetupCard({
         </div>
       )}
 
-      <SettingsRow
+      <FieldRow
         label="URL del webhook"
         hint="En Kapso, en los webhooks del número: uno de tipo Kapso (v2) con esta URL."
       >
@@ -331,7 +326,7 @@ export function WhatsappSetupCard({
             ))}
           </dd>
         </dl>
-      </SettingsRow>
+      </FieldRow>
 
       {webhookSecret ? (
         <SecretRow
@@ -450,6 +445,6 @@ export function WhatsappSetupCard({
           </div>
         ) : null}
       </div>
-    </SettingsPanel>
+    </Panel>
   );
 }

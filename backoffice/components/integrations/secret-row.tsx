@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { SettingsRow, StatusDot } from "@/components/settings/settings-layout";
+import { FieldRow, StatusDot } from "@/components/panel";
 import { useClearSecret, useSetSecret } from "@/lib/queries";
 import type { SecretStatus } from "@/lib/types";
 
@@ -79,7 +79,7 @@ export function SecretRow({
 
   return (
     <>
-      <SettingsRow label={title} hint={hint} htmlFor={inputId}>
+      <FieldRow label={title} hint={hint} htmlFor={inputId}>
         {editing ? (
           <form
             onSubmit={onSubmit}
@@ -192,7 +192,7 @@ export function SecretRow({
             </div>
           </div>
         )}
-      </SettingsRow>
+      </FieldRow>
 
       <AlertDialog open={confirming} onOpenChange={setConfirming}>
         <AlertDialogContent>

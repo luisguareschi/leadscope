@@ -3,10 +3,7 @@
 import type { ReactNode } from "react";
 import { SecretRow } from "@/components/integrations/secret-row";
 import { WhatsappSetupCard } from "@/components/integrations/whatsapp-setup-card";
-import {
-  SettingsPanel,
-  SettingsSection,
-} from "@/components/settings/settings-layout";
+import { Panel, Section } from "@/components/panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSecrets } from "@/lib/queries";
@@ -33,7 +30,7 @@ export function IntegrationsSection({ companyName }: { companyName?: string }) {
   const secrets = query.data?.secrets;
 
   return (
-    <SettingsSection
+    <Section
       title="Integraciones"
       description={`Las claves de ${companyName ?? "la empresa"}. Se guardan cifradas: acá solo ves si están cargadas y los últimos 4 caracteres.`}
     >
@@ -46,7 +43,7 @@ export function IntegrationsSection({ companyName }: { companyName?: string }) {
 
       <WhatsappSetupCard secrets={secrets} />
 
-      <SettingsPanel
+      <Panel
         title="Anthropic, HubSpot y formularios"
         description="Anthropic responde, HubSpot guarda el contacto y el secreto autentica los leads de formulario."
       >
@@ -60,7 +57,7 @@ export function IntegrationsSection({ companyName }: { companyName?: string }) {
             </div>
           ) : null;
         })}
-      </SettingsPanel>
-    </SettingsSection>
+      </Panel>
+    </Section>
   );
 }

@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatNumber } from "@/lib/format";
 import { usePromptPreview } from "@/lib/queries";
-import { SettingsPanel, SettingsSection } from "./settings-layout";
+import { Panel, Section } from "@/components/panel";
 
 const RULES = [
   {
@@ -77,11 +77,11 @@ export function PromptSection({ rules }: { rules: string }) {
   };
 
   return (
-    <SettingsSection
+    <Section
       title="Reglas y prompt"
       description="Lo que el motor necesita para funcionar. Lo define LeadScope en el código, se completa con tu configuración y no se edita desde el panel."
     >
-      <SettingsPanel
+      <Panel
         title="Reglas de la plataforma"
         actions={
           <Button variant="ghost" size="sm" onClick={() => openAt("rules")}>
@@ -109,9 +109,9 @@ export function PromptSection({ rules }: { rules: string }) {
           El texto que recibe el modelo está en inglés; el asistente responde en
           el idioma de la configuración.
         </p>
-      </SettingsPanel>
+      </Panel>
 
-      <SettingsPanel
+      <Panel
         title="Prompt completo"
         description="Lo que recibe el modelo en la próxima respuesta, con lo que ya está guardado."
         actions={
@@ -152,7 +152,7 @@ export function PromptSection({ rules }: { rules: string }) {
             />
           </div>
         )}
-      </SettingsPanel>
+      </Panel>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-3xl">
@@ -202,6 +202,6 @@ export function PromptSection({ rules }: { rules: string }) {
           </Tabs>
         </SheetContent>
       </Sheet>
-    </SettingsSection>
+    </Section>
   );
 }

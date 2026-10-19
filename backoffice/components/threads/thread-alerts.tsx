@@ -7,12 +7,7 @@ import {
   PauseCircleIcon,
   TimerOffIcon,
 } from "lucide-react";
-import {
-  Alert,
-  AlertAction,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Notice } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { needsHumanReasonLabel } from "@/lib/thread-status";
@@ -51,86 +46,78 @@ export function ThreadAlerts({ thread }: { thread: Thread }) {
     thread.replyWindowClosesAt !== null &&
     new Date(thread.replyWindowClosesAt) < new Date();
 
-  return (
-    <div className="flex flex-col gap-3">
-      {thread.needsHuman ? (
-        <Alert className="border-amber-500/40 bg-amber-500/5 text-amber-900 dark:text-amber-200">
-          <HandIcon />
-          <AlertTitle>El asistente se detuvo y espera a una persona</AlertTitle>
-          <AlertDescription className="text-amber-900/80 dark:text-amber-200/80">
-            {needsHumanReasonLabel(thread.needsHumanReason)} Contactá al lead
-            desde tu WhatsApp y, cuando esté resuelto, devolvele la conversación
-            al asistente.
-          </AlertDescription>
-          <AlertAction>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => run("clear-needs-human")}
-              disabled={pending !== null}
-            >
-              {pending === "clear-needs-human" ? <Spinner /> : null}
-              Marcar como atendida
-            </Button>
-          </AlertAction>
-        </Alert>
-      ) : null}
-      {thread.paused ? (
-        <Alert>
-          <PauseCircleIcon />
-          <AlertTitle>Asistente pausado</AlertTitle>
-          <AlertDescription>
-            Un asesor tomó esta conversación. Los mensajes nuevos se guardan,
-            pero el asistente no responde.
-          </AlertDescription>
-          <AlertAction>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => run("resume")}
-              disabled={pending !== null}
-            >
-              {pending === "resume" ? <Spinner /> : null}
-              Reanudar
-            </Button>
-          </AlertAction>
-        </Alert>
-      ) : null}
-      {thread.crm.status === "failed" ? (
-        <Alert variant="destructive">
-          <CircleAlertIcon />
-          <AlertTitle>No se pudo guardar en HubSpot</AlertTitle>
-          <AlertDescription>
-            {thread.crm.lastError}
-            {thread.crm.retriesExhausted
-              ? " Se agotaron los reintentos automáticos."
-              : " Se reintenta solo en unos minutos."}
-          </AlertDescription>
-          <AlertAction>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => run("crm-sync")}
-              disabled={pending !== null}
-            >
-              {pending === "crm-sync" ? <Spinner /> : null}
-              Reintentar
-            </Button>
-          </AlertAction>
-        </Alert>
-      ) : null}
-      {windowClosed && !thread.paused && thread.state !== "closed" ? (
-        <Alert>
-          <TimerOffIcon />
-          <AlertTitle>
-            Pasaron más de 24 horas desde el último mensaje del lead
-          </AlertTitle>
-          <AlertDescription>
-            WhatsApp no deja que el asistente le escriba hasta que el lead
-            vuelva a escribir.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-    </div>
-  );
+  const notices = [
+    thread.needsHuman ? (
+      <Notice
+        key="needs-human"
+        tone="warning"
+        icon={<HandIcon />}
+        title="El asistente se detuvo y espera a una persona"
+        action={
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => run("clear-needs-human")}
+            disabled={pending !== null}
+          >
+            {pending === "clear-needs-human" ? <Spinner /> : null}
+            Marcar como atendida
+          </Button>
+        }
+      >
+        {needsHumanReasonLabel(thread.needsHumanReason)} Contactá al lead desde
+        tu WhatsApp y, cuando esté resuelto, devolvele la conversación al
+        asistente.
+      </Notice>
+    ) : null,
+    thread.paused ? (
+      <Notice
+        key="paused"
+        tone="neutral"
+        icon={<PauseCircleIcon />}
+        title="Asistente pausado"
+      >
+        Un asesor tomó esta conversación. Los mensajes nuevos se guardan, pero
+        el asistente no responde.
+      </Notice>
+    ) : null,
+    thread.crm.status === "failed" ? (
+      <Notice
+        key="crm"
+        tone="error"
+        icon={<CircleAlertIcon />}
+        title="No se pudo guardar en HubSpot"
+        action={
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => run("crm-sync")}
+            disabled={pending !== null}
+          >
+            {pending === "crm-sync" ? <Spinner /> : null}
+            Reintentar
+          </Button>
+        }
+      >
+        {thread.crm.lastError}
+        {thread.crm.retriesExhausted
+          ? " Se agotaron los reintentos automáticos."
+          : " Se reintenta solo en unos minutos."}
+      </Notice>
+    ) : null,
+    windowClosed && !thread.paused && thread.state !== "closed" ? (
+      <Notice
+        key="window"
+        tone="neutral"
+        icon={<TimerOffIcon />}
+        title="Pasaron más de 24 horas desde el último mensaje del lead"
+      >
+        WhatsApp no deja que el asistente le escriba hasta que el lead vuelva a
+        escribir.
+      </Notice>
+    ) : null,
+  ].filter(Boolean);
+
+  if (notices.length === 0) return null;
+  return <div className="flex flex-col gap-2">{notices}</div>;
 }

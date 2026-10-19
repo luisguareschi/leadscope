@@ -47,18 +47,32 @@ function DeliveryStatus({ status }: { status: string | null }) {
   return <CheckIcon className="size-3.5" aria-label="Enviado" />;
 }
 
-function Bubble({ message }: { message: ChatMessage }) {
+function Bubble({
+  message,
+  continued,
+}: {
+  message: ChatMessage;
+  /** Same side as the message before it: tighter spacing, no tail. */
+  continued: boolean;
+}) {
   const outbound = message.direction === "outbound";
   const meta = message.type === "text" ? null : TYPE_META[message.type];
   return (
-    <div className={cn("flex", outbound ? "justify-end" : "justify-start")}>
+    <div
+      className={cn(
+        "flex",
+        outbound ? "justify-end" : "justify-start",
+        continued ? "mt-1" : "mt-3",
+      )}
+    >
       <div
         className={cn(
-          "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm shadow-xs sm:max-w-[70%]",
+          "max-w-[85%] rounded-2xl border px-3.5 py-2 text-sm sm:max-w-[70%]",
           outbound
-            ? "rounded-br-md bg-primary/10 text-foreground"
-            : "rounded-bl-md border bg-card",
-          message.status === "failed" && "ring-1 ring-destructive/40",
+            ? "border-primary/10 bg-primary/[0.07] text-foreground"
+            : "bg-card shadow-xs",
+          !continued && (outbound ? "rounded-tr-md" : "rounded-tl-md"),
+          message.status === "failed" && "border-destructive/40",
         )}
       >
         {meta ? (
@@ -86,26 +100,30 @@ export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
   const bottom = useRef<HTMLDivElement>(null);
   const count = messages.length;
 
+  // Scroll only the transcript's own box: scrollIntoView would also move the page.
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "end" });
+    const scroller = bottom.current?.closest("[data-chat-scroll]");
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }, [count]);
 
   const days = messages.map((message) => formatDayLabel(message.sentAt));
   return (
-    <div className="flex flex-col gap-2 p-4">
+    <div className="flex flex-col px-5 pt-2 pb-5">
       {messages.map((message, index) => {
         const day = days[index]!;
         const showDay = index === 0 || days[index - 1] !== day;
+        const continued =
+          !showDay && messages[index - 1]?.direction === message.direction;
         return (
           <Fragment key={message.id}>
             {showDay ? (
-              <div className="my-2 flex justify-center">
-                <span className="rounded-full bg-muted px-3 py-0.5 text-xs text-muted-foreground">
-                  {day}
-                </span>
+              <div className="mt-4 mb-1 flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                {day}
+                <span className="h-px flex-1 bg-border" />
               </div>
             ) : null}
-            <Bubble message={message} />
+            <Bubble message={message} continued={continued} />
           </Fragment>
         );
       })}

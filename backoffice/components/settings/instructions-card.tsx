@@ -8,7 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
 import { useSaveInstructions } from "@/lib/queries";
-import { SettingsSection } from "./settings-layout";
+import { Section } from "@/components/panel";
 
 export function InstructionsCard({
   instructions,
@@ -44,7 +44,7 @@ export function InstructionsCard({
   };
 
   return (
-    <SettingsSection
+    <Section
       title="Instrucciones"
       description="Lo que el asistente tiene que saber de la empresa y cómo querés que hable de ella. Precios y proyectos van en Conocimiento."
     >
@@ -110,6 +110,6 @@ export function InstructionsCard({
           </div>
         </div>
       </form>
-    </SettingsSection>
+    </Section>
   );
 }

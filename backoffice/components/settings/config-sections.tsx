@@ -16,7 +16,7 @@ import { useSettingsOptions } from "@/lib/queries";
 import type { ConfigDraft } from "./config-draft";
 import { useConfigEditor } from "./config-editor";
 import { SearchableSelect, type SearchableOption } from "./searchable-select";
-import { SettingsPanel, SettingsRow, SettingsSection } from "./settings-layout";
+import { Panel, FieldRow, Section } from "@/components/panel";
 import type { ConfigSectionId } from "./sections";
 
 type TextKey = {
@@ -111,9 +111,9 @@ function TextRow({
   }
 
   return (
-    <SettingsRow label={label} hint={hint} htmlFor={id} error={error}>
+    <FieldRow label={label} hint={hint} htmlFor={id} error={error}>
       {control}
-    </SettingsRow>
+    </FieldRow>
   );
 }
 
@@ -133,7 +133,7 @@ function SelectRow({
   const { draft, errors, set } = useConfigEditor();
   const id = fieldId(name);
   return (
-    <SettingsRow label={label} hint={hint} htmlFor={id} error={errors[name]}>
+    <FieldRow label={label} hint={hint} htmlFor={id} error={errors[name]}>
       <SearchableSelect
         id={id}
         value={draft[name]}
@@ -142,7 +142,7 @@ function SelectRow({
         invalid={Boolean(errors[name])}
         mono={mono}
       />
-    </SettingsRow>
+    </FieldRow>
   );
 }
 
@@ -174,11 +174,11 @@ function useChoices() {
 function GeneralSection() {
   const choices = useChoices();
   return (
-    <SettingsSection
+    <Section
       title="General"
       description="Cómo se presenta el asistente y desde dónde atiende."
     >
-      <SettingsPanel>
+      <Panel>
         <TextRow
           name="displayName"
           label="Nombre del asistente"
@@ -210,18 +210,18 @@ function GeneralSection() {
           placeholder="Lunes a viernes de 9 a 18 h"
           maxLength={300}
         />
-      </SettingsPanel>
-    </SettingsSection>
+      </Panel>
+    </Section>
   );
 }
 
 function ConversationSection() {
   return (
-    <SettingsSection
+    <Section
       title="Conversación"
       description="Cómo escribe y qué pregunta para calificar al lead."
     >
-      <SettingsPanel title="Estilo">
+      <Panel title="Estilo">
         <TextRow
           name="tone"
           label="Tono"
@@ -237,8 +237,8 @@ function ConversationSection() {
           suffix="caracteres"
           narrow
         />
-      </SettingsPanel>
-      <SettingsPanel
+      </Panel>
+      <Panel
         title="Preguntas para calificar"
         description="Con las tres respuestas pide un horario y deriva el lead a un asesor."
       >
@@ -263,8 +263,8 @@ function ConversationSection() {
           compact
           maxLength={300}
         />
-      </SettingsPanel>
-    </SettingsSection>
+      </Panel>
+    </Section>
   );
 }
 
@@ -274,11 +274,11 @@ function ForbiddenSection() {
     .split("\n")
     .filter((line) => line.trim());
   return (
-    <SettingsSection
+    <Section
       title="Temas prohibidos"
       description="Lo que el asistente nunca responde. Si un lead pregunta por esto, pasa la conversación a una persona."
     >
-      <SettingsPanel>
+      <Panel>
         <TextRow
           name="forbiddenDescribe"
           label="Temas"
@@ -294,18 +294,18 @@ function ForbiddenSection() {
           multiline
           mono
         />
-      </SettingsPanel>
-    </SettingsSection>
+      </Panel>
+    </Section>
   );
 }
 
 function MessagesSection() {
   return (
-    <SettingsSection
+    <Section
       title="Mensajes fijos"
       description="Se envían tal cual, sin pasar por el modelo."
     >
-      <SettingsPanel>
+      <Panel>
         <TextRow
           name="needsHuman"
           label="Hace falta un asesor"
@@ -327,19 +327,19 @@ function MessagesSection() {
           multiline
           maxLength={1000}
         />
-      </SettingsPanel>
-    </SettingsSection>
+      </Panel>
+    </Section>
   );
 }
 
 function CrmSection() {
   const { draft, set } = useConfigEditor();
   return (
-    <SettingsSection
+    <Section
       title="Bienvenida y CRM"
       description="Qué recibe un lead que llega por un formulario, y dónde queda la conversación en HubSpot."
     >
-      <SettingsPanel
+      <Panel
         title="Bienvenida a leads de formulario"
         description="Una plantilla aprobada en Meta, enviada una vez."
         actions={
@@ -381,8 +381,8 @@ function CrmSection() {
             Apagada: el lead queda registrado, pero no recibe mensaje.
           </p>
         )}
-      </SettingsPanel>
-      <SettingsPanel title="HubSpot">
+      </Panel>
+      <Panel title="HubSpot">
         <TextRow
           name="transcriptProperty"
           label="Propiedad del resumen"
@@ -390,19 +390,19 @@ function CrmSection() {
           mono
           maxLength={100}
         />
-      </SettingsPanel>
-    </SettingsSection>
+      </Panel>
+    </Section>
   );
 }
 
 function ModelSection() {
   const choices = useChoices();
   return (
-    <SettingsSection
+    <Section
       title="Modelo y límites"
       description="Cambiarlos afecta el costo y la calidad de las respuestas."
     >
-      <SettingsPanel title="Modelo">
+      <Panel title="Modelo">
         <SelectRow
           name="model"
           label="Modelo de Anthropic"
@@ -436,8 +436,8 @@ function ModelSection() {
           suffix="s"
           narrow
         />
-      </SettingsPanel>
-      <SettingsPanel
+      </Panel>
+      <Panel
         title="Conocimiento"
         description="Tienen que entrar los archivos que ya están subidos."
       >
@@ -464,8 +464,8 @@ function ModelSection() {
           suffix="caracteres"
           narrow
         />
-      </SettingsPanel>
-    </SettingsSection>
+      </Panel>
+    </Section>
   );
 }
 

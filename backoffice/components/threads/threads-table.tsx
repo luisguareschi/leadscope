@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FileTextIcon, MessagesSquareIcon, SearchXIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
   Empty,
   EmptyDescription,
@@ -14,17 +12,17 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatPhone, formatRelative, initials } from "@/lib/format";
 import type { Thread } from "@/lib/types";
 import { CrmIndicator } from "./crm-indicator";
 import { StatusBadge } from "./status-badge";
+
+const ROW =
+  "grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-3 px-5 py-3 @3xl/content:grid-cols-[2rem_minmax(0,14rem)_9.5rem_minmax(0,1fr)_auto] @3xl/content:gap-x-5";
 
 export function ThreadsTable({
   threads,
@@ -35,9 +33,26 @@ export function ThreadsTable({
   loading: boolean;
   filtered: boolean;
 }) {
-  const router = useRouter();
+  if (loading) {
+    return (
+      <ul className="divide-y">
+        {Array.from({ length: 6 }, (_, index) => (
+          <li key={index} className={ROW}>
+            <Skeleton className="size-8 rounded-full" />
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-3.5 w-32" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <Skeleton className="hidden h-5 w-24 rounded-full @3xl/content:block" />
+            <Skeleton className="hidden h-3.5 w-full max-w-md @3xl/content:block" />
+            <Skeleton className="h-3 w-12" />
+          </li>
+        ))}
+      </ul>
+    );
+  }
 
-  if (!loading && threads.length === 0) {
+  if (threads.length === 0) {
     return (
       <Empty className="border-0">
         <EmptyHeader>
@@ -60,81 +75,64 @@ export function ThreadsTable({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="pl-4 lg:pl-6">Lead</TableHead>
-          <TableHead>Estado</TableHead>
-          <TableHead className="hidden md:table-cell">Último mensaje</TableHead>
-          <TableHead>Actividad</TableHead>
-          <TableHead className="pr-4 text-center lg:pr-6">HubSpot</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {loading
-          ? Array.from({ length: 6 }, (_, index) => (
-              <TableRow key={index}>
-                <TableCell className="pl-4 lg:pl-6" colSpan={5}>
-                  <Skeleton className="h-9 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          : threads.map((thread) => (
-              <TableRow
-                key={thread.id}
-                className="cursor-pointer"
-                onClick={() => router.push(`/threads/${thread.id}`)}
-              >
-                <TableCell className="pl-4 lg:pl-6">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="size-8">
-                      <AvatarFallback className="text-xs">
-                        {initials(thread.name ?? thread.phone.slice(-2))}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="grid min-w-0 leading-tight">
-                      <Link
-                        href={`/threads/${thread.id}`}
-                        className="truncate font-medium hover:underline"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        {thread.name ?? "Sin nombre"}
-                      </Link>
-                      <span className="truncate text-xs text-muted-foreground">
-                        {formatPhone(thread.phone)}
-                      </span>
-                    </div>
-                    {thread.source === "form" ? (
-                      <Badge
-                        variant="outline"
-                        className="hidden gap-1 text-muted-foreground lg:inline-flex"
-                      >
-                        <FileTextIcon />
-                        Formulario
-                      </Badge>
-                    ) : null}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge thread={thread} />
-                </TableCell>
-                <TableCell className="hidden max-w-[22rem] md:table-cell">
-                  <span className="block truncate text-muted-foreground">
-                    {thread.lastMessagePreview ?? "—"}
-                  </span>
-                </TableCell>
-                <TableCell className="whitespace-nowrap text-muted-foreground">
-                  {formatRelative(thread.lastMessageAt)}
-                </TableCell>
-                <TableCell
-                  className="pr-4 text-center lg:pr-6"
-                  onClick={(event) => event.stopPropagation()}
+    <ul className="divide-y">
+      {threads.map((thread) => (
+        <li key={thread.id} className="relative">
+          <div className={`${ROW} transition-colors hover:bg-muted/40`}>
+            <Avatar className="size-8">
+              <AvatarFallback className="text-xs">
+                {initials(thread.name ?? thread.phone.slice(-2))}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <Link
+                  href={`/threads/${thread.id}`}
+                  className="truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
                 >
-                  <CrmIndicator crm={thread.crm} />
-                </TableCell>
-              </TableRow>
-            ))}
-      </TableBody>
-    </Table>
+                  {thread.name ?? "Sin nombre"}
+                </Link>
+                {thread.source === "form" ? (
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span
+                          className="relative inline-flex text-muted-foreground"
+                          aria-label="Llegó por un formulario"
+                        />
+                      }
+                    >
+                      <FileTextIcon className="size-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent>Llegó por un formulario</TooltipContent>
+                  </Tooltip>
+                ) : null}
+              </div>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="truncate text-xs text-muted-foreground tabular-nums">
+                  {formatPhone(thread.phone)}
+                </span>
+                <StatusBadge thread={thread} className="@3xl/content:hidden" />
+              </div>
+            </div>
+            <StatusBadge
+              thread={thread}
+              className="hidden @3xl/content:inline-flex"
+            />
+            <p className="hidden truncate text-sm text-muted-foreground @3xl/content:block">
+              {thread.lastMessagePreview ?? "—"}
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <span className="relative">
+                <CrmIndicator crm={thread.crm} />
+              </span>
+              <span className="w-14 text-right text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+                {formatRelative(thread.lastMessageAt)}
+              </span>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

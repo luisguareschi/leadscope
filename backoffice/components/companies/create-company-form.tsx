@@ -4,12 +4,13 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -26,12 +27,25 @@ function slugify(name: string): string {
     .slice(0, 48);
 }
 
-export function CreateCompanyForm() {
+export function CreateCompanyDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const create = useCreateCompany();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [operatorEmail, setOperatorEmail] = useState("");
+
+  const reset = () => {
+    setName("");
+    setSlug("");
+    setSlugEdited(false);
+    setOperatorEmail("");
+  };
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -43,10 +57,8 @@ export function CreateCompanyForm() {
       },
       {
         onSuccess: (result) => {
-          setName("");
-          setSlug("");
-          setSlugEdited(false);
-          setOperatorEmail("");
+          reset();
+          onOpenChange(false);
           toast.success(
             `${result.company.name} quedó creada. El operador carga las claves en Configuración.`,
           );
@@ -59,21 +71,27 @@ export function CreateCompanyForm() {
   };
 
   return (
-    <Card className="shadow-xs">
-      <CardHeader className="border-b">
-        <CardTitle>Nueva empresa</CardTitle>
-        <CardDescription>
-          Se crea la empresa, su identificador y el primer operador. Las claves
-          no se cargan acá.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nueva empresa</DialogTitle>
+          <DialogDescription>
+            Se crean la empresa, su identificador y el primer operador, que
+            recibe la invitación por email. Las claves las carga esa persona en
+            Configuración.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          id="create-company-form"
+          onSubmit={onSubmit}
+          className="flex flex-col gap-4"
+        >
           <Field>
             <FieldLabel htmlFor="company-name">Nombre</FieldLabel>
             <Input
               id="company-name"
               required
+              autoFocus
               maxLength={80}
               value={name}
               onChange={(event) => {
@@ -91,6 +109,7 @@ export function CreateCompanyForm() {
               maxLength={48}
               spellCheck={false}
               value={slug}
+              className="font-mono text-xs md:text-xs"
               onChange={(event) => {
                 setSlugEdited(true);
                 setSlug(event.target.value);
@@ -99,8 +118,8 @@ export function CreateCompanyForm() {
               title="Letras, números y guiones. Por ejemplo: costa-sur"
             />
             <FieldDescription>
-              Queda en minúsculas, como en la dirección del formulario. Por
-              ejemplo, costa-sur.
+              En minúsculas, como en la dirección del formulario. Por ejemplo,
+              costa-sur.
             </FieldDescription>
           </Field>
           <Field>
@@ -112,21 +131,33 @@ export function CreateCompanyForm() {
               type="email"
               required
               autoComplete="off"
+              placeholder="nombre@empresa.com"
               value={operatorEmail}
               onChange={(event) => setOperatorEmail(event.target.value)}
             />
             <FieldDescription>
-              Tiene que ser un email nuevo. Le llega una invitación para elegir
-              su contraseña; entra al panel de esta empresa y carga las claves
-              en Configuración.
+              Un email nuevo: le llega un enlace para elegir su contraseña.
             </FieldDescription>
           </Field>
-          <Button type="submit" disabled={create.isPending} className="w-fit">
+        </form>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            form="create-company-form"
+            disabled={create.isPending}
+          >
             {create.isPending ? <Spinner /> : null}
             Crear empresa
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

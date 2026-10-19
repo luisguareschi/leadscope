@@ -19,6 +19,11 @@ const shortDateFormat = new Intl.DateTimeFormat(LOCALE, {
   day: "numeric",
   month: "short",
 });
+const dateFormat = new Intl.DateTimeFormat(LOCALE, {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
 const longDateFormat = new Intl.DateTimeFormat(LOCALE, {
   weekday: "long",
   day: "numeric",
@@ -55,6 +60,11 @@ export function formatTime(value: string): string {
 
 export function formatDateTime(value: string | null): string {
   return value ? dateTimeFormat.format(new Date(value)) : "—";
+}
+
+/** "18 oct 2026" */
+export function formatDate(value: string): string {
+  return dateFormat.format(new Date(value));
 }
 
 export function formatDayLabel(value: string, now = new Date()): string {

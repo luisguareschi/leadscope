@@ -1,15 +1,25 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Panel } from "@/components/panel";
 import { Progress } from "@/components/ui/progress";
 import { formatBytes, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { KnowledgeList } from "@/lib/types";
 
+function Cell({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1 px-5 py-4">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+/** Every file's text goes into each reply, so this is the space the assistant has. */
 export function UsageCard({
   usage,
   fileCount,
@@ -21,42 +31,53 @@ export function UsageCard({
     100,
     Math.round((usage.usedChars / usage.maxCharsTotal) * 100),
   );
+  const high = percent >= 90;
   return (
-    <Card className="shadow-xs">
-      <CardHeader>
-        <CardTitle>Espacio del asistente</CardTitle>
-        <CardDescription>
-          Todo el texto de estos archivos se le da al asistente en cada
-          respuesta. Este es el máximo que entra.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between gap-2 text-sm">
-          <span>
-            <span className="font-semibold tabular-nums">
-              {formatNumber(usage.usedChars)}
+    <Panel>
+      <div className="grid grid-cols-1 divide-y @2xl/content:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] @2xl/content:divide-x @2xl/content:divide-y-0">
+        <Cell label="Texto que lee el asistente en cada respuesta">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm tabular-nums">
+              <span className="font-medium">
+                {formatNumber(usage.usedChars)}
+              </span>
+              <span className="text-muted-foreground">
+                {" "}
+                / {formatNumber(usage.maxCharsTotal)} caracteres
+              </span>
             </span>
-            <span className="text-muted-foreground">
-              {" "}
-              de {formatNumber(usage.maxCharsTotal)} caracteres
+            <span
+              className={cn(
+                "text-xs tabular-nums",
+                high
+                  ? "font-medium text-amber-700 dark:text-amber-400"
+                  : "text-muted-foreground",
+              )}
+            >
+              {percent}%
             </span>
-          </span>
-          <span
+          </div>
+          <Progress
+            value={percent}
+            aria-label="Espacio usado"
             className={cn(
-              "tabular-nums text-muted-foreground",
-              percent >= 90 && "font-medium text-amber-700",
+              "mt-1",
+              high && "[&_[data-slot=progress-indicator]]:bg-amber-500",
             )}
-          >
-            {percent}%
+          />
+        </Cell>
+        <Cell label="Archivos">
+          <span className="text-sm font-medium tabular-nums">
+            {formatNumber(fileCount)}
           </span>
-        </div>
-        <Progress value={percent} aria-label="Espacio usado" />
-        <p className="text-xs text-muted-foreground">
-          {fileCount} {fileCount === 1 ? "archivo" : "archivos"} · Máximo por
-          archivo: {formatNumber(usage.maxCharsPerFile)} caracteres de texto y{" "}
-          {formatBytes(usage.maxFileBytes)}.
-        </p>
-      </CardContent>
-    </Card>
+        </Cell>
+        <Cell label="Máximo por archivo">
+          <span className="truncate text-sm tabular-nums">
+            {formatNumber(usage.maxCharsPerFile)} caracteres ·{" "}
+            {formatBytes(usage.maxFileBytes)}
+          </span>
+        </Cell>
+      </div>
+    </Panel>
   );
 }

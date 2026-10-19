@@ -2,19 +2,18 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { SearchIcon } from "lucide-react";
-import { SummaryCards } from "@/components/threads/summary-cards";
+import { HandIcon, SearchIcon } from "lucide-react";
+import { cn } from "cn";
+import { Notice, Panel } from "@/components/panel";
 import { ThreadsTable } from "@/components/threads/threads-table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useThreads, useThreadsSummary } from "@/lib/queries";
 import { FILTERS, isStatusFilter } from "@/lib/thread-status";
 import type { ThreadStatusFilter } from "@/lib/types";
@@ -57,76 +56,105 @@ function ThreadsView() {
 
   const rows = threads.data?.pages.flatMap((page) => page.threads) ?? [];
   const counts = summary.data;
+  const waiting = counts?.needs_human ?? 0;
 
   return (
-    <>
-      <SummaryCards
-        summary={counts}
-        active={status}
-        onSelect={(next) => setParams({ status: next })}
-      />
-      <div className="px-4 lg:px-6">
-        <Card className="gap-0 py-0 shadow-xs">
-          <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-            <Tabs
-              value={status}
-              onValueChange={(value) =>
-                setParams({ status: value as ThreadStatusFilter })
-              }
+    <div className="@container/content flex flex-col gap-4 px-4 lg:px-6">
+      {waiting > 0 && status !== "needs_human" ? (
+        <Notice
+          tone="warning"
+          icon={<HandIcon />}
+          title={
+            waiting === 1
+              ? "1 conversación espera a un asesor"
+              : `${waiting} conversaciones esperan a un asesor`
+          }
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setParams({ status: "needs_human" })}
             >
-              <div className="-mx-1 overflow-x-auto px-1 overflow-y-hidden">
-                <TabsList>
-                  {FILTERS.map((filter) => {
-                    const count =
-                      filter.value === "all"
-                        ? counts?.total
-                        : counts?.[filter.value];
-                    return (
-                      <TabsTrigger key={filter.value} value={filter.value}>
-                        {filter.label}
-                        {count !== undefined ? (
-                          <span className="text-xs text-muted-foreground tabular-nums">
-                            {count}
-                          </span>
-                        ) : null}
-                      </TabsTrigger>
-                    );
-                  })}
-                </TabsList>
-              </div>
-            </Tabs>
-            <InputGroup className="lg:max-w-72">
-              <InputGroupAddon>
-                <SearchIcon />
-              </InputGroupAddon>
-              <InputGroupInput
-                placeholder="Buscar por nombre o teléfono"
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                aria-label="Buscar conversaciones"
-              />
-            </InputGroup>
-          </div>
-          {threads.isError ? (
-            <div className="p-4 lg:p-6">
-              <Alert variant="destructive">
-                <AlertTitle>
-                  No se pudieron cargar las conversaciones
-                </AlertTitle>
-                <AlertDescription>{threads.error.message}</AlertDescription>
-              </Alert>
-            </div>
-          ) : (
-            <ThreadsTable
-              threads={rows}
-              loading={threads.isPending}
-              filtered={status !== "all" || Boolean(search)}
-            />
-          )}
+              Ver
+            </Button>
+          }
+        >
+          El asistente se detuvo y no responde hasta que alguien la marque como
+          atendida.
+        </Notice>
+      ) : null}
+
+      <div className="flex flex-col gap-3 @3xl/content:flex-row @3xl/content:items-center @3xl/content:justify-between">
+        <div
+          role="group"
+          aria-label="Filtrar por estado"
+          className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] lg:-mx-6 lg:px-6 @3xl/content:mx-0 @3xl/content:px-0"
+        >
+          {FILTERS.map((filter) => {
+            const count =
+              filter.value === "all" ? counts?.total : counts?.[filter.value];
+            const selected = status === filter.value;
+            const attention =
+              filter.value === "needs_human" && (count ?? 0) > 0;
+            return (
+              <Button
+                key={filter.value}
+                aria-pressed={selected}
+                size="sm"
+                variant={selected ? "secondary" : "ghost"}
+                className={cn(
+                  "shrink-0",
+                  selected ? "text-foreground" : "text-muted-foreground",
+                )}
+                onClick={() => setParams({ status: filter.value })}
+              >
+                {filter.label}
+                {count !== undefined ? (
+                  <span
+                    className={cn(
+                      "rounded px-1 text-xs tabular-nums",
+                      attention
+                        ? "bg-amber-500/15 font-medium text-amber-800 dark:text-amber-300"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {count}
+                  </span>
+                ) : null}
+              </Button>
+            );
+          })}
+        </div>
+        <InputGroup className="@3xl/content:max-w-72">
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+          <InputGroupInput
+            placeholder="Buscar por nombre o teléfono"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            aria-label="Buscar conversaciones"
+          />
+        </InputGroup>
+      </div>
+
+      {threads.isError ? (
+        <Alert variant="destructive">
+          <AlertTitle>No se pudieron cargar las conversaciones</AlertTitle>
+          <AlertDescription>{threads.error.message}</AlertDescription>
+        </Alert>
+      ) : (
+        <Panel>
+          <ThreadsTable
+            threads={rows}
+            loading={threads.isPending}
+            filtered={status !== "all" || Boolean(search)}
+          />
           {threads.hasNextPage ? (
-            <div className="flex justify-center border-t p-3">
+            <div className="flex justify-center p-2">
               <Button
                 variant="ghost"
+                size="sm"
                 onClick={() => threads.fetchNextPage()}
                 disabled={threads.isFetchingNextPage}
               >
@@ -135,9 +163,9 @@ function ThreadsView() {
               </Button>
             </div>
           ) : null}
-        </Card>
-      </div>
-    </>
+        </Panel>
+      )}
+    </div>
   );
 }
 
