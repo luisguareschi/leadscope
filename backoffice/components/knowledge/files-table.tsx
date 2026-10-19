@@ -30,14 +30,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { formatBytes, formatNumber, formatRelative } from "@/lib/format";
 import { useDeleteKnowledgeFile, useUploadKnowledgeFile } from "@/lib/queries";
 import type { KnowledgeFile } from "@/lib/types";
@@ -68,92 +60,89 @@ export function FilesTable({
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="pl-4 lg:pl-6">Archivo</TableHead>
-            <TableHead className="hidden sm:table-cell">Formato</TableHead>
-            <TableHead className="text-right">Caracteres</TableHead>
-            <TableHead className="hidden text-right md:table-cell">
-              Tamaño
-            </TableHead>
-            <TableHead className="hidden lg:table-cell">Actualizado</TableHead>
-            <TableHead className="w-12 pr-4 lg:pr-6" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {files.map((file) => (
-            <TableRow key={file.id}>
-              <TableCell className="pl-4 lg:pl-6">
-                <button
-                  type="button"
-                  onClick={() => onPreview(file)}
-                  className="flex max-w-[22rem] items-center gap-2 text-left font-medium hover:underline"
-                >
-                  <FormatIcon format={file.format} />
-                  <span className="truncate">{file.name}</span>
-                  {upload.isPending && replacing?.id === file.id ? (
-                    <Spinner className="size-3.5" />
-                  ) : null}
-                </button>
-              </TableCell>
-              <TableCell className="hidden text-muted-foreground sm:table-cell">
-                {file.formatLabel}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(file.charCount)}
-              </TableCell>
-              <TableCell className="hidden text-right text-muted-foreground tabular-nums md:table-cell">
-                {formatBytes(file.sizeBytes)}
-              </TableCell>
-              <TableCell className="hidden text-muted-foreground lg:table-cell">
-                {formatRelative(file.updatedAt)}
-                {file.uploadedBy ? (
-                  <span className="block text-xs">{file.uploadedBy}</span>
+      <ul className="divide-y">
+        {files.map((file) => (
+          <li
+            key={file.id}
+            className="relative grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 px-5 py-3 transition-colors hover:bg-muted/40 @3xl/content:grid-cols-[2.25rem_minmax(0,1fr)_8rem_11rem_auto] @3xl/content:gap-x-5"
+          >
+            <span className="flex size-9 items-center justify-center rounded-lg border bg-muted/40">
+              <FormatIcon format={file.format} />
+            </span>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <button
+                type="button"
+                onClick={() => onPreview(file)}
+                className="flex min-w-0 items-center gap-2 text-left text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+              >
+                <span className="truncate">{file.name}</span>
+                {upload.isPending && replacing?.id === file.id ? (
+                  <Spinner className="size-3.5 shrink-0" />
                 ) : null}
-              </TableCell>
-              <TableCell className="pr-4 lg:pr-6">
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Acciones para ${file.name}`}
-                      />
-                    }
+              </button>
+              <span className="truncate text-xs text-muted-foreground tabular-nums">
+                {file.formatLabel} · {formatBytes(file.sizeBytes)}
+                <span className="@3xl/content:hidden">
+                  {" "}
+                  · {formatNumber(file.charCount)} caracteres
+                </span>
+              </span>
+            </div>
+            <span className="hidden text-right text-sm tabular-nums @3xl/content:block">
+              {formatNumber(file.charCount)}
+              <span className="block text-xs text-muted-foreground">
+                caracteres
+              </span>
+            </span>
+            <span className="hidden min-w-0 text-right text-sm text-muted-foreground @3xl/content:block">
+              {formatRelative(file.updatedAt)}
+              {file.uploadedBy ? (
+                <span className="block truncate text-xs">
+                  {file.uploadedBy}
+                </span>
+              ) : null}
+            </span>
+            <div className="relative">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Acciones para ${file.name}`}
+                    />
+                  }
+                >
+                  <EllipsisVerticalIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-44">
+                  <DropdownMenuItem onClick={() => onPreview(file)}>
+                    <EyeIcon />
+                    Ver texto
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setReplacing(file);
+                      replaceInput.current?.click();
+                    }}
                   >
-                    <EllipsisVerticalIcon />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-44">
-                    <DropdownMenuItem onClick={() => onPreview(file)}>
-                      <EyeIcon />
-                      Ver texto
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setReplacing(file);
-                        replaceInput.current?.click();
-                      }}
-                    >
-                      <RefreshCwIcon />
-                      Reemplazar
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => setDeleting(file)}
-                    >
-                      <Trash2Icon />
-                      Eliminar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                    <RefreshCwIcon />
+                    Reemplazar
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => setDeleting(file)}
+                  >
+                    <Trash2Icon />
+                    Eliminar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </li>
+        ))}
+      </ul>
 
       <input
         ref={replaceInput}

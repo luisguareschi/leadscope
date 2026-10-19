@@ -1,151 +1,284 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { toast } from "sonner";
-import { PauseIcon, PlayIcon, Trash2Icon } from "lucide-react";
+import type { ReactNode } from "react";
 import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  CheckIcon,
+  CircleAlertIcon,
+  HandIcon,
+  RefreshCwIcon,
+} from "lucide-react";
+import { cn } from "cn";
+import { Panel, StatusPill, type Tone } from "@/components/panel";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
-import { formatDateTime, formatDayLabel, formatTime } from "@/lib/format";
-import { useDeleteThread } from "@/lib/queries";
+import { formatDateTime, formatPhone } from "@/lib/format";
+import { needsHumanReasonLabel } from "@/lib/thread-status";
 import type { Thread } from "@/lib/types";
-import { crmLabel } from "./crm-indicator";
-import { useThreadActionWithToast } from "./thread-alerts";
+import { useThreadActionWithToast } from "./use-thread-action";
 
-function Detail({ label, value }: { label: string; value: React.ReactNode }) {
+function Group({
+  title,
+  aside,
+  children,
+}: {
+  title: string;
+  aside?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <div className="grid gap-0.5">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="text-sm break-words">
-        {value ?? <span className="text-muted-foreground">—</span>}
-      </dd>
+    <div className="flex flex-col gap-3 px-5 py-4">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-xs font-medium text-muted-foreground">{title}</h4>
+        {aside}
+      </div>
+      <div className="flex flex-col gap-3">{children}</div>
     </div>
   );
 }
 
-function replyWindowText(closesAt: string | null): string {
-  if (!closesAt) return "Cerrada (el lead no escribió todavía)";
-  if (new Date(closesAt) <= new Date()) return "Cerrada";
-  const day = formatDayLabel(closesAt);
-  const when = day === "Hoy" ? "hoy" : day === "Ayer" ? "ayer" : "mañana";
-  return `Abierta hasta ${when} a las ${formatTime(closesAt)}`;
+function Detail({
+  label,
+  value,
+  answered,
+}: {
+  label: string;
+  value: ReactNode;
+  /** Shows whether one of the three qualifying answers is in. */
+  answered?: boolean;
+}) {
+  const empty = value === null || value === undefined || value === "";
+  return (
+    <div className="flex gap-2.5">
+      {answered !== undefined ? (
+        <span
+          className={cn(
+            "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border",
+            answered
+              ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+              : "border-dashed",
+          )}
+        >
+          {answered ? <CheckIcon className="size-2.5" /> : null}
+        </span>
+      ) : null}
+      <dl className="flex min-w-0 flex-col gap-0.5">
+        <dt className="text-[13px] text-muted-foreground">{label}</dt>
+        <dd className="text-sm break-words">
+          {empty ? <span className="text-muted-foreground/70">—</span> : value}
+        </dd>
+      </dl>
+    </div>
+  );
+}
+
+const CRM_TONE: Record<Thread["crm"]["status"], Tone> = {
+  synced: "ok",
+  pending: "pending",
+  failed: "error",
+  none: "muted",
+};
+
+const CRM_SHORT: Record<Thread["crm"]["status"], string> = {
+  synced: "Guardado",
+  pending: "Guardando",
+  failed: "Falló",
+  none: "Sin guardar",
+};
+
+/** Something the operator has to act on, with the one action that fixes it. */
+function AttentionBlock({
+  tone,
+  icon,
+  text,
+  detail,
+  action,
+}: {
+  tone: "warning" | "error";
+  icon: ReactNode;
+  text: ReactNode;
+  detail: ReactNode;
+  action: ReactNode;
+}) {
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "flex flex-col gap-3 rounded-lg border p-3",
+        tone === "warning"
+          ? "border-amber-500/30 bg-amber-500/5 [&_[data-slot=attention-icon]]:text-amber-600"
+          : "border-destructive/30 bg-destructive/5 [&_[data-slot=attention-icon]]:text-destructive",
+      )}
+    >
+      <div className="flex gap-2">
+        <span
+          data-slot="attention-icon"
+          className="mt-0.5 shrink-0 [&_svg]:size-4"
+        >
+          {icon}
+        </span>
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="text-[13px] leading-relaxed break-words">{text}</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {detail}
+          </p>
+        </div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/** Only when the assistant is not answering: stopped for a person, or paused by an advisor. */
+function AssistantGroup({ thread }: { thread: Thread }) {
+  const { run, pending } = useThreadActionWithToast(thread.id);
+
+  if (thread.needsHuman) {
+    return (
+      <Group
+        title="Asistente"
+        aside={<StatusPill tone="warning">Detenido</StatusPill>}
+      >
+        <AttentionBlock
+          tone="warning"
+          icon={<HandIcon />}
+          text={needsHumanReasonLabel(thread.needsHumanReason)}
+          detail="Contactá al lead desde tu WhatsApp y, cuando esté resuelto, devolvele la conversación al asistente."
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full bg-background"
+              onClick={() => run("clear-needs-human")}
+              disabled={pending !== null}
+            >
+              {pending === "clear-needs-human" ? <Spinner /> : <CheckIcon />}
+              Marcar como atendida
+            </Button>
+          }
+        />
+      </Group>
+    );
+  }
+
+  if (thread.paused) {
+    return (
+      <Group
+        title="Asistente"
+        aside={<StatusPill tone="muted">Pausado</StatusPill>}
+      >
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          Un asesor tomó esta conversación. Los mensajes nuevos se guardan, pero
+          el asistente no responde.
+        </p>
+      </Group>
+    );
+  }
+
+  return null;
+}
+
+function HubSpotGroup({ thread }: { thread: Thread }) {
+  const { run, pending } = useThreadActionWithToast(thread.id);
+  const { crm } = thread;
+
+  return (
+    <Group
+      title="HubSpot"
+      aside={
+        <StatusPill tone={CRM_TONE[crm.status]}>
+          {CRM_SHORT[crm.status]}
+        </StatusPill>
+      }
+    >
+      {crm.status === "failed" ? (
+        <AttentionBlock
+          tone="error"
+          icon={<CircleAlertIcon />}
+          text={crm.lastError ?? "Error desconocido."}
+          detail={
+            crm.retriesExhausted
+              ? "Se agotaron los reintentos automáticos."
+              : "Se reintenta solo en unos minutos."
+          }
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full bg-background"
+              onClick={() => run("crm-sync")}
+              disabled={pending !== null}
+            >
+              {pending === "crm-sync" ? <Spinner /> : <RefreshCwIcon />}
+              Reintentar
+            </Button>
+          }
+        />
+      ) : (
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          {crm.status === "synced"
+            ? `Contacto y conversación guardados el ${formatDateTime(crm.syncedAt)}.`
+            : crm.status === "pending"
+              ? "Guardando el contacto y la conversación…"
+              : "Se guarda cuando el lead se deriva, la conversación se cierra o el asistente se detiene."}
+        </p>
+      )}
+    </Group>
+  );
 }
 
 export function LeadDetails({ thread }: { thread: Thread }) {
-  const router = useRouter();
-  const { run, pending } = useThreadActionWithToast(thread.id);
-  const remove = useDeleteThread();
-  const [confirming, setConfirming] = useState(false);
-
   const knows =
     thread.knowsProjects === null ? null : thread.knowsProjects ? "Sí" : "No";
+  const answers = [thread.interest, thread.budget, knows].filter(
+    (value) => value !== null && value !== "",
+  ).length;
+  // What needs action goes first; a HubSpot that is fine is reference, at the end.
+  const crmFailed = thread.crm.status === "failed";
 
   return (
-    <Card className="shadow-xs">
-      <CardHeader>
-        <CardTitle>Datos del lead</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <dl className="grid gap-3">
-          <Detail label="Interés" value={thread.interest} />
-          <Detail label="Presupuesto" value={thread.budget} />
-          <Detail label="Conoce los proyectos" value={knows} />
+    <Panel title="Lead" className="flex min-h-0 flex-col">
+      <div className="min-h-0 flex-1 divide-y overflow-y-auto">
+        <AssistantGroup thread={thread} />
+        {crmFailed ? <HubSpotGroup thread={thread} /> : null}
+        <Group
+          title="Calificación"
+          aside={
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {answers} de 3
+            </span>
+          }
+        >
+          <Detail
+            label="Qué busca"
+            value={thread.interest}
+            answered={Boolean(thread.interest)}
+          />
+          <Detail
+            label="Presupuesto"
+            value={thread.budget}
+            answered={Boolean(thread.budget)}
+          />
+          <Detail
+            label="Conoce los proyectos"
+            value={knows}
+            answered={knows !== null}
+          />
           <Detail label="Horario para llamar" value={thread.callTime} />
+        </Group>
+        <Group title="Contacto">
+          <Detail label="Teléfono" value={formatPhone(thread.phone)} />
           {thread.email ? <Detail label="Email" value={thread.email} /> : null}
           <Detail
             label="Origen"
             value={thread.source === "form" ? "Formulario" : "WhatsApp"}
           />
-        </dl>
-        <Separator />
-        <dl className="grid gap-3">
-          <Detail label="HubSpot" value={crmLabel(thread.crm)} />
-          <Detail
-            label="Ventana de respuesta de WhatsApp"
-            value={replyWindowText(thread.replyWindowClosesAt)}
-          />
           <Detail
             label="Primer contacto"
             value={formatDateTime(thread.createdAt)}
           />
-        </dl>
-        <Separator />
-        <div className="flex flex-col gap-2">
-          {thread.paused ? (
-            <Button
-              variant="outline"
-              onClick={() => run("resume")}
-              disabled={pending !== null}
-            >
-              {pending === "resume" ? <Spinner /> : <PlayIcon />}
-              Reanudar asistente
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              onClick={() => run("pause")}
-              disabled={pending !== null}
-            >
-              {pending === "pause" ? <Spinner /> : <PauseIcon />}
-              Pausar asistente
-            </Button>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Pausá cuando un asesor tome la conversación desde su WhatsApp, así
-            el asistente no se mete.
-          </p>
-          <Button
-            variant="ghost"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setConfirming(true)}
-          >
-            <Trash2Icon />
-            Eliminar conversación
-          </Button>
-        </div>
-      </CardContent>
-      <AlertDialog open={confirming} onOpenChange={setConfirming}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta conversación?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se borran la conversación y todos sus mensajes de LeadScope. Usalo
-              cuando el lead pide que borremos sus datos (Ley 18.331). El
-              contacto en HubSpot no se modifica.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={() =>
-                remove.mutate(thread.id, {
-                  onSuccess: () => {
-                    toast.success("Conversación eliminada.");
-                    router.replace("/threads");
-                  },
-                  onError: (error) => toast.error(error.message),
-                })
-              }
-            >
-              {remove.isPending ? <Spinner /> : null}
-              Eliminar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
+        </Group>
+        {crmFailed ? null : <HubSpotGroup thread={thread} />}
+      </div>
+    </Panel>
   );
 }

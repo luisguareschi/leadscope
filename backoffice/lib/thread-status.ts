@@ -1,3 +1,4 @@
+import type { Tone } from "@/components/panel";
 import type { Thread, ThreadStatusFilter } from "./types";
 
 export type DisplayStatus =
@@ -32,26 +33,68 @@ export function displayStatus(
 
 export const STATUS_META: Record<
   DisplayStatus,
-  { label: string; className: string }
+  { label: string; tone: Tone; description: string }
 > = {
   needs_human: {
     label: "Requiere asesor",
-    className: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
+    tone: "warning",
+    description:
+      "El asistente se detuvo (una queja, un tema prohibido o un error) y no responde hasta que alguien la marque como atendida.",
   },
-  paused: { label: "Pausada", className: "bg-muted text-muted-foreground" },
-  new: { label: "Nueva", className: "bg-primary/10 text-primary" },
-  qualifying: { label: "Calificando", className: "bg-primary/10 text-primary" },
-  answering: { label: "Respondiendo", className: "bg-primary/10 text-primary" },
+  paused: {
+    label: "Pausada",
+    tone: "muted",
+    description:
+      "Un asesor tomó la conversación. El asistente no responde hasta que la reanuden.",
+  },
+  new: {
+    label: "Nueva",
+    tone: "pending",
+    description: "El lead escribió por primera vez y el asistente lo saluda.",
+  },
+  qualifying: {
+    label: "Calificando",
+    tone: "pending",
+    description:
+      "El asistente hace las tres preguntas: qué busca, presupuesto y si conoce los proyectos.",
+  },
+  answering: {
+    label: "Respondiendo",
+    tone: "pending",
+    description:
+      "El asistente responde las preguntas del lead con lo que hay en Conocimiento, por ejemplo cuando vuelve a escribir después de una derivación.",
+  },
   scheduling: {
     label: "Coordinando llamada",
-    className: "bg-sky-500/15 text-sky-800 dark:text-sky-300",
+    tone: "info",
+    description:
+      "El lead respondió las tres preguntas y el asistente le pide un horario para que lo llame un asesor.",
   },
   handed_off: {
     label: "Derivada",
-    className: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
+    tone: "ok",
+    description:
+      "El lead dio un horario y espera la llamada de un asesor. Ya está en HubSpot.",
   },
-  closed: { label: "Cerrada", className: "bg-muted text-muted-foreground" },
+  closed: {
+    label: "Cerrada",
+    tone: "muted",
+    description:
+      "El lead dijo que no le interesa. Queda en HubSpot sin asesor; si vuelve a escribir, se reabre.",
+  },
 };
+
+/** Which statuses each filter shows, for explaining them. */
+export const FILTER_STATUSES: Array<{
+  filter: Exclude<ThreadStatusFilter, "all">;
+  statuses: DisplayStatus[];
+}> = [
+  { filter: "active", statuses: ["new", "qualifying", "answering"] },
+  { filter: "handoff", statuses: ["scheduling", "handed_off"] },
+  { filter: "needs_human", statuses: ["needs_human"] },
+  { filter: "paused", statuses: ["paused"] },
+  { filter: "closed", statuses: ["closed"] },
+];
 
 export const FILTERS: Array<{ value: ThreadStatusFilter; label: string }> = [
   { value: "all", label: "Todas" },

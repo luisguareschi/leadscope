@@ -11,9 +11,10 @@ import {
   Trash2Icon,
   UsersIcon,
 } from "lucide-react";
+import { cn } from "cn";
 import { DeleteCompanyDialog } from "@/components/companies/delete-company-dialog";
 import { OperatorsPanel } from "@/components/operators/operators-panel";
-import { Badge } from "@/components/ui/badge";
+import { StatusPill } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -36,16 +37,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useAuth } from "@/lib/auth";
-import { formatDateTime } from "@/lib/format";
+import { formatDate, initials } from "@/lib/format";
 import { useCompanyAction } from "@/lib/queries";
 import { enterCompany } from "@/lib/support";
 import type { CompanySummary } from "@/lib/types";
@@ -62,9 +55,11 @@ function operatorsLabel(company: CompanySummary): string {
 export function CompaniesTable({
   companies,
   showingArchived,
+  onCreate,
 }: {
   companies: CompanySummary[];
   showingArchived: boolean;
+  onCreate: () => void;
 }) {
   const { email } = useAuth();
   const action = useCompanyAction();
@@ -83,10 +78,13 @@ export function CompaniesTable({
           </EmptyTitle>
           <EmptyDescription>
             {showingArchived
-              ? "Creá la primera con el formulario. Quedan la empresa y su operador."
-              : "Creá una con el formulario, o mostrá las archivadas para restaurar una."}
+              ? "Creá la primera: quedan la empresa y su operador, que recibe la invitación."
+              : "Creá una, o mostrá las archivadas para restaurar una."}
           </EmptyDescription>
         </EmptyHeader>
+        <Button size="sm" onClick={onCreate}>
+          Nueva empresa
+        </Button>
       </Empty>
     );
   }
@@ -109,113 +107,124 @@ export function CompaniesTable({
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="pl-4 lg:pl-6">Empresa</TableHead>
-            <TableHead>Identificador</TableHead>
-            <TableHead className="hidden sm:table-cell">Operadores</TableHead>
-            <TableHead className="hidden text-right md:table-cell">
-              Creada
-            </TableHead>
-            <TableHead className="w-36 pr-4 lg:pr-6">
-              <span className="sr-only">Acciones</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {companies.map((company) => {
-            const archived = company.archivedAt !== null;
-            return (
-              <TableRow
-                key={company.id}
-                className={archived ? "bg-muted/40" : undefined}
+      <ul className="divide-y">
+        {companies.map((company) => {
+          const archived = company.archivedAt !== null;
+          const active = company.operators.filter((item) => !item.archived);
+          return (
+            <li
+              key={company.id}
+              className={cn(
+                "grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 px-5 py-3 @3xl/content:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,16rem)_9rem_auto] @3xl/content:gap-x-5",
+                archived && "bg-muted/30",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-9 items-center justify-center rounded-lg border bg-muted/40 text-xs font-medium",
+                  archived && "text-muted-foreground",
+                )}
               >
-                <TableCell className="pl-4 font-medium lg:pl-6">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={archived ? "text-muted-foreground" : ""}>
-                      {company.name}
-                    </span>
-                    {archived ? (
-                      <Badge variant="outline">Archivada</Badge>
-                    ) : null}
-                  </div>
-                </TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">
-                  {company.slug}
-                </TableCell>
-                <TableCell className="hidden max-w-72 truncate sm:table-cell">
-                  {operatorsLabel(company)}
-                </TableCell>
-                <TableCell className="hidden text-right text-muted-foreground md:table-cell">
-                  {formatDateTime(company.createdAt)}
-                </TableCell>
-                <TableCell className="pr-4 lg:pr-6">
-                  <div className="flex items-center justify-end gap-1">
-                    {archived ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={action.isPending}
-                        onClick={() => toggleArchive(company)}
-                      >
-                        <ArchiveRestoreIcon />
-                        Restaurar
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={!email}
-                        onClick={() => {
-                          if (email) enterCompany(company.id, email);
-                        }}
-                        aria-label={`Entrar a ${company.name}`}
-                      >
-                        <LogInIcon />
-                        Entrar
-                      </Button>
+                {initials(company.name)}
+              </span>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={cn(
+                      "truncate text-sm font-medium",
+                      archived && "text-muted-foreground",
                     )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`Más acciones para ${company.name}`}
-                          />
-                        }
-                      >
-                        <EllipsisVerticalIcon />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-48">
-                        <DropdownMenuItem onClick={() => setManaging(company)}>
-                          <UsersIcon />
-                          Operadores
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => toggleArchive(company)}
-                        >
-                          {archived ? <ArchiveRestoreIcon /> : <ArchiveIcon />}
-                          {archived ? "Restaurar" : "Archivar"}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setDeleting(company)}
-                        >
-                          <Trash2Icon />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                  >
+                    {company.name}
+                  </span>
+                  {archived ? (
+                    <StatusPill tone="muted">Archivada</StatusPill>
+                  ) : null}
+                </div>
+                <span className="truncate font-mono text-xs text-muted-foreground">
+                  {company.slug}
+                </span>
+              </div>
+              <div className="hidden min-w-0 flex-col gap-0.5 @3xl/content:flex">
+                <span className="text-sm tabular-nums">
+                  {active.length === 1
+                    ? "1 operador"
+                    : `${active.length} operadores`}
+                </span>
+                <span
+                  className="truncate text-xs text-muted-foreground"
+                  title={operatorsLabel(company)}
+                >
+                  {operatorsLabel(company)}
+                </span>
+              </div>
+              <span className="hidden text-right text-xs text-muted-foreground tabular-nums @3xl/content:block">
+                Creada el
+                <span className="block text-sm text-foreground">
+                  {formatDate(company.createdAt)}
+                </span>
+              </span>
+              <div className="flex items-center justify-end gap-1">
+                {archived ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={action.isPending}
+                    onClick={() => toggleArchive(company)}
+                  >
+                    <ArchiveRestoreIcon />
+                    Restaurar
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!email}
+                    onClick={() => {
+                      if (email) enterCompany(company.id, email);
+                    }}
+                    aria-label={`Entrar a ${company.name}`}
+                  >
+                    <LogInIcon />
+                    Entrar
+                  </Button>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Más acciones para ${company.name}`}
+                      />
+                    }
+                  >
+                    <EllipsisVerticalIcon />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-48">
+                    <DropdownMenuItem onClick={() => setManaging(company)}>
+                      <UsersIcon />
+                      Operadores
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toggleArchive(company)}>
+                      {archived ? <ArchiveRestoreIcon /> : <ArchiveIcon />}
+                      {archived ? "Restaurar" : "Archivar"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setDeleting(company)}
+                    >
+                      <Trash2Icon />
+                      Eliminar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
 
       <Sheet
         open={managing !== null}
@@ -229,7 +238,7 @@ export function CompaniesTable({
               y se puede deshacer.
             </SheetDescription>
           </SheetHeader>
-          <div className="px-4 pb-6">
+          <div className="px-5 pt-1 pb-6">
             {managing ? (
               <OperatorsPanel
                 companyId={managing.id}

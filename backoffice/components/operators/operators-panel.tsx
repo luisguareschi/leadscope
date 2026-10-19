@@ -20,8 +20,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { StatusPill } from "@/components/panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -41,7 +42,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, initials } from "@/lib/format";
 import { toastInvite } from "@/lib/invite";
 import {
   useAddOperator,
@@ -53,14 +54,15 @@ import {
 import type { AuthUserRemoval, Operator } from "@/lib/types";
 
 function StatusBadge({ operator }: { operator: Operator }) {
-  if (operator.archivedAt) return <Badge variant="outline">Archivado</Badge>;
+  if (operator.archivedAt)
+    return <StatusPill tone="muted">Archivado</StatusPill>;
   if (operator.inviteError)
-    return <Badge variant="destructive">Invitación fallida</Badge>;
+    return <StatusPill tone="error">Invitación fallida</StatusPill>;
   if (operator.invitedAt)
-    return <Badge variant="secondary">Invitación enviada</Badge>;
+    return <StatusPill tone="pending">Invitación enviada</StatusPill>;
   if (operator.hasLogin)
-    return <Badge variant="secondary">Usuario vinculado</Badge>;
-  return <Badge variant="outline">Sin invitación</Badge>;
+    return <StatusPill tone="ok">Usuario vinculado</StatusPill>;
+  return <StatusPill tone="warning">Sin invitación</StatusPill>;
 }
 
 function detailOf(operator: Operator): string | null {
@@ -170,7 +172,7 @@ export function OperatorsPanel({
           <Skeleton className="h-14 w-full" />
         </div>
       ) : query.data.operators.length === 0 ? (
-        <Empty className="border">
+        <Empty className="rounded-xl border">
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <UsersIcon />
@@ -182,7 +184,7 @@ export function OperatorsPanel({
           </EmptyHeader>
         </Empty>
       ) : (
-        <ul className="divide-y rounded-lg border">
+        <ul className="divide-y overflow-hidden rounded-xl border bg-card shadow-xs">
           {query.data.operators.map((operator) => {
             const busy =
               (resend.isPending && resend.variables === operator.id) ||
@@ -191,9 +193,14 @@ export function OperatorsPanel({
             return (
               <li
                 key={operator.id}
-                className="flex items-start justify-between gap-3 px-3 py-3"
+                className="flex items-center gap-3 px-4 py-3"
               >
-                <div className="flex min-w-0 flex-col gap-1">
+                <Avatar className="size-8">
+                  <AvatarFallback className="text-xs">
+                    {initials(operator.email)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate text-sm font-medium">
                       {operator.email}
