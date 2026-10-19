@@ -31,17 +31,70 @@ export function displayStatus(
   }
 }
 
-export const STATUS_META: Record<DisplayStatus, { label: string; tone: Tone }> =
-  {
-    needs_human: { label: "Requiere asesor", tone: "warning" },
-    paused: { label: "Pausada", tone: "muted" },
-    new: { label: "Nueva", tone: "pending" },
-    qualifying: { label: "Calificando", tone: "pending" },
-    answering: { label: "Respondiendo", tone: "pending" },
-    scheduling: { label: "Coordinando llamada", tone: "info" },
-    handed_off: { label: "Derivada", tone: "ok" },
-    closed: { label: "Cerrada", tone: "muted" },
-  };
+export const STATUS_META: Record<
+  DisplayStatus,
+  { label: string; tone: Tone; description: string }
+> = {
+  needs_human: {
+    label: "Requiere asesor",
+    tone: "warning",
+    description:
+      "El asistente se detuvo (una queja, un tema prohibido o un error) y no responde hasta que alguien la marque como atendida.",
+  },
+  paused: {
+    label: "Pausada",
+    tone: "muted",
+    description:
+      "Un asesor tomó la conversación. El asistente no responde hasta que la reanuden.",
+  },
+  new: {
+    label: "Nueva",
+    tone: "pending",
+    description: "El lead escribió por primera vez y el asistente lo saluda.",
+  },
+  qualifying: {
+    label: "Calificando",
+    tone: "pending",
+    description:
+      "El asistente hace las tres preguntas: qué busca, presupuesto y si conoce los proyectos.",
+  },
+  answering: {
+    label: "Respondiendo",
+    tone: "pending",
+    description:
+      "El asistente responde las preguntas del lead con lo que hay en Conocimiento, por ejemplo cuando vuelve a escribir después de una derivación.",
+  },
+  scheduling: {
+    label: "Coordinando llamada",
+    tone: "info",
+    description:
+      "El lead respondió las tres preguntas y el asistente le pide un horario para que lo llame un asesor.",
+  },
+  handed_off: {
+    label: "Derivada",
+    tone: "ok",
+    description:
+      "El lead dio un horario y espera la llamada de un asesor. Ya está en HubSpot.",
+  },
+  closed: {
+    label: "Cerrada",
+    tone: "muted",
+    description:
+      "El lead dijo que no le interesa. Queda en HubSpot sin asesor; si vuelve a escribir, se reabre.",
+  },
+};
+
+/** Which statuses each filter shows, for explaining them. */
+export const FILTER_STATUSES: Array<{
+  filter: Exclude<ThreadStatusFilter, "all">;
+  statuses: DisplayStatus[];
+}> = [
+  { filter: "active", statuses: ["new", "qualifying", "answering"] },
+  { filter: "handoff", statuses: ["scheduling", "handed_off"] },
+  { filter: "needs_human", statuses: ["needs_human"] },
+  { filter: "paused", statuses: ["paused"] },
+  { filter: "closed", statuses: ["closed"] },
+];
 
 export const FILTERS: Array<{ value: ThreadStatusFilter; label: string }> = [
   { value: "all", label: "Todas" },

@@ -1,12 +1,20 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CheckIcon } from "lucide-react";
+import {
+  CheckIcon,
+  CircleAlertIcon,
+  HandIcon,
+  RefreshCwIcon,
+} from "lucide-react";
 import { cn } from "cn";
 import { Panel, StatusPill, type Tone } from "@/components/panel";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime, formatPhone } from "@/lib/format";
+import { needsHumanReasonLabel } from "@/lib/thread-status";
 import type { Thread } from "@/lib/types";
-import { crmLabel } from "./crm-indicator";
+import { useThreadActionWithToast } from "./use-thread-action";
 
 function Group({
   title,
@@ -77,64 +85,200 @@ const CRM_SHORT: Record<Thread["crm"]["status"], string> = {
   none: "Sin guardar",
 };
 
+/** Something the operator has to act on, with the one action that fixes it. */
+function AttentionBlock({
+  tone,
+  icon,
+  text,
+  detail,
+  action,
+}: {
+  tone: "warning" | "error";
+  icon: ReactNode;
+  text: ReactNode;
+  detail: ReactNode;
+  action: ReactNode;
+}) {
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "flex flex-col gap-3 rounded-lg border p-3",
+        tone === "warning"
+          ? "border-amber-500/30 bg-amber-500/5 [&_[data-slot=attention-icon]]:text-amber-600"
+          : "border-destructive/30 bg-destructive/5 [&_[data-slot=attention-icon]]:text-destructive",
+      )}
+    >
+      <div className="flex gap-2">
+        <span
+          data-slot="attention-icon"
+          className="mt-0.5 shrink-0 [&_svg]:size-4"
+        >
+          {icon}
+        </span>
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="text-[13px] leading-relaxed break-words">{text}</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {detail}
+          </p>
+        </div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/** Only when the assistant is not answering: stopped for a person, or paused by an advisor. */
+function AssistantGroup({ thread }: { thread: Thread }) {
+  const { run, pending } = useThreadActionWithToast(thread.id);
+
+  if (thread.needsHuman) {
+    return (
+      <Group
+        title="Asistente"
+        aside={<StatusPill tone="warning">Detenido</StatusPill>}
+      >
+        <AttentionBlock
+          tone="warning"
+          icon={<HandIcon />}
+          text={needsHumanReasonLabel(thread.needsHumanReason)}
+          detail="Contactá al lead desde tu WhatsApp y, cuando esté resuelto, devolvele la conversación al asistente."
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full bg-background"
+              onClick={() => run("clear-needs-human")}
+              disabled={pending !== null}
+            >
+              {pending === "clear-needs-human" ? <Spinner /> : <CheckIcon />}
+              Marcar como atendida
+            </Button>
+          }
+        />
+      </Group>
+    );
+  }
+
+  if (thread.paused) {
+    return (
+      <Group
+        title="Asistente"
+        aside={<StatusPill tone="muted">Pausado</StatusPill>}
+      >
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          Un asesor tomó esta conversación. Los mensajes nuevos se guardan, pero
+          el asistente no responde.
+        </p>
+      </Group>
+    );
+  }
+
+  return null;
+}
+
+function HubSpotGroup({ thread }: { thread: Thread }) {
+  const { run, pending } = useThreadActionWithToast(thread.id);
+  const { crm } = thread;
+
+  return (
+    <Group
+      title="HubSpot"
+      aside={
+        <StatusPill tone={CRM_TONE[crm.status]}>
+          {CRM_SHORT[crm.status]}
+        </StatusPill>
+      }
+    >
+      {crm.status === "failed" ? (
+        <AttentionBlock
+          tone="error"
+          icon={<CircleAlertIcon />}
+          text={crm.lastError ?? "Error desconocido."}
+          detail={
+            crm.retriesExhausted
+              ? "Se agotaron los reintentos automáticos."
+              : "Se reintenta solo en unos minutos."
+          }
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full bg-background"
+              onClick={() => run("crm-sync")}
+              disabled={pending !== null}
+            >
+              {pending === "crm-sync" ? <Spinner /> : <RefreshCwIcon />}
+              Reintentar
+            </Button>
+          }
+        />
+      ) : (
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          {crm.status === "synced"
+            ? `Contacto y conversación guardados el ${formatDateTime(crm.syncedAt)}.`
+            : crm.status === "pending"
+              ? "Guardando el contacto y la conversación…"
+              : "Se guarda cuando el lead se deriva, la conversación se cierra o el asistente se detiene."}
+        </p>
+      )}
+    </Group>
+  );
+}
+
 export function LeadDetails({ thread }: { thread: Thread }) {
   const knows =
     thread.knowsProjects === null ? null : thread.knowsProjects ? "Sí" : "No";
   const answers = [thread.interest, thread.budget, knows].filter(
     (value) => value !== null && value !== "",
   ).length;
+  // What needs action goes first; a HubSpot that is fine is reference, at the end.
+  const crmFailed = thread.crm.status === "failed";
 
   return (
-    <Panel title="Lead">
-      <Group
-        title="Calificación"
-        aside={
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {answers} de 3
-          </span>
-        }
-      >
-        <Detail
-          label="Qué busca"
-          value={thread.interest}
-          answered={Boolean(thread.interest)}
-        />
-        <Detail
-          label="Presupuesto"
-          value={thread.budget}
-          answered={Boolean(thread.budget)}
-        />
-        <Detail
-          label="Conoce los proyectos"
-          value={knows}
-          answered={knows !== null}
-        />
-        <Detail label="Horario para llamar" value={thread.callTime} />
-      </Group>
-      <Group title="Contacto">
-        <Detail label="Teléfono" value={formatPhone(thread.phone)} />
-        {thread.email ? <Detail label="Email" value={thread.email} /> : null}
-        <Detail
-          label="Origen"
-          value={thread.source === "form" ? "Formulario" : "WhatsApp"}
-        />
-        <Detail
-          label="Primer contacto"
-          value={formatDateTime(thread.createdAt)}
-        />
-      </Group>
-      <Group
-        title="HubSpot"
-        aside={
-          <StatusPill tone={CRM_TONE[thread.crm.status]}>
-            {CRM_SHORT[thread.crm.status]}
-          </StatusPill>
-        }
-      >
-        <p className="text-[13px] leading-relaxed text-muted-foreground">
-          {crmLabel(thread.crm)}
-        </p>
-      </Group>
+    <Panel title="Lead" className="flex min-h-0 flex-col">
+      <div className="min-h-0 flex-1 divide-y overflow-y-auto">
+        <AssistantGroup thread={thread} />
+        {crmFailed ? <HubSpotGroup thread={thread} /> : null}
+        <Group
+          title="Calificación"
+          aside={
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {answers} de 3
+            </span>
+          }
+        >
+          <Detail
+            label="Qué busca"
+            value={thread.interest}
+            answered={Boolean(thread.interest)}
+          />
+          <Detail
+            label="Presupuesto"
+            value={thread.budget}
+            answered={Boolean(thread.budget)}
+          />
+          <Detail
+            label="Conoce los proyectos"
+            value={knows}
+            answered={knows !== null}
+          />
+          <Detail label="Horario para llamar" value={thread.callTime} />
+        </Group>
+        <Group title="Contacto">
+          <Detail label="Teléfono" value={formatPhone(thread.phone)} />
+          {thread.email ? <Detail label="Email" value={thread.email} /> : null}
+          <Detail
+            label="Origen"
+            value={thread.source === "form" ? "Formulario" : "WhatsApp"}
+          />
+          <Detail
+            label="Primer contacto"
+            value={formatDateTime(thread.createdAt)}
+          />
+        </Group>
+        {crmFailed ? null : <HubSpotGroup thread={thread} />}
+      </div>
     </Panel>
   );
 }

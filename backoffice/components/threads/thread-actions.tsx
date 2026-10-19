@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useDeleteThread } from "@/lib/queries";
 import type { Thread } from "@/lib/types";
-import { useThreadActionWithToast } from "./thread-alerts";
+import { useThreadActionWithToast } from "./use-thread-action";
 
 export function ThreadActions({ thread }: { thread: Thread }) {
   const router = useRouter();

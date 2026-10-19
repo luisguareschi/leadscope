@@ -12,6 +12,7 @@ import {
   MapPinIcon,
   MicIcon,
   StickerIcon,
+  TimerOffIcon,
   VideoIcon,
 } from "lucide-react";
 import { formatDayLabel, formatTime } from "@/lib/format";
@@ -40,7 +41,10 @@ function DeliveryStatus({ status }: { status: string | null }) {
   }
   if (status === "read")
     return (
-      <CheckCheckIcon className="size-3.5 text-sky-600" aria-label="Leído" />
+      <CheckCheckIcon
+        className="size-3.5 text-emerald-600"
+        aria-label="Leído"
+      />
     );
   if (status === "delivered")
     return <CheckCheckIcon className="size-3.5" aria-label="Entregado" />;
@@ -60,23 +64,28 @@ function Bubble({
   return (
     <div
       className={cn(
-        "flex",
-        outbound ? "justify-end" : "justify-start",
-        continued ? "mt-1" : "mt-3",
+        "flex max-w-[85%] flex-col gap-1 sm:max-w-[70%]",
+        outbound ? "items-end self-end" : "items-start self-start",
+        continued ? "mt-2" : "mt-4",
       )}
     >
       <div
         className={cn(
-          "max-w-[85%] rounded-2xl border px-3.5 py-2 text-sm sm:max-w-[70%]",
+          "rounded-2xl border px-3.5 py-2 text-sm",
           outbound
-            ? "border-primary/10 bg-primary/[0.07] text-foreground"
+            ? "border-primary/10 bg-primary/80 text-primary-foreground"
             : "bg-card shadow-xs",
           !continued && (outbound ? "rounded-tr-md" : "rounded-tl-md"),
           message.status === "failed" && "border-destructive/40",
         )}
       >
         {meta ? (
-          <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground [&_svg]:size-3.5">
+          <div
+            className={cn(
+              "mb-1 flex items-center gap-1.5 text-xs font-medium [&_svg]:size-3.5",
+              outbound ? "opacity-80" : "text-muted-foreground",
+            )}
+          >
             {meta.icon}
             {meta.label}
           </div>
@@ -85,18 +94,32 @@ function Bubble({
           <p className="break-words whitespace-pre-wrap">{message.body}</p>
         ) : null}
         {!message.body && !meta ? (
-          <p className="text-muted-foreground italic">(sin texto)</p>
+          <p
+            className={cn(
+              "italic",
+              outbound ? "opacity-80" : "text-muted-foreground",
+            )}
+          >
+            (sin texto)
+          </p>
         ) : null}
-        <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-muted-foreground tabular-nums">
-          {formatTime(message.sentAt)}
-          {outbound ? <DeliveryStatus status={message.status} /> : null}
-        </div>
+      </div>
+      <div className="flex items-center gap-1 px-1 text-[11px] text-muted-foreground tabular-nums">
+        {formatTime(message.sentAt)}
+        {outbound ? <DeliveryStatus status={message.status} /> : null}
       </div>
     </div>
   );
 }
 
-export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
+export function ChatTranscript({
+  messages,
+  endNote,
+}: {
+  messages: ChatMessage[];
+  /** A line after the last message, like a system message in WhatsApp. */
+  endNote?: string | null;
+}) {
   const bottom = useRef<HTMLDivElement>(null);
   const count = messages.length;
 
@@ -127,6 +150,14 @@ export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
           </Fragment>
         );
       })}
+      {endNote ? (
+        <div className="mt-5 flex justify-center">
+          <p className="flex max-w-sm items-start gap-2 rounded-lg border bg-background px-3 py-2 text-center text-xs leading-relaxed text-muted-foreground">
+            <TimerOffIcon className="mt-0.5 size-3.5 shrink-0" />
+            {endNote}
+          </p>
+        </div>
+      ) : null}
       <div ref={bottom} />
     </div>
   );

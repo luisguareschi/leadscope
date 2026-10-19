@@ -8,11 +8,15 @@ import { ChatTranscript } from "@/components/threads/chat-transcript";
 import { LeadDetails } from "@/components/threads/lead-details";
 import { StatusBadge } from "@/components/threads/status-badge";
 import { ThreadActions } from "@/components/threads/thread-actions";
-import { ThreadAlerts } from "@/components/threads/thread-alerts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ApiError } from "@/lib/api";
 import {
   formatDayLabel,
@@ -24,19 +28,33 @@ import {
 import { useThread } from "@/lib/queries";
 import type { Thread } from "@/lib/types";
 
+function windowClosed(closesAt: Thread["replyWindowClosesAt"]): boolean {
+  return !closesAt || new Date(closesAt) <= new Date();
+}
+
 function ReplyWindow({
   closesAt,
 }: {
   closesAt: Thread["replyWindowClosesAt"];
 }) {
-  if (!closesAt || new Date(closesAt) <= new Date())
-    return <StatusPill tone="muted">Ventana de 24 h cerrada</StatusPill>;
-  const day = formatDayLabel(closesAt);
-  const when = day === "Hoy" ? "hoy" : day === "Ayer" ? "ayer" : "mañana";
+  const closed = windowClosed(closesAt);
+  let label = "Ventana de 24 h cerrada";
+  if (!closed && closesAt) {
+    const day = formatDayLabel(closesAt);
+    const when = day === "Hoy" ? "hoy" : day === "Ayer" ? "ayer" : "mañana";
+    label = `Puede responder hasta ${when} ${formatTime(closesAt)}`;
+  }
   return (
-    <StatusPill tone="ok">
-      Puede responder hasta {when} {formatTime(closesAt)}
-    </StatusPill>
+    <Tooltip>
+      <TooltipTrigger render={<span className="inline-flex" />}>
+        <StatusPill tone={closed ? "muted" : "ok"}>{label}</StatusPill>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-64">
+        WhatsApp deja responder hasta 24 horas después del último mensaje del
+        lead. Después, el asistente no puede escribirle hasta que el lead vuelva
+        a escribir.
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -79,7 +97,8 @@ export default function ThreadPage() {
   const data = query.data;
   const thread = data?.thread;
   return (
-    <div className="@container/content flex flex-col gap-4 px-4 lg:px-6">
+    // Fills the panel's scroll area exactly: each column scrolls inside itself, never the page.
+    <div className="@container/content flex min-h-0 flex-1 flex-col gap-4 px-4 lg:px-6">
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {back}
         {thread ? (
@@ -114,10 +133,10 @@ export default function ThreadPage() {
         )}
       </header>
 
-      {thread ? <ThreadAlerts thread={thread} /> : null}
-
-      <div className="grid items-start gap-4 @4xl/content:grid-cols-[minmax(0,1fr)_19rem]">
+      {/* A basis taller than any screen, so the row always shrinks to the space that is left. */}
+      <div className="grid min-h-0 flex-[1_1_100svh] grid-cols-2 grid-rows-[minmax(0,1fr)] gap-4">
         <Panel
+          className="flex min-h-0 flex-col"
           title="Conversación"
           description={
             data
@@ -134,10 +153,20 @@ export default function ThreadPage() {
         >
           <div
             data-chat-scroll
-            className="h-[calc(100svh-15rem)] min-h-96 overflow-y-auto bg-muted/20"
+            className="min-h-0 flex-1 overflow-y-auto bg-muted/20"
           >
             {data ? (
-              <ChatTranscript messages={data.messages} />
+              <ChatTranscript
+                messages={data.messages}
+                endNote={
+                  windowClosed(data.thread.replyWindowClosesAt) &&
+                  data.messages.length > 0 &&
+                  !data.thread.paused &&
+                  data.thread.state !== "closed"
+                    ? "Pasaron más de 24 horas desde el último mensaje del lead. El asistente no puede escribirle hasta que vuelva a escribir."
+                    : null
+                }
+              />
             ) : (
               <div className="flex flex-col gap-3 p-5">
                 <Skeleton className="h-12 w-2/3 rounded-2xl" />
@@ -150,7 +179,7 @@ export default function ThreadPage() {
         {thread ? (
           <LeadDetails thread={thread} />
         ) : (
-          <Skeleton className="h-96 w-full rounded-xl" />
+          <Skeleton className="h-full w-full rounded-xl" />
         )}
       </div>
     </div>
