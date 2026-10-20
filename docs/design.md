@@ -110,8 +110,8 @@ Operators edit all of this in Configuración (see [Company settings](#company-se
 
 - Display name.
 - Language and tone (for Altamira: Uruguayan Spanish with “vos”).
-- The qualifying questions.
-- Forbidden topics (for Altamira: future rental yield, guaranteed returns).
+- The information to collect (`collect`): up to 10 items, each a key (how it is stored on the thread), a name (for the panel and HubSpot), a short description of what to find out (for the prompt, not a question to read out), and required or optional. Altamira's, the seed's, and the starter config's are interest, budget, and whether they know the projects, all required.
+- Forbidden topics in plain language (for Altamira: future rental yield, guaranteed returns). No regex patterns.
 - Knowledge limits (`knowledge.*`): 60,000 characters of extracted text per file, 150,000 per company (about 40k tokens of prompt), and 15 MB per original upload. Brochure PDFs are large because of their images, so the upload cap is generous and the text caps do the real work.
 - CRM adapter type and property names.
 - WhatsApp template names. The phone number id is a unique column on the company, not config, because the webhook finds the company by it. Configuración edits it in Integraciones, next to the Kapso keys (saved on its own; the stored config goes along unchanged, so no config version is written); each change is kept as a version with who and when.
@@ -124,7 +124,7 @@ The company's own instructions (free text, `Company.instructions`) sit next to t
 
 Configuración is one page for any operator of the company; there are no admin or member roles in the MVP. A platform admin uses it through support access, and those writes are audited like any other.
 
-- **Asistente** (General, Conversación, Temas prohibidos, Mensajes fijos, Bienvenida y CRM, Modelo y límites) edits the whole config: one draft across those sections and one save bar that appears while there are unsaved changes. Before saving, the API checks it with a stricter schema than the one that loads it: required texts and lengths, a timezone and language the runtime knows, a country libphonenumber supports, patterns that compile the way the guardrail compiles them, a Meta template name and language code, a HubSpot internal property name, a `claude-…` model id, bounded numbers, and knowledge limits that still fit the files already uploaded. Unknown keys are rejected. Errors come back per field, in Spanish.
+- **Asistente** (General, Conversación, Temas prohibidos, Mensajes fijos, Bienvenida y CRM, Modelo y límites) edits the whole config: one draft across those sections and one save bar that appears while there are unsaved changes. Before saving, the API checks it with a stricter schema than the one that loads it: required texts and lengths, a timezone and language the runtime knows, a country libphonenumber supports, one to 10 collect items with unique keys (letters, digits, and underscores, starting with a letter), a Meta template name and language code, a HubSpot internal property name, a `claude-…` model id, bounded numbers, and knowledge limits that still fit the files already uploaded. Unknown keys are rejected. Errors come back per field, in Spanish (a collect item's as `collect.<index>.<field>`, the cap as `collect`). Configs saved before the collect list existed (three `questions`, `forbiddenTopics.patterns`) are upgraded on read and on restore: the questions become the three required items under the same keys, with their wording as the description, and the patterns are dropped. The migration rewrote the stored rows and versions the same way.
 - **Instrucciones** edits the company instructions (up to 20,000 characters). **Reglas y prompt** shows the platform rules read-only and, in a side panel, the full prompt the model would receive on the next turn: the cached block (platform rules, instructions, knowledge), the per-turn context for a first-time lead, and the `submit_turn` tool. The preview and the engine build the cached block with the same function.
 - **Historial** lists every save of the config or the instructions, newest first, with who saved it, when, and whether it came through support access. Restoring a version re-checks it against today's rules and saves it again as a new version; the one in use stays in the history. Saving or restoring what is already there writes nothing.
 
@@ -146,7 +146,7 @@ A fresh database has no companies and no operators. `db:seed` and `operator:add`
 
 A signed-in Supabase user whose email is on `PLATFORM_ADMIN_EMAILS` can open Empresas and call `GET /internal/me`, `GET /internal/companies`, and `POST /internal/companies` with no operator row. The check is the session email (the JWT, or the dev token). It is not hardcoded. Company routes (threads, knowledge, secrets) need a company: the login's operator row, or support access below. With neither, the panel sends the admin to Empresas and hides the company pages.
 
-Creating a company writes the company row, the slug, a starter config (display name, the three questions, default knowledge limits, no welcome template), and the first operator, who gets the Supabase invitation described below. That is how the first company, including Altamira, is created. It does not collect API keys and does not set a WhatsApp phone number id; the company sets that in Configuración → Integraciones. The same page lists existing companies (name, slug, operator emails), each with Entrar. The operator created there sets a password from the invitation and only sees their company. They set secrets in Configuración → Integraciones. An operator whose email is not on the list gets no nav item and 403 on the company routes.
+Creating a company writes the company row, the slug, a starter config (display name, the three starter items to collect, default knowledge limits, no welcome template), and the first operator, who gets the Supabase invitation described below. That is how the first company, including Altamira, is created. It does not collect API keys and does not set a WhatsApp phone number id; the company sets that in Configuración → Integraciones. The same page lists existing companies (name, slug, operator emails), each with Entrar. The operator created there sets a password from the invitation and only sees their company. They set secrets in Configuración → Integraciones. An operator whose email is not on the list gets no nav item and 403 on the company routes.
 
 ### Archiving and deleting a company
 
@@ -213,8 +213,8 @@ flowchart TD
 
 Five pieces, kept separate on purpose:
 
-1. **Platform rules (in code)** — behavior shared by every company and anything the engine depends on: answer only from the knowledge block, one question at a time, the `submit_turn` fields the engine parses, the lead goes to an advisor only after the three answers, `needs_human` means the fixed line goes out and the bot waits, and replies only inside WhatsApp's 24-hour window with no follow-ups. Edited by Luis. Configuración shows them read-only.
-2. **Company config** — the company-specific parts filled into those rules: name, language, tone, questions, forbidden topics, the fixed lines.
+1. **Platform rules (in code)** — behavior shared by every company and anything the engine depends on: answer only from the knowledge block, find out the configured items naturally (any order, one question at a time, never re-asking what the lead said), the `submit_turn` fields the engine parses, the lead goes to an advisor only after every required item, `needsHuman` and `forbiddenTopic` mean the fixed line goes out and the bot waits, and replies only inside WhatsApp's 24-hour window with no follow-ups. Edited by Luis. Configuración shows them read-only.
+2. **Company config** — the company-specific parts filled into those rules: name, language, tone, the items to collect, forbidden topics, the fixed lines.
 3. **Company instructions** — free text the company writes in its own words, placed right after the platform rules. The prompt says the platform rules win if the two disagree, and the engine enforces the parts that matter in code anyway (state, guardrails, window).
 4. **Uploaded files** — the commercial source. Price-from, typology, delivery, and orientation come from the extracted text. Re-uploading a file replaces its previous version. If the operator does not re-upload, prices go stale. Full inventory and unit-level availability stay with the advisor and are not dumped in chat.
 5. **Allowlisted public pages → `siteNotes`** — optional and secondary. Stable facts only (address, amenities, neighborhood). A scheduled fetch can strip the HTML to plain text. Skip it when no allowlist is set. The bot does not open URLs while chatting.
@@ -241,21 +241,24 @@ The model writes the reply and extracts data. The engine owns the state.
 
 ### Structured output
 
-Every model call returns, through Anthropic tool use:
+Every model call returns, through Anthropic tool use (`submit_turn`, built per company from its config):
 
 - `reply` — the text to send.
-- `interest`, `budget`, `knowsProjects` — filled when the lead says them.
+- `collected` — one entry per collect item key, filled when the lead's own messages state it, in a few words; null when the turn adds nothing. Values are text (a yes/no item is "Sí"/"No" plus any detail).
 - `callTime` — when the lead agrees to a call.
-- `intent` — one of `continue`, `qualified`, `not_interested`, `needs_human`.
+- `intent` — one of `continue`, `qualified`, `not_interested`. `not_interested` stays explicit: it closes the thread and writes the CRM with no advisor.
+- `needsHuman` — true for a complaint, an existing purchase, or a lead who insists on a person.
+- `forbiddenTopic` — the forbidden topic (copied from the config's list, which is the schema's enum) the lead asked about or the reply would touch; otherwise null. Any non-empty value counts as flagged.
+- `summary` — two to five short bullets for the advisor: what happened and what the lead wants. Rewritten every turn from the whole conversation (the previous one is in the turn context) and stored on the thread (`Thread.summary`, capped at 1,200 characters); an empty one keeps the previous.
 
-The engine moves the state from those fields. The model never sets the state directly. `qualified` is accepted but moves nothing on its own: the stored answers are the gate.
+The engine moves the state from those fields. The model never sets the state directly. `qualified` is accepted but moves nothing on its own: the stored required items are the gate. Values under keys the company does not have are ignored.
 
-The system prompt has two blocks. The first (platform rules filled from the company config, the company instructions, all knowledge documents) is identical across turns, so it carries Anthropic's cache breakpoint. The second is per turn: the lead's local time, business hours, what is already known, and the next step the engine wants (for example, "ask the next missing question: …"). History is the last 40 messages. The call has a 25-second timeout; an invalid tool call is retried once before it counts as a model failure.
+The system prompt has two blocks. The first (platform rules filled from the company config, the company instructions, all knowledge documents) is identical across turns, so it carries Anthropic's cache breakpoint. The second is per turn: the lead's local time, business hours, each item with what is known, the summary so far, and the next step the engine wants (for example, "ask naturally about one thing still missing: Presupuesto [budget] (required)"). History is the last 40 messages. The call has a 25-second timeout; an invalid tool call is retried once before it counts as a model failure.
 
 ### States
 
-1. **Greeting** — welcome, then move into the questions.
-2. **Qualify** — ask the company’s questions (Altamira: interest, budget, whether they know the projects).
+1. **Greeting** — welcome, then start finding out the items.
+2. **Qualify** — find out the company's items (Altamira: interest, budget, whether they know the projects), in whatever order the conversation allows.
 3. **Answer** — reply to repeated questions from the knowledge block. Stay here while they ask.
 4. **Handoff** — ask when an advisor can call. Once a call time is captured, write the CRM and stop replying.
 5. **Closed** — no interest; write the CRM, do not assign an advisor.
@@ -270,9 +273,9 @@ The system prompt has two blocks. The first (platform rules filled from the comp
 - A lead who writes on the API number gets the greeting.
 - A lead who fills a form gets one approved welcome template, then the same flow. A HubSpot workflow calls `POST /hooks/crm/form-lead` with the contact’s phone; the backend sends the template. The company pays Meta for that send.
 - WhatsApp only allows free-form replies within 24 hours of the lead’s last message. Outside that window, only approved templates can be sent. v1 does not send follow-ups after that window.
-- Leave **Qualify** only after `interest`, `budget`, and `knowsProjects` are stored. `knowsProjects` may be false. There is no numeric budget minimum in code. `intent` `not_interested` closes the thread even if a question is still open. `intent` `qualified` without the three stored answers does not leave Qualify.
-- Once the three answers are stored the thread is in **Handoff** and the bot asks for a call time. The turn that stores the call time (with the three answers) writes the CRM, once.
-- A lead who writes again after **Closed** or **Handoff** reopens the same thread in **Answer**. The thread keeps its history. If that same turn is the one that first completes the three answers and `callTime`, it still finishes the handoff and writes the CRM. A later message does not write the CRM again.
+- Leave **Qualify** only after every required item is stored (`Thread.collected`, keyed by item key). "No" is an answer. Optional items never hold the handoff. There is no numeric budget minimum in code. `intent` `not_interested` closes the thread even if an item is still open. `intent` `qualified` without the required items does not leave Qualify.
+- Once the required items are stored the thread is in **Handoff** and the bot asks for a call time. The turn that stores the call time (with the required items) writes the CRM, once.
+- A lead who writes again after **Closed** or **Handoff** reopens the same thread in **Answer**. The thread keeps its history. If that same turn is the one that first completes the required items and `callTime`, it still finishes the handoff and writes the CRM. A later message does not write the CRM again.
 - A new answer replaces the stored one (a lead may correct their budget); an empty field never erases one.
 - Messages that arrive while the thread is paused or waiting for a person are stored and marked handled. Resuming does not make the bot answer them; it answers from the next message.
 - Advisors keep their own personal WhatsApp numbers. The bot never lives on those phones.
@@ -283,12 +286,12 @@ The bot sets `needsHuman`, sends one fixed line from company config, writes the 
 
 | Cause | Line sent |
 | --- | --- |
-| The model returns `needs_human` (a forbidden topic, a complaint or existing purchase, or a lead who refuses to answer and insists on a person) | `messages.needsHuman` |
-| The reply mentions a forbidden topic | `messages.fallback` |
+| The model sets `forbiddenTopic` (the lead asked about one, or its reply would touch one). Reason `forbidden_topic: <topic>` | `messages.needsHuman` |
+| The model sets `needsHuman` (a complaint or existing purchase, or a lead who refuses to answer and insists on a person) | `messages.needsHuman` |
 | Anthropic fails, times out, or returns an empty or invalid turn | `messages.fallback` |
 | WhatsApp refuses the reply (it is stored as a failed message) | none; the panel shows why |
 
-A lead who just asks for a person is not stopped: the bot says an advisor will contact them and keeps collecting the answers and the call time, so the advisor calls prepared.
+On those two paths the model's own reply is never sent; the engine sends the fixed line. The forbidden-topic flag wins over every other field of the turn. A lead who just asks for a person is not stopped: the bot says an advisor will contact them and keeps collecting the missing items and the call time, so the advisor calls prepared.
 
 ### Processing
 
@@ -299,8 +302,8 @@ A lead who just asks for a person is not stopped: the bot says an advisor will c
 
 ### Guardrails
 
-- A final check on every reply before sending: if it mentions a forbidden topic (for Altamira, rental yield or guaranteed returns), replace it with a safe fixed message and offer the advisor. The topics are regular expressions in company config (`forbiddenTopics.patterns`), matched case- and accent-insensitively. The model also gets a plain-language list (`forbiddenTopics.describe`).
-- If Anthropic fails or times out, send a short fixed message (“te va a contactar un asesor”) and mark the thread `needs_human`.
+- Forbidden topics (for Altamira, rental yield or guaranteed returns) are a plain-language list in company config (`forbiddenTopics.describe`). The model flags one in `submit_turn` (`forbiddenTopic`) when the lead asks about it or its reply would touch it; the engine then sends `messages.needsHuman` instead of the reply, sets `needsHuman`, and writes HubSpot. There is no regex check on replies (removed Oct 2026): the operator writes topics the way they would explain them to a person. The yield-extraction fixtures in `backend/test/fixtures/` run against the engine and the local fake on every test run, and against the real model with `ANTHROPIC_API_KEY` set; that live run is part of prompt tuning.
+- If Anthropic fails or times out, send a short fixed message (“te va a contactar un asesor”) and set `needsHuman` on the thread.
 - Cap reply length (`maxReplyChars`, 600 for Altamira), cutting at the last full sentence. WhatsApp messages stay short.
 
 ## CRM (HubSpot first)
@@ -308,7 +311,7 @@ A lead who just asks for a person is not stopped: the bot says an advisor will c
 On handoff, close, or when the bot stops itself (`needsHuman`):
 
 1. Upsert the contact by phone, normalized to E.164 so a form contact and a WhatsApp contact match. A contact id from the form payload is used directly. Otherwise search `phone`, `mobilephone`, and `hs_searchable_calculated_phone_number`; create the contact if none matches. A new contact gets the phone, the WhatsApp first name, and the form email. An existing contact's name and email are never overwritten. If HubSpot rejects a create because the email exists, the contact it names is updated instead.
-2. Write a long text property (`crm.transcriptProperty`) with: status, interest, budget, whether they know the projects, agreed call time (if any), email, and the full transcript. Over 65k characters, the header and the latest part of the conversation are kept. With no property configured, only the contact is upserted.
+2. Write one long text property (`crm.transcriptProperty`) with, in order: status, phone, name, email, agreed call time (if any), the reason when the bot stopped itself, the assistant's bullet summary, the collected fields (each item's name and value, in config order, then any value stored under a key the config no longer has), and the full transcript. No per-field HubSpot properties. Over 65k characters, the header and the latest part of the conversation are kept. With no property configured, only the contact is upserted.
 3. Do not use HubSpot’s native AI module.
 
 CRM writes go through an outbox on the thread (`crmPendingAction`). A failed write is retried with backoff (1 min, doubling, up to 1 h, 12 attempts), the panel shows the error, and an operator can retry it on demand.
@@ -323,7 +326,7 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 - **CompanySettingsVersion** — one saved config or instructions: kind, the value, who saved it (`createdByEmail`, null for the first version), whether it came through support access, the version it restored (if any), and when. The newest of each kind is what the Company row holds.
 - **Operator** — email, Supabase Auth user id (linked when invited, or on first login), companyId, archived at, last invitation sent at and last invitation error. Maps a login to a company.
 - **KnowledgeFile** — name, lower-cased name (unique per company, so the same name replaces), format, MIME type, size, SHA-256, extracted text, character count, uploaded by.
-- **Thread** — lead phone (E.164) and WhatsApp id, WhatsApp name, form email, source (`whatsapp` / `form`), state, `paused`, `needsHuman` + reason, the four lead fields, last inbound at (24-hour window), last message at + preview (for the list), processing lease, CRM contact id and outbox (`crmPendingAction`, attempts, next attempt, last error, synced at). Unique on (companyId, phone).
+- **Thread** — lead phone (E.164) and WhatsApp id, WhatsApp name, form email, source (`whatsapp` / `form`), state, `paused`, `needsHuman` + reason, `collected` (JSON, item key → text; threads from before Oct 2026 were migrated to the keys `interest`, `budget`, `knowsProjects` with "Sí"/"No"), `summary` (the model's bullets), call time, last inbound at (24-hour window), last message at + preview (for the list), processing lease, CRM contact id and outbox (`crmPendingAction`, attempts, next attempt, last error, synced at). Unique on (companyId, phone).
 - **Message** — thread id, direction, WhatsApp type, body (or caption), WhatsApp message id (unique), delivery status from Meta's receipts, `handledAt` (inbound: when a turn took it), sent at.
 - **LlmUsage** — thread id, model, input/output and cache read/write tokens, latency. Used to see cost per company.
 - **AdminAuditEntry** — a write a platform admin made inside a company through support access, or to a company from Empresas: admin email, company id (null once the company is deleted) and slug, method and path, response status, time.
@@ -340,7 +343,7 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 - `GET|POST /internal/companies/:id/operators`, `POST .../operators/:operatorId/invite` (resend), `.../archive`, `.../restore`, `DELETE .../operators/:operatorId` — platform admin only, audited. Add and resend return `{ operator, invite }` where `invite.status` is `sent`, `linked`, `reset_sent`, or `failed` with a Spanish `message`.
 - `GET /internal/threads?status=&search=&cursor=` — the operator's company threads, newest activity first, 50 per page.
 - `GET /internal/threads/summary` — counts per status (they add up to the total).
-- `GET /internal/threads/:id` — thread + messages.
+- `GET /internal/threads/:id` — thread (with `collected` and `summary`), `fields` (the company's items in config order with the lead's value, then values under keys no item has anymore, `required: null`), and messages.
 - `POST /internal/threads/:id/pause`, `.../resume`, `.../clear-needs-human`, `.../crm-sync` (retry a failed CRM write).
 - `DELETE /internal/threads/:id` — delete a lead's thread and messages on request.
 - `GET /internal/knowledge/files` (with usage and limits), `GET /internal/knowledge/files/:id` (with the text), `POST /internal/knowledge/files` (upload; same name replaces), `PUT /internal/knowledge/files/:id` (replace), `DELETE /internal/knowledge/files/:id`.
@@ -368,9 +371,9 @@ Pages:
 
 1. Login (Supabase email + password, "forgot password"). No public signup. Invitation and reset emails land on `/auth/set-password`.
 2. Conversaciones — status filters with their counts, search by name or phone, and the list (newest activity first) with status, last message, and HubSpot status (shown only once there is a write to report). When threads need an advisor, a notice above the list says how many and filters to them. The sidebar shows the same count.
-3. Thread detail — a header with the lead, its status, Pausar / Reanudar asistente, and Eliminar in the overflow menu; the full conversation with delivery ticks, the 24-hour window as a pill, and a line at the end of the transcript once the window has closed; a Lead panel with the three answers (and how many are in), the call time, contact data, and HubSpot status. The page fits the window and each column scrolls inside itself. Nothing sits between the header and the conversation: what needs action goes at the top of the Lead panel — why the bot stopped with Marcar como atendida (clears `needsHuman`), that an advisor paused it, and a failed HubSpot write with the error and Reintentar. The panel still does not send WhatsApp.
+3. Thread detail — a header with the lead, its status, Pausar / Reanudar asistente, and Eliminar in the overflow menu; the full conversation with delivery ticks, the 24-hour window as a pill, and a line at the end of the transcript once the window has closed; a Lead panel with the assistant's summary (bullets), the company's collected fields (how many required ones are in, optional ones tagged), the call time, contact data, and HubSpot status. The page fits the window and each column scrolls inside itself. Nothing sits between the header and the conversation: what needs action goes at the top of the Lead panel — why the bot stopped with Marcar como atendida (clears `needsHuman`), that an advisor paused it, and a failed HubSpot write with the error and Reintentar. The panel still does not send WhatsApp.
 4. Conocimiento — upload (a button, or drag and drop onto the list), list, preview the extracted text, replace, and delete files for the operator’s company, with a strip for the space used, the file count, and the per-file limits. Not a “sync sheet now” button.
-5. Configuración — a grouped section nav on the left (a scrolling row on narrow screens), one section at a time, `?tab=<section>` in the URL. Asistente: General, Conversación, Temas prohibidos, Mensajes fijos, Bienvenida y CRM, Modelo y límites (the config form split by topic, one draft across them, errors next to each field and a dot on the section that has them, and one save bar that appears only with unsaved changes; Idioma, Zona horaria, País de los teléfonos, and Modelo de Anthropic are searchable selects, and a saved value that is not in the list stays selectable). Prompt: Instrucciones (company instructions) and Reglas y prompt (the read-only platform rules, and the full prompt in a side panel). Empresa: Integraciones (WhatsApp con Kapso: a status pill, the Phone number ID, the Kapso API key, the company's webhook URL with a copy button, the webhook secret, and Probar conexión, with the Spanish step-by-step guide collapsed below, open until the three values are set; then the Anthropic API key, HubSpot access token, and form-lead secret: write-only fields, whether each is set, the last 4 characters when available, and an explicit Quitar; the platform encryption key is not here; a secret's input opens only on Configurar or Reemplazar), Historial (history with a filter by kind, and restore), and, only for a platform admin in support access, Operadores. See [Company settings](#company-settings). The old `/integrations` URL redirects to `/settings?tab=integrations`, and the old `?tab=assistant` opens General.
+5. Configuración — a grouped section nav on the left (a scrolling row on narrow screens), one section at a time, `?tab=<section>` in the URL. Asistente: General, Conversación (tone, reply length, and Información a recopilar: the items, with name, key, what to find out, required or optional, reorder and remove, Agregar dato disabled at 10 with the count shown; a new item's key follows its name until typed), Temas prohibidos (plain-language topics, one per line; no patterns), Mensajes fijos, Bienvenida y CRM, Modelo y límites (the config form split by topic, one draft across them, errors next to each field and a dot on the section that has them, and one save bar that appears only with unsaved changes; Idioma, Zona horaria, País de los teléfonos, and Modelo de Anthropic are searchable selects, and a saved value that is not in the list stays selectable). Prompt: Instrucciones (company instructions) and Reglas y prompt (the read-only platform rules, and the full prompt in a side panel). Empresa: Integraciones (WhatsApp con Kapso: a status pill, the Phone number ID, the Kapso API key, the company's webhook URL with a copy button, the webhook secret, and Probar conexión, with the Spanish step-by-step guide collapsed below, open until the three values are set; then the Anthropic API key, HubSpot access token, and form-lead secret: write-only fields, whether each is set, the last 4 characters when available, and an explicit Quitar; the platform encryption key is not here; a secret's input opens only on Configurar or Reemplazar), Historial (history with a filter by kind, and restore), and, only for a platform admin in support access, Operadores. See [Company settings](#company-settings). The old `/integrations` URL redirects to `/settings?tab=integrations`, and the old `?tab=assistant` opens General.
 6. Empresas — only when `GET /internal/me` says `platformAdmin`, including when `company` is null. Create a company (name, slug, first operator email, in the Nueva empresa dialog) and list the companies that exist, with Mostrar archivadas. This is the empty-database setup. No API keys. Each row's menu has Operadores, Archivar / Restaurar, and Eliminar (type the slug). Each active row has Entrar, which opens that company's panel as [support access](#support-access) with the "Viendo como administrador" bar. An operator who is not an admin has no nav item; opening the URL shows that they have no access, and the API answers 403. A platform admin with no operator row and no entered company does not see Conversaciones, Conocimiento, or Configuración.
 
 The panel does not send messages. Advisors answer from their own WhatsApp.
@@ -414,7 +417,7 @@ Google Drive / Sheets sync and a Connect Google OAuth flow are later, not v1. MC
 1. Repo skeleton: `backend/` and `backoffice/`, Prisma schema with `Company`, Supabase Auth, staging deploy.
 2. Altamira `Company` row and config; knowledge file upload (extract text, store per company); Conocimiento page to upload, list, replace, and delete.
 3. WhatsApp webhook (Kapso): resolve company, store messages, answer fast, per-thread processing, greeting.
-4. Engine with structured output: questions, answers from the knowledge block, guardrails, fallback.
+4. Engine with structured output: items to collect, answers from the knowledge block, the forbidden-topic flag, fallback.
 5. Handoff / close → HubSpot upsert + transcript.
 6. Backoffice thread list, detail, pause / resume.
 7. Form-lead trigger and welcome template.
