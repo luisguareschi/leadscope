@@ -40,6 +40,11 @@ import { useThreadActionWithToast } from "./use-thread-action";
 
 const UNASSIGNED = "__none__";
 
+function waitingLabel(since: string | null): string {
+  const waiting = formatWaiting(since);
+  return waiting === "recién" ? "recién llegado" : `lleva ${waiting} esperando`;
+}
+
 function Row({
   label,
   children,
@@ -161,7 +166,7 @@ export function FollowUpGroup({ thread }: { thread: Thread }) {
             {thread.stage === "to_contact" ? (
               <span className="text-muted-foreground">
                 {" "}
-                · espera desde hace {formatWaiting(thread.handedOffAt)}
+                · {waitingLabel(thread.handedOffAt)}
               </span>
             ) : null}
           </Row>
