@@ -1,6 +1,12 @@
 import type { CollectItem } from "../companies/company-config.js";
 import { foldText } from "../engine/guardrails.js";
-import { fieldsOf, missingItems, stageForPrompt } from "../engine/turn.js";
+import {
+  fieldsOf,
+  isWithSalesTeam,
+  missingItems,
+  stageForPrompt,
+  stageOf,
+} from "../engine/turn.js";
 import type { Collected, Intent, ModelTurn } from "../engine/types.js";
 import type { CompleteInput, CompleteResult, LlmClient } from "./types.js";
 
@@ -210,6 +216,7 @@ export function createFakeLlm(): LlmClient {
       const said = lines.at(-1) ?? "";
       const text = foldText(said);
       const stage = stageForPrompt(thread, items);
+      const leadStage = stageOf(thread);
       const fields = fieldsOf(thread);
       const update: Record<string, string | null> = {};
       let callTime: string | null = null;
@@ -222,7 +229,8 @@ export function createFakeLlm(): LlmClient {
       const nextAsk = (): string => {
         const missing = missingItems({ collected, callTime: null }, items);
         const required = missing.find((item) => item.required);
-        if (required) return askFor(required);
+        if (leadStage === "contacted") return "¿Te puedo ayudar con algo más?";
+        if (required && !isWithSalesTeam(leadStage)) return askFor(required);
         if (fields.callTime === null)
           return "¿En qué día y horario te puede llamar un asesor?";
         const optional = missing[0];
@@ -241,7 +249,7 @@ export function createFakeLlm(): LlmClient {
         reply =
           "Perfecto, gracias por avisar. Si más adelante te interesa, escribinos por acá.";
       } else if (
-        stage === "handoff" &&
+        (stage === "handoff" || leadStage === "to_contact") &&
         fields.callTime === null &&
         !isQuestion
       ) {

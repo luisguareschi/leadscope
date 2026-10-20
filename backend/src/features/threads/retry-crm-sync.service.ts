@@ -1,7 +1,7 @@
 import type { AppContext } from "../../context.js";
 import { retryCrmSync as retryWithLease } from "../../conversation/process-thread.js";
 import { badRequest, notFound } from "../../lib/http-error.js";
-import { toThreadDto } from "./thread-dto.js";
+import { findThreadDto } from "./thread-dto.js";
 
 /** Lets an operator retry a failed CRM write right away instead of waiting for the next backoff. */
 export async function retryCrmSync(
@@ -20,7 +20,5 @@ export async function retryCrmSync(
     data: { crmAttempts: 0, crmNextAttemptAt: null },
   });
   await retryWithLease(ctx, threadId);
-  return toThreadDto(
-    await ctx.db.thread.findUniqueOrThrow({ where: { id: threadId } }),
-  );
+  return findThreadDto(ctx.db, threadId);
 }

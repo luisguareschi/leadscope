@@ -1,8 +1,23 @@
 export type ThreadState =
   "greeting" | "qualify" | "answer" | "handoff" | "closed";
-export type ThreadStatusFilter =
-  "all" | "active" | "handoff" | "needs_human" | "paused" | "closed";
+/** Where the lead is for the sales team. Forward-only; only a person sets Contactado. */
+export type LeadStage =
+  "qualifying" | "to_contact" | "contacted" | "not_interested";
+/** What the assistant is doing in the thread, independent of the stage. */
+export type BotActivity = "active" | "paused" | "needs_human";
+export type StageFilter = "all" | LeadStage;
+export type BotFilter = "all" | BotActivity;
+export type AssigneeFilter = "all" | "me" | "none";
+export type ThreadFilters = {
+  stage: StageFilter;
+  bot: BotFilter;
+  assignee: AssigneeFilter;
+  search: string;
+};
 export type CrmStatus = "none" | "pending" | "synced" | "failed";
+
+/** An operator of the company who can have threads. */
+export type Assignee = { id: string; email: string; me: boolean };
 
 export type Thread = {
   id: string;
@@ -11,15 +26,27 @@ export type Thread = {
   email: string | null;
   source: "whatsapp" | "form";
   state: ThreadState;
+  stage: LeadStage;
+  botActivity: BotActivity;
   paused: boolean;
   pausedAt: string | null;
   needsHuman: boolean;
   needsHumanReason: string | null;
+  /** When it reached Por contactar. */
+  handedOffAt: string | null;
+  /** The lead wrote after reaching Por contactar, or after being marked Contactado. */
+  wroteAgain: boolean;
+  assignee: { id: string; email: string; archived: boolean } | null;
+  assignedAt: string | null;
+  contactedAt: string | null;
+  /** Email of whoever marked it contacted. */
+  contactedBy: string | null;
   /** What the lead said, by collect item key. */
   collected: Record<string, string>;
   /** Bullets from the assistant, rewritten every turn: the conversation and what the lead wants. */
   summary: string | null;
   callTime: string | null;
+  lastInboundAt: string | null;
   lastMessageAt: string | null;
   lastMessagePreview: string | null;
   replyWindowClosesAt: string | null;
@@ -60,11 +87,11 @@ export type ThreadsPage = { threads: Thread[]; nextCursor: string | null };
 
 export type ThreadsSummary = {
   total: number;
-  active: number;
-  handoff: number;
-  needs_human: number;
-  paused: number;
-  closed: number;
+  stages: Record<LeadStage, number>;
+  bot: Record<BotActivity, number>;
+  /** Null for a platform admin in support access, who has no operator row here. */
+  mine: { all: number; toContact: number } | null;
+  unassignedToContact: number;
 };
 
 export type KnowledgeFile = {

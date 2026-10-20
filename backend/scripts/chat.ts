@@ -76,7 +76,7 @@ async function main() {
     ].filter(Boolean);
     console.log(
       dim(
-        `[${thread.state}${flags.length ? ` · ${flags.join(" · ")}` : ""}] ${loaded.config.collect
+        `[${thread.stage} · ${thread.state}${flags.length ? ` · ${flags.join(" · ")}` : ""}] ${loaded.config.collect
           .map(
             (item) =>
               `${item.key}: ${collectedOf(thread.collected)[item.key] ?? "—"}`,

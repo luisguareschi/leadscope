@@ -54,6 +54,20 @@ export function formatRelative(value: string | null, now = new Date()): string {
   return shortDateFormat.format(date);
 }
 
+/** How long since `value`, short: "recién", "45 min", "3 h", "2 d". */
+export function formatWaiting(value: string | null, now = new Date()): string {
+  if (!value) return "—";
+  const minutes = Math.max(
+    0,
+    Math.floor((now.getTime() - new Date(value).getTime()) / 60_000),
+  );
+  if (minutes < 1) return "recién";
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h`;
+  return `${Math.floor(hours / 24)} d`;
+}
+
 export function formatTime(value: string): string {
   return timeFormat.format(new Date(value));
 }

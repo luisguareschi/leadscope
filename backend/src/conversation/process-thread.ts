@@ -89,7 +89,7 @@ async function runTurn(
   const pending = await ctx.db.message.findMany({
     where: { threadId, direction: "inbound", handledAt: null },
     orderBy: { sentAt: "asc" },
-    select: { id: true, body: true, waMessageId: true },
+    select: { id: true, body: true, waMessageId: true, sentAt: true },
   });
   if (pending.length === 0) return "no_pending";
   const pendingIds = pending.map((message) => message.id);
@@ -162,6 +162,10 @@ async function runTurn(
   const crmAction: CrmActionKind | null =
     decision.crm ?? (sendError ? "needs_human" : null);
   const sentAt = ctx.now();
+  // The queue counts from the lead message that qualified them; anything later is "wrote again".
+  const handedOff =
+    decision.stage === "to_contact" && thread.stage !== "to_contact";
+  const qualifiedAt = pending.at(-1)?.sentAt ?? sentAt;
 
   await ctx.db.$transaction([
     ctx.db.message.create({
@@ -199,6 +203,18 @@ async function runTurn(
           : {}),
       },
     }),
+    // Conditional, so a person who marked the lead contacted during this turn is not overwritten.
+    ...(decision.stage !== thread.stage
+      ? [
+          ctx.db.thread.updateMany({
+            where: { id: threadId, stage: thread.stage },
+            data: {
+              stage: decision.stage,
+              ...(handedOff ? { handedOffAt: qualifiedAt } : {}),
+            },
+          }),
+        ]
+      : []),
     ...(usage
       ? [
           ctx.db.llmUsage.create({

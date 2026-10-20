@@ -1,114 +1,85 @@
 import type { Tone } from "@/components/panel";
-import type { Thread, ThreadStatusFilter } from "./types";
+import type { BotActivity, BotFilter, LeadStage, StageFilter } from "./types";
 
-export type DisplayStatus =
-  | "needs_human"
-  | "paused"
-  | "new"
-  | "qualifying"
-  | "answering"
-  | "scheduling"
-  | "handed_off"
-  | "closed";
-
-/** Flags win over the stage, the same way the backend's filters partition threads. */
-export function displayStatus(
-  thread: Pick<Thread, "needsHuman" | "paused" | "state" | "callTime">,
-): DisplayStatus {
-  if (thread.needsHuman) return "needs_human";
-  if (thread.paused) return "paused";
-  switch (thread.state) {
-    case "greeting":
-      return "new";
-    case "qualify":
-      return "qualifying";
-    case "answer":
-      return "answering";
-    case "handoff":
-      return thread.callTime ? "handed_off" : "scheduling";
-    case "closed":
-      return "closed";
-  }
-}
-
-export const STATUS_META: Record<
-  DisplayStatus,
+export const STAGE_META: Record<
+  LeadStage,
   { label: string; tone: Tone; description: string }
 > = {
-  needs_human: {
-    label: "Requiere asesor",
-    tone: "warning",
-    description:
-      "El asistente se detuvo (una queja, un tema prohibido o un error) y no responde hasta que alguien la marque como atendida.",
-  },
-  paused: {
-    label: "Pausada",
-    tone: "muted",
-    description:
-      "Un asesor tomó la conversación. El asistente no responde hasta que la reanuden.",
-  },
-  new: {
-    label: "Nueva",
-    tone: "pending",
-    description: "El lead escribió por primera vez y el asistente lo saluda.",
-  },
   qualifying: {
     label: "Calificando",
     tone: "pending",
     description:
       "El asistente averigua lo que la empresa pide en Configuración (por ejemplo qué busca y su presupuesto), en el orden que surja.",
   },
-  answering: {
-    label: "Respondiendo",
-    tone: "pending",
+  to_contact: {
+    label: "Por contactar",
+    tone: "warning",
     description:
-      "El asistente responde las preguntas del lead con lo que hay en Conocimiento, por ejemplo cuando vuelve a escribir después de una derivación.",
+      "El lead ya dio todos los datos obligatorios y espera a un asesor. Queda acá aunque vuelva a escribir, hasta que alguien lo marque como contactado.",
   },
-  scheduling: {
-    label: "Coordinando llamada",
-    tone: "info",
-    description:
-      "El asistente ya sabe todos los datos obligatorios y le pide un horario para que lo llame un asesor.",
-  },
-  handed_off: {
-    label: "Derivada",
+  contacted: {
+    label: "Contactado",
     tone: "ok",
     description:
-      "El lead dio un horario y espera la llamada de un asesor. Ya está en HubSpot.",
+      "Un asesor ya habló con el lead. El asistente sigue respondiendo sus preguntas, sin volver a pedirle datos.",
   },
-  closed: {
-    label: "Cerrada",
+  not_interested: {
+    label: "Sin interés",
     tone: "muted",
     description:
-      "El lead dijo que no le interesa. Queda en HubSpot sin asesor; si vuelve a escribir, se reabre.",
+      "El lead dijo que no le interesa. Queda en HubSpot sin asesor; si vuelve a escribir y da los datos, pasa a Por contactar.",
   },
 };
 
-/** Which statuses each filter shows, for explaining them. */
-export const FILTER_STATUSES: Array<{
-  filter: Exclude<ThreadStatusFilter, "all">;
-  statuses: DisplayStatus[];
-}> = [
-  { filter: "active", statuses: ["new", "qualifying", "answering"] },
-  { filter: "handoff", statuses: ["scheduling", "handed_off"] },
-  { filter: "needs_human", statuses: ["needs_human"] },
-  { filter: "paused", statuses: ["paused"] },
-  { filter: "closed", statuses: ["closed"] },
-];
+export const BOT_META: Record<
+  BotActivity,
+  { label: string; tone: Tone; description: string }
+> = {
+  active: {
+    label: "Respondiendo",
+    tone: "info",
+    description: "El asistente responde los mensajes del lead.",
+  },
+  paused: {
+    label: "Pausado",
+    tone: "muted",
+    description:
+      "Un asesor pausó el asistente en esta conversación. Los mensajes se guardan, pero no responde hasta que lo reanuden.",
+  },
+  needs_human: {
+    label: "Requiere asesor",
+    tone: "warning",
+    description:
+      "El asistente se detuvo (una queja, un tema prohibido o un error) y no responde hasta que alguien la marque como atendida.",
+  },
+};
 
-export const FILTERS: Array<{ value: ThreadStatusFilter; label: string }> = [
+export const STAGE_FILTERS: Array<{ value: StageFilter; label: string }> = [
   { value: "all", label: "Todas" },
-  { value: "active", label: "En curso" },
-  { value: "handoff", label: "Derivadas" },
-  { value: "needs_human", label: "Requieren asesor" },
-  { value: "paused", label: "Pausadas" },
-  { value: "closed", label: "Cerradas" },
+  { value: "to_contact", label: "Por contactar" },
+  { value: "qualifying", label: "Calificando" },
+  { value: "contacted", label: "Contactadas" },
+  { value: "not_interested", label: "Sin interés" },
 ];
 
-export function isStatusFilter(
-  value: string | null,
-): value is ThreadStatusFilter {
-  return FILTERS.some((filter) => filter.value === value);
+export const BOT_FILTERS: Array<{ value: BotFilter; label: string }> = [
+  { value: "all", label: "Asistente: todos" },
+  { value: "active", label: "Respondiendo" },
+  { value: "paused", label: "Pausado" },
+  { value: "needs_human", label: "Requiere asesor" },
+];
+
+export function isStageFilter(value: string | null): value is StageFilter {
+  return STAGE_FILTERS.some((filter) => filter.value === value);
+}
+
+export function isBotFilter(value: string | null): value is BotFilter {
+  return BOT_FILTERS.some((filter) => filter.value === value);
+}
+
+/** "ana@altamira.uy" → "ana". Operators only have an email. */
+export function operatorName(email: string): string {
+  return email.replace(/@.*/, "");
 }
 
 /** Why the bot stopped, in words an operator understands. */

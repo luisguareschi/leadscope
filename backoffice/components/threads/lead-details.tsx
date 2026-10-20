@@ -15,6 +15,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime, formatPhone } from "@/lib/format";
 import { needsHumanReasonLabel } from "@/lib/thread-status";
 import type { LeadField, Thread } from "@/lib/types";
+import { FollowUpGroup } from "./follow-up-group";
+import { BotBadge } from "./status-badge";
 import { useThreadActionWithToast } from "./use-thread-action";
 
 function Group({
@@ -142,10 +144,7 @@ function AssistantGroup({ thread }: { thread: Thread }) {
 
   if (thread.needsHuman) {
     return (
-      <Group
-        title="Asistente"
-        aside={<StatusPill tone="warning">Detenido</StatusPill>}
-      >
+      <Group title="Asistente" aside={<BotBadge activity="needs_human" />}>
         <AttentionBlock
           tone="warning"
           icon={<HandIcon />}
@@ -170,13 +169,10 @@ function AssistantGroup({ thread }: { thread: Thread }) {
 
   if (thread.paused) {
     return (
-      <Group
-        title="Asistente"
-        aside={<StatusPill tone="muted">Pausado</StatusPill>}
-      >
+      <Group title="Asistente" aside={<BotBadge activity="paused" />}>
         <p className="text-[13px] leading-relaxed text-muted-foreground">
-          Un asesor tomó esta conversación. Los mensajes nuevos se guardan, pero
-          el asistente no responde.
+          Un asesor pausó el asistente en esta conversación. Los mensajes nuevos
+          se guardan, pero el asistente no responde.
         </p>
       </Group>
     );
@@ -285,6 +281,7 @@ export function LeadDetails({
     <Panel title="Lead" className="flex min-h-0 flex-col">
       <div className="min-h-0 flex-1 divide-y overflow-y-auto">
         <AssistantGroup thread={thread} />
+        <FollowUpGroup thread={thread} />
         {crmFailed ? <HubSpotGroup thread={thread} /> : null}
         <SummaryGroup summary={thread.summary} />
         <Group

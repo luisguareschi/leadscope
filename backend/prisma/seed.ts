@@ -127,7 +127,7 @@ async function main() {
     whatsappPhoneNumberId: company.whatsappPhoneNumberId,
   });
 
-  await db.operator.upsert({
+  const operator = await db.operator.upsert({
     where: { email: operatorEmail },
     create: { email: operatorEmail, companyId: company.id },
     update: {},
@@ -180,6 +180,20 @@ async function main() {
           email: demo.email,
           source: demo.source ?? "whatsapp",
           state: demo.state,
+          stage: demo.stage ?? "qualifying",
+          handedOffAt:
+            demo.handedOffMinutesAgo === undefined
+              ? null
+              : at(demo.handedOffMinutesAgo),
+          ...(demo.contactedMinutesAgo === undefined
+            ? {}
+            : {
+                contactedAt: at(demo.contactedMinutesAgo),
+                contactedById: operator.id,
+                contactedByEmail: operator.email,
+                assignedToId: operator.id,
+                assignedAt: at(demo.contactedMinutesAgo),
+              }),
           paused: demo.paused ?? false,
           pausedAt: demo.paused ? at(last.minutesAgo - 1) : null,
           needsHuman: Boolean(demo.needsHuman),

@@ -4,6 +4,10 @@ export type Intent = (typeof INTENTS)[number];
 export type ThreadState =
   "greeting" | "qualify" | "answer" | "handoff" | "closed";
 
+/** Where the lead is for the sales team. See `nextStage` for the forward-only rule. */
+export type LeadStage =
+  "qualifying" | "to_contact" | "contacted" | "not_interested";
+
 /** What the lead told us, by collect item key (`config.collect[].key`). Only non-empty values. */
 export type Collected = Record<string, string>;
 
@@ -17,6 +21,8 @@ export type CollectRule = { key: string; required: boolean };
 
 export type ThreadSnapshot = {
   state: ThreadState;
+  /** Qualifying when absent. */
+  stage?: LeadStage;
   /** `Thread.collected` as stored (JSON). Read with `collectedOf`. */
   collected: unknown;
   callTime: string | null;
@@ -53,6 +59,7 @@ export type TurnRules = {
 
 export type TurnDecision = {
   state: ThreadState;
+  stage: LeadStage;
   fields: LeadFields;
   summary: string | null;
   reply: string;
