@@ -1,10 +1,5 @@
 import type { Tone } from "@/components/panel";
-import type {
-  BotActivity,
-  BotFilter,
-  LeadStage,
-  StageFilter,
-} from "./types";
+import type { BotActivity, BotFilter, LeadStage, StageFilter } from "./types";
 
 export const STAGE_META: Record<
   LeadStage,
