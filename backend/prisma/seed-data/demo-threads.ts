@@ -1,5 +1,6 @@
 import type {
   CrmAction,
+  LeadStage,
   ThreadSource,
   ThreadState,
 } from "../../src/generated/prisma/client.js";
@@ -17,6 +18,12 @@ export type DemoThread = {
   email?: string;
   source?: ThreadSource;
   state: ThreadState;
+  /** Calificando when absent. */
+  stage?: LeadStage;
+  /** Por contactar: when the lead message that completed the required items arrived. */
+  handedOffMinutesAgo?: number;
+  /** Contactado by the seed operator, who also has the thread. */
+  contactedMinutesAgo?: number;
   paused?: boolean;
   needsHuman?: string;
   /** By collect item key, as `Thread.collected` stores it. */
@@ -27,7 +34,7 @@ export type DemoThread = {
   messages: DemoMessage[];
 };
 
-/** Fictional conversations (fake +598 99 000 0xx numbers) covering every status the panel shows. */
+/** Fictional conversations (fake +598 99 000 0xx numbers) covering every stage and bot activity the panel shows. */
 export const DEMO_THREADS: DemoThread[] = [
   {
     phone: "+59899000001",
@@ -63,6 +70,8 @@ export const DEMO_THREADS: DemoThread[] = [
     phone: "+59899000002",
     name: "Diego",
     state: "handoff",
+    stage: "to_contact",
+    handedOffMinutesAgo: 60,
     collected: {
       interest: "Monoambiente para invertir",
       budget: "Hasta USD 140.000",
@@ -98,7 +107,9 @@ export const DEMO_THREADS: DemoThread[] = [
   {
     phone: "+59899000003",
     name: "Lucía Fernández",
-    state: "handoff",
+    state: "answer",
+    stage: "to_contact",
+    handedOffMinutesAgo: 182,
     collected: {
       interest: "3 dormitorios para vivir con la familia",
       budget: "USD 250.000",
@@ -149,6 +160,16 @@ export const DEMO_THREADS: DemoThread[] = [
         text: "Listo, un asesor te va a llamar mañana después de las 18. ¡Gracias por escribirnos!",
         minutesAgo: 180,
       },
+      {
+        from: "lead",
+        text: "Una más: ¿la cochera se compra aparte?",
+        minutesAgo: 20,
+      },
+      {
+        from: "bot",
+        text: "Sí, en Proyecto Demo Parque la cochera se compra aparte. El asesor te cuenta los valores cuando te llame mañana después de las 18.",
+        minutesAgo: 20,
+      },
     ],
   },
   {
@@ -188,6 +209,9 @@ export const DEMO_THREADS: DemoThread[] = [
     phone: "+59899000005",
     name: "Sofía",
     state: "answer",
+    stage: "contacted",
+    handedOffMinutesAgo: 300,
+    contactedMinutesAgo: 285,
     paused: true,
     collected: {
       interest: "1 dormitorio",
@@ -218,6 +242,7 @@ export const DEMO_THREADS: DemoThread[] = [
     phone: "+59899000006",
     name: "Pablo",
     state: "closed",
+    stage: "not_interested",
     crm: { synced: true },
     messages: [
       { from: "lead", text: "Hola", minutesAgo: 1500 },

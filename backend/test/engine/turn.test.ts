@@ -325,6 +325,101 @@ describe("decideTurn", () => {
   });
 });
 
+describe("lead stage", () => {
+  it("moves Calificando to Por contactar once every required item is stored, before the call time", () => {
+    expect(
+      decideTurn(thread(), model({ collected: { interest: "x" } }), rules)
+        .stage,
+    ).toBe("qualifying");
+    const decision = decideTurn(
+      thread({ collected: { interest: "x", budget: "y" } }),
+      model({ collected: { knowsProjects: "No" } }),
+      rules,
+    );
+    expect(decision).toMatchObject({
+      state: "handoff",
+      stage: "to_contact",
+      crm: null,
+    });
+  });
+
+  it("never moves Por contactar back, whatever the lead writes next", () => {
+    const handedOff = thread({
+      state: "answer",
+      stage: "to_contact",
+      collected: qualified,
+      callTime: "mañana",
+    });
+    for (const input of [
+      model({ reply: "La entrega es en 2027." }),
+      model({ intent: "not_interested" }),
+      model({ needsHuman: true }),
+      model({ forbiddenTopic: "Rentabilidad futura" }),
+      { kind: "non_text" } as const,
+      { kind: "model_failure", reason: "timeout" } as const,
+    ]) {
+      expect(decideTurn(handedOff, input, rules).stage).toBe("to_contact");
+    }
+  });
+
+  it("keeps Por contactar even when the config gained a required item since", () => {
+    const decision = decideTurn(
+      thread({ state: "answer", stage: "to_contact", collected: qualified }),
+      model(),
+      {
+        ...rules,
+        collect: [...rules.collect, { key: "zone", required: true }],
+      },
+    );
+    expect(decision.stage).toBe("to_contact");
+  });
+
+  it("keeps Contactado: only a person sets it, and nothing the bot decides changes it", () => {
+    const contacted = thread({ state: "answer", stage: "contacted" });
+    expect(
+      decideTurn(contacted, model({ intent: "not_interested" }), rules).stage,
+    ).toBe("contacted");
+    expect(
+      decideTurn(contacted, model({ collected: qualified }), rules).stage,
+    ).toBe("contacted");
+  });
+
+  it("moves Calificando to Sin interés, and back to Por contactar only when the lead re-qualifies", () => {
+    expect(
+      decideTurn(thread(), model({ intent: "not_interested" }), rules).stage,
+    ).toBe("not_interested");
+
+    const notInterested = thread({ state: "closed", stage: "not_interested" });
+    expect(decideTurn(notInterested, model(), rules).stage).toBe(
+      "not_interested",
+    );
+    expect(
+      decideTurn(notInterested, model({ collected: qualified }), rules).stage,
+    ).toBe("to_contact");
+
+    const alreadyKnown = thread({
+      state: "closed",
+      stage: "not_interested",
+      collected: qualified,
+    });
+    expect(
+      decideTurn(alreadyKnown, model({ reply: "Gracias" }), rules).stage,
+    ).toBe("not_interested");
+    expect(
+      decideTurn(alreadyKnown, model({ intent: "qualified" }), rules).stage,
+    ).toBe("to_contact");
+  });
+
+  it("does not hand off on a turn where the bot stops itself", () => {
+    const decision = decideTurn(
+      thread({ collected: { interest: "x", budget: "y" } }),
+      model({ collected: { knowsProjects: "No" }, needsHuman: true }),
+      rules,
+    );
+    expect(decision.stage).toBe("qualifying");
+  });
+});
+
 describe("mergeFields", () => {
   it("lets a new answer replace the old one and ignores blanks", () => {
     expect(

@@ -7,6 +7,7 @@ import {
   hasRequiredItems,
   missingItems,
   stageForPrompt,
+  stageOf,
 } from "./turn.js";
 import type { ThreadSnapshot } from "./types.js";
 
@@ -155,6 +156,22 @@ export function nextStepFor(
   const fields = fieldsOf(thread);
   const missing = describeMissing(missingItems(fields, config.collect));
   const stage = stageForPrompt(thread, config.collect);
+  const leadStage = stageOf(thread);
+
+  // With the sales team, the bot keeps answering but never re-qualifies, even if the config gained
+  // a required item since.
+  if (leadStage === "contacted") {
+    return `An advisor from ${config.displayName} already contacted this lead. Answer their questions from <knowledge>. Do not ask for anything: no items, no call time. If they want to talk to a person, say the team will see their message.`;
+  }
+  if (leadStage === "to_contact") {
+    const optional = describeMissing(
+      missingItems(fields, config.collect).filter((item) => !item.required),
+    );
+    if (fields.callTime) {
+      return `This lead is already with an advisor, who will call ${fields.callTime}. Answer their questions from <knowledge>. Do not ask again for what you already know. You may remind them that an advisor will contact them. If they give a new call time, return it in callTime.`;
+    }
+    return `This lead already goes to an advisor.${optional ? ` Still missing, optional: ${optional}.` : ""} Briefly answer anything they asked, then ask when an advisor can call them (respect the business hours if they are set). Do not ask again for what you already know.`;
+  }
 
   if (stage === "greeting") {
     return `First message to this lead. Greet them, introduce yourself as the virtual assistant of ${config.displayName}, briefly answer anything they asked, and ask naturally about one thing their message did not already tell you${missing ? ` (still to find out: ${missing})` : ""}.`;

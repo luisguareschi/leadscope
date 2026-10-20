@@ -2,7 +2,9 @@ import { capReply } from "./guardrails.js";
 import type {
   Collected,
   CollectRule,
+  Intent,
   LeadFields,
+  LeadStage,
   ThreadSnapshot,
   ThreadState,
   TurnDecision,
@@ -112,6 +114,36 @@ export function stageForPrompt(
   return thread.state;
 }
 
+export function stageOf(thread: Pick<ThreadSnapshot, "stage">): LeadStage {
+  return thread.stage ?? "qualifying";
+}
+
+/** Por contactar and Contactado: the lead is the sales team's, and the bot does not re-qualify. */
+export function isWithSalesTeam(stage: LeadStage): boolean {
+  return stage === "to_contact" || stage === "contacted";
+}
+
+/**
+ * Forward-only. Calificando moves to Por contactar once every required item is stored, or to Sin
+ * interés. From Por contactar only a person moves the lead (to Contactado); nothing the lead writes
+ * moves it back. Sin interés comes back to Por contactar only when the lead re-qualifies: the turn
+ * completes the required items, or the model says they accept a call.
+ */
+function nextStage(
+  previous: ThreadSnapshot,
+  fields: LeadFields,
+  intent: Intent,
+  items: CollectRule[],
+): LeadStage {
+  const stage = stageOf(previous);
+  if (isWithSalesTeam(stage)) return stage;
+  if (intent === "not_interested") return "not_interested";
+  if (!hasRequiredItems(fields, items)) return stage;
+  if (stage === "qualifying") return "to_contact";
+  const completedNow = !hasRequiredItems(fieldsOf(previous), items);
+  return completedNow || intent === "qualified" ? "to_contact" : stage;
+}
+
 function nextState(
   previous: ThreadSnapshot,
   fields: LeadFields,
@@ -140,10 +172,12 @@ export function decideTurn(
 ): TurnDecision {
   const current = fieldsOf(thread);
   const keptSummary = clean(thread.summary);
+  const stage = stageOf(thread);
 
   if (input.kind === "non_text") {
     return {
       state: thread.state,
+      stage,
       fields: current,
       summary: keptSummary,
       reply: rules.messages.nonText,
@@ -155,6 +189,7 @@ export function decideTurn(
   if (input.kind === "model_failure") {
     return {
       state: thread.state,
+      stage,
       fields: current,
       summary: keptSummary,
       reply: rules.messages.fallback,
@@ -172,6 +207,7 @@ export function decideTurn(
   if (forbiddenTopic) {
     return {
       state: thread.state,
+      stage,
       fields,
       summary,
       reply: rules.messages.needsHuman,
@@ -184,6 +220,7 @@ export function decideTurn(
   if (output.needsHuman) {
     return {
       state: thread.state,
+      stage,
       fields,
       summary,
       reply: rules.messages.needsHuman,
@@ -196,6 +233,7 @@ export function decideTurn(
   if (!reply) {
     return {
       state: thread.state,
+      stage,
       fields,
       summary,
       reply: rules.messages.fallback,
@@ -207,6 +245,7 @@ export function decideTurn(
   if (output.intent === "not_interested") {
     return {
       state: "closed",
+      stage: nextStage(thread, fields, output.intent, rules.collect),
       fields,
       summary,
       reply,
@@ -217,6 +256,7 @@ export function decideTurn(
 
   return {
     ...nextState(thread, fields, rules.collect),
+    stage: nextStage(thread, fields, output.intent, rules.collect),
     fields,
     summary,
     reply,

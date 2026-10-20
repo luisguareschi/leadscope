@@ -167,6 +167,57 @@ describe("turn context", () => {
     );
     expect(step).toContain("already with an advisor, who will call mañana");
   });
+
+  it("after the handoff asks only for a call time, never for a required item added since", () => {
+    const withZone = parseCompanyConfig({
+      ...baseConfig,
+      collect: [
+        ...baseConfig.collect,
+        {
+          key: "zone",
+          name: "Zona",
+          description: "Barrio que prefiere.",
+          required: true,
+        },
+      ],
+    });
+    const known = { interest: "a", budget: "b", knowsProjects: "Sí" };
+    const scheduling = nextStepFor(
+      {
+        state: "qualify",
+        stage: "to_contact",
+        collected: known,
+        callTime: null,
+      },
+      withZone,
+    );
+    expect(scheduling).toContain("ask when an advisor can call");
+    expect(scheduling).not.toContain("Zona");
+
+    const scheduled = nextStepFor(
+      {
+        state: "answer",
+        stage: "to_contact",
+        collected: known,
+        callTime: "hoy",
+      },
+      withZone,
+    );
+    expect(scheduled).toContain(
+      "remind them that an advisor will contact them",
+    );
+    expect(scheduled).not.toContain("Zona");
+  });
+
+  it("once contacted, answers questions and asks for nothing", () => {
+    const step = nextStepFor(
+      { state: "qualify", stage: "contacted", collected: {}, callTime: null },
+      config,
+    );
+    expect(step).toContain("already contacted this lead");
+    expect(step).toContain("Do not ask for anything");
+    expect(step).not.toContain("still missing");
+  });
 });
 
 describe("buildChatTurns", () => {

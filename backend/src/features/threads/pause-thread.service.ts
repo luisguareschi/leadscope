@@ -1,6 +1,6 @@
 import type { AppContext } from "../../context.js";
 import { notFound } from "../../lib/http-error.js";
-import { toThreadDto } from "./thread-dto.js";
+import { findThreadDto } from "./thread-dto.js";
 
 /** A person takes over: the bot stores new messages but does not answer them. */
 export async function pauseThread(
@@ -18,7 +18,5 @@ export async function pauseThread(
     where: { threadId, direction: "inbound", handledAt: null },
     data: { handledAt: ctx.now() },
   });
-  return toThreadDto(
-    await ctx.db.thread.findUniqueOrThrow({ where: { id: threadId } }),
-  );
+  return findThreadDto(ctx.db, threadId);
 }

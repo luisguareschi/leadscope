@@ -247,6 +247,78 @@ describe("a bot turn", () => {
     expect(summary).toContain("Lead: Mañana a las 10");
   });
 
+  it("keeps a handed-off lead in Por contactar when they write again, and the bot keeps answering", async () => {
+    const qualifyAt = new Date(Date.now() - 10 * 60_000);
+    const { threadId } = await receive(
+      "Busco 2 dormitorios, tengo 150 mil y no conozco los proyectos",
+      { sentAt: qualifyAt },
+    );
+    ctx.llm.push({
+      reply: "¿Cuándo te puede llamar un asesor?",
+      collected: {
+        interest: "2 dormitorios",
+        budget: "USD 150.000",
+        knowsProjects: "No",
+      },
+    });
+    await processThread(ctx, threadId);
+    let saved = await thread();
+    expect(saved).toMatchObject({ state: "handoff", stage: "to_contact" });
+    expect(saved.handedOffAt).toEqual(qualifyAt);
+
+    await receive("Mañana a las 10", {
+      sentAt: new Date(Date.now() - 5 * 60_000),
+    });
+    ctx.llm.push({
+      reply: "Listo, te llaman mañana a las 10.",
+      callTime: "Mañana a las 10",
+    });
+    await processThread(ctx, threadId);
+
+    await receive("¿Y la entrega para cuándo es?");
+    ctx.llm.push({ reply: "La entrega es en diciembre de 2027." });
+    await processThread(ctx, threadId);
+    await receive("No me interesa más, gracias");
+    ctx.llm.push({ reply: "Gracias por avisar.", intent: "not_interested" });
+    await processThread(ctx, threadId);
+
+    saved = await thread();
+    expect(saved.stage).toBe("to_contact");
+    expect(saved.handedOffAt).toEqual(qualifyAt);
+    expect(ctx.llm.calls.at(2)?.turnContext).toContain(
+      "already with an advisor, who will call Mañana a las 10",
+    );
+    expect(saved.messages.at(-3)?.body).toBe(
+      "La entrega es en diciembre de 2027.",
+    );
+    // HubSpot gets what it got before: the handoff, then the close.
+    expect(
+      ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary,
+    ).toContain("Estado: Cerrado: sin interés");
+  });
+
+  it("does not let a turn overwrite Contactado set by a person while the model was answering", async () => {
+    const { threadId } = await receive(
+      "Busco 2 dormitorios, tengo 150 mil y no conozco los proyectos",
+    );
+    ctx.llm.push(async () => {
+      await testDb().thread.update({
+        where: { id: threadId },
+        data: { stage: "contacted", contactedAt: new Date() },
+      });
+      return {
+        reply: "¿Cuándo te puede llamar un asesor?",
+        collected: {
+          interest: "2 dormitorios",
+          budget: "USD 150.000",
+          knowsProjects: "No",
+        },
+      };
+    });
+    await processThread(ctx, threadId);
+    expect((await thread()).stage).toBe("contacted");
+  });
+
   it("hands off on the company's own items: required ones gate, optional ones do not", async () => {
     await resetDb();
     pnid = (

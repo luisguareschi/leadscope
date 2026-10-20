@@ -1,15 +1,17 @@
 import type { ModelTurn } from "../../src/engine/types.js";
 import type { CompleteInput, LlmClient } from "../../src/llm/types.js";
 
+/** A queued turn, an error to throw, or a step that runs while the model is "thinking". */
+type ScriptedTurn =
+  Partial<ModelTurn> | Error | (() => Promise<Partial<ModelTurn>>);
+
 export type ScriptedLlm = LlmClient & {
   calls: CompleteInput[];
-  push(...turns: Array<Partial<ModelTurn> | Error>): void;
+  push(...turns: ScriptedTurn[]): void;
 };
 
 /** An LLM that returns queued turns in order and records every request it received. */
-export function scriptedLlm(
-  ...initial: Array<Partial<ModelTurn> | Error>
-): ScriptedLlm {
+export function scriptedLlm(...initial: ScriptedTurn[]): ScriptedLlm {
   const queue = [...initial];
   const calls: CompleteInput[] = [];
   return {
@@ -20,8 +22,9 @@ export function scriptedLlm(
     },
     async complete(input) {
       calls.push(input);
-      const next = queue.shift() ?? { reply: "Respuesta de prueba." };
-      if (next instanceof Error) throw next;
+      const queued = queue.shift() ?? { reply: "Respuesta de prueba." };
+      if (queued instanceof Error) throw queued;
+      const next = typeof queued === "function" ? await queued() : queued;
       return {
         output: {
           reply: "Respuesta de prueba.",

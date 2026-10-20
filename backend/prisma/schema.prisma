@@ -49,6 +49,8 @@ model Operator {
   createdAt      DateTime        @default(now())
   company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   uploads        KnowledgeFile[]
+  assignedThreads  Thread[]      @relation("ThreadAssignee")
+  contactedThreads Thread[]      @relation("ThreadContactedBy")
 
   @@index([companyId])
 }
@@ -83,6 +85,15 @@ enum ThreadState {
   closed
 }
 
+/// Where the lead is for the sales team. Forward-only: the bot moves Calificando to Por contactar
+/// (or Sin interés), and only a person moves Por contactar to Contactado.
+enum LeadStage {
+  qualifying
+  to_contact
+  contacted
+  not_interested
+}
+
 enum ThreadSource {
   whatsapp
   form
@@ -106,7 +117,18 @@ model Thread {
   /// Only from a form payload. The assistant does not ask for email.
   email               String?
   source              ThreadSource @default(whatsapp)
+  /// The engine's conversation step (what the prompt asks next, and when HubSpot is written).
   state               ThreadState  @default(greeting)
+  stage               LeadStage    @default(qualifying)
+  /// When the thread reached Por contactar: the lead message that completed the required items.
+  handedOffAt         DateTime?
+  /// The operator (advisor) who has the lead. Any operator of the company can take or reassign it.
+  assignedToId        String?
+  assignedAt          DateTime?
+  contactedAt         DateTime?
+  contactedById       String?
+  /// Who marked it contacted, kept when that operator is deleted or when it was a platform admin.
+  contactedByEmail    String?
   paused              Boolean      @default(false)
   pausedAt            DateTime?
   needsHuman          Boolean      @default(false)
@@ -132,11 +154,16 @@ model Thread {
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
   company             Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignedTo          Operator?    @relation("ThreadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  contactedBy         Operator?    @relation("ThreadContactedBy", fields: [contactedById], references: [id], onDelete: SetNull)
   messages            Message[]
   llmUsages           LlmUsage[]
 
   @@unique([companyId, phone])
   @@index([companyId, lastMessageAt])
+  @@index([companyId, stage, handedOffAt])
+  @@index([assignedToId])
+  @@index([contactedById])
   @@index([crmPendingAction])
 }
 

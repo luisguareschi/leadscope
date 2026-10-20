@@ -82,18 +82,26 @@ describe("threads", () => {
     expect(response.body.nextCursor).toBeNull();
   });
 
-  it("filters by status, with counts that add up to the total", async () => {
+  it("filters by lead stage and by bot activity, with counts that add up to the total", async () => {
     await makeThread(companyId, "+59899000001", { state: "qualify" });
-    await makeThread(companyId, "+59899000002", { state: "handoff" });
+    await makeThread(companyId, "+59899000002", {
+      state: "handoff",
+      stage: "to_contact",
+    });
     await makeThread(companyId, "+59899000003", {
       state: "handoff",
+      stage: "to_contact",
       needsHuman: true,
     });
     await makeThread(companyId, "+59899000004", {
       state: "answer",
+      stage: "contacted",
       paused: true,
     });
-    await makeThread(companyId, "+59899000005", { state: "closed" });
+    await makeThread(companyId, "+59899000005", {
+      state: "closed",
+      stage: "not_interested",
+    });
 
     const summary = await request(app)
       .get("/internal/threads/summary")
@@ -101,20 +109,30 @@ describe("threads", () => {
       .expect(200);
     expect(summary.body).toEqual({
       total: 5,
-      active: 1,
-      handoff: 1,
-      needs_human: 1,
-      paused: 1,
-      closed: 1,
+      stages: {
+        qualifying: 1,
+        to_contact: 2,
+        contacted: 1,
+        not_interested: 1,
+      },
+      bot: { active: 3, paused: 1, needs_human: 1 },
+      mine: { all: 0, toContact: 0 },
+      unassignedToContact: 2,
     });
 
-    const handoff = await request(app)
-      .get("/internal/threads?status=handoff")
-      .set(auth)
-      .expect(200);
-    expect(
-      handoff.body.threads.map((thread: { phone: string }) => thread.phone),
-    ).toEqual(["+59899000002"]);
+    const phones = async (query: string) =>
+      (
+        await request(app)
+          .get(`/internal/threads?${query}`)
+          .set(auth)
+          .expect(200)
+      ).body.threads.map((thread: { phone: string }) => thread.phone);
+    expect(await phones("stage=to_contact&bot=active")).toEqual([
+      "+59899000002",
+    ]);
+    expect(await phones("bot=needs_human")).toEqual(["+59899000003"]);
+    expect(await phones("bot=paused")).toEqual(["+59899000004"]);
+    expect(await phones("stage=not_interested")).toEqual(["+59899000005"]);
   });
 
   it("searches by name or phone digits", async () => {
@@ -290,9 +308,10 @@ describe("threads", () => {
 
   it("rejects bad input", async () => {
     await request(app)
-      .get("/internal/threads?status=bogus")
+      .get("/internal/threads?stage=bogus")
       .set(auth)
       .expect(400);
+    await request(app).get("/internal/threads?bot=bogus").set(auth).expect(400);
     await request(app).get("/internal/threads?limit=500").set(auth).expect(400);
   });
 });
