@@ -41,14 +41,31 @@ export const baseConfig: CompanyConfigInput = {
   displayName: "Constructora Test",
   language: "es-UY",
   tone: "Breve y cordial, con voseo.",
-  questions: {
-    interest: "¿Qué estás buscando?",
-    budget: "¿Con qué presupuesto contás?",
-    knowsProjects: "¿Ya conocés nuestros proyectos?",
-  },
+  collect: [
+    {
+      key: "interest",
+      name: "Interés",
+      description: "Qué está buscando.",
+      required: true,
+    },
+    {
+      key: "budget",
+      name: "Presupuesto",
+      description: "Con qué presupuesto cuenta.",
+      required: true,
+    },
+    {
+      key: "knowsProjects",
+      name: "Conoce los proyectos",
+      description: "Si ya conoce los proyectos.",
+      required: true,
+    },
+  ],
   forbiddenTopics: {
-    describe: ["Rentabilidad futura"],
-    patterns: ["rentabilidad", "renta garantizada"],
+    describe: [
+      "Rentabilidad futura",
+      "Alquiler o renta garantizada, o cualquier promesa de ingresos.",
+    ],
   },
   messages: {
     fallback: "Te va a contactar un asesor.",

@@ -13,6 +13,7 @@ import { loadCompany } from "../src/companies/load-company.js";
 import { loadEnv } from "../src/config/env.js";
 import { recordInboundMessage } from "../src/conversation/inbound.js";
 import { processThread } from "../src/conversation/process-thread.js";
+import { collectedOf } from "../src/engine/turn.js";
 import { createContext } from "../src/create-context.js";
 import { createIntegrations } from "../src/integrations/registry.js";
 import { logger } from "../src/lib/logger.js";
@@ -51,9 +52,8 @@ async function main() {
   const phone = waIdToE164(waId);
   if (!phone) throw new Error(`Invalid phone ${values.phone}`);
 
-  const llmKind = ctx.integrations.llmFor(
-    loadCompany(company, ctx.encryptionKey),
-  ).kind;
+  const loaded = loadCompany(company, ctx.encryptionKey);
+  const llmKind = ctx.integrations.llmFor(loaded).kind;
   console.log(
     bold(`Chat with ${company.name}'s assistant as ${values.name} (${phone}).`),
   );
@@ -76,9 +76,17 @@ async function main() {
     ].filter(Boolean);
     console.log(
       dim(
-        `[${thread.state}${flags.length ? ` · ${flags.join(" · ")}` : ""}] interest: ${thread.interest ?? "—"} · budget: ${thread.budget ?? "—"} · knows projects: ${thread.knowsProjects ?? "—"} · call: ${thread.callTime ?? "—"} · crm: ${thread.crmSyncedAt ? "synced" : thread.crmPendingAction ? "pending" : "—"}`,
+        `[${thread.state}${flags.length ? ` · ${flags.join(" · ")}` : ""}] ${loaded.config.collect
+          .map(
+            (item) =>
+              `${item.key}: ${collectedOf(thread.collected)[item.key] ?? "—"}`,
+          )
+          .join(
+            " · ",
+          )} · call: ${thread.callTime ?? "—"} · crm: ${thread.crmSyncedAt ? "synced" : thread.crmPendingAction ? "pending" : "—"}`,
       ),
     );
+    if (thread.summary) console.log(dim(thread.summary));
   };
 
   const rl = createInterface({

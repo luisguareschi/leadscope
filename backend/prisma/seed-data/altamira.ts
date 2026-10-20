@@ -15,30 +15,34 @@ export const altamiraConfig: CompanyConfigInput = {
   defaultCountry: "UY",
   // Week 1: the hours Altamira's advisors make calls.
   businessHours: "",
-  questions: {
-    interest:
-      "¿Qué estás buscando? Por ejemplo, si es para vivir o para invertir, y cuántos dormitorios.",
-    budget: "¿Con qué presupuesto aproximado contás?",
-    knowsProjects: "¿Ya conocés nuestros proyectos?",
-  },
+  collect: [
+    {
+      key: "interest",
+      name: "Interés",
+      description:
+        "Qué está buscando: si es para vivir o para invertir, cuántos dormitorios, y la zona o el proyecto si lo dice.",
+      required: true,
+    },
+    {
+      key: "budget",
+      name: "Presupuesto",
+      description:
+        "Con qué presupuesto aproximado cuenta (monto y moneda, o un rango).",
+      required: true,
+    },
+    {
+      key: "knowsProjects",
+      name: "Conoce los proyectos",
+      description:
+        "Si ya conoce los proyectos de Altamira (sí o no, y cuáles si lo dice).",
+      required: true,
+    },
+  ],
   forbiddenTopics: {
     describe: [
       "Rentabilidad futura, renta proyectada o retorno de la inversión (porcentajes, ROI, cap rate).",
       "Alquiler o renta garantizada, o cualquier promesa de ingresos.",
       "Valorización o plusvalía futura de las unidades.",
-    ],
-    patterns: [
-      "rentabilidad",
-      "renta (futura|garantizada|asegurada|proyectada|estimada|esperada|mensual|anual)",
-      "(alquiler|ingreso)s? (garantizad|asegurad)",
-      "garantiza\\w* (la |el |una |un )?(renta|alquiler|retorno|rentabilidad|ingreso)",
-      "retorno (de|sobre) (la |tu |su )?inversion",
-      "rendimiento (de la |del )?(inversion|capital|alquiler)",
-      "\\d+([.,]\\d+)? ?% (de )?(renta|rentabilidad|retorno|rendimiento)",
-      "\\broi\\b",
-      "cap rate",
-      "plusvalia",
-      "valorizacion",
     ],
   },
   messages: {

@@ -1,24 +1,6 @@
-/** Lower-cases and strips accents, so patterns can be written as "garantia" and still match "Garantía". */
+/** Lower-cases and strips accents, so text can be compared regardless of "Garantía" vs "garantia". */
 export function foldText(text: string): string {
   return text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-}
-
-/** Returns the first forbidden pattern found in the reply, or null. Invalid patterns are skipped. */
-export function findForbidden(
-  reply: string,
-  patterns: string[],
-): string | null {
-  const folded = foldText(reply);
-  for (const pattern of patterns) {
-    let regex: RegExp;
-    try {
-      regex = new RegExp(foldText(pattern), "u");
-    } catch {
-      continue;
-    }
-    if (regex.test(folded)) return pattern;
-  }
-  return null;
 }
 
 /** Keeps WhatsApp replies short. Cuts at the last sentence end that fits, or the last word. */

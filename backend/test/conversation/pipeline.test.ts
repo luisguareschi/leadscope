@@ -91,14 +91,16 @@ describe("a bot turn", () => {
     await receive("Busco 2 dormitorios para vivir");
     ctx.llm.push({
       reply: "¡Hola Ana! ¿Con qué presupuesto contás?",
-      interest: "2 dormitorios para vivir",
+      collected: { interest: "2 dormitorios para vivir" },
+      summary: "- Busca 2 dormitorios para vivir.",
     });
 
     await expect(processThread(ctx, threadId)).resolves.toBe("replied");
 
     const saved = await thread();
     expect(saved.state).toBe("qualify");
-    expect(saved.interest).toBe("2 dormitorios para vivir");
+    expect(saved.collected).toEqual({ interest: "2 dormitorios para vivir" });
+    expect(saved.summary).toBe("- Busca 2 dormitorios para vivir.");
     expect(
       saved.messages
         .filter((m) => m.direction === "outbound")
@@ -193,9 +195,13 @@ describe("a bot turn", () => {
     );
     ctx.llm.push({
       reply: "¿Cuándo te puede llamar un asesor?",
-      interest: "2 dormitorios",
-      budget: "USD 150.000",
-      knowsProjects: false,
+      collected: {
+        interest: "2 dormitorios",
+        budget: "USD 150.000",
+        knowsProjects: "No",
+      },
+      summary:
+        "- Busca 2 dormitorios con USD 150.000.\n- No conoce los proyectos.",
     });
     await processThread(ctx, threadId);
     expect((await thread()).state).toBe("handoff");
@@ -206,6 +212,8 @@ describe("a bot turn", () => {
       reply: "Listo, te llaman mañana a las 10.",
       callTime: "Mañana a las 10",
       intent: "qualified",
+      summary:
+        "- Busca 2 dormitorios con USD 150.000.\n- No conoce los proyectos.\n- Pidió que lo llamen mañana a las 10.",
     });
     await processThread(ctx, threadId);
 
@@ -219,10 +227,64 @@ describe("a bot turn", () => {
       ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary ??
       "";
     expect(summary).toContain("Estado: Derivado a asesor (calificado)");
-    expect(summary).toContain("Presupuesto: USD 150.000");
-    expect(summary).toContain("Conoce los proyectos: No");
     expect(summary).toContain("Horario para llamar: Mañana a las 10");
+    // One property: the summary and the collected fields on top, then the transcript.
+    const lines = summary.split("\n");
+    const at = (line: string) => lines.indexOf(line);
+    expect(at("Resumen:")).toBeGreaterThan(0);
+    expect(lines[at("Resumen:") + 1]).toBe(
+      "- Busca 2 dormitorios con USD 150.000.",
+    );
+    expect(
+      lines.slice(at("Datos del lead:") + 1, at("Datos del lead:") + 4),
+    ).toEqual([
+      "Interés: 2 dormitorios",
+      "Presupuesto: USD 150.000",
+      "Conoce los proyectos: No",
+    ]);
+    expect(at("Resumen:")).toBeLessThan(at("Datos del lead:"));
+    expect(at("Datos del lead:")).toBeLessThan(at("Conversación:"));
     expect(summary).toContain("Lead: Mañana a las 10");
+  });
+
+  it("hands off on the company's own items: required ones gate, optional ones do not", async () => {
+    await resetDb();
+    pnid = (
+      await createCompany(testDb(), {
+        config: {
+          collect: [
+            {
+              key: "zone",
+              name: "Zona",
+              description: "Barrio preferido.",
+              required: false,
+            },
+            {
+              key: "moveIn",
+              name: "Mudanza",
+              description: "Cuándo se quiere mudar.",
+              required: true,
+            },
+          ],
+        },
+      })
+    ).whatsappPhoneNumberId!;
+    const { threadId } = await receive("Hola, me gusta Pocitos");
+    ctx.llm.push({ reply: "¿Para cuándo?", collected: { zone: "Pocitos" } });
+    await processThread(ctx, threadId);
+    expect((await thread()).state).toBe("qualify");
+    expect(ctx.llm.calls[0]?.turnContext).toContain("- Zona [zone]: (unknown)");
+    expect(ctx.llm.calls[0]?.scenario.config.collect).toHaveLength(2);
+
+    await receive("En marzo");
+    ctx.llm.push({
+      reply: "¿Cuándo te llamamos?",
+      collected: { moveIn: "Marzo" },
+    });
+    await processThread(ctx, threadId);
+    const saved = await thread();
+    expect(saved.state).toBe("handoff");
+    expect(saved.collected).toEqual({ zone: "Pocitos", moveIn: "Marzo" });
   });
 
   it("keeps the handoff and flags the thread when WhatsApp refuses the reply", async () => {

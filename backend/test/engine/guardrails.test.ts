@@ -1,46 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseCompanyConfig } from "../../src/companies/company-config.js";
-import {
-  capReply,
-  findForbidden,
-  foldText,
-} from "../../src/engine/guardrails.js";
-import { altamiraConfig } from "../../prisma/seed-data/altamira.js";
+import { capReply, foldText } from "../../src/engine/guardrails.js";
 
-const altamira = parseCompanyConfig(altamiraConfig).forbiddenTopics.patterns;
-
-describe("findForbidden with Altamira's patterns", () => {
-  it.each([
-    "La rentabilidad estimada es muy buena",
-    "Te garantizamos la renta durante 3 años",
-    "Tiene alquiler garantizado",
-    "El retorno de la inversión es de 6 años",
-    "Un 7,5 % de rentabilidad",
-    "Es una zona con mucha plusvalía",
-    "El ROI es alto",
-    "Con una renta mensual asegurada",
-  ])("blocks: %s", (reply) => {
-    expect(findForbidden(reply, altamira)).not.toBeNull();
-  });
-
-  it.each([
-    "Los precios arrancan en USD 129.000",
-    "La entrega está prevista para diciembre de 2027",
-    "Las unidades al frente miran al norte",
-    "Tenemos financiación: reserva con USD 5.000 y saldo a la entrega",
-    "El edificio tiene garantía de construcción",
-    "Excelente rendimiento energético",
-  ])("allows: %s", (reply) => {
-    expect(findForbidden(reply, altamira)).toBeNull();
-  });
-
-  it("matches regardless of accents and case", () => {
-    expect(findForbidden("PLUSVALÍA", ["plusvalia"])).toBe("plusvalia");
-    expect(foldText("Garantía Año")).toBe("garantia ano");
-  });
-
-  it("skips invalid patterns instead of crashing", () => {
-    expect(findForbidden("texto", ["(", "texto"])).toBe("texto");
+describe("foldText", () => {
+  it("lower-cases and strips accents", () => {
+    expect(foldText("Garantía Año PLUSVALÍA")).toBe("garantia ano plusvalia");
   });
 });
 

@@ -12,7 +12,10 @@ export type CompleteInput = {
   /** Per-turn context appended after the cached block. */
   turnContext: string;
   messages: ChatTurn[];
-  /** Structured view of the same turn. The real model ignores it; the local fake reads it. */
+  /**
+   * Structured view of the same turn. The real client builds submit_turn from its config and sends
+   * nothing else from it; the local fake reads all of it.
+   */
   scenario: {
     thread: PromptThread;
     config: CompanyConfig;

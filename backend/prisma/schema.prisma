@@ -111,9 +111,10 @@ model Thread {
   pausedAt            DateTime?
   needsHuman          Boolean      @default(false)
   needsHumanReason    String?
-  interest            String?
-  budget              String?
-  knowsProjects       Boolean?
+  /// What the lead told the assistant, keyed by the company's `config.collect[].key`. Values are text.
+  collected           Json         @default("{}")
+  /// Short bullets from the model, rewritten every turn: the conversation and what the lead wants.
+  summary             String?      @db.Text
   callTime            String?
   /// Start of WhatsApp's 24-hour free-form reply window.
   lastInboundAt       DateTime?

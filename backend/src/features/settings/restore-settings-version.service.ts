@@ -1,3 +1,4 @@
+import { upgradeLegacyConfig } from "../../companies/company-config.js";
 import {
   parseEditableConfig,
   parseSettingsInput,
@@ -24,7 +25,10 @@ async function changeFor(
   version: CompanySettingsVersion,
 ): Promise<SettingsChange> {
   if (version.kind === "config") {
-    const config = parseEditableConfig(version.config, 422);
+    const config = parseEditableConfig(
+      upgradeLegacyConfig(version.config),
+      422,
+    );
     await assertKnowledgeLimitsFit(ctx, companyId, config.knowledge, 422);
     return { kind: "config", config };
   }
