@@ -77,7 +77,7 @@ function ItemRow({
               id={id("name")}
               value={item.name}
               maxLength={60}
-              placeholder="Presupuesto"
+              placeholder="Por ejemplo, Presupuesto"
               aria-invalid={error("name") ? true : undefined}
               onChange={(event) => {
                 const name = event.target.value;
@@ -116,7 +116,7 @@ function ItemRow({
             value={item.description}
             maxLength={300}
             className="min-h-9"
-            placeholder="Con qué presupuesto aproximado cuenta (monto y moneda, o un rango)."
+            placeholder="Por ejemplo: con qué presupuesto aproximado cuenta (monto y moneda, o un rango)."
             aria-invalid={error("description") ? true : undefined}
             onChange={(event) =>
               onChange({ ...item, description: event.target.value })
