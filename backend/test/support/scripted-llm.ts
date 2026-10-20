@@ -26,10 +26,11 @@ export function scriptedLlm(
         output: {
           reply: "Respuesta de prueba.",
           intent: "continue",
-          interest: null,
-          budget: null,
-          knowsProjects: null,
+          collected: {},
           callTime: null,
+          needsHuman: false,
+          forbiddenTopic: null,
+          summary: null,
           ...next,
         },
         usage: {

@@ -19,9 +19,9 @@ export type DemoThread = {
   state: ThreadState;
   paused?: boolean;
   needsHuman?: string;
-  interest?: string;
-  budget?: string;
-  knowsProjects?: boolean;
+  /** By collect item key, as `Thread.collected` stores it. */
+  collected?: Record<string, string>;
+  summary?: string;
   callTime?: string;
   crm?: { synced: boolean; action?: CrmAction; error?: string };
   messages: DemoMessage[];
@@ -33,7 +33,9 @@ export const DEMO_THREADS: DemoThread[] = [
     phone: "+59899000001",
     name: "Martina",
     state: "qualify",
-    interest: "2 dormitorios para vivir",
+    collected: { interest: "2 dormitorios para vivir en pareja" },
+    summary:
+      "- Vio el anuncio en Instagram.\n- Busca 2 dormitorios para vivir con su pareja.\n- Falta el presupuesto.",
     messages: [
       {
         from: "lead",
@@ -61,9 +63,13 @@ export const DEMO_THREADS: DemoThread[] = [
     phone: "+59899000002",
     name: "Diego",
     state: "handoff",
-    interest: "Monoambiente para invertir",
-    budget: "Hasta USD 140.000",
-    knowsProjects: false,
+    collected: {
+      interest: "Monoambiente para invertir",
+      budget: "Hasta USD 140.000",
+      knowsProjects: "No",
+    },
+    summary:
+      "- Busca un monoambiente para invertir, hasta USD 140.000.\n- No conoce los proyectos; se le contó Proyecto Demo Rambla (desde USD 129.000).\n- Falta coordinar el horario de la llamada.",
     messages: [
       {
         from: "lead",
@@ -93,9 +99,13 @@ export const DEMO_THREADS: DemoThread[] = [
     phone: "+59899000003",
     name: "Lucía Fernández",
     state: "handoff",
-    interest: "3 dormitorios para vivir con la familia",
-    budget: "USD 250.000",
-    knowsProjects: true,
+    collected: {
+      interest: "3 dormitorios para vivir con la familia",
+      budget: "USD 250.000",
+      knowsProjects: "Sí, pasó por el de Parque Batlle",
+    },
+    summary:
+      "- Busca 3 dormitorios para vivir con su familia, unos USD 250.000.\n- Ya conoce Proyecto Demo Parque.\n- Pidió que la llamen mañana después de las 18.",
     callTime: "Mañana después de las 18",
     crm: {
       synced: false,
@@ -145,8 +155,11 @@ export const DEMO_THREADS: DemoThread[] = [
     phone: "+59899000004",
     name: "Federico",
     state: "qualify",
-    needsHuman: "lead_needs_human",
-    interest: "Para invertir",
+    needsHuman:
+      "forbidden_topic: Rentabilidad futura, renta proyectada o retorno de la inversión (porcentajes, ROI, cap rate).",
+    collected: { interest: "Para invertir" },
+    summary:
+      "- Quiere invertir en un apartamento.\n- Preguntó qué rentabilidad da por año (tema prohibido); espera a un asesor.",
     crm: { synced: true },
     messages: [
       {
@@ -176,9 +189,13 @@ export const DEMO_THREADS: DemoThread[] = [
     name: "Sofía",
     state: "answer",
     paused: true,
-    interest: "1 dormitorio",
-    budget: "USD 160.000",
-    knowsProjects: true,
+    collected: {
+      interest: "1 dormitorio",
+      budget: "USD 160.000",
+      knowsProjects: "Sí",
+    },
+    summary:
+      "- Preguntó la orientación del 1 dormitorio en Proyecto Demo Rambla.\n- Prefiere hablar con Ana, la asesora que la atendió.",
     messages: [
       {
         from: "lead",

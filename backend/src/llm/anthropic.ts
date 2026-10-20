@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
+import type { CompanyConfig } from "../companies/company-config.js";
 import { INTENTS } from "../engine/types.js";
 import type { CompleteInput, CompleteResult, LlmClient } from "./types.js";
 
@@ -10,57 +11,111 @@ const nullableText = z
 
 export const modelTurnSchema = z.object({
   reply: z.string(),
-  interest: nullableText,
-  budget: nullableText,
-  knowsProjects: z
-    .boolean()
+  collected: z
+    .record(z.string(), z.unknown())
     .nullish()
-    .transform((value) => value ?? null),
+    .transform((values) =>
+      Object.fromEntries(
+        Object.entries(values ?? {}).map(([key, value]) => [
+          key,
+          typeof value === "string"
+            ? value
+            : typeof value === "number"
+              ? String(value)
+              : null,
+        ]),
+      ),
+    ),
   callTime: nullableText,
   intent: z.enum(INTENTS),
+  needsHuman: z
+    .boolean()
+    .nullish()
+    .transform((value) => value ?? false),
+  // Fails safe: anything set (even `true` instead of the topic) counts as flagged.
+  forbiddenTopic: z
+    .union([z.string(), z.boolean()])
+    .nullish()
+    .transform((value) =>
+      value === true
+        ? "(sin especificar)"
+        : typeof value === "string"
+          ? value.trim() || null
+          : null,
+    ),
+  summary: nullableText,
 });
 
-export const SUBMIT_TURN_TOOL: Anthropic.Tool = {
-  name: "submit_turn",
-  description:
-    "Return the WhatsApp reply for the lead and any lead details stated in their messages.",
-  input_schema: {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      reply: {
-        type: "string",
-        description: "The WhatsApp message to send to the lead.",
+/**
+ * The submit_turn tool for one company: `collected` has one property per collect item, and
+ * `forbiddenTopic` lists the company's topics. Stable until the config changes, so it caches.
+ */
+export function submitTurnTool(
+  config: Pick<CompanyConfig, "collect" | "forbiddenTopics">,
+): Anthropic.Tool {
+  const topics = config.forbiddenTopics.describe;
+  return {
+    name: "submit_turn",
+    description:
+      "Return the WhatsApp reply for the lead, what their messages told you, and the flags the engine acts on.",
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        reply: {
+          type: "string",
+          description: "The WhatsApp message to send to the lead.",
+        },
+        collected: {
+          type: "object",
+          additionalProperties: false,
+          description:
+            "What the lead's own messages state about each item, in a few words. null when this turn does not add or change it.",
+          properties: Object.fromEntries(
+            config.collect.map((item) => [
+              item.key,
+              {
+                type: ["string", "null"],
+                description: `${item.name}: ${item.description}`,
+              },
+            ]),
+          ),
+          required: config.collect.map((item) => item.key),
+        },
+        callTime: {
+          type: ["string", "null"],
+          description: "When the lead says an advisor can call them.",
+        },
+        intent: { type: "string", enum: [...INTENTS] },
+        needsHuman: {
+          type: "boolean",
+          description:
+            "True for a complaint, an existing purchase, or a lead who insists on a person.",
+        },
+        forbiddenTopic: {
+          type: ["string", "null"],
+          description:
+            "The forbidden topic the lead asks about, or that your reply would touch, copied from the list. Otherwise null.",
+          ...(topics.length > 0 ? { enum: [...topics, null] } : {}),
+        },
+        summary: {
+          type: "string",
+          description:
+            'Two to five short bullets, each starting with "- ": the conversation so far and what the lead wants.',
+        },
       },
-      interest: {
-        type: ["string", "null"],
-        description: "What the lead is looking for, in their words.",
-      },
-      budget: {
-        type: ["string", "null"],
-        description: "The lead's budget, in their words.",
-      },
-      knowsProjects: {
-        type: ["boolean", "null"],
-        description:
-          "Whether the lead says they already know the company's projects.",
-      },
-      callTime: {
-        type: ["string", "null"],
-        description: "When the lead says an advisor can call them.",
-      },
-      intent: { type: "string", enum: [...INTENTS] },
+      required: [
+        "reply",
+        "collected",
+        "callTime",
+        "intent",
+        "needsHuman",
+        "forbiddenTopic",
+        "summary",
+      ],
     },
-    required: [
-      "reply",
-      "interest",
-      "budget",
-      "knowsProjects",
-      "callTime",
-      "intent",
-    ],
-  },
-};
+  };
+}
 
 const MAX_ATTEMPTS_ON_INVALID_OUTPUT = 2;
 
@@ -78,6 +133,7 @@ export function createAnthropicClient(
 
   async function callOnce(input: CompleteInput): Promise<CompleteResult> {
     const started = Date.now();
+    const tool = submitTurnTool(input.scenario.config);
     const response = await client.messages.create(
       {
         model: input.model,
@@ -92,10 +148,10 @@ export function createAnthropicClient(
           { type: "text", text: input.turnContext },
         ],
         messages: input.messages,
-        tools: [SUBMIT_TURN_TOOL],
+        tools: [tool],
         tool_choice: {
           type: "tool",
-          name: SUBMIT_TURN_TOOL.name,
+          name: tool.name,
           disable_parallel_tool_use: true,
         },
       },

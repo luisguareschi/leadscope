@@ -1,3 +1,4 @@
+import { upgradeLegacyConfig } from "../../companies/company-config.js";
 import type { CompanySettingsVersion } from "../../generated/prisma/client.js";
 
 /** `current` marks the newest version of its kind: the one the company runs on now. */
@@ -13,7 +14,8 @@ export function toSettingsVersionDto(
     viaSupport: version.viaSupport,
     restoredFromId: version.restoredFromId,
     current,
-    config: version.kind === "config" ? version.config : null,
+    config:
+      version.kind === "config" ? upgradeLegacyConfig(version.config) : null,
     instructions: version.kind === "instructions" ? version.instructions : null,
     whatsappPhoneNumberId:
       version.kind === "whatsappPhoneNumberId"

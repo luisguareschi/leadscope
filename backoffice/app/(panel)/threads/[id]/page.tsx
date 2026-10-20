@@ -176,8 +176,8 @@ export default function ThreadPage() {
             )}
           </div>
         </Panel>
-        {thread ? (
-          <LeadDetails thread={thread} />
+        {thread && data ? (
+          <LeadDetails thread={thread} fields={data.fields} />
         ) : (
           <Skeleton className="h-full w-full rounded-xl" />
         )}

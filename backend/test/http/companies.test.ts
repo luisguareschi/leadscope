@@ -98,7 +98,15 @@ describe("platform admin companies", () => {
     ]);
     const config = parseCompanyConfig(row.config);
     expect(config.displayName).toBe("Costa Sur");
-    expect(config.questions.budget.length).toBeGreaterThan(0);
+    expect(config.collect.map((item) => [item.key, item.required])).toEqual([
+      ["interest", true],
+      ["budget", true],
+      ["knowsProjects", true],
+    ]);
+    expect(row.config).not.toHaveProperty("questions");
+    expect(row.config).toHaveProperty("forbiddenTopics", {
+      describe: expect.any(Array),
+    });
     expect(config.knowledge.maxCharsPerFile).toBe(60_000);
     expect(config.llm.model).toBe("claude-haiku-4-5");
     expect(config.whatsapp.welcomeTemplate).toBeNull();

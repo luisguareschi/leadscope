@@ -1,7 +1,32 @@
 import {
   DEFAULT_KNOWLEDGE_LIMITS,
+  type CollectItem,
   type CompanyConfigInput,
 } from "./company-config.js";
+
+/** What every new company starts finding out: the three items Altamira qualifies with. */
+export const STARTER_COLLECT: CollectItem[] = [
+  {
+    key: "interest",
+    name: "Interés",
+    description:
+      "Qué está buscando: si es para vivir o para invertir, y cuántos dormitorios.",
+    required: true,
+  },
+  {
+    key: "budget",
+    name: "Presupuesto",
+    description: "Con qué presupuesto aproximado cuenta.",
+    required: true,
+  },
+  {
+    key: "knowsProjects",
+    name: "Conoce los proyectos",
+    description:
+      "Si ya conoce los proyectos de la empresa (sí o no, y cuáles si lo dice).",
+    required: true,
+  },
+];
 
 /**
  * Config written when a platform admin creates a company. Same shape the seed stores for
@@ -17,21 +42,11 @@ export function starterCompanyConfig(displayName: string): CompanyConfigInput {
     timezone: "America/Montevideo",
     defaultCountry: "UY",
     businessHours: "",
-    questions: {
-      interest:
-        "¿Qué estás buscando? Por ejemplo, si es para vivir o para invertir, y cuántos dormitorios.",
-      budget: "¿Con qué presupuesto aproximado contás?",
-      knowsProjects: "¿Ya conocés nuestros proyectos?",
-    },
+    collect: STARTER_COLLECT,
     forbiddenTopics: {
       describe: [
         "Rentabilidad futura, renta proyectada o retorno de la inversión.",
         "Alquiler o renta garantizada, o cualquier promesa de ingresos.",
-      ],
-      patterns: [
-        "rentabilidad",
-        "renta (futura|garantizada|asegurada|proyectada)",
-        "(alquiler|ingreso)s? (garantizad|asegurad)",
       ],
     },
     messages: {

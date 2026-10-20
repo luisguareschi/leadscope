@@ -14,9 +14,8 @@ const input: CompleteInput = {
   scenario: {
     thread: {
       state: "greeting",
-      interest: null,
-      budget: null,
-      knowsProjects: null,
+      collected: {},
+      summary: null,
       callTime: null,
       name: null,
       source: "whatsapp",
@@ -56,11 +55,16 @@ describe("Anthropic client", () => {
     const fetchImpl = vi.fn(async (..._args: Parameters<typeof fetch>) =>
       messageResponse({
         reply: "¡Hola! ¿Con qué presupuesto contás?",
-        interest: "2 dormitorios",
-        budget: null,
-        knowsProjects: null,
+        collected: {
+          interest: "2 dormitorios",
+          budget: null,
+          knowsProjects: null,
+        },
         callTime: null,
         intent: "continue",
+        needsHuman: false,
+        forbiddenTopic: null,
+        summary: "- Busca 2 dormitorios.",
       }),
     );
     const client = createAnthropicClient("sk-test", {
@@ -71,11 +75,16 @@ describe("Anthropic client", () => {
 
     expect(result.output).toEqual({
       reply: "¡Hola! ¿Con qué presupuesto contás?",
-      interest: "2 dormitorios",
-      budget: null,
-      knowsProjects: null,
+      collected: {
+        interest: "2 dormitorios",
+        budget: null,
+        knowsProjects: null,
+      },
       callTime: null,
       intent: "continue",
+      needsHuman: false,
+      forbiddenTopic: null,
+      summary: "- Busca 2 dormitorios.",
     });
     expect(result.usage).toMatchObject({
       inputTokens: 1200,
@@ -101,15 +110,77 @@ describe("Anthropic client", () => {
       name: "submit_turn",
       disable_parallel_tool_use: true,
     });
-    expect(body.tools[0].input_schema.required).toEqual([
+    const schema = body.tools[0].input_schema;
+    expect(schema.required).toEqual([
       "reply",
+      "collected",
+      "callTime",
+      "intent",
+      "needsHuman",
+      "forbiddenTopic",
+      "summary",
+    ]);
+    expect(schema.properties.collected.required).toEqual([
       "interest",
       "budget",
       "knowsProjects",
-      "callTime",
-      "intent",
+    ]);
+    expect(schema.properties.collected.properties.budget.description).toBe(
+      "Presupuesto: Con qué presupuesto cuenta.",
+    );
+    expect(schema.properties.intent.enum).toEqual([
+      "continue",
+      "qualified",
+      "not_interested",
+    ]);
+    expect(schema.properties.forbiddenTopic.enum).toEqual([
+      "Rentabilidad futura",
+      "Alquiler o renta garantizada, o cualquier promesa de ingresos.",
+      null,
     ]);
     expect(body.scenario).toBeUndefined();
+  });
+
+  it("builds collected from the company's own items, and treats any forbidden-topic value as flagged", async () => {
+    const config = parseCompanyConfig({
+      ...baseConfig,
+      collect: [
+        {
+          key: "zona",
+          name: "Zona",
+          description: "Barrio preferido.",
+          required: false,
+        },
+      ],
+      forbiddenTopics: { describe: [] },
+    });
+    const fetchImpl = vi.fn(async (..._args: Parameters<typeof fetch>) =>
+      messageResponse({
+        reply: "Te paso con un asesor.",
+        collected: { zona: "Pocitos", ajena: "x" },
+        callTime: null,
+        intent: "continue",
+        needsHuman: false,
+        forbiddenTopic: true,
+        summary: "- Quiere Pocitos.",
+      }),
+    );
+    const client = createAnthropicClient("sk-test", {
+      fetch: fetchImpl as unknown as typeof fetch,
+      maxRetries: 0,
+    });
+    const result = await client.complete({
+      ...input,
+      scenario: { ...input.scenario, config },
+    });
+    expect(result.output.forbiddenTopic).toBe("(sin especificar)");
+    expect(result.output.collected.zona).toBe("Pocitos");
+    const body = JSON.parse(String(fetchImpl.mock.calls[0]![1]?.body));
+    const schema = body.tools[0].input_schema;
+    expect(Object.keys(schema.properties.collected.properties)).toEqual([
+      "zona",
+    ]);
+    expect(schema.properties.forbiddenTopic.enum).toBeUndefined();
   });
 
   it("asks again once when the tool input is invalid, then gives up", async () => {
@@ -124,7 +195,12 @@ describe("Anthropic client", () => {
       maxRetries: 0,
     });
     await expect(client.complete(input)).resolves.toMatchObject({
-      output: { reply: "Ok", interest: null },
+      output: {
+        reply: "Ok",
+        collected: {},
+        needsHuman: false,
+        forbiddenTopic: null,
+      },
     });
 
     const alwaysBad = vi.fn(async () => messageResponse({ nope: true }));

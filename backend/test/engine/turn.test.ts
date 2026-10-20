@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  collectedOf,
   decideTurn,
+  hasRequiredItems,
+  MAX_SUMMARY_CHARS,
   mergeFields,
   stageForPrompt,
 } from "../../src/engine/turn.js";
@@ -12,7 +15,11 @@ import type {
 
 const rules: TurnRules = {
   maxReplyChars: 200,
-  forbiddenPatterns: ["rentabilidad", "renta garantizada"],
+  collect: [
+    { key: "interest", required: true },
+    { key: "budget", required: true },
+    { key: "knowsProjects", required: true },
+  ],
   messages: {
     fallback: "FALLBACK",
     needsHuman: "NEEDS_HUMAN",
@@ -20,26 +27,31 @@ const rules: TurnRules = {
   },
 };
 
-const empty = {
-  interest: null,
-  budget: null,
-  knowsProjects: null,
-  callTime: null,
-};
 const thread = (overrides: Partial<ThreadSnapshot> = {}): ThreadSnapshot => ({
   state: "qualify",
-  ...empty,
+  collected: {},
+  callTime: null,
+  summary: null,
   ...overrides,
 });
 const model = (overrides: Partial<ModelTurn> = {}) =>
   ({
     kind: "model",
-    output: { reply: "Ok.", intent: "continue", ...empty, ...overrides },
+    output: {
+      reply: "Ok.",
+      intent: "continue",
+      collected: {},
+      callTime: null,
+      needsHuman: false,
+      forbiddenTopic: null,
+      summary: null,
+      ...overrides,
+    },
   }) as const;
 const qualified = {
   interest: "2 dormitorios",
   budget: "USD 150.000",
-  knowsProjects: false,
+  knowsProjects: "No",
 };
 
 describe("decideTurn", () => {
@@ -57,49 +69,87 @@ describe("decideTurn", () => {
     });
   });
 
-  it("stays in qualify until interest, budget, and knowsProjects are all stored", () => {
+  it("stays in qualify until every required item is stored", () => {
     const decision = decideTurn(
       thread(),
-      model({ interest: "Para vivir", budget: "100k" }),
+      model({ collected: { interest: "Para vivir", budget: "100k" } }),
       rules,
     );
     expect(decision.state).toBe("qualify");
-    expect(decision.fields).toMatchObject({
+    expect(decision.fields.collected).toEqual({
       interest: "Para vivir",
       budget: "100k",
-      knowsProjects: null,
     });
   });
 
-  it("does not let intent=qualified skip the qualify gate", () => {
+  it("does not let intent=qualified skip the required items", () => {
     const decision = decideTurn(
       thread(),
-      model({ intent: "qualified", interest: "Para vivir" }),
+      model({ intent: "qualified", collected: { interest: "Para vivir" } }),
       rules,
     );
     expect(decision.state).toBe("qualify");
     expect(decision.crm).toBeNull();
   });
 
-  it("counts knowsProjects=false as an answer and moves to handoff to ask for a call time", () => {
+  it("moves to handoff to ask for a call time once the last required item arrives, in any order", () => {
     const decision = decideTurn(
-      thread({ interest: "Para vivir", budget: "100k" }),
-      model({ knowsProjects: false, reply: "¿Cuándo te llamamos?" }),
+      thread({ collected: { knowsProjects: "No", budget: "100k" } }),
+      model({
+        collected: { interest: "Para vivir" },
+        reply: "¿Cuándo te llamamos?",
+      }),
       rules,
     );
     expect(decision).toMatchObject({ state: "handoff", crm: null });
   });
 
+  it("does not wait for optional items", () => {
+    const withOptional: TurnRules = {
+      ...rules,
+      collect: [
+        { key: "budget", required: true },
+        { key: "zone", required: false },
+      ],
+    };
+    const decision = decideTurn(
+      thread(),
+      model({ collected: { budget: "USD 200.000" } }),
+      withOptional,
+    );
+    expect(decision.state).toBe("handoff");
+    expect(
+      hasRequiredItems(
+        { collected: { zone: "Pocitos" }, callTime: null },
+        withOptional.collect,
+      ),
+    ).toBe(false);
+  });
+
+  it("treats a value under a key the company does not ask for as nothing", () => {
+    const decision = decideTurn(
+      thread({ collected: { interest: "x", budget: "y" } }),
+      model({ collected: { somethingElse: "z" } }),
+      rules,
+    );
+    expect(decision.state).toBe("qualify");
+    expect(decision.fields.collected).toEqual({ interest: "x", budget: "y" });
+  });
+
   it("writes the CRM once, on the turn that completes the handoff", () => {
     const first = decideTurn(
-      thread({ state: "handoff", ...qualified }),
+      thread({ state: "handoff", collected: qualified }),
       model({ callTime: "Mañana a las 10" }),
       rules,
     );
     expect(first).toMatchObject({ state: "handoff", crm: "handoff" });
 
     const again = decideTurn(
-      thread({ state: "handoff", ...qualified, callTime: "Mañana a las 10" }),
+      thread({
+        state: "handoff",
+        collected: qualified,
+        callTime: "Mañana a las 10",
+      }),
       model(),
       rules,
     );
@@ -109,7 +159,7 @@ describe("decideTurn", () => {
   it("completes the handoff in a single turn when the lead gives everything at once", () => {
     const decision = decideTurn(
       thread({ state: "greeting" }),
-      model({ ...qualified, callTime: "Hoy 18 h" }),
+      model({ collected: qualified, callTime: "Hoy 18 h" }),
       rules,
     );
     expect(decision).toMatchObject({ state: "handoff", crm: "handoff" });
@@ -117,7 +167,7 @@ describe("decideTurn", () => {
 
   it("closes the thread and writes the CRM when the lead is not interested", () => {
     const decision = decideTurn(
-      thread({ interest: "x" }),
+      thread({ collected: { interest: "x" } }),
       model({ intent: "not_interested", reply: "Gracias." }),
       rules,
     );
@@ -125,25 +175,26 @@ describe("decideTurn", () => {
       state: "closed",
       crm: "close",
       reply: "Gracias.",
+      needsHuman: null,
     });
   });
 
   it("reopens a closed thread in answer and keeps what it knew", () => {
     const decision = decideTurn(
-      thread({ state: "closed", interest: "x" }),
+      thread({ state: "closed", collected: { interest: "x" } }),
       model({ reply: "Claro." }),
       rules,
     );
     expect(decision).toMatchObject({
       state: "answer",
-      fields: { interest: "x" },
+      fields: { collected: { interest: "x" } },
     });
   });
 
-  it("asks for a call time again after a reopened closed thread completes the three answers", () => {
+  it("asks for a call time again after a reopened closed thread completes the required items", () => {
     const decision = decideTurn(
       thread({ state: "closed" }),
-      model(qualified),
+      model({ collected: qualified }),
       rules,
     );
     expect(decision.state).toBe("handoff");
@@ -152,10 +203,7 @@ describe("decideTurn", () => {
   it("sends the fixed line, stops, and writes the CRM when the lead needs a person", () => {
     const decision = decideTurn(
       thread(),
-      model({
-        intent: "needs_human",
-        reply: "La rentabilidad la ve un asesor",
-      }),
+      model({ needsHuman: true, reply: "Te paso con alguien" }),
       rules,
     );
     expect(decision).toMatchObject({
@@ -166,29 +214,61 @@ describe("decideTurn", () => {
     });
   });
 
-  it("blocks a reply that mentions a forbidden topic", () => {
+  it("never sends the model's words on a forbidden topic: the engine sends the fixed line and stops", () => {
     const decision = decideTurn(
-      thread(),
-      model({ reply: "La Rentabilidad es del 8% anual" }),
+      thread({ collected: { interest: "Para invertir" } }),
+      model({
+        reply: "La rentabilidad es del 8% anual",
+        forbiddenTopic: "Rentabilidad futura",
+        collected: { budget: "USD 120.000" },
+        summary: "- Quiere invertir.\n- Preguntó por la rentabilidad.",
+      }),
       rules,
     );
-    expect(decision.reply).toBe("FALLBACK");
-    expect(decision.needsHuman?.reason).toBe("blocked_reply: rentabilidad");
-    expect(decision.crm).toBe("needs_human");
+    expect(decision).toMatchObject({
+      reply: "NEEDS_HUMAN",
+      needsHuman: { reason: "forbidden_topic: Rentabilidad futura" },
+      crm: "needs_human",
+      state: "qualify",
+      summary: "- Quiere invertir.\n- Preguntó por la rentabilidad.",
+    });
+    expect(decision.fields.collected).toEqual({
+      interest: "Para invertir",
+      budget: "USD 120.000",
+    });
   });
 
-  it("keeps fields the lead gave even when the reply is blocked", () => {
+  it("puts the forbidden-topic flag ahead of every other path", () => {
+    for (const overrides of [
+      { intent: "not_interested" as const },
+      { needsHuman: true },
+      { reply: "  " },
+      { collected: qualified, callTime: "mañana" },
+    ]) {
+      const decision = decideTurn(
+        thread(),
+        model({ forbiddenTopic: "Rentabilidad futura", ...overrides }),
+        rules,
+      );
+      expect(decision.reply).toBe("NEEDS_HUMAN");
+      expect(decision.needsHuman?.reason).toMatch(/^forbidden_topic: /);
+      expect(decision.crm).toBe("needs_human");
+    }
+  });
+
+  it("sends the model's reply when no flag is set, whatever it says", () => {
     const decision = decideTurn(
       thread(),
-      model({ reply: "renta garantizada", budget: "200k" }),
+      model({ reply: "La entrega es en 2027." }),
       rules,
     );
-    expect(decision.fields.budget).toBe("200k");
+    expect(decision.reply).toBe("La entrega es en 2027.");
+    expect(decision.needsHuman).toBeNull();
   });
 
-  it("falls back and waits for a person when the model fails", () => {
+  it("falls back and waits for a person when the model fails, keeping the summary", () => {
     const decision = decideTurn(
-      thread({ interest: "x" }),
+      thread({ collected: { interest: "x" }, summary: "- Busca x." }),
       { kind: "model_failure", reason: "timeout" },
       rules,
     );
@@ -196,7 +276,8 @@ describe("decideTurn", () => {
       reply: "FALLBACK",
       needsHuman: { reason: "model_failure: timeout" },
       crm: "needs_human",
-      fields: { interest: "x" },
+      fields: { collected: { interest: "x" } },
+      summary: "- Busca x.",
     });
   });
 
@@ -225,6 +306,23 @@ describe("decideTurn", () => {
     expect(decision.reply.length).toBeLessThanOrEqual(200);
     expect(decision.reply.endsWith(".")).toBe(true);
   });
+
+  it("replaces the summary every turn, keeps it when the model sends none, and caps it", () => {
+    const previous = thread({ summary: "- Antes." });
+    expect(
+      decideTurn(previous, model({ summary: "- Ahora." }), rules).summary,
+    ).toBe("- Ahora.");
+    expect(decideTurn(previous, model({ summary: " " }), rules).summary).toBe(
+      "- Antes.",
+    );
+    const capped = decideTurn(
+      previous,
+      model({ summary: `- ${"x".repeat(2_000)}` }),
+      rules,
+    ).summary!;
+    expect(capped.length).toBe(MAX_SUMMARY_CHARS);
+    expect(capped.endsWith("…")).toBe(true);
+  });
 });
 
 describe("mergeFields", () => {
@@ -232,35 +330,48 @@ describe("mergeFields", () => {
     expect(
       mergeFields(
         {
-          interest: "Para vivir",
-          budget: "100k",
-          knowsProjects: true,
+          collected: { interest: "Para vivir", budget: "100k" },
           callTime: null,
         },
         {
-          interest: "  ",
-          budget: "Mejor 150k",
-          knowsProjects: null,
+          collected: { interest: "  ", budget: "Mejor 150k", other: "x" },
           callTime: null,
         },
+        rules.collect,
       ),
     ).toEqual({
-      interest: "Para vivir",
-      budget: "Mejor 150k",
-      knowsProjects: true,
+      collected: { interest: "Para vivir", budget: "Mejor 150k" },
       callTime: null,
     });
+  });
+});
+
+describe("collectedOf", () => {
+  it("keeps only non-empty text values", () => {
+    expect(
+      collectedOf({ interest: " Para vivir ", budget: "", knows: true }),
+    ).toEqual({ interest: "Para vivir" });
+    expect(collectedOf(null)).toEqual({});
+    expect(collectedOf(["x"])).toEqual({});
   });
 });
 
 describe("stageForPrompt", () => {
   it("shows a completed handoff and a closed thread as answer", () => {
     expect(
-      stageForPrompt(thread({ state: "handoff", ...qualified, callTime: "x" })),
+      stageForPrompt(
+        thread({ state: "handoff", collected: qualified, callTime: "x" }),
+        rules.collect,
+      ),
     ).toBe("answer");
-    expect(stageForPrompt(thread({ state: "handoff", ...qualified }))).toBe(
-      "handoff",
+    expect(
+      stageForPrompt(
+        thread({ state: "handoff", collected: qualified }),
+        rules.collect,
+      ),
+    ).toBe("handoff");
+    expect(stageForPrompt(thread({ state: "closed" }), rules.collect)).toBe(
+      "answer",
     );
-    expect(stageForPrompt(thread({ state: "closed" }))).toBe("answer");
   });
 });

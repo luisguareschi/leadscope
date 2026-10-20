@@ -1,6 +1,7 @@
 import type { Prisma, Thread } from "../../generated/prisma/client.js";
 import { MAX_CRM_ATTEMPTS } from "../../conversation/crm-sync.js";
 import { replyWindowClosesAt } from "../../conversation/reply-window.js";
+import { collectedOf } from "../../engine/turn.js";
 
 export type ThreadStatusFilter =
   "all" | "active" | "handoff" | "needs_human" | "paused" | "closed";
@@ -52,9 +53,9 @@ export function toThreadDto(thread: Thread) {
     pausedAt: thread.pausedAt,
     needsHuman: thread.needsHuman,
     needsHumanReason: thread.needsHumanReason,
-    interest: thread.interest,
-    budget: thread.budget,
-    knowsProjects: thread.knowsProjects,
+    /** By collect item key. The thread view also sends them labeled, in config order (`fields`). */
+    collected: collectedOf(thread.collected),
+    summary: thread.summary,
     callTime: thread.callTime,
     lastMessageAt: thread.lastMessageAt,
     lastMessagePreview: thread.lastMessagePreview,

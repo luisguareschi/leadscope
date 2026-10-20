@@ -1,8 +1,11 @@
 import { isSupportedCountry } from "libphonenumber-js";
 import { z } from "zod";
-import { foldText } from "../engine/guardrails.js";
 import { HttpError } from "../lib/http-error.js";
-import { MAX_UPLOAD_BYTES, type CompanyConfig } from "./company-config.js";
+import {
+  MAX_COLLECT_ITEMS,
+  MAX_UPLOAD_BYTES,
+  type CompanyConfig,
+} from "./company-config.js";
 
 /** All of a company's uploaded text together: about 100k tokens of prompt. */
 export const MAX_KNOWLEDGE_CHARS = 400_000;
@@ -45,15 +48,37 @@ function isTimeZone(value: string): boolean {
   }
 }
 
-/** Same compilation as the guardrail, so a pattern that saves is a pattern that runs. */
-function isPattern(value: string): boolean {
-  try {
-    new RegExp(foldText(value), "u");
-    return true;
-  } catch {
-    return false;
-  }
-}
+const collectItemSchema = z.strictObject({
+  key: z
+    .string()
+    .trim()
+    .max(40, "Máximo 40 caracteres.")
+    .regex(
+      /^[a-zA-Z][a-zA-Z0-9_]*$/,
+      "Usá letras, números y guiones bajos, empezando con una letra. Por ejemplo: presupuesto.",
+    ),
+  name: required(60),
+  description: required(300),
+  required: z.boolean(),
+});
+
+const collectSchema = z
+  .array(collectItemSchema)
+  .min(1, "Agregá al menos un dato para recopilar.")
+  .max(MAX_COLLECT_ITEMS, `Máximo ${MAX_COLLECT_ITEMS} datos.`)
+  .superRefine((items, issue) => {
+    const seen = new Set<string>();
+    items.forEach((item, index) => {
+      const key = item.key.toLowerCase();
+      if (seen.has(key))
+        issue.addIssue({
+          code: "custom",
+          path: [index, "key"],
+          message: "Ya hay otro dato con esta clave.",
+        });
+      seen.add(key);
+    });
+  });
 
 /**
  * What an operator may save from Configuración. Stricter than `companyConfigSchema`, which stays
@@ -82,18 +107,9 @@ export const editableConfigSchema = z.strictObject({
       "Usá el código de dos letras del país, por ejemplo UY.",
     ),
   businessHours: optional(300),
-  questions: z.strictObject({
-    interest: required(300),
-    budget: required(300),
-    knowsProjects: required(300),
-  }),
+  collect: collectSchema,
   forbiddenTopics: z.strictObject({
     describe: z.array(required(300)).max(30, "Máximo 30 temas."),
-    patterns: z
-      .array(
-        required(200).refine(isPattern, "No es una expresión regular válida."),
-      )
-      .max(50, "Máximo 50 patrones."),
   }),
   messages: z.strictObject({
     fallback: required(1_000),
@@ -202,7 +218,7 @@ function spanishIssue(issue: z.core.$ZodRawIssue): string {
 
 /**
  * Turns issues into one message per field, keyed by dotted path. A bad line of a list (forbidden
- * topics, patterns) is reported on the list, quoting the line.
+ * topics) is reported on the list, quoting the line; a bad field of a collect item on that field.
  */
 export function fieldErrors(
   issues: z.core.$ZodIssue[],

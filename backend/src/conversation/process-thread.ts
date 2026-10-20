@@ -30,7 +30,7 @@ export type TurnOutcome =
 function rulesFor(company: LoadedCompany): TurnRules {
   return {
     maxReplyChars: company.config.maxReplyChars,
-    forbiddenPatterns: company.config.forbiddenTopics.patterns,
+    collect: company.config.collect,
     messages: company.config.messages,
   };
 }
@@ -184,7 +184,9 @@ async function runTurn(
       where: { id: threadId },
       data: {
         state: decision.state,
-        ...decision.fields,
+        collected: decision.fields.collected,
+        callTime: decision.fields.callTime,
+        summary: decision.summary,
         ...(needsHumanReason ? { needsHuman: true, needsHumanReason } : {}),
         lastMessageAt: sentAt,
         lastMessagePreview: messagePreview("text", decision.reply),

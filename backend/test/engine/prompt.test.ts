@@ -15,14 +15,13 @@ const config = parseCompanyConfig({
   businessHours: "lunes a viernes de 9 a 18",
 });
 const empty = {
-  interest: null,
-  budget: null,
-  knowsProjects: null,
+  collected: {},
+  summary: null,
   callTime: null,
 };
 
 describe("buildSystemPrompt", () => {
-  it("puts the company's questions, forbidden topics, and every document in the prompt", () => {
+  it("puts the company's items, forbidden topics, and every document in the prompt", () => {
     const prompt = buildSystemPrompt({
       config,
       instructions: "",
@@ -39,7 +38,13 @@ describe("buildSystemPrompt", () => {
         },
       ],
     });
-    expect(prompt).toContain("¿Con qué presupuesto contás?");
+    expect(prompt).toContain(
+      "   - Presupuesto [budget] (required): Con qué presupuesto cuenta.",
+    );
+    expect(prompt).toContain("not a script");
+    expect(prompt).toContain(
+      "Never ask for something the lead already told you",
+    );
     expect(prompt).toContain("- Rentabilidad futura");
     expect(prompt).toContain(
       '<document name="precios.xlsx" updated="2026-10-01">\nTorre Sur desde USD 150.000\n</document>',
@@ -69,13 +74,15 @@ describe("buildSystemPrompt", () => {
     const rules = buildPlatformRules(config);
     expect(rules).toContain("Always call the submit_turn tool exactly once.");
     expect(rules).toContain(
-      "The lead goes to an advisor only after all three answers are known.",
+      "The lead goes to an advisor only after every required item is known.",
     );
     expect(rules).toContain(
       'The lead receives "Un asesor te va a responder eso."',
     );
     expect(rules).toContain("within 24 hours of the lead's last message");
-    expect(rules).toContain('receives "Te va a contactar un asesor." instead');
+    expect(rules).toContain("set forbiddenTopic to that topic");
+    expect(rules).toContain("- summary: 2 to 5 short bullets");
+    expect(rules).not.toContain("Optional items");
   });
 
   it("says so when there are no documents", () => {
@@ -86,22 +93,24 @@ describe("buildSystemPrompt", () => {
 describe("turn context", () => {
   const now = new Date("2026-10-10T19:00:00Z");
 
-  it("tells the model what is known and the next question", () => {
+  it("tells the model what is known, the summary so far, and what is still missing", () => {
     const context = buildTurnContext(
       {
         state: "qualify",
         ...empty,
-        interest: "2 dormitorios",
+        collected: { interest: "2 dormitorios" },
+        summary: "- Busca 2 dormitorios.",
         name: "Ana",
         source: "whatsapp",
       },
       config,
       now,
     );
-    expect(context).toContain("- Interest: 2 dormitorios");
-    expect(context).toContain("- Budget: (unknown)");
+    expect(context).toContain("- Interés [interest]: 2 dormitorios");
+    expect(context).toContain("- Presupuesto [budget]: (unknown)");
+    expect(context).toContain("Summary so far:\n- Busca 2 dormitorios.");
     expect(context).toContain(
-      'next missing question: "¿Con qué presupuesto contás?"',
+      "ask naturally about one thing still missing: Presupuesto [budget], Conoce los proyectos [knowsProjects] (required)",
     );
     expect(context).toContain("lunes a viernes de 9 a 18");
     expect(context).toContain("America/Montevideo");
@@ -116,27 +125,42 @@ describe("turn context", () => {
     expect(context).toContain("already received a welcome message");
   });
 
-  it("asks for a call time once the three answers are known", () => {
+  it("asks for a call time once every required item is known, mentioning optional ones still open", () => {
+    const withOptional = parseCompanyConfig({
+      ...baseConfig,
+      collect: [
+        ...baseConfig.collect,
+        {
+          key: "zone",
+          name: "Zona",
+          description: "Barrio que prefiere.",
+          required: false,
+        },
+      ],
+    });
     const step = nextStepFor(
       {
         state: "handoff",
-        interest: "a",
-        budget: "b",
-        knowsProjects: true,
+        collected: { interest: "a", budget: "b", knowsProjects: "Sí" },
         callTime: null,
       },
-      config,
+      withOptional,
     );
     expect(step).toContain("ask when an advisor can call");
+    expect(step).toContain("Still missing, optional: Zona [zone] (optional)");
+    expect(buildPlatformRules(withOptional)).toContain(
+      "Optional items are nice to have",
+    );
+    expect(buildPlatformRules(withOptional)).toContain(
+      "   - Zona [zone] (optional): Barrio que prefiere.",
+    );
   });
 
   it("does not re-qualify a lead already handed off", () => {
     const step = nextStepFor(
       {
         state: "handoff",
-        interest: "a",
-        budget: "b",
-        knowsProjects: true,
+        collected: { interest: "a", budget: "b", knowsProjects: "Sí" },
         callTime: "mañana",
       },
       config,

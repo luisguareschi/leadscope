@@ -15,9 +15,10 @@ export type Thread = {
   pausedAt: string | null;
   needsHuman: boolean;
   needsHumanReason: string | null;
-  interest: string | null;
-  budget: string | null;
-  knowsProjects: boolean | null;
+  /** What the lead said, by collect item key. */
+  collected: Record<string, string>;
+  /** Bullets from the assistant, rewritten every turn: the conversation and what the lead wants. */
+  summary: string | null;
   callTime: string | null;
   lastMessageAt: string | null;
   lastMessagePreview: string | null;
@@ -30,6 +31,20 @@ export type Thread = {
     retriesExhausted: boolean;
   };
   createdAt: string;
+};
+
+/** One item to collect with the lead's value. `required` is null for a key no item has anymore. */
+export type LeadField = {
+  key: string;
+  name: string;
+  required: boolean | null;
+  value: string | null;
+};
+
+export type ThreadDetail = {
+  thread: Thread;
+  fields: LeadField[];
+  messages: ChatMessage[];
 };
 
 export type ChatMessage = {
@@ -171,6 +186,17 @@ export type SecretStatus = {
 
 export type SecretsList = { secrets: SecretStatus[] };
 
+/** Something the assistant finds out from the lead. `key` is how it is stored on the thread. */
+export type CollectItem = {
+  key: string;
+  name: string;
+  description: string;
+  required: boolean;
+};
+
+/** Mirrors `MAX_COLLECT_ITEMS` in the backend. */
+export const MAX_COLLECT_ITEMS = 10;
+
 /** Mirrors the backend's `CompanyConfig` (companies/company-config.ts). */
 export type CompanyConfig = {
   displayName: string;
@@ -179,8 +205,8 @@ export type CompanyConfig = {
   timezone: string;
   defaultCountry: string;
   businessHours: string;
-  questions: { interest: string; budget: string; knowsProjects: string };
-  forbiddenTopics: { describe: string[]; patterns: string[] };
+  collect: CollectItem[];
+  forbiddenTopics: { describe: string[] };
   messages: { fallback: string; needsHuman: string; nonText: string };
   maxReplyChars: number;
   llm: {

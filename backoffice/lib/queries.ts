@@ -12,7 +12,6 @@ import { useAuth } from "./auth";
 import { COMPANY_ID_HEADER, supportCompanyIdFor } from "./support";
 import type {
   AuthUserRemoval,
-  ChatMessage,
   KnowledgeFile,
   KnowledgeList,
   CompaniesList,
@@ -34,6 +33,7 @@ import type {
   SettingsSaveResult,
   SettingsVersion,
   Thread,
+  ThreadDetail,
   ThreadsPage,
   ThreadsSummary,
   ThreadStatusFilter,
@@ -129,10 +129,7 @@ export function useThread(id: string) {
   const api = useApi();
   return useQuery({
     queryKey: ["threads", "detail", id],
-    queryFn: () =>
-      api<{ thread: Thread; messages: ChatMessage[] }>(
-        `/internal/threads/${id}`,
-      ),
+    queryFn: () => api<ThreadDetail>(`/internal/threads/${id}`),
     refetchInterval: THREAD_POLL_MS,
     retry: (count, error) =>
       !(error instanceof ApiError && error.status === 404) && count < 2,

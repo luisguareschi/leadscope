@@ -1,8 +1,11 @@
-import type { CompanyConfig } from "@/lib/types";
+import type { CollectItem, CompanyConfig } from "@/lib/types";
 
 const MEGABYTE = 1024 * 1024;
 
-/** The config as the form edits it: numbers and lists are strings until they are saved. */
+/** An item as the form edits it. `id` only keeps React rows stable while items move. */
+export type CollectItemDraft = CollectItem & { id: string };
+
+/** The config as the form edits it: numbers and text lists are strings until they are saved. */
 export type ConfigDraft = {
   displayName: string;
   language: string;
@@ -11,11 +14,8 @@ export type ConfigDraft = {
   businessHours: string;
   tone: string;
   maxReplyChars: string;
-  interest: string;
-  budget: string;
-  knowsProjects: string;
+  collect: CollectItemDraft[];
   forbiddenDescribe: string;
-  forbiddenPatterns: string;
   needsHuman: string;
   fallback: string;
   nonText: string;
@@ -42,11 +42,8 @@ export const FIELD_PATHS: Record<keyof ConfigDraft, string> = {
   businessHours: "businessHours",
   tone: "tone",
   maxReplyChars: "maxReplyChars",
-  interest: "questions.interest",
-  budget: "questions.budget",
-  knowsProjects: "questions.knowsProjects",
+  collect: "collect",
   forbiddenDescribe: "forbiddenTopics.describe",
-  forbiddenPatterns: "forbiddenTopics.patterns",
   needsHuman: "messages.needsHuman",
   fallback: "messages.fallback",
   nonText: "messages.nonText",
@@ -64,6 +61,7 @@ export const FIELD_PATHS: Record<keyof ConfigDraft, string> = {
   maxCharsTotal: "knowledge.maxCharsTotal",
 };
 
+/** The list itself (the cap) or, when only an item is wrong, a pointer to it. */
 export function errorsByField(
   fields: Record<string, string>,
 ): Partial<Record<keyof ConfigDraft, string>> {
@@ -71,7 +69,47 @@ export function errorsByField(
   for (const [key, path] of Object.entries(FIELD_PATHS)) {
     if (fields[path]) errors[key as keyof ConfigDraft] = fields[path];
   }
+  if (!errors.collect && Object.keys(itemErrors(fields)).length > 0)
+    errors.collect = "Revisá los datos marcados.";
   return errors;
+}
+
+/** Per-item messages keyed "<index>.<field>", from the API's "collect.<index>.<field>". */
+export function itemErrors(
+  fields: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(fields)
+      .filter(([path]) => /^collect\.\d+\./.test(path))
+      .map(([path, message]) => [path.slice("collect.".length), message]),
+  );
+}
+
+function withoutId(item: CollectItemDraft): CollectItem {
+  return {
+    key: item.key,
+    name: item.name,
+    description: item.description,
+    required: item.required,
+  };
+}
+
+let nextItemId = 0;
+export function newItemId(): string {
+  nextItemId += 1;
+  return `item-${nextItemId}`;
+}
+
+/** Draft values compare by content; the item ids do not count as a change. */
+export function sameDraftValue<K extends keyof ConfigDraft>(
+  key: K,
+  a: ConfigDraft[K],
+  b: ConfigDraft[K],
+): boolean {
+  if (key !== "collect") return a === b;
+  const strip = (items: CollectItemDraft[]) =>
+    JSON.stringify(items.map(withoutId));
+  return strip(a as CollectItemDraft[]) === strip(b as CollectItemDraft[]);
 }
 
 const lines = (values: string[]) => values.join("\n");
@@ -95,11 +133,8 @@ export function toDraft(config: CompanyConfig): ConfigDraft {
     businessHours: config.businessHours,
     tone: config.tone,
     maxReplyChars: String(config.maxReplyChars),
-    interest: config.questions.interest,
-    budget: config.questions.budget,
-    knowsProjects: config.questions.knowsProjects,
+    collect: config.collect.map((item) => ({ ...item, id: newItemId() })),
     forbiddenDescribe: lines(config.forbiddenTopics.describe),
-    forbiddenPatterns: lines(config.forbiddenTopics.patterns),
     needsHuman: config.messages.needsHuman,
     fallback: config.messages.fallback,
     nonText: config.messages.nonText,
@@ -126,14 +161,9 @@ export function fromDraft(draft: ConfigDraft): CompanyConfig {
     timezone: draft.timezone,
     defaultCountry: draft.defaultCountry,
     businessHours: draft.businessHours,
-    questions: {
-      interest: draft.interest,
-      budget: draft.budget,
-      knowsProjects: draft.knowsProjects,
-    },
+    collect: draft.collect.map(withoutId),
     forbiddenTopics: {
       describe: fromLines(draft.forbiddenDescribe),
-      patterns: fromLines(draft.forbiddenPatterns),
     },
     messages: {
       fallback: draft.fallback,

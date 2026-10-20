@@ -1,6 +1,6 @@
 # LeadScope
 
-WhatsApp lead assistant for real-estate developers. It greets leads, asks three qualifying questions, answers the repeated ones from the company's own files, asks when an advisor can call, and leaves the case in HubSpot. First client: Altamira (Uruguay). The build plan is [`docs/design.md`](docs/design.md).
+WhatsApp lead assistant for real-estate developers. It greets leads, finds out what each company asks for (for Altamira: interest, budget, and whether they know the projects) in a natural conversation, answers the repeated ones from the company's own files, asks when an advisor can call, and leaves the case in HubSpot. First client: Altamira (Uruguay). The build plan is [`docs/design.md`](docs/design.md).
 
 | Folder | What it is |
 | --- | --- |
@@ -39,7 +39,7 @@ The menu on each row has **Operadores** (add and invite, resend the invitation, 
 
 Sign in as the operator email you just typed. The sidebar is Conversaciones, Conocimiento, and Configuración. Empresas is not there, and `/companies` says there is no access.
 
-**Configuración** edits the company config (tone, the three questions, forbidden topics, fixed messages, business hours, welcome template, HubSpot property, model and limits) and the company instructions. Idioma, Zona horaria, País de los teléfonos, and Modelo de Anthropic are searchable lists; the models come from Anthropic's API when the company has its key, and from a fixed list otherwise. The platform rules the engine depends on are shown read-only, with the full prompt the model would receive. Every save keeps a version (who and when), and **Versiones** restores any of them. **Integraciones** (a tab of Configuración; the old `/integrations` URL redirects there) is where that company connects WhatsApp through Kapso (a step-by-step guide, the exact webhook URL with a copy button, the Kapso API key and webhook secret, and **Probar conexión**) and sets its Anthropic, HubSpot, and form-lead secrets. It shows whether each one is set and the last 4 characters; it never shows the full value. Leaving a field empty does not clear it. A platform admin inside the company through Entrar also sees an **Operadores** tab.
+**Configuración** edits the company config (tone, the information to collect, forbidden topics, fixed messages, business hours, welcome template, HubSpot property, model and limits) and the company instructions. **Información a recopilar** (in Conversación) is the list of things the assistant finds out from each lead, up to 10: a name, a key (how it is stored; a new item's key follows its name until you type one), what to find out (for the prompt, not a question to read out), and Obligatorio or Opcional. The assistant asks naturally, in any order, and skips what the lead already said; once every required item is in it asks for a call time. **Temas prohibidos** is plain language, one topic per line: when the lead asks about one, the model flags it and the engine sends the fixed "Hace falta un asesor" line, stops, and writes HubSpot. Idioma, Zona horaria, País de los teléfonos, and Modelo de Anthropic are searchable lists; the models come from Anthropic's API when the company has its key, and from a fixed list otherwise. The platform rules the engine depends on are shown read-only, with the full prompt the model would receive. Every save keeps a version (who and when), and **Versiones** restores any of them. **Integraciones** (a tab of Configuración; the old `/integrations` URL redirects there) is where that company connects WhatsApp through Kapso (a step-by-step guide, the exact webhook URL with a copy button, the Kapso API key and webhook secret, and **Probar conexión**) and sets its Anthropic, HubSpot, and form-lead secrets. It shows whether each one is set and the last 4 characters; it never shows the full value. Leaving a field empty does not clear it. A platform admin inside the company through Entrar also sees an **Operadores** tab.
 
 `npm run db:seed` and `npm run operator:add` are local fixtures only. A production setup does not run them. The seed loads a sample knowledge file and 7 demo conversations on fake numbers (+598 99 000 001–007): qualifying, scheduling a call, handed off with a failed HubSpot write, waiting for an advisor, paused, closed, and a form lead. Use it only when you want that fixture in a development database.
 
@@ -54,7 +54,9 @@ cd backend
 npm run chat                         # or: npm run chat -- --phone +59899555123 --name "Ana"
 ```
 
-Type as the lead. `/audio` sends a voice note, `/estado` shows what the bot extracted, `/reset` starts over. Without an Anthropic key it uses a scripted stand-in; put a key in `ANTHROPIC_API_KEY` in `backend/.env` (development only) or set the company's Anthropic key in Configuración → Integraciones to talk to `claude-haiku-4-5` with the real prompt. The conversation appears in the panel like any other.
+Type as the lead. `/audio` sends a voice note, `/estado` shows what the bot collected (by item key) and its summary, `/reset` starts over. Without an Anthropic key it uses a scripted stand-in; put a key in `ANTHROPIC_API_KEY` in `backend/.env` (development only) or set the company's Anthropic key in Configuración → Integraciones to talk to `claude-haiku-4-5` with the real prompt. The conversation appears in the panel like any other.
+
+In the panel, the thread's **Lead** panel shows the assistant's bullet summary (rewritten every turn) and the company's collected fields; HubSpot gets the same summary and fields at the top of the one long-text property, followed by the transcript. To check the real model on rental-yield and guaranteed-return questions (fixtures in `backend/test/fixtures/forbidden-topic-messages.ts`), run `ANTHROPIC_API_KEY=sk-ant-… npx vitest run forbidden-topics` in `backend/`; without a key those live cases are skipped and the engine and fake cases still run.
 
 **As Kapso would.** With the backend running, post a signed Kapso webhook; the reply arrives after the debounce (3.5 s) and shows in the panel. See [Local testing without Kapso](#local-testing-without-kapso) for the options and a hand-made `curl`:
 
@@ -76,7 +78,7 @@ When a company has no key for an integration and `ALLOW_FAKE_INTEGRATIONS=true` 
 
 | Integration | Fake | Real once you set |
 | --- | --- | --- |
-| Anthropic | scripted replies that walk the three questions | `anthropicApiKey` on the company, from Configuración → Integraciones |
+| Anthropic | scripted replies that pick up the company's items from what the lead writes and flag yield questions | `anthropicApiKey` on the company, from Configuración → Integraciones |
 | WhatsApp | sends recorded in memory (`FakeChannel`) | `kapsoApiKey` (Configuración → Integraciones) + the company's phone number id (Configuración → Integraciones). Inbound also needs `kapsoWebhookSecret`. |
 | HubSpot | contacts kept in memory | `hubspotAccessToken` (Configuración → Integraciones), and `crm.transcriptProperty` in the config |
 

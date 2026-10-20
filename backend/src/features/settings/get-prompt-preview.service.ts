@@ -2,14 +2,13 @@ import { loadCompanyById } from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
 import { loadSystemPrompt } from "../../conversation/system-prompt.js";
 import { buildTurnContext, type PromptThread } from "../../engine/prompt.js";
-import { SUBMIT_TURN_TOOL } from "../../llm/anthropic.js";
+import { submitTurnTool } from "../../llm/anthropic.js";
 
 /** The turn context is per lead; the preview shows it for someone writing for the first time. */
 const FIRST_MESSAGE_LEAD: PromptThread = {
   state: "greeting",
-  interest: null,
-  budget: null,
-  knowsProjects: null,
+  collected: {},
+  summary: null,
   callTime: null,
   name: null,
   source: "whatsapp",
@@ -27,7 +26,7 @@ export async function getPromptPreview(ctx: AppContext, companyId: string) {
       company.config,
       ctx.now(),
     ),
-    tool: SUBMIT_TURN_TOOL,
+    tool: submitTurnTool(company.config),
     knowledge: {
       files: documents.length,
       chars: documents.reduce((sum, doc) => sum + doc.text.length, 0),

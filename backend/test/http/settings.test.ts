@@ -110,10 +110,11 @@ describe("company settings", () => {
       ...settings.body.config,
       tone: "Cercano y breve, con voseo.",
       businessHours: "lunes a viernes de 9 a 18",
-      questions: {
-        ...settings.body.config.questions,
-        budget: "¿Cuánto pensás invertir?",
-      },
+      collect: settings.body.config.collect.map((item: { key: string }) =>
+        item.key === "budget"
+          ? { ...item, description: "Cuánto piensa invertir." }
+          : item,
+      ),
       crm: { provider: "hubspot", transcriptProperty: "resumen_whatsapp" },
       whatsapp: {
         welcomeTemplate: {
@@ -130,11 +131,11 @@ describe("company settings", () => {
       .send(next)
       .expect(200);
     expect(saved.body.changed).toBe(true);
-    expect(saved.body.settings.config.questions.budget).toBe(
-      "¿Cuánto pensás invertir?",
+    expect(saved.body.settings.config.collect[1].description).toBe(
+      "Cuánto piensa invertir.",
     );
     expect(saved.body.settings.platformRules).toContain(
-      "¿Cuánto pensás invertir?",
+      "Presupuesto [budget] (required): Cuánto piensa invertir.",
     );
 
     const stored = await settingsOf(altamiraId);
@@ -184,10 +185,14 @@ describe("company settings", () => {
       .send({
         ...config,
         timezone: "Marte/Olympus",
-        questions: { ...config.questions, budget: "   " },
+        collect: [
+          config.collect[0],
+          { ...config.collect[1], description: "   " },
+          config.collect[2],
+        ],
         forbiddenTopics: {
           ...config.forbiddenTopics,
-          patterns: ["rentabilidad", "(renta"],
+          patterns: ["rentabilidad"],
         },
         llm: { ...config.llm, model: "gpt-4o" },
         knowledge: { ...config.knowledge, maxCharsPerFile: 900_000 },
@@ -203,19 +208,19 @@ describe("company settings", () => {
       .expect(400);
     expect(response.body.error.code).toBe("invalid_config");
     expect(Object.keys(response.body.error.fields).sort()).toEqual([
+      "collect.1.description",
       "crm.transcriptProperty",
       "forbiddenTopics.patterns",
       "knowledge.maxCharsPerFile",
       "llm.model",
-      "questions.budget",
       "timezone",
       "whatsapp.welcomeTemplate.name",
     ]);
-    expect(response.body.error.fields["questions.budget"]).toBe(
+    expect(response.body.error.fields["collect.1.description"]).toBe(
       "No puede quedar vacío.",
     );
     expect(response.body.error.fields["forbiddenTopics.patterns"]).toBe(
-      "«(renta»: No es una expresión regular válida.",
+      "Este campo no se puede guardar desde Configuración.",
     );
 
     const tooSmall = await request(app)
@@ -251,6 +256,83 @@ describe("company settings", () => {
         where: { companyId: altamiraId },
       }),
     ).toBe(3);
+  });
+
+  it("caps the information to collect at 10 items and checks each one", async () => {
+    const config = await currentConfig(operator);
+    const item = (index: number) => ({
+      key: `dato${index}`,
+      name: `Dato ${index}`,
+      description: `Qué dice sobre el dato ${index}.`,
+      required: index % 2 === 0,
+    });
+    const ten = Array.from({ length: 10 }, (_, index) => item(index));
+
+    const tooMany = await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({ ...config, collect: [...ten, item(10)] })
+      .expect(400);
+    expect(tooMany.body.error.fields).toEqual({ collect: "Máximo 10 datos." });
+
+    const none = await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({ ...config, collect: [] })
+      .expect(400);
+    expect(none.body.error.fields).toEqual({
+      collect: "Agregá al menos un dato para recopilar.",
+    });
+
+    const bad = await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({
+        ...config,
+        collect: [
+          item(1),
+          { ...item(2), key: "con espacio", name: " " },
+          { ...item(3), required: "sí" },
+          { ...item(4), question: "¿Cuál?" },
+        ],
+      })
+      .expect(400);
+    expect(bad.body.error.fields).toEqual({
+      "collect.1.key":
+        "Usá letras, números y guiones bajos, empezando con una letra. Por ejemplo: presupuesto.",
+      "collect.1.name": "No puede quedar vacío.",
+      "collect.2.required": "Valor inválido.",
+      "collect.3.question":
+        "Este campo no se puede guardar desde Configuración.",
+    });
+
+    const duplicate = await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({ ...config, collect: [item(1), { ...item(2), key: "Dato1" }] })
+      .expect(400);
+    expect(duplicate.body.error.fields).toEqual({
+      "collect.1.key": "Ya hay otro dato con esta clave.",
+    });
+
+    const saved = await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({ ...config, collect: ten })
+      .expect(200);
+    expect(saved.body.settings.config.collect).toHaveLength(10);
+    expect(saved.body.settings.platformRules).toContain(
+      "   - Dato 1 [dato1] (optional): Qué dice sobre el dato 1.",
+    );
+    const versions = await request(app)
+      .get("/internal/settings/versions")
+      .set(operator)
+      .expect(200);
+    expect(versions.body.versions[0]).toMatchObject({
+      kind: "config",
+      current: true,
+      config: { collect: ten },
+    });
   });
 
   it("keeps an operator inside their own company, even with another company's header", async () => {
