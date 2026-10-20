@@ -32,15 +32,8 @@ export function StageBadge({ stage }: { stage: LeadStage }) {
   );
 }
 
-/** What the assistant is doing. `quiet` hides it while it simply answers, as in the list. */
-export function BotBadge({
-  activity,
-  quiet = false,
-}: {
-  activity: BotActivity;
-  quiet?: boolean;
-}) {
-  if (quiet && activity === "active") return null;
+/** What the assistant is doing, independent of the stage. */
+export function BotBadge({ activity }: { activity: BotActivity }) {
   const meta = BOT_META[activity];
   return (
     <Tooltip>

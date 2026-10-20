@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
-import {
-  ChevronDownIcon,
-  HandIcon,
-  PhoneCallIcon,
-  UserRoundPlusIcon,
-} from "lucide-react";
+import { PhoneCallIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -18,27 +12,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime, formatWaiting } from "@/lib/format";
-import { useAssignees, useAssignThread, useMe } from "@/lib/queries";
+import { useMe } from "@/lib/queries";
 import { operatorName } from "@/lib/thread-status";
 import type { Thread } from "@/lib/types";
-import { AssigneeLabel } from "./assignee-label";
-import { StageBadge } from "./status-badge";
+import { AssigneePicker } from "./assignee-picker";
+import { BotBadge, StageBadge } from "./status-badge";
 import { useThreadActionWithToast } from "./use-thread-action";
-
-const UNASSIGNED = "__none__";
 
 function waitingLabel(since: string | null): string {
   const waiting = formatWaiting(since);
@@ -53,108 +34,36 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-2 text-[13px]">
+    <div className="grid min-h-7 grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-2 text-[13px]">
       <span className="text-muted-foreground">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
   );
 }
 
-function AssignMenu({ thread }: { thread: Thread }) {
-  const assignees = useAssignees();
-  const assign = useAssignThread(thread.id);
-  const current = thread.assignee?.id ?? UNASSIGNED;
-  const choose = (value: string) => {
-    if (value === current) return;
-    const operatorId = value === UNASSIGNED ? null : value;
-    assign.mutate(operatorId, {
-      onSuccess: ({ thread: updated }) =>
-        toast.success(
-          updated.assignee
-            ? `Asignada a ${operatorName(updated.assignee.email)}.`
-            : "La conversación quedó sin asignar.",
-        ),
-      onError: (error) => toast.error(error.message),
-    });
-  };
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-background"
-            disabled={assign.isPending}
-          />
-        }
-      >
-        {assign.isPending ? <Spinner /> : <UserRoundPlusIcon />}
-        Asignar a…
-        <ChevronDownIcon className="text-muted-foreground" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-56">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>Operadores de la empresa</DropdownMenuLabel>
-          <DropdownMenuRadioGroup value={current} onValueChange={choose}>
-            {(assignees.data?.assignees ?? []).map((operator) => (
-              <DropdownMenuRadioItem
-                key={operator.id}
-                value={operator.id}
-                closeOnClick
-              >
-                <span className="truncate">{operator.email}</span>
-                {operator.me ? (
-                  <span className="ml-auto pl-2 text-xs text-muted-foreground">
-                    vos
-                  </span>
-                ) : null}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-          {assignees.isPending ? (
-            <div className="flex justify-center p-2">
-              <Spinner />
-            </div>
-          ) : null}
-        </DropdownMenuGroup>
-        {thread.assignee ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => choose(UNASSIGNED)}>
-              Quitar asignación
-            </DropdownMenuItem>
-          </>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-/** Where the lead is for the sales team, who has it, and what an advisor can do next. */
+/** Where the lead is for the sales team, what the assistant is doing, and who has the lead. */
 export function FollowUpGroup({ thread }: { thread: Thread }) {
   const me = useMe();
   const { run, pending } = useThreadActionWithToast(thread.id);
   const [confirming, setConfirming] = useState(false);
   const canBeAssigned = me.data ? !me.data.supportAccess : false;
-  const myEmail = canBeAssigned ? (me.data?.operator?.email ?? null) : null;
-  const mine = Boolean(myEmail) && thread.assignee?.email === myEmail;
   const contacted = thread.stage === "contacted";
 
   return (
     <div className="flex flex-col gap-3 px-5 py-4">
-      <div className="flex items-center justify-between gap-2">
-        <h4 className="text-xs font-medium text-muted-foreground">
-          Seguimiento
-        </h4>
-        <StageBadge stage={thread.stage} />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Row label="Asesor">
-          <span className="flex items-center gap-2">
-            <AssigneeLabel assignee={thread.assignee} myEmail={myEmail} />
+      <h4 className="text-xs font-medium text-muted-foreground">Seguimiento</h4>
+      <div className="flex flex-col gap-1.5">
+        <Row label="Etapa">
+          <StageBadge stage={thread.stage} />
+        </Row>
+        <Row label="Asistente">
+          <BotBadge activity={thread.botActivity} />
+        </Row>
+        <Row label="Asignado">
+          <span className="flex min-w-0 items-center gap-2">
+            <AssigneePicker thread={thread} size="compact" />
             {thread.assignedAt ? (
-              <span className="text-xs text-muted-foreground">
+              <span className="shrink-0 text-xs text-muted-foreground">
                 desde {formatDateTime(thread.assignedAt)}
               </span>
             ) : null}
@@ -183,33 +92,22 @@ export function FollowUpGroup({ thread }: { thread: Thread }) {
           </Row>
         ) : null}
       </div>
-      <div className="flex flex-wrap gap-2">
-        {canBeAssigned && !mine ? (
+      {contacted ? null : (
+        <div>
           <Button
             size="sm"
-            variant={thread.assignee ? "outline" : "default"}
-            className={thread.assignee ? "bg-background" : undefined}
-            onClick={() => run("take")}
-            disabled={pending !== null}
-          >
-            {pending === "take" ? <Spinner /> : <HandIcon />}
-            Tomar
-          </Button>
-        ) : null}
-        <AssignMenu thread={thread} />
-        {contacted ? null : (
-          <Button
-            size="sm"
-            variant={mine || !canBeAssigned ? "default" : "outline"}
-            className={mine || !canBeAssigned ? undefined : "bg-background"}
+            variant={thread.stage === "to_contact" ? "default" : "outline"}
+            className={
+              thread.stage === "to_contact" ? undefined : "bg-background"
+            }
             onClick={() => setConfirming(true)}
             disabled={pending !== null}
           >
             {pending === "contacted" ? <Spinner /> : <PhoneCallIcon />}
             Marcar contactado
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       <AlertDialog open={confirming} onOpenChange={setConfirming}>
         <AlertDialogContent>
@@ -218,11 +116,9 @@ export function FollowUpGroup({ thread }: { thread: Thread }) {
             <AlertDialogDescription>
               La conversación pasa a Contactado y queda registrado quién y
               cuándo.{" "}
-              {thread.assignee
-                ? ""
-                : canBeAssigned
-                  ? "Como no tenía asesor, queda asignada a vos. "
-                  : ""}
+              {!thread.assignee && canBeAssigned
+                ? "Como no tenía a nadie asignado, queda asignada a vos. "
+                : ""}
               El asistente sigue respondiendo sus preguntas sin volver a pedirle
               datos. No se puede deshacer.
             </AlertDialogDescription>

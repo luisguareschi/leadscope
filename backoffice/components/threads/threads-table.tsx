@@ -32,7 +32,7 @@ import {
   initials,
 } from "@/lib/format";
 import type { Thread } from "@/lib/types";
-import { AssigneeLabel } from "./assignee-label";
+import { AssigneePicker } from "./assignee-picker";
 import { CrmIndicator } from "./crm-indicator";
 import {
   BotBadge,
@@ -48,15 +48,12 @@ export function ThreadsTable({
   loading,
   filtered,
   queue,
-  myEmail,
 }: {
   threads: Thread[];
   loading: boolean;
   filtered: boolean;
   /** Por contactar: the last column is how long each lead has waited. */
   queue: boolean;
-  /** The signed-in operator, to show their own threads as "Vos". */
-  myEmail: string | null;
 }) {
   const router = useRouter();
 
@@ -86,17 +83,18 @@ export function ThreadsTable({
     <Table className="table-fixed">
       <TableHeader className="bg-muted/40">
         <TableRow className="hover:bg-transparent">
-          <TableHead className={`${HEAD} w-[28%] pl-5`}>Lead</TableHead>
-          <TableHead className={`${HEAD} w-56`}>
+          <TableHead className={`${HEAD} w-[26%] pl-5`}>Lead</TableHead>
+          <TableHead className={`${HEAD} w-36`}>
             <span className="flex items-center gap-1">
               Etapa
               <StatusLegendButton />
             </span>
           </TableHead>
-          <TableHead className={`${HEAD} hidden @4xl/content:table-cell`}>
+          <TableHead className={`${HEAD} w-36`}>Asistente</TableHead>
+          <TableHead className={`${HEAD} hidden @5xl/content:table-cell`}>
             Último mensaje
           </TableHead>
-          <TableHead className={`${HEAD} w-36`}>Asesor</TableHead>
+          <TableHead className={`${HEAD} w-40`}>Asignado</TableHead>
           <TableHead className={`${HEAD} w-20 text-center`}>HubSpot</TableHead>
           <TableHead className={`${HEAD} w-28 pr-5 text-right`}>
             {queue ? "Esperando" : "Actividad"}
@@ -119,7 +117,10 @@ export function ThreadsTable({
                 <TableCell>
                   <Skeleton className="h-5 w-24 rounded-full" />
                 </TableCell>
-                <TableCell className="hidden @4xl/content:table-cell">
+                <TableCell>
+                  <Skeleton className="h-5 w-24 rounded-full" />
+                </TableCell>
+                <TableCell className="hidden @5xl/content:table-cell">
                   <Skeleton className="h-3.5 w-full max-w-md" />
                 </TableCell>
                 <TableCell>
@@ -179,18 +180,18 @@ export function ThreadsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-wrap items-center gap-1">
-                    <StageBadge stage={thread.stage} />
-                    <BotBadge activity={thread.botActivity} quiet />
-                  </div>
+                  <StageBadge stage={thread.stage} />
                 </TableCell>
-                <TableCell className="hidden @4xl/content:table-cell">
+                <TableCell>
+                  <BotBadge activity={thread.botActivity} />
+                </TableCell>
+                <TableCell className="hidden @5xl/content:table-cell">
                   <p className="truncate text-muted-foreground">
                     {thread.lastMessagePreview ?? "—"}
                   </p>
                 </TableCell>
-                <TableCell>
-                  <AssigneeLabel assignee={thread.assignee} myEmail={myEmail} />
+                <TableCell onClick={(event) => event.stopPropagation()}>
+                  <AssigneePicker thread={thread} size="compact" />
                 </TableCell>
                 <TableCell
                   className="text-center"

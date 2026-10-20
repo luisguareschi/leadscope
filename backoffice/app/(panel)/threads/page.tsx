@@ -262,7 +262,6 @@ function ThreadsView() {
               stage !== "all" || bot !== "all" || mine || Boolean(search)
             }
             queue={stage === "to_contact"}
-            myEmail={canBeAssigned ? (me.data?.operator?.email ?? null) : null}
           />
           {threads.hasNextPage ? (
             <div className="flex justify-center p-2">
