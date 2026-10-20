@@ -36,8 +36,8 @@ import { AssigneePicker } from "./assignee-picker";
 import { CrmIndicator } from "./crm-indicator";
 import {
   BotBadge,
+  ColumnHelp,
   StageBadge,
-  StatusLegendButton,
   WroteAgainBadge,
 } from "./status-badge";
 
@@ -87,10 +87,15 @@ export function ThreadsTable({
           <TableHead className={`${HEAD} w-36`}>
             <span className="flex items-center gap-1">
               Etapa
-              <StatusLegendButton />
+              <ColumnHelp column="stage" />
             </span>
           </TableHead>
-          <TableHead className={`${HEAD} w-36`}>Asistente</TableHead>
+          <TableHead className={`${HEAD} w-36`}>
+            <span className="flex items-center gap-1">
+              Asistente
+              <ColumnHelp column="bot" />
+            </span>
+          </TableHead>
           <TableHead className={`${HEAD} hidden @5xl/content:table-cell`}>
             Último mensaje
           </TableHead>

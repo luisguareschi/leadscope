@@ -1,16 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { CircleHelpIcon, MessageCircleMoreIcon } from "lucide-react";
-import { StatusPill, type Tone } from "@/components/panel";
+import { StatusDot, StatusPill, type Tone } from "@/components/panel";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -75,66 +67,61 @@ export function WroteAgainBadge({
 
 type Meta = { label: string; tone: Tone; description: string };
 
-function LegendList({
-  title,
-  items,
-}: {
-  title: string;
-  items: Record<string, Meta>;
-}) {
-  return (
-    <section className="flex flex-col gap-2.5">
-      <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
-      <ul className="flex flex-col gap-2.5">
-        {Object.entries(items).map(([key, meta]) => (
-          <li
-            key={key}
-            className="grid grid-cols-[8.5rem_minmax(0,1fr)] items-start gap-3"
-          >
-            <StatusPill tone={meta.tone}>{meta.label}</StatusPill>
-            <p className="text-[13px] leading-relaxed text-muted-foreground">
-              {meta.description}
-            </p>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
+const COLUMN_HELP: Record<
+  "stage" | "bot",
+  { label: string; intro: string; items: Record<string, Meta> }
+> = {
+  stage: {
+    label: "Qué significa cada etapa",
+    intro:
+      "Dónde está el lead para el equipo de ventas. Solo avanza: el asistente lo pasa a Por contactar y un asesor lo marca como contactado.",
+    items: STAGE_META,
+  },
+  bot: {
+    label: "Qué significa cada estado del asistente",
+    intro: "Qué hace el asistente en la conversación, aparte de la etapa.",
+    items: BOT_META,
+  },
+};
 
-/** A help button that explains the two things every thread shows: stage and assistant. */
-export function StatusLegendButton() {
-  const [open, setOpen] = useState(false);
+/** The "?" next to a column header: hovering or focusing it explains that column's values. */
+export function ColumnHelp({ column }: { column: "stage" | "bot" }) {
+  const help = COLUMN_HELP[column];
   return (
-    <>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        className="text-muted-foreground"
-        aria-label="Qué significa cada estado"
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen(true);
-        }}
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground"
+            aria-label={help.label}
+            onClick={(event) => event.stopPropagation()}
+          />
+        }
       >
         <CircleHelpIcon />
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Etapa y asistente</DialogTitle>
-            <DialogDescription>
-              La etapa solo avanza: el asistente pasa al lead a Por contactar
-              cuando tiene los datos obligatorios, y un asesor lo marca como
-              contactado. Lo que hace el asistente se muestra aparte.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="-mx-1 flex max-h-[60vh] flex-col gap-5 overflow-y-auto px-1">
-            <LegendList title="Etapa del lead" items={STAGE_META} />
-            <LegendList title="Asistente" items={BOT_META} />
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        align="start"
+        className="max-w-80 flex-col items-start gap-2.5 p-3"
+      >
+        <p className="leading-relaxed text-background/80">{help.intro}</p>
+        <ul className="flex flex-col gap-2">
+          {Object.entries(help.items).map(([key, meta]) => (
+            <li key={key} className="flex flex-col gap-0.5">
+              <span className="flex items-center gap-1.5 font-medium">
+                <StatusDot tone={meta.tone} className="size-1.5" />
+                {meta.label}
+              </span>
+              <span className="leading-relaxed text-background/70">
+                {meta.description}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </TooltipContent>
+    </Tooltip>
   );
 }
