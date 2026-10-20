@@ -5,7 +5,7 @@ WhatsApp lead assistant for real-estate developers. It greets leads, finds out w
 | Folder | What it is |
 | --- | --- |
 | `backend/` | Express 5 + Prisma 7 (Postgres). WhatsApp through Kapso (webhook and sends), conversation engine, Anthropic, HubSpot, knowledge uploads. Ships as a Docker image. |
-| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations, pause/resume, knowledge files, company settings, instructions, and secrets, and (for a platform admin) creating, archiving, and deleting companies, managing their operators, and entering one through support access. |
+| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations (the Por contactar queue, assigning leads to advisors, marking them contacted), pause/resume, knowledge files, company settings, instructions, and secrets, and (for a platform admin) creating, archiving, and deleting companies, managing their operators, and entering one through support access. |
 | `docs/` | Design, proposals, meeting notes. |
 
 ## Run it locally
@@ -41,7 +41,9 @@ Sign in as the operator email you just typed. The sidebar is Conversaciones, Con
 
 **Configuración** edits the company config (tone, the information to collect, forbidden topics, fixed messages, business hours, welcome template, HubSpot property, model and limits) and the company instructions. **Información a recopilar** (in Conversación) is the list of things the assistant finds out from each lead, up to 10: a name, a key (how it is stored; a new item's key follows its name until you type one), what to find out (for the prompt, not a question to read out), and Obligatorio or Opcional. The assistant asks naturally, in any order, and skips what the lead already said; once every required item is in it asks for a call time. **Temas prohibidos** is plain language, one topic per line: when the lead asks about one, the model flags it and the engine sends the fixed "Hace falta un asesor" line, stops, and writes HubSpot. Idioma, Zona horaria, País de los teléfonos, and Modelo de Anthropic are searchable lists; the models come from Anthropic's API when the company has its key, and from a fixed list otherwise. The platform rules the engine depends on are shown read-only, with the full prompt the model would receive. Every save keeps a version (who and when), and **Versiones** restores any of them. **Integraciones** (a tab of Configuración; the old `/integrations` URL redirects there) is where that company connects WhatsApp through Kapso (a step-by-step guide, the exact webhook URL with a copy button, the Kapso API key and webhook secret, and **Probar conexión**) and sets its Anthropic, HubSpot, and form-lead secrets. It shows whether each one is set and the last 4 characters; it never shows the full value. Leaving a field empty does not clear it. A platform admin inside the company through Entrar also sees an **Operadores** tab.
 
-`npm run db:seed` and `npm run operator:add` are local fixtures only. A production setup does not run them. The seed loads a sample knowledge file and 7 demo conversations on fake numbers (+598 99 000 001–007): qualifying, scheduling a call, handed off with a failed HubSpot write, waiting for an advisor, paused, closed, and a form lead. Use it only when you want that fixture in a development database.
+**Conversaciones** shows two things per thread: the lead stage (Calificando → Por contactar → Contactado, plus Sin interés) and what the assistant is doing (respondiendo, pausado, requiere asesor). The stage only moves forward. Once a lead gives every required item the thread is **Por contactar**, and it stays there when the lead writes again (it gets an "Escribió de nuevo" badge) until a person marks it contacted; the bot keeps answering without asking for the data again. Por contactar is the advisors' queue, longest wait first. In a thread, **Tomar** assigns it to you, **Asignar a…** gives it to another active operator of the company (or nobody), and **Marcar contactado** records who and when (and assigns it to you if nobody had it). **Asignadas a mí** filters the list to your threads. HubSpot gets the same writes as before.
+
+`npm run db:seed` and `npm run operator:add` are local fixtures only. A production setup does not run them. The seed loads a sample knowledge file and 7 demo conversations on fake numbers (+598 99 000 001–007): qualifying, Por contactar asking for a call time, Por contactar with a failed HubSpot write and a later question from the lead, waiting for an advisor, contacted and paused (assigned to the seed operator), Sin interés, and a form lead. `SEED_OPERATOR_EMAIL` sets the seed operator; add more with `npm run operator:add -- altamira <email>` to try assigning between them. Use it only when you want that fixture in a development database.
 
 ## Talk to the assistant
 
@@ -54,7 +56,7 @@ cd backend
 npm run chat                         # or: npm run chat -- --phone +59899555123 --name "Ana"
 ```
 
-Type as the lead. `/audio` sends a voice note, `/estado` shows what the bot collected (by item key) and its summary, `/reset` starts over. Without an Anthropic key it uses a scripted stand-in; put a key in `ANTHROPIC_API_KEY` in `backend/.env` (development only) or set the company's Anthropic key in Configuración → Integraciones to talk to `claude-haiku-4-5` with the real prompt. The conversation appears in the panel like any other.
+Type as the lead. `/audio` sends a voice note, `/estado` shows the lead stage, the conversation step, what the bot collected (by item key), and its summary, `/reset` starts over. Without an Anthropic key it uses a scripted stand-in; put a key in `ANTHROPIC_API_KEY` in `backend/.env` (development only) or set the company's Anthropic key in Configuración → Integraciones to talk to `claude-haiku-4-5` with the real prompt. The conversation appears in the panel like any other.
 
 In the panel, the thread's **Lead** panel shows the assistant's bullet summary (rewritten every turn) and the company's collected fields; HubSpot gets the same summary and fields at the top of the one long-text property, followed by the transcript. To check the real model on rental-yield and guaranteed-return questions (fixtures in `backend/test/fixtures/forbidden-topic-messages.ts`), run `ANTHROPIC_API_KEY=sk-ant-… npx vitest run forbidden-topics` in `backend/`; without a key those live cases are skipped and the engine and fake cases still run.
 
@@ -87,7 +89,7 @@ Still placeholders for Altamira: the welcome template name, the HubSpot property
 ## Tests
 
 ```bash
-cd backend && npm test          # 222 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
+cd backend && npm test          # 276 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
 cd backoffice && npm run lint && npm run typecheck && npm run build
 ```
 
