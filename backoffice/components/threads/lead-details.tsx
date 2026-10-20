@@ -6,6 +6,7 @@ import {
   CircleAlertIcon,
   HandIcon,
   RefreshCwIcon,
+  SparklesIcon,
 } from "lucide-react";
 import { cn } from "cn";
 import { Panel, StatusPill, type Tone } from "@/components/panel";
@@ -13,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime, formatPhone } from "@/lib/format";
 import { needsHumanReasonLabel } from "@/lib/thread-status";
-import type { Thread } from "@/lib/types";
+import type { LeadField, Thread } from "@/lib/types";
 import { useThreadActionWithToast } from "./use-thread-action";
 
 function Group({
@@ -40,11 +41,13 @@ function Detail({
   label,
   value,
   answered,
+  tag,
 }: {
   label: string;
   value: ReactNode;
-  /** Shows whether one of the three qualifying answers is in. */
+  /** Shows whether an item to collect is in. */
   answered?: boolean;
+  tag?: string;
 }) {
   const empty = value === null || value === undefined || value === "";
   return (
@@ -62,7 +65,12 @@ function Detail({
         </span>
       ) : null}
       <dl className="flex min-w-0 flex-col gap-0.5">
-        <dt className="text-[13px] text-muted-foreground">{label}</dt>
+        <dt className="flex flex-wrap items-baseline gap-x-1.5 text-[13px] text-muted-foreground">
+          {label}
+          {tag ? (
+            <span className="text-[11px] text-muted-foreground/70">{tag}</span>
+          ) : null}
+        </dt>
         <dd className="text-sm break-words">
           {empty ? <span className="text-muted-foreground/70">—</span> : value}
         </dd>
@@ -226,12 +234,50 @@ function HubSpotGroup({ thread }: { thread: Thread }) {
   );
 }
 
-export function LeadDetails({ thread }: { thread: Thread }) {
-  const knows =
-    thread.knowsProjects === null ? null : thread.knowsProjects ? "Sí" : "No";
-  const answers = [thread.interest, thread.budget, knows].filter(
-    (value) => value !== null && value !== "",
-  ).length;
+/** The assistant's bullets, rewritten every turn. */
+function SummaryGroup({ summary }: { summary: string | null }) {
+  const bullets = (summary ?? "")
+    .split("\n")
+    .map((line) => line.replace(/^\s*[-•*]\s*/, "").trim())
+    .filter(Boolean);
+  return (
+    <Group
+      title="Resumen"
+      aside={
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <SparklesIcon className="size-3" />
+          Del asistente
+        </span>
+      }
+    >
+      {bullets.length > 0 ? (
+        <ul className="flex list-disc flex-col gap-1.5 pl-4 text-sm leading-relaxed marker:text-muted-foreground/60">
+          {bullets.map((bullet, index) => (
+            <li key={index} className="break-words">
+              {bullet}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          Se arma con la primera respuesta del asistente.
+        </p>
+      )}
+    </Group>
+  );
+}
+
+export function LeadDetails({
+  thread,
+  fields,
+}: {
+  thread: Thread;
+  /** The company's items with the lead's values, from the thread view. */
+  fields: LeadField[];
+}) {
+  const asked = fields.filter((field) => field.required !== null);
+  const required = asked.filter((field) => field.required);
+  const requiredIn = required.filter((field) => field.value).length;
   // What needs action goes first; a HubSpot that is fine is reference, at the end.
   const crmFailed = thread.crm.status === "failed";
 
@@ -240,29 +286,32 @@ export function LeadDetails({ thread }: { thread: Thread }) {
       <div className="min-h-0 flex-1 divide-y overflow-y-auto">
         <AssistantGroup thread={thread} />
         {crmFailed ? <HubSpotGroup thread={thread} /> : null}
+        <SummaryGroup summary={thread.summary} />
         <Group
-          title="Calificación"
+          title="Datos del lead"
           aside={
             <span className="text-xs text-muted-foreground tabular-nums">
-              {answers} de 3
+              {requiredIn} de {required.length} obligatorios
             </span>
           }
         >
-          <Detail
-            label="Qué busca"
-            value={thread.interest}
-            answered={Boolean(thread.interest)}
-          />
-          <Detail
-            label="Presupuesto"
-            value={thread.budget}
-            answered={Boolean(thread.budget)}
-          />
-          <Detail
-            label="Conoce los proyectos"
-            value={knows}
-            answered={knows !== null}
-          />
+          {fields.map((field) => (
+            <Detail
+              key={field.key}
+              label={field.name}
+              value={field.value}
+              answered={
+                field.required === null ? undefined : Boolean(field.value)
+              }
+              tag={
+                field.required === null
+                  ? "ya no se pide"
+                  : field.required
+                    ? undefined
+                    : "opcional"
+              }
+            />
+          ))}
           <Detail label="Horario para llamar" value={thread.callTime} />
         </Group>
         <Group title="Contacto">

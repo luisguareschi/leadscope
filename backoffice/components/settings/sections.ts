@@ -84,14 +84,8 @@ export const CONFIG_SECTION_FIELDS: Record<
     "defaultCountry",
     "businessHours",
   ],
-  conversation: [
-    "tone",
-    "maxReplyChars",
-    "interest",
-    "budget",
-    "knowsProjects",
-  ],
-  forbidden: ["forbiddenDescribe", "forbiddenPatterns"],
+  conversation: ["tone", "maxReplyChars", "collect"],
+  forbidden: ["forbiddenDescribe"],
   messages: ["needsHuman", "fallback", "nonText"],
   crm: [
     "welcomeEnabled",

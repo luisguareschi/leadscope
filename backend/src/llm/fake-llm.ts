@@ -134,10 +134,17 @@ function itemFor(
   return open.find((item) => !isBudgetItem(item) && !isKnowsItem(item));
 }
 
+const LEAD_IN =
+  /^(estoy buscando|busco|buscamos|quiero|queremos|necesito|tengo|tenemos|cuento con|contamos con)\s+((un|una|unos|unas|como|aprox\.?)\s+)?/i;
+
+/** "tengo unos 220 mil dólares" → "220 mil dólares". */
 function valueFor(item: CollectItem, fragment: string): string {
-  if (!isKnowsItem(item)) return fragment;
-  const folded = foldText(fragment);
-  return YES.test(folded) && !NO.test(folded) ? "Sí" : "No";
+  if (isKnowsItem(item)) {
+    const folded = foldText(fragment);
+    return YES.test(folded) && !NO.test(folded) ? "Sí" : "No";
+  }
+  const value = fragment.replace(LEAD_IN, "").trim() || fragment;
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
 }
 
 function askFor(item: CollectItem): string {

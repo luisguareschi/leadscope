@@ -15,6 +15,7 @@ import { formatNumber } from "@/lib/format";
 import { useSettingsOptions } from "@/lib/queries";
 import type { ConfigDraft } from "./config-draft";
 import { useConfigEditor } from "./config-editor";
+import { CollectEditor } from "./collect-editor";
 import { SearchableSelect, type SearchableOption } from "./searchable-select";
 import { Panel, FieldRow, Section } from "@/components/panel";
 import type { ConfigSectionId } from "./sections";
@@ -219,7 +220,7 @@ function ConversationSection() {
   return (
     <Section
       title="Conversación"
-      description="Cómo escribe y qué pregunta para calificar al lead."
+      description="Cómo escribe y qué averigua del lead antes de derivarlo."
     >
       <Panel title="Estilo">
         <TextRow
@@ -238,32 +239,7 @@ function ConversationSection() {
           narrow
         />
       </Panel>
-      <Panel
-        title="Preguntas para calificar"
-        description="Con las tres respuestas pide un horario y deriva el lead a un asesor."
-      >
-        <TextRow
-          name="interest"
-          label="1 · Qué busca"
-          multiline
-          compact
-          maxLength={300}
-        />
-        <TextRow
-          name="budget"
-          label="2 · Presupuesto"
-          multiline
-          compact
-          maxLength={300}
-        />
-        <TextRow
-          name="knowsProjects"
-          label="3 · Si conoce los proyectos"
-          multiline
-          compact
-          maxLength={300}
-        />
-      </Panel>
+      <CollectEditor />
     </Section>
   );
 }
@@ -276,23 +252,17 @@ function ForbiddenSection() {
   return (
     <Section
       title="Temas prohibidos"
-      description="Lo que el asistente nunca responde. Si un lead pregunta por esto, pasa la conversación a una persona."
+      description="Lo que el asistente nunca responde. Si un lead pregunta por uno, el asistente no contesta con sus palabras: envía el mensaje fijo «Hace falta un asesor», se detiene y deja el lead en HubSpot."
     >
       <Panel>
         <TextRow
           name="forbiddenDescribe"
           label="Temas"
-          hint={`Uno por línea. El modelo los recibe como lista${
-            topics.length ? ` (${topics.length})` : ""
+          hint={`Uno por línea, en palabras simples, como se lo explicarías a una persona. El asistente marca cuál tocó el lead${
+            topics.length ? ` (${topics.length} cargados)` : ""
           }.`}
+          placeholder="Rentabilidad futura, renta proyectada o retorno de la inversión."
           multiline
-        />
-        <TextRow
-          name="forbiddenPatterns"
-          label="Patrones de bloqueo"
-          hint="Expresiones regulares, una por línea. Si una respuesta coincide no se envía y va el mensaje de respaldo. No distingue mayúsculas ni acentos."
-          multiline
-          mono
         />
       </Panel>
     </Section>
@@ -309,14 +279,14 @@ function MessagesSection() {
         <TextRow
           name="needsHuman"
           label="Hace falta un asesor"
-          hint="Una queja, una compra existente, un tema prohibido o un lead que pide hablar con alguien. Después espera a una persona."
+          hint="Un tema prohibido, una queja, una compra existente o un lead que insiste en hablar con alguien. Después espera a una persona."
           multiline
           maxLength={1000}
         />
         <TextRow
           name="fallback"
           label="Respaldo"
-          hint="Si el modelo falla o una respuesta toca un tema prohibido."
+          hint="Si el modelo falla, tarda demasiado o devuelve una respuesta vacía."
           multiline
           maxLength={1000}
         />

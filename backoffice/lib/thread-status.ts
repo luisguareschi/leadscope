@@ -56,7 +56,7 @@ export const STATUS_META: Record<
     label: "Calificando",
     tone: "pending",
     description:
-      "El asistente hace las tres preguntas: qué busca, presupuesto y si conoce los proyectos.",
+      "El asistente averigua lo que la empresa pide en Configuración (por ejemplo qué busca y su presupuesto), en el orden que surja.",
   },
   answering: {
     label: "Respondiendo",
@@ -68,7 +68,7 @@ export const STATUS_META: Record<
     label: "Coordinando llamada",
     tone: "info",
     description:
-      "El lead respondió las tres preguntas y el asistente le pide un horario para que lo llame un asesor.",
+      "El asistente ya sabe todos los datos obligatorios y le pide un horario para que lo llame un asesor.",
   },
   handed_off: {
     label: "Derivada",
@@ -116,6 +116,8 @@ export function needsHumanReasonLabel(reason: string | null): string {
   if (!reason) return "El asistente se detuvo.";
   if (reason === "lead_needs_human")
     return "El lead preguntó algo que tiene que responder una persona.";
+  if (reason.startsWith("forbidden_topic"))
+    return `El lead preguntó por un tema prohibido: «${reason.slice("forbidden_topic: ".length)}». El asistente no respondió y envió el mensaje fijo.`;
   if (reason.startsWith("blocked_reply"))
     return "La respuesta del asistente tocaba un tema prohibido y no se envió.";
   if (reason.startsWith("model_failure"))

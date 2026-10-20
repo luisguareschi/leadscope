@@ -12,6 +12,8 @@ import {
   errorsByField,
   FIELD_PATHS,
   fromDraft,
+  itemErrors,
+  sameDraftValue,
   toDraft,
   type ConfigDraft,
 } from "./config-draft";
@@ -22,6 +24,8 @@ type Errors = Partial<Record<keyof ConfigDraft, string>>;
 export type ConfigEditor = {
   draft: ConfigDraft;
   errors: Errors;
+  /** Errors on one collect item, keyed "<index>.<field>". */
+  itemErrors: Record<string, string>;
   formError: string | null;
   changedKeys: Array<keyof ConfigDraft>;
   saving: boolean;
@@ -46,6 +50,7 @@ export function useConfigEditorState(
   }));
   const [draft, setDraft] = useState(base.initial);
   const [errors, setErrors] = useState<Errors>({});
+  const [itemErrorsState, setItemErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const mutation = useSaveConfig();
 
@@ -54,11 +59,12 @@ export function useConfigEditorState(
     setBase({ version, initial });
     setDraft(initial);
     setErrors({});
+    setItemErrors({});
     setFormError(null);
   }
 
   const changedKeys = (Object.keys(draft) as Array<keyof ConfigDraft>).filter(
-    (key) => draft[key] !== base.initial[key],
+    (key) => !sameDraftValue(key, draft[key], base.initial[key]),
   );
 
   useEffect(() => {
@@ -71,17 +77,20 @@ export function useConfigEditorState(
   return {
     draft,
     errors,
+    itemErrors: itemErrorsState,
     formError,
     changedKeys,
     saving: mutation.isPending,
     set: (key, value) => {
       setDraft((current) => ({ ...current, [key]: value }));
       setErrors((current) => ({ ...current, [key]: undefined }));
+      if (key === "collect") setItemErrors({});
       setFormError(null);
     },
     discard: () => {
       setDraft(base.initial);
       setErrors({});
+      setItemErrors({});
       setFormError(null);
     },
     // The outcome is read from the promise: a save replaces the draft before mutate() callbacks run.
@@ -100,6 +109,7 @@ export function useConfigEditorState(
           if (!(error instanceof ApiError) || !error.fields) return null;
           const next = errorsByField(error.fields);
           setErrors(next);
+          setItemErrors(itemErrors(error.fields));
           return (
             (Object.keys(FIELD_PATHS) as Array<keyof ConfigDraft>).find(
               (key) => next[key],

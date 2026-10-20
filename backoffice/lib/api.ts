@@ -7,7 +7,7 @@ export class ApiError extends Error {
     readonly status: number,
     message: string,
     readonly code?: string,
-    /** Per-field messages, keyed by the field's dotted path (e.g. "questions.budget"). */
+    /** Per-field messages, keyed by the field's dotted path (e.g. "collect.1.description"). */
     readonly fields?: Record<string, string>,
   ) {
     super(message);
