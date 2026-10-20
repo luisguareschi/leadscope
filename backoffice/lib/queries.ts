@@ -11,6 +11,7 @@ import { ApiError, apiFetch } from "./api";
 import { useAuth } from "./auth";
 import { COMPANY_ID_HEADER, supportCompanyIdFor } from "./support";
 import type {
+  Assignee,
   AuthUserRemoval,
   KnowledgeFile,
   KnowledgeList,
@@ -34,9 +35,9 @@ import type {
   SettingsVersion,
   Thread,
   ThreadDetail,
+  ThreadFilters,
   ThreadsPage,
   ThreadsSummary,
-  ThreadStatusFilter,
   WhatsappConnectionCheck,
 } from "./types";
 
@@ -109,13 +110,14 @@ export function useThreadsSummary(enabled = true) {
   });
 }
 
-export function useThreads(status: ThreadStatusFilter, search: string) {
+export function useThreads(filters: ThreadFilters) {
   const api = useApi();
+  const { stage, bot, assignee, search } = filters;
   return useInfiniteQuery({
-    queryKey: ["threads", "list", status, search],
+    queryKey: ["threads", "list", stage, bot, assignee, search],
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) => {
-      const params = new URLSearchParams({ status, limit: "50" });
+      const params = new URLSearchParams({ stage, bot, assignee, limit: "50" });
       if (search) params.set("search", search);
       if (pageParam) params.set("cursor", pageParam);
       return api<ThreadsPage>(`/internal/threads?${params}`);
@@ -137,7 +139,7 @@ export function useThread(id: string) {
 }
 
 export type ThreadAction =
-  "pause" | "resume" | "clear-needs-human" | "crm-sync";
+  "pause" | "resume" | "clear-needs-human" | "crm-sync" | "take" | "contacted";
 
 export function useThreadAction(id: string) {
   const api = useApi();
@@ -146,6 +148,31 @@ export function useThreadAction(id: string) {
     mutationFn: (action: ThreadAction) =>
       api<{ thread: Thread }>(`/internal/threads/${id}/${action}`, {
         method: "POST",
+      }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["threads"] }),
+  });
+}
+
+/** Active operators of the company, for "Asignar a…". */
+export function useAssignees() {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["threads", "assignees"],
+    queryFn: () =>
+      api<{ assignees: Assignee[] }>("/internal/threads/assignees"),
+    staleTime: 60_000,
+  });
+}
+
+/** `operatorId` null leaves the thread with nobody. */
+export function useAssignThread(id: string) {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (operatorId: string | null) =>
+      api<{ thread: Thread }>(`/internal/threads/${id}/assign`, {
+        method: "POST",
+        body: JSON.stringify({ operatorId }),
       }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["threads"] }),
   });

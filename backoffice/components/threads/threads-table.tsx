@@ -25,10 +25,21 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatPhone, formatRelative, initials } from "@/lib/format";
+import {
+  formatPhone,
+  formatRelative,
+  formatWaiting,
+  initials,
+} from "@/lib/format";
 import type { Thread } from "@/lib/types";
+import { AssigneeLabel } from "./assignee-label";
 import { CrmIndicator } from "./crm-indicator";
-import { StatusBadge, StatusLegendButton } from "./status-badge";
+import {
+  BotBadge,
+  StageBadge,
+  StatusLegendButton,
+  WroteAgainBadge,
+} from "./status-badge";
 
 const HEAD = "h-10 text-xs font-medium text-muted-foreground";
 
@@ -36,10 +47,16 @@ export function ThreadsTable({
   threads,
   loading,
   filtered,
+  queue,
+  myEmail,
 }: {
   threads: Thread[];
   loading: boolean;
   filtered: boolean;
+  /** Por contactar: the last column is how long each lead has waited. */
+  queue: boolean;
+  /** The signed-in operator, to show their own threads as "Vos". */
+  myEmail: string | null;
 }) {
   const router = useRouter();
 
@@ -57,7 +74,7 @@ export function ThreadsTable({
           </EmptyTitle>
           <EmptyDescription>
             {filtered
-              ? "Probá con otro estado o buscá por otro nombre o teléfono."
+              ? "Probá con otra etapa u otro filtro, o buscá por otro nombre o teléfono."
               : "Cuando un lead escriba al número de WhatsApp, la conversación aparece acá."}
           </EmptyDescription>
         </EmptyHeader>
@@ -69,19 +86,20 @@ export function ThreadsTable({
     <Table className="table-fixed">
       <TableHeader className="bg-muted/40">
         <TableRow className="hover:bg-transparent">
-          <TableHead className={`${HEAD} w-[30%] pl-5`}>Lead</TableHead>
-          <TableHead className={`${HEAD} w-44`}>
+          <TableHead className={`${HEAD} w-[28%] pl-5`}>Lead</TableHead>
+          <TableHead className={`${HEAD} w-56`}>
             <span className="flex items-center gap-1">
-              Estado
+              Etapa
               <StatusLegendButton />
             </span>
           </TableHead>
-          <TableHead className={`${HEAD} hidden @3xl/content:table-cell`}>
+          <TableHead className={`${HEAD} hidden @4xl/content:table-cell`}>
             Último mensaje
           </TableHead>
+          <TableHead className={`${HEAD} w-36`}>Asesor</TableHead>
           <TableHead className={`${HEAD} w-20 text-center`}>HubSpot</TableHead>
           <TableHead className={`${HEAD} w-28 pr-5 text-right`}>
-            Actividad
+            {queue ? "Esperando" : "Actividad"}
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -101,8 +119,11 @@ export function ThreadsTable({
                 <TableCell>
                   <Skeleton className="h-5 w-24 rounded-full" />
                 </TableCell>
-                <TableCell className="hidden @3xl/content:table-cell">
+                <TableCell className="hidden @4xl/content:table-cell">
                   <Skeleton className="h-3.5 w-full max-w-md" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-3.5 w-20" />
                 </TableCell>
                 <TableCell />
                 <TableCell className="pr-5">
@@ -149,6 +170,7 @@ export function ThreadsTable({
                             </TooltipContent>
                           </Tooltip>
                         ) : null}
+                        <WroteAgainBadge thread={thread} />
                       </div>
                       <span className="truncate text-xs text-muted-foreground tabular-nums">
                         {formatPhone(thread.phone)}
@@ -157,12 +179,18 @@ export function ThreadsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge thread={thread} />
+                  <div className="flex flex-wrap items-center gap-1">
+                    <StageBadge stage={thread.stage} />
+                    <BotBadge activity={thread.botActivity} quiet />
+                  </div>
                 </TableCell>
-                <TableCell className="hidden @3xl/content:table-cell">
+                <TableCell className="hidden @4xl/content:table-cell">
                   <p className="truncate text-muted-foreground">
                     {thread.lastMessagePreview ?? "—"}
                   </p>
+                </TableCell>
+                <TableCell>
+                  <AssigneeLabel assignee={thread.assignee} myEmail={myEmail} />
                 </TableCell>
                 <TableCell
                   className="text-center"
@@ -171,7 +199,9 @@ export function ThreadsTable({
                   <CrmIndicator crm={thread.crm} />
                 </TableCell>
                 <TableCell className="pr-5 text-right text-xs text-muted-foreground tabular-nums">
-                  {formatRelative(thread.lastMessageAt)}
+                  {queue
+                    ? formatWaiting(thread.handedOffAt)
+                    : formatRelative(thread.lastMessageAt)}
                 </TableCell>
               </TableRow>
             ))}

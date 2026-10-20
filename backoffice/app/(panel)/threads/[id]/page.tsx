@@ -6,7 +6,11 @@ import { ArrowLeftIcon } from "lucide-react";
 import { Panel, StatusPill } from "@/components/panel";
 import { ChatTranscript } from "@/components/threads/chat-transcript";
 import { LeadDetails } from "@/components/threads/lead-details";
-import { StatusBadge } from "@/components/threads/status-badge";
+import {
+  BotBadge,
+  StageBadge,
+  WroteAgainBadge,
+} from "@/components/threads/status-badge";
 import { ThreadActions } from "@/components/threads/thread-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -113,7 +117,9 @@ export default function ThreadPage() {
                 <h2 className="truncate text-lg leading-tight font-semibold tracking-tight">
                   {thread.name ?? formatPhone(thread.phone)}
                 </h2>
-                <StatusBadge thread={thread} />
+                <StageBadge stage={thread.stage} />
+                <BotBadge activity={thread.botActivity} />
+                <WroteAgainBadge thread={thread} />
               </div>
               <p className="truncate text-[13px] text-muted-foreground tabular-nums">
                 {formatPhone(thread.phone)}

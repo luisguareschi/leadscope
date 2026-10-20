@@ -35,8 +35,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             title: "Conversaciones",
             url: "/threads",
             icon: <MessagesSquareIcon />,
-            badge: summary.data?.needs_human || undefined,
-            badgeLabel: "conversaciones que requieren un asesor",
+            badge: summary.data?.unassignedToContact || undefined,
+            badgeLabel: "leads por contactar sin asesor",
           },
           {
             title: "Conocimiento",

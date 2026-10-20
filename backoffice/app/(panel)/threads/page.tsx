@@ -2,43 +2,91 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { HandIcon, SearchIcon } from "lucide-react";
+import {
+  BotIcon,
+  ChevronDownIcon,
+  HandIcon,
+  SearchIcon,
+  UserRoundCheckIcon,
+} from "lucide-react";
 import { cn } from "cn";
 import { Notice, Panel } from "@/components/panel";
 import { ThreadsTable } from "@/components/threads/threads-table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
-import { useThreads, useThreadsSummary } from "@/lib/queries";
-import { FILTERS, isStatusFilter } from "@/lib/thread-status";
-import type { ThreadStatusFilter } from "@/lib/types";
+import { useMe, useThreads, useThreadsSummary } from "@/lib/queries";
+import {
+  BOT_FILTERS,
+  isBotFilter,
+  isStageFilter,
+  STAGE_FILTERS,
+} from "@/lib/thread-status";
+import type { BotFilter, StageFilter, ThreadsSummary } from "@/lib/types";
+
+function countFor(
+  counts: ThreadsSummary | undefined,
+  stage: StageFilter,
+): number | undefined {
+  if (!counts) return undefined;
+  return stage === "all" ? counts.total : counts.stages[stage];
+}
 
 function ThreadsView() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const rawStatus = params.get("status");
-  const status: ThreadStatusFilter = isStatusFilter(rawStatus)
-    ? rawStatus
-    : "all";
+  const me = useMe();
+  const rawStage = params.get("stage");
+  const rawBot = params.get("bot");
+  const stage: StageFilter = isStageFilter(rawStage) ? rawStage : "all";
+  const bot: BotFilter = isBotFilter(rawBot) ? rawBot : "all";
+  // A platform admin in support access has no operator row here, so nothing is "theirs".
+  const canBeAssigned = me.data ? !me.data.supportAccess : false;
+  const mine = canBeAssigned && params.get("mine") === "1";
   const search = params.get("q") ?? "";
   const [searchInput, setSearchInput] = useState(search);
 
   const summary = useThreadsSummary();
-  const threads = useThreads(status, search);
+  const threads = useThreads({
+    stage,
+    bot,
+    assignee: mine ? "me" : "all",
+    search,
+  });
 
-  const setParams = (next: { status?: ThreadStatusFilter; q?: string }) => {
+  const setParams = (next: {
+    stage?: StageFilter;
+    bot?: BotFilter;
+    mine?: boolean;
+    q?: string;
+  }) => {
     const updated = new URLSearchParams(params);
-    const nextStatus = next.status ?? status;
-    const nextSearch = next.q ?? search;
-    if (nextStatus === "all") updated.delete("status");
-    else updated.set("status", nextStatus);
-    if (nextSearch) updated.set("q", nextSearch);
+    const values = {
+      stage: next.stage ?? stage,
+      bot: next.bot ?? bot,
+      mine: next.mine ?? mine,
+      q: next.q ?? search,
+    };
+    for (const key of ["stage", "bot"] as const) {
+      if (values[key] === "all") updated.delete(key);
+      else updated.set(key, values[key]);
+    }
+    if (values.mine) updated.set("mine", "1");
+    else updated.delete("mine");
+    if (values.q) updated.set("q", values.q);
     else updated.delete("q");
     const query = updated.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, {
@@ -56,11 +104,13 @@ function ThreadsView() {
 
   const rows = threads.data?.pages.flatMap((page) => page.threads) ?? [];
   const counts = summary.data;
-  const waiting = counts?.needs_human ?? 0;
+  const waiting = counts?.bot.needs_human ?? 0;
+  const botLabel =
+    BOT_FILTERS.find((filter) => filter.value === bot)?.label ?? "";
 
   return (
     <div className="@container/content flex flex-col gap-4 px-4 lg:px-6">
-      {waiting > 0 && status !== "needs_human" ? (
+      {waiting > 0 && bot !== "needs_human" ? (
         <Notice
           tone="warning"
           icon={<HandIcon />}
@@ -73,7 +123,7 @@ function ThreadsView() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setParams({ status: "needs_human" })}
+              onClick={() => setParams({ bot: "needs_human", stage: "all" })}
             >
               Ver
             </Button>
@@ -87,15 +137,13 @@ function ThreadsView() {
       <div className="flex flex-col gap-3 @3xl/content:flex-row @3xl/content:items-center @3xl/content:justify-between">
         <div
           role="group"
-          aria-label="Filtrar por estado"
+          aria-label="Filtrar por etapa"
           className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] lg:-mx-6 lg:px-6 @3xl/content:mx-0 @3xl/content:px-0"
         >
-          {FILTERS.map((filter) => {
-            const count =
-              filter.value === "all" ? counts?.total : counts?.[filter.value];
-            const selected = status === filter.value;
-            const attention =
-              filter.value === "needs_human" && (count ?? 0) > 0;
+          {STAGE_FILTERS.map((filter) => {
+            const count = countFor(counts, filter.value);
+            const selected = stage === filter.value;
+            const attention = filter.value === "to_contact" && (count ?? 0) > 0;
             return (
               <Button
                 key={filter.value}
@@ -106,7 +154,7 @@ function ThreadsView() {
                   "shrink-0",
                   selected ? "text-foreground" : "text-muted-foreground",
                 )}
-                onClick={() => setParams({ status: filter.value })}
+                onClick={() => setParams({ stage: filter.value })}
               >
                 {filter.label}
                 {count !== undefined ? (
@@ -138,6 +186,68 @@ function ThreadsView() {
         </InputGroup>
       </div>
 
+      <div className="-mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+        {canBeAssigned ? (
+          <Button
+            size="sm"
+            variant={mine ? "secondary" : "outline"}
+            aria-pressed={mine}
+            className={cn(mine && "text-foreground")}
+            onClick={() => setParams({ mine: !mine })}
+          >
+            <UserRoundCheckIcon />
+            Asignadas a mí
+            {counts?.mine ? (
+              <span className="rounded px-1 text-xs text-muted-foreground tabular-nums">
+                {stage === "to_contact"
+                  ? counts.mine.toContact
+                  : counts.mine.all}
+              </span>
+            ) : null}
+          </Button>
+        ) : null}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                size="sm"
+                variant={bot === "all" ? "outline" : "secondary"}
+                aria-label="Filtrar por asistente"
+              />
+            }
+          >
+            <BotIcon />
+            {botLabel}
+            <ChevronDownIcon className="text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-48">
+            <DropdownMenuRadioGroup
+              value={bot}
+              onValueChange={(value) => {
+                if (isBotFilter(value)) setParams({ bot: value });
+              }}
+            >
+              {BOT_FILTERS.map((filter) => (
+                <DropdownMenuRadioItem key={filter.value} value={filter.value}>
+                  {filter.value === "all" ? "Todos" : filter.label}
+                  {filter.value !== "all" && counts ? (
+                    <span className="ml-auto pl-3 text-xs text-muted-foreground tabular-nums">
+                      {counts.bot[filter.value]}
+                    </span>
+                  ) : null}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {stage === "to_contact" ? (
+          <p className="text-[13px] text-muted-foreground">
+            Primero los que más esperan. Siguen acá aunque vuelvan a escribir,
+            hasta que alguien los marque como contactados.
+          </p>
+        ) : null}
+      </div>
+
       {threads.isError ? (
         <Alert variant="destructive">
           <AlertTitle>No se pudieron cargar las conversaciones</AlertTitle>
@@ -148,7 +258,11 @@ function ThreadsView() {
           <ThreadsTable
             threads={rows}
             loading={threads.isPending}
-            filtered={status !== "all" || Boolean(search)}
+            filtered={
+              stage !== "all" || bot !== "all" || mine || Boolean(search)
+            }
+            queue={stage === "to_contact"}
+            myEmail={canBeAssigned ? (me.data?.operator?.email ?? null) : null}
           />
           {threads.hasNextPage ? (
             <div className="flex justify-center p-2">
