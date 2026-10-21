@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowDownIcon, ArrowUpIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { cn } from "cn";
+import { HelpTip } from "@/components/help-tip";
 import { Panel } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,10 +130,10 @@ function ItemRow({
           </p>
         ) : null}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex items-center gap-1">
             <label
               htmlFor={id("required")}
-              className="flex items-center gap-2 text-[13px] font-medium"
+              className="flex items-center gap-2 text-[13px]"
             >
               <Switch
                 id={id("required")}
@@ -143,11 +144,18 @@ function ItemRow({
               />
               {item.required ? "Necesario para Por contactar" : "Opcional"}
             </label>
-            <p className="text-xs text-muted-foreground">
+            <HelpTip
+              label={
+                item.required
+                  ? "Qué significa Necesario para Por contactar"
+                  : "Qué significa Opcional"
+              }
+              className="max-w-64"
+            >
               {item.required
-                ? "El lead pasa a Por contactar recién cuando lo sabe, salvo que pida hablar con alguien ya."
+                ? "Pasa a Por contactar recién cuando lo sabe, salvo que pida hablar con alguien ya."
                 : "Lo pregunta si surge; no frena el paso a Por contactar."}
-            </p>
+            </HelpTip>
           </div>
           <div className="flex items-center gap-1">
             <Button

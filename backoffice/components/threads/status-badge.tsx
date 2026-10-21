@@ -1,8 +1,8 @@
 "use client";
 
-import { CircleHelpIcon, MessageCircleMoreIcon } from "lucide-react";
+import { MessageCircleMoreIcon } from "lucide-react";
+import { HelpTip } from "@/components/help-tip";
 import { StatusDot, StatusPill, type Tone } from "@/components/panel";
-import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -88,40 +88,24 @@ const COLUMN_HELP: Record<
 export function ColumnHelp({ column }: { column: "stage" | "bot" }) {
   const help = COLUMN_HELP[column];
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="text-muted-foreground"
-            aria-label={help.label}
-            onClick={(event) => event.stopPropagation()}
-          />
-        }
-      >
-        <CircleHelpIcon />
-      </TooltipTrigger>
-      <TooltipContent
-        side="bottom"
-        align="start"
-        className="max-w-80 flex-col items-start gap-2.5 p-3"
-      >
-        <p className="leading-relaxed text-background/80">{help.intro}</p>
-        <ul className="flex flex-col gap-2">
-          {Object.entries(help.items).map(([key, meta]) => (
-            <li key={key} className="flex flex-col gap-0.5">
-              <span className="flex items-center gap-1.5 font-medium">
-                <StatusDot tone={meta.tone} className="size-1.5" />
-                {meta.label}
-              </span>
-              <span className="leading-relaxed text-background/70">
-                {meta.description}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </TooltipContent>
-    </Tooltip>
+    <HelpTip
+      label={help.label}
+      className="flex-col items-start gap-2.5 leading-normal"
+    >
+      <p className="leading-relaxed text-background/80">{help.intro}</p>
+      <ul className="flex flex-col gap-2">
+        {Object.entries(help.items).map(([key, meta]) => (
+          <li key={key} className="flex flex-col gap-0.5">
+            <span className="flex items-center gap-1.5 font-medium">
+              <StatusDot tone={meta.tone} className="size-1.5" />
+              {meta.label}
+            </span>
+            <span className="leading-relaxed text-background/70">
+              {meta.description}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </HelpTip>
   );
 }
