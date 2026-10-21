@@ -129,24 +129,26 @@ function ItemRow({
           </p>
         ) : null}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <label
-            htmlFor={id("required")}
-            className="flex items-center gap-2 text-[13px]"
-          >
-            <Switch
-              id={id("required")}
-              checked={item.required}
-              onCheckedChange={(checked) =>
-                onChange({ ...item, required: checked })
-              }
-            />
-            {item.required ? "Necesario para Por contactar" : "Opcional"}
-            <span className="text-muted-foreground">
+          <div className="flex min-w-0 flex-col gap-1">
+            <label
+              htmlFor={id("required")}
+              className="flex items-center gap-2 text-[13px] font-medium"
+            >
+              <Switch
+                id={id("required")}
+                checked={item.required}
+                onCheckedChange={(checked) =>
+                  onChange({ ...item, required: checked })
+                }
+              />
+              {item.required ? "Necesario para Por contactar" : "Opcional"}
+            </label>
+            <p className="text-xs text-muted-foreground">
               {item.required
-                ? "· Pasa a Por contactar recién cuando lo sabe, salvo que pida hablar con alguien ya."
-                : "· Lo pregunta si surge; no frena el paso a Por contactar."}
-            </span>
-          </label>
+                ? "El lead pasa a Por contactar recién cuando lo sabe, salvo que pida hablar con alguien ya."
+                : "Lo pregunta si surge; no frena el paso a Por contactar."}
+            </p>
+          </div>
           <div className="flex items-center gap-1">
             <Button
               type="button"

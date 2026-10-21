@@ -74,6 +74,16 @@ export async function syncThreadToCrm(
         crmSyncedAt: ctx.now(),
       },
     });
+    ctx.logger.info(
+      {
+        threadId,
+        companyId: thread.companyId,
+        action: thread.crmPendingAction,
+        contactId,
+        created: thread.crmContactId === null,
+      },
+      "crm contact written",
+    );
     const cleared = await ctx.db.thread.updateMany({
       where: { id: threadId, crmRequestVersion: version },
       data: { crmPendingAction: null, crmNextAttemptAt: null },
