@@ -7,6 +7,7 @@ import {
   resetDb,
   testDb,
   type TestContext,
+  settle,
 } from "../support/harness.js";
 import {
   kapsoMessageReceived,
@@ -26,7 +27,7 @@ beforeEach(async () => {
 });
 
 // Replies run in the background after the 200; finish them before the next test truncates the tables.
-afterEach(() => ctx.replies.drain());
+afterEach(() => settle(ctx));
 
 const received = (text: string, overrides: { id?: string } = {}) =>
   kapsoMessageReceived({ phoneNumberId: "PNID", text, ...overrides });
@@ -81,7 +82,7 @@ describe("Kapso webhook", () => {
       await db.thread.findFirstOrThrow({ select: { phone: true, name: true } }),
     ).toEqual({ phone: "+59899111222", name: "Ana" });
 
-    await ctx.replies.drain();
+    await settle(ctx);
     const outbound = await db.message.findMany({
       where: { direction: "outbound" },
     });
@@ -97,7 +98,7 @@ describe("Kapso webhook", () => {
     const payload = received("Hola", { id: "wamid.same" });
     await postWebhook(payload).expect(200);
     await postWebhook(payload).expect(200);
-    await ctx.replies.drain();
+    await settle(ctx);
     expect(await db.message.count({ where: { direction: "inbound" } })).toBe(1);
     expect(ctx.integrations.fakes.channel.sent).toHaveLength(1);
   });
@@ -109,7 +110,7 @@ describe("Kapso webhook", () => {
       data: [received("Hola"), received("busco un 2 dormitorios")],
       batch_info: { size: 2, window_ms: 5000 },
     }).expect(200);
-    await ctx.replies.drain();
+    await settle(ctx);
     expect(
       (
         await db.message.findMany({
@@ -128,7 +129,7 @@ describe("Kapso webhook", () => {
         message: { type: "audio", audio: { id: "media" }, text: undefined },
       }),
     ).expect(200);
-    await ctx.replies.drain();
+    await settle(ctx);
     expect(
       ctx.integrations.fakes.channel.sent.map((sent) => sent.body),
     ).toEqual(["¿Me lo escribís?"]);
@@ -158,7 +159,7 @@ describe("Kapso webhook", () => {
 
   it("applies delivery receipts without moving a status backwards", async () => {
     await postWebhook(received("Hola")).expect(200);
-    await ctx.replies.drain();
+    await settle(ctx);
     const sent = await db.message.findFirstOrThrow({
       where: { direction: "outbound" },
     });
@@ -230,7 +231,7 @@ describe("Kapso webhook routing", () => {
       kapsoMessageReceived({ phoneNumberId: "PNID-OTRA" }),
       { secret: "otra-secret" },
     ).expect(200);
-    await ctx.replies.drain();
+    await settle(ctx);
     const theirs = await db.message.findFirstOrThrow({
       where: { direction: "outbound" },
     });
@@ -307,6 +308,42 @@ describe("form-lead hook", () => {
       .send({ phone: "+59899111222" });
     expect(again.body.welcome).toBe("already_in_conversation");
     expect(ctx.integrations.fakes.channel.sent).toHaveLength(1);
+  });
+
+  it("writes the form lead to the CRM when it arrives, once", async () => {
+    await request(app)
+      .post(hook)
+      .set("X-LeadScope-Secret", "form-secret")
+      .send({
+        phone: "099 111 222",
+        email: "ana@example.com",
+        firstname: "Ana",
+      })
+      .expect(200);
+    await ctx.crm.drain();
+    const contact = ctx.integrations.fakes.crm.contacts.get("+59899111222");
+    expect(contact?.lead).toMatchObject({
+      phone: "+59899111222",
+      name: "Ana",
+      email: "ana@example.com",
+    });
+    expect(contact?.lead.summary).toContain(
+      "Asistente: [template] ¡Hola! Gracias por escribirnos.",
+    );
+    const thread = await db.thread.findFirstOrThrow();
+    expect(thread).toMatchObject({
+      crmContactId: "fake-contact-1",
+      crmPendingAction: null,
+    });
+
+    const syncedAt = thread.crmSyncedAt;
+    await request(app)
+      .post(hook)
+      .set("X-LeadScope-Secret", "form-secret")
+      .send({ phone: "099 111 222" })
+      .expect(200);
+    await ctx.crm.drain();
+    expect((await db.thread.findFirstOrThrow()).crmSyncedAt).toEqual(syncedAt);
   });
 
   it("matches the WhatsApp thread when the lead already wrote", async () => {

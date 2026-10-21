@@ -36,8 +36,10 @@ export type ModelTurn = {
   collected: Record<string, string | null>;
   callTime: string | null;
   intent: Intent;
-  /** The lead needs a person (complaint, existing purchase, insists on a person). */
+  /** The lead needs a person (complaint, existing purchase, something only a person can answer). */
   needsHuman: boolean;
+  /** The lead wants to talk to a person now ("llámenme", "quiero hablar con alguien"). */
+  callNow: boolean;
   /** The forbidden topic the lead asked about (or the reply would touch), as listed in config. */
   forbiddenTopic: string | null;
   /** Short bullets: the conversation so far and what the lead wants. */
@@ -49,7 +51,7 @@ export type TurnInput =
   | { kind: "model_failure"; reason: string }
   | { kind: "non_text" };
 
-export type CrmActionKind = "handoff" | "close" | "needs_human";
+export type CrmActionKind = "handoff" | "close" | "needs_human" | "update";
 
 export type TurnRules = {
   maxReplyChars: number;

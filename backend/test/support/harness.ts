@@ -150,6 +150,12 @@ export function createTestContext(
   return Object.assign(ctx, { llm });
 }
 
+/** Waits for queued replies, then for the CRM writes they (and inbound messages) asked for. */
+export async function settle(ctx: AppContext): Promise<void> {
+  await ctx.replies.drain();
+  await ctx.crm.drain();
+}
+
 let messageCounter = 0;
 
 export function inbound(

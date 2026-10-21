@@ -223,7 +223,7 @@ function HubSpotGroup({ thread }: { thread: Thread }) {
             ? `Contacto y conversación guardados el ${formatDateTime(crm.syncedAt)}.`
             : crm.status === "pending"
               ? "Guardando el contacto y la conversación…"
-              : "Se guarda cuando el lead se deriva, la conversación se cierra o el asistente se detiene."}
+              : "Se guarda desde el primer mensaje y se actualiza cuando el asistente aprende algo nuevo del lead."}
         </p>
       )}
     </Group>
@@ -288,7 +288,7 @@ export function LeadDetails({
           title="Datos del lead"
           aside={
             <span className="text-xs text-muted-foreground tabular-nums">
-              {requiredIn} de {required.length} obligatorios
+              {requiredIn} de {required.length} necesarios
             </span>
           }
         >

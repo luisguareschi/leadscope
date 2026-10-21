@@ -1,4 +1,5 @@
 import type { Env } from "./config/env.js";
+import type { CrmQueue } from "./conversation/crm-queue.js";
 import type { ReplyScheduler } from "./conversation/reply-scheduler.js";
 import type { AuthAdmin } from "./integrations/auth/auth-admin.js";
 import type { Integrations } from "./integrations/registry.js";
@@ -15,5 +16,7 @@ export type AppContext = {
   authAdmin: AuthAdmin;
   logger: Logger;
   replies: ReplyScheduler;
+  /** Background CRM writes; see `crmRequest` for how one is asked for. */
+  crm: CrmQueue;
   now: () => Date;
 };

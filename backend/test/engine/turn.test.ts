@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CALL_NOW_TIME,
   collectedOf,
   decideTurn,
   hasRequiredItems,
@@ -43,6 +44,7 @@ const model = (overrides: Partial<ModelTurn> = {}) =>
       collected: {},
       callTime: null,
       needsHuman: false,
+      callNow: false,
       forbiddenTopic: null,
       summary: null,
       ...overrides,
@@ -417,6 +419,100 @@ describe("lead stage", () => {
       rules,
     );
     expect(decision.stage).toBe("qualifying");
+  });
+});
+
+describe("a lead who wants to talk to a person now (callNow)", () => {
+  it("goes to Por contactar right away with required items missing, call time Lo antes posible", () => {
+    const decision = decideTurn(
+      thread({ state: "greeting", collected: { interest: "2 dormitorios" } }),
+      model({
+        callNow: true,
+        reply:
+          "Un asesor te contacta lo antes posible. Si preferís, llamá al 2600 0000.",
+      }),
+      rules,
+    );
+    expect(decision).toMatchObject({
+      state: "answer",
+      stage: "to_contact",
+      fields: {
+        collected: { interest: "2 dormitorios" },
+        callTime: CALL_NOW_TIME,
+      },
+      reply:
+        "Un asesor te contacta lo antes posible. Si preferís, llamá al 2600 0000.",
+      needsHuman: null,
+      crm: "handoff",
+    });
+    expect(CALL_NOW_TIME).toBe("Lo antes posible");
+  });
+
+  it("also brings back a Sin interés lead, and never moves Contactado", () => {
+    expect(
+      decideTurn(
+        thread({ state: "closed", stage: "not_interested" }),
+        model({ callNow: true }),
+        rules,
+      ).stage,
+    ).toBe("to_contact");
+    expect(
+      decideTurn(
+        thread({ state: "answer", stage: "contacted" }),
+        model({ callNow: true }),
+        rules,
+      ).stage,
+    ).toBe("contacted");
+  });
+
+  it("does not override a forbidden topic or a lead who needs a person", () => {
+    expect(
+      decideTurn(
+        thread(),
+        model({ callNow: true, forbiddenTopic: "Rentabilidad futura" }),
+        rules,
+      ),
+    ).toMatchObject({ stage: "qualifying", reply: "NEEDS_HUMAN" });
+    expect(
+      decideTurn(thread(), model({ callNow: true, needsHuman: true }), rules),
+    ).toMatchObject({ stage: "qualifying", reply: "NEEDS_HUMAN" });
+  });
+
+  it("leaves the normal path unchanged without the flag", () => {
+    const decision = decideTurn(
+      thread(),
+      model({ collected: { interest: "Para vivir" } }),
+      rules,
+    );
+    expect(decision).toMatchObject({
+      state: "qualify",
+      stage: "qualifying",
+      fields: { callTime: null },
+      crm: null,
+    });
+  });
+});
+
+describe("a company with no required items", () => {
+  const allOptional: TurnRules = {
+    ...rules,
+    collect: [{ key: "zone", required: false }],
+  };
+
+  it("moves the lead to Por contactar once it gives a call time, not on its first message", () => {
+    const first = decideTurn(
+      thread({ state: "greeting" }),
+      model({ reply: "Hola" }),
+      allOptional,
+    );
+    expect(first).toMatchObject({ state: "handoff", stage: "qualifying" });
+
+    const withTime = decideTurn(
+      thread({ state: "handoff" }),
+      model({ callTime: "Mañana a las 10" }),
+      allOptional,
+    );
+    expect(withTime).toMatchObject({ stage: "to_contact", crm: "handoff" });
   });
 });
 

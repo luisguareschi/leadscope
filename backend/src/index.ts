@@ -30,7 +30,7 @@ async function shutdown(signal: string) {
   // Finish turns already running; anything still pending is picked up by the next process.
   ctx.replies.stop();
   await Promise.race([
-    ctx.replies.drain(),
+    ctx.replies.drain().then(() => ctx.crm.drain()),
     new Promise((resolve) => setTimeout(resolve, 20_000)),
   ]);
   await ctx.db.$disconnect();

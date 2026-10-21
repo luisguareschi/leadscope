@@ -15,7 +15,7 @@ export const STAGE_META: Record<
     label: "Por contactar",
     tone: "warning",
     description:
-      "El lead ya dio todos los datos obligatorios y espera a un asesor. Queda acá aunque vuelva a escribir, hasta que alguien lo marque como contactado.",
+      "El lead ya dio los datos necesarios, o pidió hablar con alguien ya (horario «Lo antes posible»), y espera a un asesor. Queda acá aunque vuelva a escribir, hasta que alguien lo marque como contactado.",
   },
   contacted: {
     label: "Contactado",

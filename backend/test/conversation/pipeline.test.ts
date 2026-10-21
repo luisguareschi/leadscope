@@ -3,7 +3,8 @@ import { recordInboundMessage } from "../../src/conversation/inbound.js";
 import { processThread } from "../../src/conversation/process-thread.js";
 import { sweepOnce } from "../../src/conversation/sweeper.js";
 import { withThreadLease } from "../../src/conversation/thread-lease.js";
-import type { Crm } from "../../src/integrations/crm/crm.js";
+import type { Crm, CrmLead } from "../../src/integrations/crm/crm.js";
+import { createIntegrations } from "../../src/integrations/registry.js";
 import {
   ChannelError,
   FakeChannel,
@@ -15,7 +16,9 @@ import {
   resetDb,
   testDb,
   type TestContext,
+  settle,
 } from "../support/harness.js";
+import { testEnv } from "../support/test-env.js";
 
 let ctx: TestContext;
 let pnid: string;
@@ -46,7 +49,7 @@ beforeEach(async () => {
   ctx = createTestContext();
 });
 
-afterEach(() => ctx.replies.drain());
+afterEach(() => settle(ctx));
 
 describe("inbound messages", () => {
   it("stores a new lead with an E.164 phone and their WhatsApp name", async () => {
@@ -176,6 +179,7 @@ describe("a bot turn", () => {
     const { threadId } = await receive("Hola");
     ctx.llm.push(new Error("overloaded"));
     await processThread(ctx, threadId);
+    await ctx.crm.drain();
     const saved = await thread();
     expect(saved.messages.at(-1)?.body).toBe("Te va a contactar un asesor.");
     expect(saved).toMatchObject({
@@ -189,7 +193,7 @@ describe("a bot turn", () => {
     ).toContain("Estado: Requiere atención de un asesor");
   });
 
-  it("writes the CRM with the summary once the handoff completes", async () => {
+  it("keeps the summary and fields on top of the transcript in HubSpot through the handoff", async () => {
     const { threadId } = await receive(
       "Busco 2 dormitorios, tengo 150 mil y no conozco los proyectos",
     );
@@ -204,8 +208,9 @@ describe("a bot turn", () => {
         "- Busca 2 dormitorios con USD 150.000.\n- No conoce los proyectos.",
     });
     await processThread(ctx, threadId);
+    await ctx.crm.drain();
     expect((await thread()).state).toBe("handoff");
-    expect(ctx.integrations.fakes.crm.contacts.size).toBe(0);
+    expect(ctx.integrations.fakes.crm.contacts.size).toBe(1);
 
     await receive("Mañana a las 10");
     ctx.llm.push({
@@ -216,6 +221,7 @@ describe("a bot turn", () => {
         "- Busca 2 dormitorios con USD 150.000.\n- No conoce los proyectos.\n- Pidió que lo llamen mañana a las 10.",
     });
     await processThread(ctx, threadId);
+    await ctx.crm.drain();
 
     const saved = await thread();
     expect(saved).toMatchObject({
@@ -226,7 +232,8 @@ describe("a bot turn", () => {
     const summary =
       ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary ??
       "";
-    expect(summary).toContain("Estado: Derivado a asesor (calificado)");
+    expect(summary).toContain("Estado: Derivado a asesor");
+    expect(summary).toContain("Etapa: Por contactar");
     expect(summary).toContain("Horario para llamar: Mañana a las 10");
     // One property: the summary and the collected fields on top, then the transcript.
     const lines = summary.split("\n");
@@ -281,6 +288,7 @@ describe("a bot turn", () => {
     await receive("No me interesa más, gracias");
     ctx.llm.push({ reply: "Gracias por avisar.", intent: "not_interested" });
     await processThread(ctx, threadId);
+    await ctx.crm.drain();
 
     saved = await thread();
     expect(saved.stage).toBe("to_contact");
@@ -291,10 +299,10 @@ describe("a bot turn", () => {
     expect(saved.messages.at(-3)?.body).toBe(
       "La entrega es en diciembre de 2027.",
     );
-    // HubSpot gets what it got before: the handoff, then the close.
+    // HubSpot shows the close, while the advisor still has the lead in the queue.
     expect(
       ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary,
-    ).toContain("Estado: Cerrado: sin interés");
+    ).toContain("Estado: Cerrado: sin interés\nEtapa: Por contactar");
   });
 
   it("does not let a turn overwrite Contactado set by a person while the model was answering", async () => {
@@ -404,7 +412,7 @@ describe("recovery", () => {
     });
     const result = await sweepOnce(ctx);
     expect(result.scheduled).toBe(1);
-    await ctx.replies.drain();
+    await settle(ctx);
     expect(
       (await testDb().thread.findUniqueOrThrow({ where: { id: threadId } }))
         .lastMessagePreview,
@@ -412,11 +420,11 @@ describe("recovery", () => {
   });
 
   it("retries a failed CRM write with backoff until it succeeds", async () => {
-    let failures = 1;
+    let down = true;
     const flaky: Crm = {
       kind: "fake",
       async upsertLead() {
-        if (failures-- > 0) throw new Error("HubSpot returned 503");
+        if (down) throw new Error("HubSpot returned 503");
         return { contactId: "hs-1" };
       },
     };
@@ -426,8 +434,10 @@ describe("recovery", () => {
       now: () => now,
     });
     const { threadId } = await receive("No me interesa");
+    await ctx.crm.drain();
     ctx.llm.push({ reply: "Gracias por avisar.", intent: "not_interested" });
     await processThread(ctx, threadId);
+    await ctx.crm.drain();
 
     let saved = await testDb().thread.findUniqueOrThrow({
       where: { id: threadId },
@@ -446,11 +456,12 @@ describe("recovery", () => {
         .crmContactId,
     ).toBeNull();
 
+    down = false;
     now = new Date(now.getTime() + 2 * 60_000);
-    // A process that crashed mid-turn left its lease behind; once expired it must not block the retry.
+    // A process that crashed mid-write left its lease behind; once expired it must not block the retry.
     await testDb().thread.update({
       where: { id: threadId },
-      data: { processingUntil: new Date(now.getTime() - 1000) },
+      data: { crmLeaseUntil: new Date(now.getTime() - 1000) },
     });
     await sweepOnce(ctx);
     saved = await testDb().thread.findUniqueOrThrow({
@@ -460,7 +471,239 @@ describe("recovery", () => {
       crmPendingAction: null,
       crmContactId: "hs-1",
       crmLastError: null,
-      processingUntil: null,
+      crmLeaseUntil: null,
     });
+  });
+});
+
+/** A CRM that records every write and can be held, to prove nobody waits for it. */
+function recordingCrm() {
+  const calls: CrmLead[] = [];
+  let release: () => void = () => {};
+  let held: Promise<void> | null = null;
+  const crm: Crm & {
+    calls: CrmLead[];
+    hold(): void;
+    release(): void;
+    failWith: string | null;
+  } = {
+    kind: "fake",
+    calls,
+    failWith: null,
+    hold() {
+      held = new Promise((resolve) => (release = resolve));
+    },
+    release() {
+      release();
+      held = null;
+    },
+    async upsertLead(lead) {
+      calls.push(lead);
+      if (held) await held;
+      if (crm.failWith) throw new Error(crm.failWith);
+      return { contactId: lead.existingContactId ?? "hs-1" };
+    },
+  };
+  return crm;
+}
+
+describe("HubSpot from the first message", () => {
+  it("creates the contact on the lead's first message, with the WhatsApp name and phone, before the bot answers", async () => {
+    const { threadId } = await receive("Hola");
+    await ctx.crm.drain();
+
+    const contact = ctx.integrations.fakes.crm.contacts.get("+59899111222");
+    expect(contact?.lead).toMatchObject({
+      phone: "+59899111222",
+      name: "Ana",
+      email: null,
+      existingContactId: null,
+    });
+    expect(contact?.lead.summary).toContain(
+      "Estado: En conversación con el asistente",
+    );
+    expect(contact?.lead.summary).toContain("Lead: Hola");
+    const saved = await thread();
+    expect(saved).toMatchObject({
+      id: threadId,
+      crmContactId: "fake-contact-1",
+      crmPendingAction: null,
+    });
+    expect(saved.messages.filter((m) => m.direction === "outbound")).toEqual(
+      [],
+    );
+  });
+
+  it("finds the lead's existing contact by phone instead of creating a second one", async () => {
+    await ctx.integrations.fakes.crm.upsertLead({
+      phone: "+59899111222",
+      name: "Ana",
+      email: "ana@example.com",
+      existingContactId: "hs-existing",
+      summary: "",
+    });
+    const { threadId } = await receive("Hola");
+    await ctx.crm.drain();
+    await processThread(ctx, threadId);
+    await ctx.crm.drain();
+
+    expect(ctx.integrations.fakes.crm.contacts.size).toBe(1);
+    expect((await thread()).crmContactId).toBe("hs-existing");
+  });
+
+  it("creates one contact when two first messages arrive at once, then writes to it by id", async () => {
+    const crm = recordingCrm();
+    ctx = createTestContext({ integrations: { crmFor: () => crm } });
+    const [{ threadId }] = await Promise.all([
+      receive("Hola"),
+      receive("¿Están?"),
+    ]);
+    await ctx.crm.drain();
+    expect(crm.calls).toHaveLength(1);
+    expect(crm.calls[0]?.existingContactId).toBeNull();
+
+    ctx.llm.push({ reply: "¿Qué buscás?", summary: "- Saludó." });
+    await processThread(ctx, threadId);
+    await ctx.crm.drain();
+    expect(crm.calls.map((call) => call.existingContactId)).toEqual([
+      null,
+      "hs-1",
+    ]);
+  });
+
+  it("updates the same contact after a turn that changed something, and only then", async () => {
+    const crm = recordingCrm();
+    ctx = createTestContext({ integrations: { crmFor: () => crm } });
+    const { threadId } = await receive("Hola, busco 2 dormitorios");
+    await ctx.crm.drain();
+    expect(crm.calls).toHaveLength(1);
+
+    ctx.llm.push({
+      reply: "¿Con qué presupuesto contás?",
+      collected: { interest: "2 dormitorios" },
+      summary: "- Busca 2 dormitorios.",
+    });
+    await processThread(ctx, threadId);
+    await ctx.crm.drain();
+    expect(crm.calls).toHaveLength(2);
+    expect(crm.calls[1]?.summary).toContain("Interés: 2 dormitorios");
+    expect(crm.calls[1]?.summary).toContain("- Busca 2 dormitorios.");
+
+    // Nothing new: same fields, summary kept, same stage.
+    await receive("¿Tienen cochera?");
+    ctx.llm.push({ reply: "Eso te lo confirma un asesor." });
+    await processThread(ctx, threadId);
+    await ctx.crm.drain();
+    expect(crm.calls).toHaveLength(2);
+
+    await receive("Hasta 150 mil");
+    ctx.llm.push({
+      reply: "¿Ya conocés los proyectos?",
+      collected: { budget: "Hasta USD 150.000" },
+      summary: "- Busca 2 dormitorios.\n- Hasta USD 150.000.",
+    });
+    await processThread(ctx, threadId);
+    await ctx.crm.drain();
+    expect(crm.calls).toHaveLength(3);
+    expect(crm.calls[2]).toMatchObject({ existingContactId: "hs-1" });
+    expect(crm.calls[2]?.summary).toContain("Presupuesto: Hasta USD 150.000");
+  });
+
+  it("never holds a reply for HubSpot, slow or failing", async () => {
+    const crm = recordingCrm();
+    crm.hold();
+    ctx = createTestContext({ integrations: { crmFor: () => crm } });
+    const { threadId } = await receive("Hola");
+    ctx.llm.push({ reply: "¡Hola! ¿Qué buscás?", summary: "- Saludó." });
+    await expect(processThread(ctx, threadId)).resolves.toBe("replied");
+    await receive("Un 2 dormitorios");
+    ctx.llm.push({
+      reply: "¿Con qué presupuesto?",
+      collected: { interest: "2 dormitorios" },
+    });
+    await expect(processThread(ctx, threadId)).resolves.toBe("replied");
+    expect(ctx.integrations.fakes.channel.sent).toHaveLength(2);
+    expect((await thread()).crmSyncedAt).toBeNull();
+
+    crm.failWith = "HubSpot returned 503";
+    crm.release();
+    await ctx.crm.drain();
+    const saved = await thread();
+    expect(saved.crmPendingAction).not.toBeNull();
+    expect(saved).toMatchObject({
+      crmAttempts: 1,
+      crmLastError: "HubSpot returned 503",
+    });
+    expect(saved.crmNextAttemptAt).not.toBeNull();
+
+    await receive("Hasta 150 mil");
+    ctx.llm.push({
+      reply: "¿Ya conocés los proyectos?",
+      collected: { budget: "USD 150.000" },
+    });
+    await expect(processThread(ctx, threadId)).resolves.toBe("replied");
+    expect(ctx.integrations.fakes.channel.sent).toHaveLength(3);
+  });
+});
+
+describe("a lead who wants to talk to a person now", () => {
+  it("goes straight to Por contactar with items missing, call time Lo antes posible, and HubSpot gets it", async () => {
+    const askedAt = new Date(Date.now() - 60_000);
+    const { threadId } = await receive("Hola, llámenme ya por favor", {
+      sentAt: askedAt,
+    });
+    ctx.llm.push({
+      reply:
+        "¡Claro! Un asesor te va a contactar lo antes posible. Si preferís, llamá ya al 2600 1234.",
+      callNow: true,
+      summary: "- Pidió hablar con una persona ya.",
+    });
+    await processThread(ctx, threadId);
+    await ctx.crm.drain();
+
+    const saved = await thread();
+    expect(saved).toMatchObject({
+      stage: "to_contact",
+      callTime: "Lo antes posible",
+      collected: {},
+      needsHuman: false,
+      crmPendingAction: null,
+    });
+    expect(saved.handedOffAt).toEqual(askedAt);
+    expect(saved.messages.at(-1)?.body).toBe(
+      "¡Claro! Un asesor te va a contactar lo antes posible. Si preferís, llamá ya al 2600 1234.",
+    );
+    const summary =
+      ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary ??
+      "";
+    expect(summary).toContain("Estado: Derivado a asesor");
+    expect(summary).toContain("Horario para llamar: Lo antes posible");
+
+    await receive("¿Y dónde queda?");
+    await processThread(ctx, threadId);
+    const context = ctx.llm.calls.at(-1)?.turnContext ?? "";
+    expect(context).toContain("asked to talk to a person right away");
+    expect(context).toContain("Do not ask for anything");
+    expect((await thread()).stage).toBe("to_contact");
+  });
+
+  it("reaches the advisor with the company's number when the instructions give one (local fake model)", async () => {
+    await resetDb();
+    pnid = (
+      await createCompany(testDb(), {
+        instructions:
+          "Si alguien quiere llamar ya, el número directo de ventas es +598 2600 1234.",
+      })
+    ).whatsappPhoneNumberId!;
+    const fake = createIntegrations(testEnv()).fakes.llm;
+    ctx = createTestContext({ integrations: { llmFor: () => fake } });
+    const { threadId } = await receive("Quiero hablar con alguien, llámenme");
+    await processThread(ctx, threadId);
+    const saved = await thread();
+    expect(saved).toMatchObject({
+      stage: "to_contact",
+      callTime: "Lo antes posible",
+    });
+    expect(saved.messages.at(-1)?.body).toContain("+598 2600 1234");
   });
 });

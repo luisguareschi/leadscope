@@ -1,6 +1,10 @@
 import { z } from "zod";
-import { loadCompany } from "../../companies/load-company.js";
+import {
+  loadCompany,
+  type LoadedCompany,
+} from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
+import { crmRequest } from "../../conversation/crm-sync.js";
 import { messagePreview } from "../../conversation/inbound.js";
 import { withThreadLease } from "../../conversation/thread-lease.js";
 import { safeEqual } from "../../lib/crypto.js";
@@ -108,7 +112,23 @@ export async function createFormLead(
     ...parsed.data,
     phone,
   });
+  // Every lead goes to the CRM when it arrives, like a lead's first WhatsApp message.
+  const crm = await ctx.db.thread.updateMany({
+    where: { id: thread.id, crmSyncedAt: null, crmPendingAction: null },
+    data: crmRequest("update"),
+  });
+  try {
+    return await sendWelcome(ctx, company, thread);
+  } finally {
+    if (crm.count > 0) ctx.crm.schedule(thread.id);
+  }
+}
 
+async function sendWelcome(
+  ctx: AppContext,
+  company: LoadedCompany,
+  thread: { id: string; waId: string },
+): Promise<FormLeadResult> {
   const leased = await withThreadLease(
     ctx,
     thread.id,

@@ -1,6 +1,5 @@
 import type { AppContext } from "../context.js";
-import { MAX_CRM_ATTEMPTS } from "./crm-sync.js";
-import { retryCrmSync } from "./process-thread.js";
+import { MAX_CRM_ATTEMPTS, syncWithCrmLease } from "./crm-sync.js";
 
 const SWEEP_EVERY_MS = 30_000;
 
@@ -41,16 +40,16 @@ export async function sweepOnce(
         {
           OR: [{ crmNextAttemptAt: null }, { crmNextAttemptAt: { lte: now } }],
         },
-        // A lease left by a crashed process expires; a live one means a turn is writing right now.
-        { OR: [{ processingUntil: null }, { processingUntil: { lt: now } }] },
+        // A lease left by a crashed process expires; a live one means a write is running right now.
+        { OR: [{ crmLeaseUntil: null }, { crmLeaseUntil: { lt: now } }] },
       ],
     },
     select: { id: true },
     take: 50,
   });
   for (const { id } of dueCrm) {
-    if (ctx.replies.isBusy(id)) continue;
-    await retryCrmSync(ctx, id);
+    if (ctx.crm.isBusy(id)) continue;
+    await syncWithCrmLease(ctx, id);
   }
   return { scheduled, crmRetried: dueCrm.length };
 }

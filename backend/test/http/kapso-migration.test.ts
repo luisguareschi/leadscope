@@ -13,6 +13,7 @@ import {
   resetDb,
   testDb,
   type TestContext,
+  settle,
 } from "../support/harness.js";
 import {
   kapsoMessageReceived,
@@ -57,7 +58,7 @@ beforeEach(async () => {
   app = createApp(ctx);
 });
 
-afterEach(() => ctx.replies.drain());
+afterEach(() => settle(ctx));
 
 describe("companies saved before Kapso", () => {
   it("still load, keep their other secrets and number, and drop the Meta token from the panel", async () => {
@@ -128,7 +129,7 @@ describe("companies saved before Kapso", () => {
     await postKapsoWebhook(app, "altamira", message, {
       secret: "kapso-hook-secret",
     }).expect(200);
-    await ctx.replies.drain();
+    await settle(ctx);
     expect(
       await db.message.count({ where: { companyId, direction: "inbound" } }),
     ).toBe(1);

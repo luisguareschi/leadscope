@@ -23,6 +23,7 @@ import {
   resetDb,
   testDb,
   type TestContext,
+  settle,
 } from "../support/harness.js";
 
 const altamira = parseCompanyConfig(altamiraConfig);
@@ -65,7 +66,7 @@ describe("a lead asking for rental yield or guaranteed returns", () => {
       .whatsappPhoneNumberId!;
     ctx = createTestContext();
   });
-  afterEach(() => ctx.replies.drain());
+  afterEach(() => settle(ctx));
 
   it.each(YIELD_ATTEMPTS)(
     "gets the fixed line, never the model's words: $lead",
@@ -83,6 +84,7 @@ describe("a lead asking for rental yield or guaranteed returns", () => {
       });
 
       await processThread(ctx, recorded.threadId);
+      await ctx.crm.drain();
 
       const saved = await testDb().thread.findUniqueOrThrow({
         where: { id: recorded.threadId },

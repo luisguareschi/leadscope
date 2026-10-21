@@ -99,10 +99,14 @@ enum ThreadSource {
   form
 }
 
+/// Why a CRM write is owed. The text written is built from the thread at write time, so a newer
+/// request simply replaces an older one in the outbox.
 enum CrmAction {
   handoff
   close
   needs_human
+  /// The lead's first message (or form), or a bot turn that changed what HubSpot shows.
+  update
 }
 
 model Thread {
@@ -147,6 +151,10 @@ model Thread {
   crmContactId        String?
   /// Set when a CRM write is owed; cleared once it succeeds. Failed writes are retried.
   crmPendingAction    CrmAction?
+  /// Bumped on every request, so a write that finishes after a newer request does not clear it.
+  crmRequestVersion   Int          @default(0)
+  /// Lease for CRM writes, apart from `processingUntil`: a slow HubSpot never holds up a reply.
+  crmLeaseUntil       DateTime?
   crmAttempts         Int          @default(0)
   crmNextAttemptAt    DateTime?
   crmLastError        String?
