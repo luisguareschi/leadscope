@@ -15,6 +15,9 @@ import type {
 /** Bullets are for a person skimming the panel or HubSpot; a longer one is cut. */
 export const MAX_SUMMARY_CHARS = 1_200;
 
+/** The call time stored when the lead wants to talk to a person now (`callNow`). */
+export const CALL_NOW_TIME = "Lo antes posible";
+
 function clean(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -56,6 +59,20 @@ export function hasRequiredItems(
       fields,
       items.filter((item) => item.required),
     ).length === 0
+  );
+}
+
+/**
+ * The lead is ready for Por contactar: every required item is stored. A company with no required
+ * items would send every "Hola" to the queue, so there the call time is the gate.
+ */
+export function isReadyForAdvisor(
+  fields: LeadFields,
+  items: CollectRule[],
+): boolean {
+  return (
+    hasRequiredItems(fields, items) &&
+    (items.some((item) => item.required) || fields.callTime !== null)
   );
 }
 
@@ -124,8 +141,8 @@ export function isWithSalesTeam(stage: LeadStage): boolean {
 }
 
 /**
- * Forward-only. Calificando moves to Por contactar once every required item is stored, or to Sin
- * interés. From Por contactar only a person moves the lead (to Contactado); nothing the lead writes
+ * Forward-only. Calificando moves to Por contactar once every required item is stored (with no
+ * required items, once there is a call time), or right away on `callNow`, or to Sin interés. From Por contactar only a person moves the lead (to Contactado); nothing the lead writes
  * moves it back. Sin interés comes back to Por contactar only when the lead re-qualifies: the turn
  * completes the required items, or the model says they accept a call.
  */
@@ -138,9 +155,9 @@ function nextStage(
   const stage = stageOf(previous);
   if (isWithSalesTeam(stage)) return stage;
   if (intent === "not_interested") return "not_interested";
-  if (!hasRequiredItems(fields, items)) return stage;
+  if (!isReadyForAdvisor(fields, items)) return stage;
   if (stage === "qualifying") return "to_contact";
-  const completedNow = !hasRequiredItems(fieldsOf(previous), items);
+  const completedNow = !isReadyForAdvisor(fieldsOf(previous), items);
   return completedNow || intent === "qualified" ? "to_contact" : stage;
 }
 
@@ -239,6 +256,20 @@ export function decideTurn(
       reply: rules.messages.fallback,
       needsHuman: { reason: "empty_reply" },
       crm: "needs_human",
+    };
+  }
+
+  // The lead wants a person now: straight to the advisors' queue, missing items or not. The bot
+  // stops qualifying (the prompt never re-qualifies a lead with the sales team).
+  if (output.callNow) {
+    return {
+      state: "answer",
+      stage: isWithSalesTeam(stage) ? stage : "to_contact",
+      fields: { ...fields, callTime: CALL_NOW_TIME },
+      summary,
+      reply,
+      needsHuman: null,
+      crm: "handoff",
     };
   }
 

@@ -83,6 +83,7 @@ describe("Anthropic client", () => {
       callTime: null,
       intent: "continue",
       needsHuman: false,
+      callNow: false,
       forbiddenTopic: null,
       summary: "- Busca 2 dormitorios.",
     });
@@ -117,9 +118,11 @@ describe("Anthropic client", () => {
       "callTime",
       "intent",
       "needsHuman",
+      "callNow",
       "forbiddenTopic",
       "summary",
     ]);
+    expect(schema.properties.callNow.type).toBe("boolean");
     expect(schema.properties.collected.required).toEqual([
       "interest",
       "budget",

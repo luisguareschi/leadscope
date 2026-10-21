@@ -32,6 +32,10 @@ export const modelTurnSchema = z.object({
     .boolean()
     .nullish()
     .transform((value) => value ?? false),
+  callNow: z
+    .boolean()
+    .nullish()
+    .transform((value) => value ?? false),
   // Fails safe: anything set (even `true` instead of the topic) counts as flagged.
   forbiddenTopic: z
     .union([z.string(), z.boolean()])
@@ -90,7 +94,12 @@ export function submitTurnTool(
         needsHuman: {
           type: "boolean",
           description:
-            "True for a complaint, an existing purchase, or a lead who insists on a person.",
+            "True for a complaint, an existing purchase, or something only a person can answer.",
+        },
+        callNow: {
+          type: "boolean",
+          description:
+            'True when the lead wants to talk to a person now or asks to be called ("llámenme", "quiero hablar con alguien").',
         },
         forbiddenTopic: {
           type: ["string", "null"],
@@ -110,6 +119,7 @@ export function submitTurnTool(
         "callTime",
         "intent",
         "needsHuman",
+        "callNow",
         "forbiddenTopic",
         "summary",
       ],

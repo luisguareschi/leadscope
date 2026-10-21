@@ -279,7 +279,7 @@ function MessagesSection() {
         <TextRow
           name="needsHuman"
           label="Hace falta un asesor"
-          hint="Un tema prohibido, una queja, una compra existente o un lead que insiste en hablar con alguien. Después espera a una persona."
+          hint="Un tema prohibido, una queja, una compra existente o algo que solo puede responder una persona. Después espera a una persona. Un lead que pide hablar con alguien ya no recibe este mensaje: pasa a Por contactar."
           multiline
           maxLength={1000}
         />

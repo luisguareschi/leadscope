@@ -1,14 +1,17 @@
 import type { CompanyConfig } from "../companies/company-config.js";
 import { collectedOf } from "../engine/turn.js";
-import type { CrmActionKind } from "../engine/types.js";
+import type { LeadStage, ThreadState } from "../engine/types.js";
 
 export type SummaryThread = {
   phone: string;
   name: string | null;
   email: string | null;
+  state: ThreadState;
+  stage: LeadStage;
   collected: unknown;
   summary: string | null;
   callTime: string | null;
+  needsHuman: boolean;
   needsHumanReason: string | null;
 };
 
@@ -47,11 +50,31 @@ export type SummaryMessage = {
   sentAt: Date;
 };
 
-const ACTION_LABEL: Record<CrmActionKind, string> = {
-  handoff: "Derivado a asesor (calificado)",
-  close: "Cerrado: sin interés",
-  needs_human: "Requiere atención de un asesor",
+const STAGE_LABEL: Record<LeadStage, string> = {
+  qualifying: "Calificando",
+  to_contact: "Por contactar",
+  contacted: "Contactado",
+  not_interested: "Sin interés",
 };
+
+/**
+ * Where the lead is now, from the thread, not from the request that queued the write: the outbox
+ * keeps only the latest request, and the property is rewritten whole every time.
+ */
+function statusOf(thread: SummaryThread): string {
+  if (thread.needsHuman) return "Requiere atención de un asesor";
+  if (thread.state === "closed") return "Cerrado: sin interés";
+  switch (thread.stage) {
+    case "to_contact":
+      return "Derivado a asesor";
+    case "contacted":
+      return "Contactado por un asesor";
+    case "not_interested":
+      return "Cerrado: sin interés";
+    case "qualifying":
+      return "En conversación con el asistente";
+  }
+}
 
 function stamp(
   date: Date,
@@ -92,7 +115,6 @@ function transcriptLine(
  * summary, the collected fields, then the full conversation.
  */
 export function buildCrmSummary(input: {
-  action: CrmActionKind;
   thread: SummaryThread;
   messages: SummaryMessage[];
   config: CompanyConfig;
@@ -101,12 +123,13 @@ export function buildCrmSummary(input: {
   const { thread, config } = input;
   const header = [
     `Resumen del asistente de WhatsApp (actualizado ${stamp(input.now, config, "full")})`,
-    `Estado: ${ACTION_LABEL[input.action]}`,
+    `Estado: ${statusOf(thread)}`,
+    `Etapa: ${STAGE_LABEL[thread.stage]}`,
     `Teléfono: ${thread.phone}`,
     `Nombre en WhatsApp: ${thread.name ?? "—"}`,
     thread.email ? `Email: ${thread.email}` : null,
     `Horario para llamar: ${thread.callTime ?? "—"}`,
-    input.action === "needs_human" && thread.needsHumanReason
+    thread.needsHuman && thread.needsHumanReason
       ? `Motivo: ${thread.needsHumanReason}`
       : null,
   ].filter((line): line is string => line !== null);

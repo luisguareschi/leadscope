@@ -8,6 +8,7 @@ import {
   resetDb,
   testDb,
   type TestContext,
+  settle,
 } from "../support/harness.js";
 import { fakeSupabase } from "../support/fake-supabase.js";
 import {
@@ -43,7 +44,7 @@ beforeEach(async () => {
   app = createApp(ctx);
 });
 
-afterEach(() => ctx.replies.drain());
+afterEach(() => settle(ctx));
 
 function postWhatsapp(text: string) {
   return postKapsoWebhook(
@@ -82,7 +83,7 @@ describe("archiving a company", () => {
     expect(entered.body.error.code).toBe("company_archived");
 
     await postWhatsapp("Hola, ¿siguen vendiendo?");
-    await ctx.replies.drain();
+    await settle(ctx);
     expect(await db.message.count()).toBe(0);
     expect(await db.thread.count({ where: { companyId: altamiraId } })).toBe(0);
     expect(ctx.integrations.fakes.channel.sent).toEqual([]);
@@ -159,7 +160,7 @@ describe("archiving a company", () => {
       .expect(200);
 
     await postWhatsapp("Hola");
-    await ctx.replies.drain();
+    await settle(ctx);
     const outbound = await db.message.findMany({
       where: { direction: "outbound" },
     });

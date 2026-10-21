@@ -32,6 +32,7 @@ export function scriptedLlm(...initial: ScriptedTurn[]): ScriptedLlm {
           collected: {},
           callTime: null,
           needsHuman: false,
+          callNow: false,
           forbiddenTopic: null,
           summary: null,
           ...next,

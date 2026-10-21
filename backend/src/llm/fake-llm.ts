@@ -1,6 +1,7 @@
 import type { CollectItem } from "../companies/company-config.js";
 import { foldText } from "../engine/guardrails.js";
 import {
+  CALL_NOW_TIME,
   fieldsOf,
   isWithSalesTeam,
   missingItems,
@@ -21,6 +22,18 @@ const NO = /\bno\b/;
 const MONEY =
   /\b(usd|u\$s|us\$|dolares|pesos|presupuesto)\b|\$|\d+\s*(mil|k)\b|\d{2,3}[.,]\d{3}/;
 const KNOWS = /\b(conozco|conoce|conocia|conocemos|vi los|proyectos)\b/;
+/** The fake's stand-in for "the lead wants a person now". */
+const CALL_NOW =
+  /\b(llamenme|llamame|me llaman ya|me pueden llamar (ya|ahora)|quiero hablar con (alguien|una persona|un asesor|un humano)|hablar con una persona|prefiero que me llamen)\b/;
+const PHONE_IN_TEXT = /\+?\d[\d\s-]{6,}\d/;
+
+/** A phone number the company's instructions give for leads who want to call now, if any. */
+function instructionsPhone(system: string): string | null {
+  const block = /<company_instructions>([\s\S]*?)<\/company_instructions>/.exec(
+    system,
+  )?.[1];
+  return block ? (PHONE_IN_TEXT.exec(block)?.[0].trim() ?? null) : null;
+}
 /**
  * The fake's stand-in for the model's judgment on yield questions. The real model reads the
  * company's plain-language topics; nothing here is company config.
@@ -167,6 +180,7 @@ function buildSummary(input: {
   previous: string | null | undefined;
   asked: string | null;
   callTime: string | null;
+  callNow: boolean;
   forbiddenTopic: string | null;
   notInterested: boolean;
 }): string {
@@ -187,7 +201,11 @@ function buildSummary(input: {
     input.forbiddenTopic
       ? "- Preguntó por un tema prohibido; espera la respuesta de un asesor."
       : null,
-    input.callTime ? `- Pidió que lo llamen ${input.callTime}.` : null,
+    input.callNow || input.callTime === CALL_NOW_TIME
+      ? "- Quiere hablar con una persona ya: pidió que lo llamen lo antes posible."
+      : input.callTime
+        ? `- Pidió que lo llamen ${input.callTime}.`
+        : null,
     input.notInterested ? "- Dijo que no le interesa." : null,
   ]
     .filter((line): line is string => Boolean(line))
@@ -221,6 +239,7 @@ export function createFakeLlm(): LlmClient {
       const update: Record<string, string | null> = {};
       let callTime: string | null = null;
       let forbiddenTopic: string | null = null;
+      let callNow = false;
       const isQuestion = QUESTION.test(text);
       let intent: Intent = "continue";
       let reply: string;
@@ -244,6 +263,15 @@ export function createFakeLlm(): LlmClient {
       ) {
         forbiddenTopic = closestTopic(text, topics);
         reply = "Eso te lo explica un asesor.";
+      } else if (lines.some((line) => CALL_NOW.test(foldText(line)))) {
+        callNow = true;
+        const phone = instructionsPhone(input.system);
+        reply = [
+          "¡Perfecto! Un asesor te va a contactar lo antes posible.",
+          phone ? `Si preferís, podés llamarnos ya al ${phone}.` : null,
+        ]
+          .filter(Boolean)
+          .join(" ");
       } else if (NOT_INTERESTED.test(text)) {
         intent = "not_interested";
         reply =
@@ -289,6 +317,7 @@ export function createFakeLlm(): LlmClient {
         collected: update,
         callTime,
         needsHuman: false,
+        callNow,
         forbiddenTopic,
         summary: buildSummary({
           source: thread.source,
@@ -300,6 +329,7 @@ export function createFakeLlm(): LlmClient {
               ? (topicOf(text)?.label ?? null)
               : null,
           callTime: callTime ?? fields.callTime,
+          callNow,
           forbiddenTopic,
           notInterested: intent === "not_interested",
         }),

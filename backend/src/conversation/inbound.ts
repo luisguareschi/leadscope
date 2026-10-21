@@ -5,6 +5,7 @@ import type {
 } from "../integrations/whatsapp/messages.js";
 import { waIdToE164 } from "../lib/phone.js";
 import { isUniqueViolation } from "../lib/prisma.js";
+import { crmRequest } from "./crm-sync.js";
 
 const PREVIEW_LABELS: Record<string, string> = {
   audio: "Audio",
@@ -46,7 +47,7 @@ async function recordOnce(
   if (!phone) return { status: "invalid_phone" };
 
   const preview = messagePreview(message.type, message.body);
-  return ctx.db.$transaction(async (tx) => {
+  const recorded = await ctx.db.$transaction(async (tx) => {
     const thread = await tx.thread.upsert({
       where: { companyId_phone: { companyId: company.id, phone } },
       create: {
@@ -65,8 +66,23 @@ async function recordOnce(
         lastMessageAt: message.sentAt,
         lastMessagePreview: preview,
       },
-      select: { id: true, paused: true, needsHuman: true },
+      select: {
+        id: true,
+        paused: true,
+        needsHuman: true,
+        crmSyncedAt: true,
+        crmPendingAction: true,
+      },
     });
+    // Every lead goes to the CRM from their first message, even one who is disqualified later.
+    const crmRequested =
+      thread.crmSyncedAt === null && thread.crmPendingAction === null;
+    if (crmRequested) {
+      await tx.thread.update({
+        where: { id: thread.id },
+        data: crmRequest("update"),
+      });
+    }
     // While a person handles the thread, the bot treats new messages as already seen.
     const botSilent = thread.paused || thread.needsHuman;
     await tx.message.create({
@@ -82,11 +98,17 @@ async function recordOnce(
       },
     });
     return {
-      status: "recorded" as const,
-      threadId: thread.id,
-      needsReply: !botSilent,
+      result: {
+        status: "recorded" as const,
+        threadId: thread.id,
+        needsReply: !botSilent,
+      },
+      crmRequested,
     };
   });
+  // In the background, after the message is stored: the webhook's 200 never waits for HubSpot.
+  if (recorded.crmRequested) ctx.crm.schedule(recorded.result.threadId);
+  return recorded.result;
 }
 
 /** Stores one inbound WhatsApp message. Safe to call twice with the same delivery. */

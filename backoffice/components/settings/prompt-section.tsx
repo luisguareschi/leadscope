@@ -24,8 +24,16 @@ const RULES = [
     text: "El modelo contesta con la herramienta submit_turn: la respuesta, lo que dijo el lead y la intención. El motor lee esos campos y decide el estado.",
   },
   {
-    title: "Derivación con las tres respuestas",
-    text: "El lead pasa a un asesor recién cuando están guardados el interés, el presupuesto y si conoce los proyectos. Ahí pide un horario para la llamada.",
+    title: "Por contactar con los datos necesarios",
+    text: "El lead pasa a Por contactar recién cuando están guardados todos los datos necesarios de Información a recopilar (si no hay ninguno, cuando da un horario). Ahí pide un horario para la llamada.",
+  },
+  {
+    title: "Quiere hablar ya",
+    text: "Si el lead pide hablar con una persona («llámenme», «quiero hablar con alguien»), pasa a Por contactar enseguida aunque falten datos, con horario «Lo antes posible», y el asistente deja de preguntar. Le dice que un asesor lo contacta lo antes posible; el número para llamar ya sale solo de tus Instrucciones.",
+  },
+  {
+    title: "HubSpot desde el primer mensaje",
+    text: "El contacto se crea con el primer mensaje (nombre de WhatsApp y teléfono) y se actualiza después de cada respuesta que cambia los datos, el resumen o la etapa.",
   },
   {
     title: "Cuando hace falta una persona",

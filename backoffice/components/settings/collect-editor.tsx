@@ -140,11 +140,11 @@ function ItemRow({
                 onChange({ ...item, required: checked })
               }
             />
-            {item.required ? "Obligatorio" : "Opcional"}
+            {item.required ? "Necesario para Por contactar" : "Opcional"}
             <span className="text-muted-foreground">
               {item.required
-                ? "· Deriva al asesor recién cuando lo sabe."
-                : "· Lo pregunta si surge; no frena la derivación."}
+                ? "· Pasa a Por contactar recién cuando lo sabe, salvo que pida hablar con alguien ya."
+                : "· Lo pregunta si surge; no frena el paso a Por contactar."}
             </span>
           </label>
           <div className="flex items-center gap-1">
@@ -199,7 +199,7 @@ export function CollectEditor() {
   return (
     <Panel
       title="Información a recopilar"
-      description="Lo que el asistente averigua del lead, con sus palabras y en el orden que surja. No repite lo que el lead ya dijo. Con todos los obligatorios pide un horario y deriva a un asesor."
+      description="Lo que el asistente averigua del lead, con sus palabras y en el orden que surja. No repite lo que el lead ya dijo. Con todos los necesarios, el lead pasa a Por contactar y el asistente le pide un horario. Si el lead pide hablar con alguien ya («Quiere hablar ya»), pasa enseguida aunque falten. Si ninguno es necesario, pasa cuando da un horario para la llamada."
       actions={
         <span
           className={cn(
@@ -255,7 +255,9 @@ export function CollectEditor() {
             {errors.collect ??
               (full
                 ? `Llegaste al máximo de ${MAX_COLLECT_ITEMS} datos. Quitá uno para agregar otro.`
-                : `${required} obligatorio${required === 1 ? "" : "s"} · ${items.length - required} opcional${items.length - required === 1 ? "" : "es"}`)}
+                : required === 0
+                  ? "Ninguno necesario: el lead pasa a Por contactar cuando da un horario para la llamada."
+                  : `${required} necesario${required === 1 ? "" : "s"} para Por contactar · ${items.length - required} opcional${items.length - required === 1 ? "" : "es"}`)}
           </p>
           <Button
             type="button"

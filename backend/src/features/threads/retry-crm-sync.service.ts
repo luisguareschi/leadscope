@@ -1,5 +1,5 @@
 import type { AppContext } from "../../context.js";
-import { retryCrmSync as retryWithLease } from "../../conversation/process-thread.js";
+import { syncWithCrmLease } from "../../conversation/crm-sync.js";
 import { badRequest, notFound } from "../../lib/http-error.js";
 import { findThreadDto } from "./thread-dto.js";
 
@@ -19,6 +19,6 @@ export async function retryCrmSync(
     where: { id: threadId },
     data: { crmAttempts: 0, crmNextAttemptAt: null },
   });
-  await retryWithLease(ctx, threadId);
+  await syncWithCrmLease(ctx, threadId);
   return findThreadDto(ctx.db, threadId);
 }

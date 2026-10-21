@@ -1,5 +1,7 @@
 import type { Env } from "./config/env.js";
 import type { AppContext } from "./context.js";
+import { CrmQueue } from "./conversation/crm-queue.js";
+import { syncWithCrmLease } from "./conversation/crm-sync.js";
 import { processThread } from "./conversation/process-thread.js";
 import { ReplyScheduler } from "./conversation/reply-scheduler.js";
 import {
@@ -46,5 +48,8 @@ export function createContext(
       logger,
     },
   );
+  ctx.crm = new CrmQueue(async (threadId) => {
+    await syncWithCrmLease(ctx, threadId);
+  }, logger);
   return ctx;
 }

@@ -74,8 +74,10 @@ describe("buildSystemPrompt", () => {
     const rules = buildPlatformRules(config);
     expect(rules).toContain("Always call the submit_turn tool exactly once.");
     expect(rules).toContain(
-      "The lead goes to an advisor only after every required item is known.",
+      "The lead goes to an advisor only after every required item is known, or right away when they want to talk to a person now (callNow).",
     );
+    expect(rules).toContain("set callNow to true");
+    expect(rules).toContain("Never make up a phone number.");
     expect(rules).toContain(
       'The lead receives "Un asesor te va a responder eso."',
     );

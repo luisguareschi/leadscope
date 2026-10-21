@@ -83,7 +83,7 @@ async function main() {
           )
           .join(
             " · ",
-          )} · call: ${thread.callTime ?? "—"} · crm: ${thread.crmSyncedAt ? "synced" : thread.crmPendingAction ? "pending" : "—"}`,
+          )} · call: ${thread.callTime ?? "—"} · crm: ${thread.crmPendingAction ? (thread.crmLastError ? "failed" : "pending") : thread.crmSyncedAt ? "synced" : "—"}`,
       ),
     );
     if (thread.summary) console.log(dim(thread.summary));
@@ -134,6 +134,7 @@ async function main() {
     }
     const since = new Date();
     const outcome = await processThread(ctx, result.threadId);
+    await ctx.crm.drain();
     const replies = await ctx.db.message.findMany({
       where: {
         threadId: result.threadId,
@@ -149,6 +150,7 @@ async function main() {
     rl.prompt();
   }
   rl.close();
+  await ctx.crm.drain();
   await ctx.db.$disconnect();
 }
 
