@@ -76,9 +76,7 @@ function Bubble({
         className={cn(
           "rounded-2xl border px-3.5 py-2 text-sm",
           outbound
-            ? message.sentBy
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-primary/10 bg-primary/80 text-primary-foreground"
+            ? "border-primary/10 bg-primary/80 text-primary-foreground"
             : "bg-card shadow-xs",
           !continued && (outbound ? "rounded-tr-md" : "rounded-tl-md"),
           message.status === "failed" && "border-destructive/40",
