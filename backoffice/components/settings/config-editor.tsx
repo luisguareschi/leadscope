@@ -42,11 +42,12 @@ export type ConfigEditor = {
  */
 export function useConfigEditorState(
   config: CompanyConfig,
-  version: string | null,
+  companyName: string,
+  version: string,
 ): ConfigEditor {
   const [base, setBase] = useState(() => ({
     version,
-    initial: toDraft(config),
+    initial: toDraft(config, companyName),
   }));
   const [draft, setDraft] = useState(base.initial);
   const [errors, setErrors] = useState<Errors>({});
@@ -55,7 +56,7 @@ export function useConfigEditorState(
   const mutation = useSaveConfig();
 
   if (base.version !== version) {
-    const initial = toDraft(config);
+    const initial = toDraft(config, companyName);
     setBase({ version, initial });
     setDraft(initial);
     setErrors({});
@@ -95,28 +96,33 @@ export function useConfigEditorState(
     },
     // The outcome is read from the promise: a save replaces the draft before mutate() callbacks run.
     save: () =>
-      mutation.mutateAsync({ config: fromDraft(draft) }).then(
-        (result) => {
-          toast.success(
-            result.changed
-              ? "Configuración guardada. El asistente la usa desde la próxima respuesta."
-              : "No había cambios para guardar.",
-          );
-          return null;
-        },
-        (error: Error) => {
-          setFormError(error.message);
-          if (!(error instanceof ApiError) || !error.fields) return null;
-          const next = errorsByField(error.fields);
-          setErrors(next);
-          setItemErrors(itemErrors(error.fields));
-          return (
-            (Object.keys(FIELD_PATHS) as Array<keyof ConfigDraft>).find(
-              (key) => next[key],
-            ) ?? null
-          );
-        },
-      ),
+      mutation
+        .mutateAsync({
+          config: fromDraft(draft),
+          companyName: draft.companyName,
+        })
+        .then(
+          (result) => {
+            toast.success(
+              result.changed
+                ? "Configuración guardada. El asistente la usa desde la próxima respuesta."
+                : "No había cambios para guardar.",
+            );
+            return null;
+          },
+          (error: Error) => {
+            setFormError(error.message);
+            if (!(error instanceof ApiError) || !error.fields) return null;
+            const next = errorsByField(error.fields);
+            setErrors(next);
+            setItemErrors(itemErrors(error.fields));
+            return (
+              (Object.keys(FIELD_PATHS) as Array<keyof ConfigDraft>).find(
+                (key) => next[key],
+              ) ?? null
+            );
+          },
+        ),
     sectionState: (section) => {
       const keys = CONFIG_SECTION_FIELDS[section];
       if (keys.some((key) => errors[key])) return "error";

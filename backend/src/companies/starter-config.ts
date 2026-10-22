@@ -30,13 +30,15 @@ export const STARTER_COLLECT: CollectItem[] = [
 
 /**
  * Config written when a platform admin creates a company. Same shape the seed stores for
- * Altamira, with the typed name filled in. No secrets, no WhatsApp number, no demo data.
- * Altamira's own wording stays in prisma/seed-data and is not copied here.
+ * Altamira, with the company's name in the fallback line. The company's name itself is
+ * `Company.name`; the assistant has no name of its own until an operator gives it one. No secrets,
+ * no WhatsApp number, no demo data. Altamira's own wording stays in prisma/seed-data and is not
+ * copied here.
  */
-export function starterCompanyConfig(displayName: string): CompanyConfigInput {
-  const name = displayName.trim();
+export function starterCompanyConfig(companyName: string): CompanyConfigInput {
+  const name = companyName.trim();
   return {
-    displayName: name,
+    assistantName: "",
     language: "es",
     tone: "Español claro y profesional. Cálido, sin emojis salvo que el lead los use.",
     timezone: "America/Montevideo",
@@ -63,6 +65,6 @@ export function starterCompanyConfig(displayName: string): CompanyConfigInput {
 }
 
 /** The company instructions a new company starts with. Its operators rewrite them in Configuración. */
-export function starterInstructions(displayName: string): string {
-  return `${displayName.trim()} es una desarrolladora inmobiliaria.`;
+export function starterInstructions(companyName: string): string {
+  return `${companyName.trim()} es una desarrolladora inmobiliaria.`;
 }

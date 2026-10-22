@@ -127,7 +127,10 @@ describe("the migration SQL", () => {
         )[0]!.upgraded;
       return [await run(legacyConfig), await run(current)];
     });
-    expect(legacy).toEqual(upgradeLegacyConfig(legacyConfig));
+    // The later name split (20261022090000) moves displayName; the app reads both steps at once.
+    expect(upgradeLegacyConfig(legacy)).toEqual(
+      upgradeLegacyConfig(legacyConfig),
+    );
     expect(legacy).toMatchObject({
       collect: upgradedCollect,
       forbiddenTopics: { describe: ["Rentabilidad futura"] },

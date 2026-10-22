@@ -86,10 +86,16 @@ describe("platform admin companies", () => {
       expect.arrayContaining([
         { kind: "config", createdByEmail: "admin@example.com" },
         { kind: "instructions", createdByEmail: "admin@example.com" },
+        { kind: "companyName", createdByEmail: "admin@example.com" },
         { kind: "whatsappPhoneNumberId", createdByEmail: "admin@example.com" },
       ]),
     );
-    expect(row.settingsVersions).toHaveLength(3);
+    expect(row.settingsVersions).toHaveLength(4);
+    expect(row.name).toBe("Costa Sur");
+    expect(
+      row.settingsVersions.find((version) => version.kind === "companyName")
+        ?.companyName,
+    ).toBe("Costa Sur");
     expect(row.encryptedSecrets).toBeNull();
     expect(row.whatsappPhoneNumberId).toBeNull();
     expect(row.threads).toEqual([]);
@@ -97,7 +103,7 @@ describe("platform admin companies", () => {
       "operador@costasur.uy",
     ]);
     const config = parseCompanyConfig(row.config);
-    expect(config.displayName).toBe("Costa Sur");
+    expect(config.assistantName).toBe("");
     expect(config.collect.map((item) => [item.key, item.required])).toEqual([
       ["interest", true],
       ["budget", true],

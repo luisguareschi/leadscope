@@ -85,7 +85,7 @@ const collectSchema = z
  * lenient so a stored config keeps loading. Unknown keys are rejected rather than dropped.
  */
 export const editableConfigSchema = z.strictObject({
-  displayName: required(80),
+  assistantName: optional(60),
   language: z
     .string()
     .trim()
@@ -184,6 +184,12 @@ export const editableConfigSchema = z.strictObject({
       .nullable(),
   }),
 }) satisfies z.ZodType<CompanyConfig>;
+
+/**
+ * `Company.name`: what the prompt, Empresas, and the panel call the company. Same limit as when
+ * Empresas creates it.
+ */
+export const companyNameSchema = required(80);
 
 /**
  * Meta's Phone number ID for the company's WhatsApp number (Kapso shows the same id): digits only.

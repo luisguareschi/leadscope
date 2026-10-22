@@ -1,16 +1,23 @@
 import { z } from "zod";
 import {
+  companyNameSchema,
   editableConfigSchema,
   MAX_INSTRUCTIONS_CHARS,
   whatsappPhoneNumberIdSchema,
 } from "../../companies/editable-config.js";
 
 /**
- * The Asistente tab saves the config and the WhatsApp phone number id together. The id is
- * optional: leaving it out keeps the stored one.
+ * The Asistente sections save the config, the company's name, and the WhatsApp phone number id
+ * together. The name and the id are optional: leaving one out keeps the stored one.
  */
 export const updateConfigBodySchema = editableConfigSchema.extend({
+  companyName: companyNameSchema.optional(),
   whatsappPhoneNumberId: whatsappPhoneNumberIdSchema.optional(),
+});
+
+/** A stored name checked on restore, reported under the same field as in the form. */
+export const companyNameValueSchema = z.object({
+  companyName: companyNameSchema,
 });
 
 /** Platform rules are code, so `instructions` is the only field this route accepts. */

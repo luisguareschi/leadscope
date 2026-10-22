@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseCompanyConfig } from "../../src/companies/company-config.js";
 import { buildChatTurns } from "../../src/engine/history.js";
+import { CALL_NOW_TIME } from "../../src/engine/turn.js";
 import {
   buildPlatformRules,
   buildSystemPrompt,
@@ -14,6 +15,7 @@ const config = parseCompanyConfig({
   ...baseConfig,
   businessHours: "lunes a viernes de 9 a 18",
 });
+const COMPANY = "Constructora Test";
 const empty = {
   collected: {},
   summary: null,
@@ -24,6 +26,7 @@ describe("buildSystemPrompt", () => {
   it("puts the company's items, forbidden topics, and every document in the prompt", () => {
     const prompt = buildSystemPrompt({
       config,
+      companyName: COMPANY,
       instructions: "",
       documents: [
         {
@@ -56,10 +59,11 @@ describe("buildSystemPrompt", () => {
   it("puts the platform rules first, then the company instructions, then knowledge", () => {
     const prompt = buildSystemPrompt({
       config,
+      companyName: COMPANY,
       instructions: "  Mencioná siempre la Torre Sur.  ",
       documents: [],
     });
-    const rules = buildPlatformRules(config);
+    const rules = buildPlatformRules(config, COMPANY);
     expect(prompt.startsWith(rules)).toBe(true);
     expect(prompt).toContain(
       "<company_instructions>\nMencioná siempre la Torre Sur.\n</company_instructions>",
@@ -71,7 +75,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("states the rules the engine depends on, with the company's own fixed lines", () => {
-    const rules = buildPlatformRules(config);
+    const rules = buildPlatformRules(config, COMPANY);
     expect(rules).toContain("Always call the submit_turn tool exactly once.");
     expect(rules).toContain(
       "The lead goes to an advisor only after every required item is known, or right away when they want to talk to a person now (callNow).",
@@ -92,6 +96,109 @@ describe("buildSystemPrompt", () => {
   });
 });
 
+describe("the assistant's name and the company's name", () => {
+  const almira = parseCompanyConfig({ ...baseConfig, assistantName: "Almira" });
+  const unnamed = parseCompanyConfig({ ...baseConfig, assistantName: "" });
+  const firstMessage = {
+    state: "greeting" as const,
+    ...empty,
+    name: null,
+    source: "whatsapp" as const,
+  };
+
+  it("introduces the assistant by its own name, as the assistant of the company", () => {
+    const rules = buildPlatformRules(almira, "Altamira");
+    expect(
+      rules.startsWith(
+        "You are Almira, the WhatsApp virtual assistant of Altamira. You chat on WhatsApp with people who contacted Altamira about its real-estate projects.",
+      ),
+    ).toBe(true);
+    expect(rules).toContain(
+      '"Almira" is your name; "Altamira" is the company you work for. Never call yourself Altamira, and never call the company Almira.',
+    );
+    expect(rules).toContain(
+      "1. Greet new leads and introduce yourself as Almira, the virtual assistant of Altamira.",
+    );
+    expect(rules).toContain("Speak on behalf of Altamira.");
+    expect(rules).toContain(
+      "If the instructions from Altamira give a phone number",
+    );
+    expect(rules).toContain("a person from Altamira has dealt with it");
+    expect(rules).toContain("only a person from Altamira can answer");
+    expect(rules).not.toMatch(/of Almira|from Almira|as Almira\./);
+  });
+
+  it("uses the company's name for the company in the instructions header and every turn step", () => {
+    const prompt = buildSystemPrompt({
+      config: almira,
+      companyName: "Altamira",
+      instructions: "Vendemos en Pocitos.",
+      documents: [],
+    });
+    expect(prompt).toContain(
+      "# Instructions from Altamira\nAltamira wrote the instructions below.",
+    );
+    expect(
+      buildTurnContext(firstMessage, almira, "Altamira", new Date()),
+    ).toContain(
+      "Greet them, introduce yourself as Almira, the virtual assistant of Altamira, briefly answer",
+    );
+    expect(
+      nextStepFor(
+        { state: "answer", stage: "contacted", collected: {}, callTime: null },
+        almira,
+        "Altamira",
+      ),
+    ).toContain("An advisor from Altamira already contacted this lead.");
+    expect(
+      nextStepFor(
+        {
+          state: "answer",
+          stage: "to_contact",
+          collected: {},
+          callTime: CALL_NOW_TIME,
+        },
+        almira,
+        "Altamira",
+      ),
+    ).toContain("offer the phone number from the instructions of Altamira");
+  });
+
+  it("with no assistant name, presents itself only as the company's assistant and invents none", () => {
+    const rules = buildPlatformRules(unnamed, "Altamira");
+    expect(
+      rules.startsWith("You are the WhatsApp virtual assistant of Altamira."),
+    ).toBe(true);
+    expect(rules).toContain(
+      "You have no personal name: introduce yourself only as the virtual assistant of Altamira, and never make up a name.",
+    );
+    expect(rules).toContain(
+      "introduce yourself as the virtual assistant of Altamira.",
+    );
+    expect(rules).not.toContain("is your name");
+    expect(
+      buildTurnContext(firstMessage, unnamed, "Altamira", new Date()),
+    ).toContain(
+      "introduce yourself as the virtual assistant of Altamira, briefly answer",
+    );
+  });
+
+  it("follows a rename of either one without touching the other", () => {
+    const renamed = buildPlatformRules(almira, "Altamira Uruguay");
+    expect(renamed).toContain(
+      "You are Almira, the WhatsApp virtual assistant of Altamira Uruguay.",
+    );
+    const other = buildPlatformRules(
+      parseCompanyConfig({ ...baseConfig, assistantName: "Lola" }),
+      "Altamira",
+    );
+    expect(other).toContain(
+      "You are Lola, the WhatsApp virtual assistant of Altamira.",
+    );
+    expect(other).not.toContain("Almira");
+  });
+});
+
 describe("turn context", () => {
   const now = new Date("2026-10-10T19:00:00Z");
 
@@ -106,6 +213,7 @@ describe("turn context", () => {
         source: "whatsapp",
       },
       config,
+      COMPANY,
       now,
     );
     expect(context).toContain("- Interés [interest]: 2 dormitorios");
@@ -122,6 +230,7 @@ describe("turn context", () => {
     const context = buildTurnContext(
       { state: "qualify", ...empty, name: null, source: "form" },
       config,
+      COMPANY,
       now,
     );
     expect(context).toContain("already received a welcome message");
@@ -147,13 +256,14 @@ describe("turn context", () => {
         callTime: null,
       },
       withOptional,
+      COMPANY,
     );
     expect(step).toContain("ask when an advisor can call");
     expect(step).toContain("Still missing, optional: Zona [zone] (optional)");
-    expect(buildPlatformRules(withOptional)).toContain(
+    expect(buildPlatformRules(withOptional, COMPANY)).toContain(
       "Optional items are nice to have",
     );
-    expect(buildPlatformRules(withOptional)).toContain(
+    expect(buildPlatformRules(withOptional, COMPANY)).toContain(
       "   - Zona [zone] (optional): Barrio que prefiere.",
     );
   });
@@ -166,6 +276,7 @@ describe("turn context", () => {
         callTime: "mañana",
       },
       config,
+      COMPANY,
     );
     expect(step).toContain("already with an advisor, who will call mañana");
   });
@@ -192,6 +303,7 @@ describe("turn context", () => {
         callTime: null,
       },
       withZone,
+      COMPANY,
     );
     expect(scheduling).toContain("ask when an advisor can call");
     expect(scheduling).not.toContain("Zona");
@@ -204,6 +316,7 @@ describe("turn context", () => {
         callTime: "hoy",
       },
       withZone,
+      COMPANY,
     );
     expect(scheduled).toContain(
       "remind them that an advisor will contact them",
@@ -215,6 +328,7 @@ describe("turn context", () => {
     const step = nextStepFor(
       { state: "qualify", stage: "contacted", collected: {}, callTime: null },
       config,
+      COMPANY,
     );
     expect(step).toContain("already contacted this lead");
     expect(step).toContain("Do not ask for anything");

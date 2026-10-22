@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { altamiraConfig } from "../../prisma/seed-data/altamira.js";
+import {
+  ALTAMIRA_NAME,
+  altamiraConfig,
+} from "../../prisma/seed-data/altamira.js";
 import { parseCompanyConfig } from "../../src/companies/company-config.js";
 import { recordInboundMessage } from "../../src/conversation/inbound.js";
 import { processThread } from "../../src/conversation/process-thread.js";
@@ -44,15 +47,21 @@ function turnFor(lead: string): CompleteInput {
     timeoutMs: 25_000,
     system: buildSystemPrompt({
       config: altamira,
+      companyName: ALTAMIRA_NAME,
       instructions: "",
       documents: [],
     }),
-    turnContext: buildTurnContext(thread, altamira, new Date()),
+    turnContext: buildTurnContext(thread, altamira, ALTAMIRA_NAME, new Date()),
     messages: buildChatTurns(
       [{ direction: "inbound", type: "text", body: lead }],
       40,
     ),
-    scenario: { thread, config: altamira, documents: [] },
+    scenario: {
+      thread,
+      config: altamira,
+      companyName: ALTAMIRA_NAME,
+      documents: [],
+    },
   };
 }
 
@@ -134,7 +143,7 @@ describe("a lead asking for rental yield or guaranteed returns", () => {
 
 describe("the prompt and tool for forbidden topics", () => {
   it("lists the topics in plain language and asks for the flag, with no patterns", () => {
-    const rules = buildPlatformRules(altamira);
+    const rules = buildPlatformRules(altamira, ALTAMIRA_NAME);
     for (const topic of altamira.forbiddenTopics.describe)
       expect(rules).toContain(`- ${topic}`);
     expect(rules).toContain("set forbiddenTopic to that topic");

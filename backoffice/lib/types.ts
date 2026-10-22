@@ -226,7 +226,8 @@ export const MAX_COLLECT_ITEMS = 10;
 
 /** Mirrors the backend's `CompanyConfig` (companies/company-config.ts). */
 export type CompanyConfig = {
-  displayName: string;
+  /** The assistant's own name, e.g. "Almira". Empty: it has none. The company's is `companyName`. */
+  assistantName: string;
   language: string;
   tone: string;
   timezone: string;
@@ -259,6 +260,8 @@ export type CompanyConfig = {
 
 export type CompanySettings = {
   config: CompanyConfig;
+  /** `Company.name`: what the prompt, Empresas, and the panel call the company. */
+  companyName: string;
   instructions: string;
   /** Phone number ID of the company's WhatsApp number (Kapso shows Meta's id). Null until it has one. */
   whatsappPhoneNumberId: string | null;
@@ -269,6 +272,7 @@ export type CompanySettings = {
   currentVersions: {
     config: string | null;
     instructions: string | null;
+    companyName: string | null;
     whatsappPhoneNumberId: string | null;
   };
   limits: { instructionsMaxChars: number };
@@ -281,7 +285,7 @@ export type SettingsSaveResult = {
 
 export type SettingsVersion = {
   id: string;
-  kind: "config" | "instructions" | "whatsappPhoneNumberId";
+  kind: "config" | "instructions" | "companyName" | "whatsappPhoneNumberId";
   createdAt: string;
   /** Null for the version that existed before versioning. */
   createdByEmail: string | null;
@@ -291,11 +295,14 @@ export type SettingsVersion = {
   current: boolean;
   config: CompanyConfig | null;
   instructions: string | null;
+  companyName: string | null;
   whatsappPhoneNumberId: string | null;
 };
 
 export type PromptPreview = {
   model: string;
+  /** Who the prompt says is talking (may be empty), and for which company. */
+  names: { assistant: string; company: string };
   system: string;
   turnContext: string;
   tool: { name: string; description: string; input_schema: unknown };

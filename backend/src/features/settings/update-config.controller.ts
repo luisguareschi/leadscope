@@ -7,17 +7,13 @@ import { updateConfig } from "./update-config.service.js";
 
 export function updateConfigController(ctx: AppContext): RequestHandler {
   return async (req, res) => {
-    const { whatsappPhoneNumberId, ...config } = parseSettingsInput(
-      updateConfigBodySchema,
-      req.body,
-    );
+    const { companyName, whatsappPhoneNumberId, ...config } =
+      parseSettingsInput(updateConfigBodySchema, req.body);
     res.json(
-      await updateConfig(
-        ctx,
-        companyAccessOf(req),
-        config,
+      await updateConfig(ctx, companyAccessOf(req), config, {
+        companyName,
         whatsappPhoneNumberId,
-      ),
+      }),
     );
   };
 }
