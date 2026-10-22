@@ -5,7 +5,7 @@ WhatsApp lead assistant for real-estate developers. It greets leads, finds out w
 | Folder | What it is |
 | --- | --- |
 | `backend/` | Express 5 + Prisma 7 (Postgres). WhatsApp through Kapso (webhook and sends), conversation engine, Anthropic, HubSpot, knowledge uploads. Ships as a Docker image. |
-| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations (the Por contactar queue, assigning leads to advisors, marking them contacted), pause/resume, knowledge files, company settings, instructions, and secrets, and (for a platform admin) creating, archiving, and deleting companies, managing their operators, and entering one through support access. |
+| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations (the Por contactar queue, assigning leads to advisors, marking them contacted, writing to the lead from the company's number), pause/resume, knowledge files, company settings, instructions, and secrets, and (for a platform admin) creating, archiving, and deleting companies, managing their operators, and entering one through support access. |
 | `docs/` | Design, proposals, meeting notes. |
 
 ## Run it locally
@@ -44,6 +44,8 @@ Sign in as the operator email you just typed. The sidebar is Conversaciones, Con
 **Conversaciones** shows two things per thread: the lead stage (Calificando → Por contactar → Contactado, plus Sin interés) and what the assistant is doing (respondiendo, pausado, requiere asesor). The assistant only moves the stage forward. Once a lead gives every necessary item the thread is **Por contactar**, and it stays there when the lead writes again (it gets an "Escribió de nuevo" badge) until a person changes the stage; the bot keeps answering without asking for the data again. Por contactar is the advisors' queue, longest wait first. The **Asignado** picker, in each row and in the thread, assigns the lead: **Asignarme**, another active operator of the company (searchable), or **Sin asignar**.
 
 The **Etapa** works the same way, like a ticket's status in Linear: click it in the row (the thread does not open) or in the thread's Seguimiento, and pick Calificando, Por contactar, Contactado, or Sin interés, in any direction, with no confirmation. **Contactado** records who and when (and assigns the lead to you if nobody had it); moving it out of Contactado clears that, so a mistake is one click to undo. Each change rewrites the HubSpot property and shows in Seguimiento as **Cambio de etapa** (who and when; "el asistente" when the bot moved it). After a manual move the assistant follows the new stage: **Calificando** asks for what is still missing and puts the lead back in Por contactar (at the end of the queue) once it is all in, which is the lead's next message if nothing is missing; **Sin interés** keeps answering questions without asking for anything, until the lead asks to talk to someone or gives the missing data. **Asignadas a mí** filters the list to your threads.
+
+**Writing to the lead from the panel.** Advisors can answer from their own WhatsApp as before, or from the composer at the bottom of the thread view, which sends from the company's number (the bot's). It is text only, with WhatsApp's own formatting: **B**, *I*, and ~~S~~ buttons, or Ctrl/Cmd+B, Ctrl/Cmd+I, and Ctrl/Cmd+Shift+X, wrap the selection in `*…*`, `_…_`, or `~…~` (press again to remove them). Enter sends, Shift+Enter adds a line. Every bubble in the panel shows that formatting the way WhatsApp does, and the ones you send say **Enviado por** and your name (the admin's email through Entrar). Sending pauses the assistant in that thread (a "Requiere asesor" thread becomes "Pausado"); it comes back only with **Reanudar asistente**, and then it reads what you wrote as the advisor's and does not ask again for what the lead already told you. A thread nobody had is assigned to you; the stage does not change. WhatsApp only allows free-form messages within 24 hours of the lead's last message: the composer shows the time left and, after that, is disabled with the explanation (templates from the panel are not in v1). If WhatsApp refuses a message, the bubble says No enviado and why. HubSpot's transcript names you on those lines the next time the property is written.
 
 A lead who wants to talk to a person now ("llámenme", "quiero hablar con alguien") skips the questions: the thread goes to Por contactar right away, even with items missing, with the call time **Lo antes posible** (shown in the Lead panel like any call time), and the assistant says an advisor will contact them as soon as possible. If the company's **Instrucciones** give a phone number for leads who want to call right away (for example "Si alguien quiere llamar ya, el número de ventas es …"), the assistant offers it; there is no other setting for it and no number in the code. It is a normal Por contactar thread: no badge and no special place in the queue.
 
@@ -95,7 +97,7 @@ Still placeholders for Altamira: the welcome template name, the HubSpot property
 ## Tests
 
 ```bash
-cd backend && npm test          # 319 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
+cd backend && npm test          # 335 tests; needs Postgres (leadscope_test, or set TEST_DATABASE_URL)
 cd backoffice && npm run lint && npm run typecheck && npm run build
 ```
 
@@ -143,7 +145,7 @@ Steps for a new company:
 
 How it works: inbound deliveries are verified with the company's secret (`X-Webhook-Signature`, hex HMAC-SHA256 of the raw body), only events for the company's own phone number id are stored, and the 200 goes back after they are stored. Duplicates are dropped by WhatsApp message id. Outbound text, the welcome template, and read receipts go to `https://api.kapso.ai/meta/whatsapp/v24.0/{phone_number_id}/messages` with `X-API-Key`; the body is Meta's Cloud API body. Kapso's API is the only provider that ships; a second one would implement `Channel` (`backend/src/integrations/whatsapp/channel.ts`) and its own webhook route.
 
-Not handled yet: inbound messages that carry only a business-scoped user id and no phone number (Meta's username rollout) are logged and skipped, because threads are keyed by phone. Messages the team sends from the WhatsApp Business App (Coexistence) do not pause the bot.
+Not handled yet: inbound messages that carry only a business-scoped user id and no phone number (Meta's username rollout) are logged and skipped, because threads are keyed by phone. Messages the team sends from the WhatsApp Business App (Coexistence) do not pause the bot; messages sent from the thread view's composer do.
 
 ### Local testing without Kapso
 
