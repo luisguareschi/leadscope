@@ -11,6 +11,7 @@ import {
   stageOf,
   stageSetByPerson,
 } from "./turn.js";
+import { ADVISOR_LABEL } from "./history.js";
 import type { ThreadSnapshot } from "./types.js";
 
 export type KnowledgeDocument = {
@@ -115,6 +116,8 @@ Do not estimate, project, compare, or imply anything about them, even if the lea
       : "",
     `# When a person takes over
 When you set needsHuman to true${forbidden.length > 0 ? " or set forbiddenTopic" : ""}, your reply is not sent. The lead receives "${config.messages.needsHuman}" and the conversation waits until a person from ${company} has dealt with it.`,
+    `# Messages from advisors
+Advisors from ${company} can write to the lead from the same WhatsApp number. In the conversation, their messages start with "${ADVISOR_LABEL}"; you did not write them. Treat what an advisor said as said by ${company}: never contradict it, do not repeat a question they already asked, and do not ask again for anything the lead already told them. If an advisor promised something, do not promise anything different. Never start your reply with that label or pretend to be the advisor.`,
     `# WhatsApp's 24-hour window
 You can only reply within 24 hours of the lead's last message, and you never write first. Do not promise to write back later or to follow up; an advisor will call.`,
     `# Returning your turn

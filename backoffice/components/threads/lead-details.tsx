@@ -149,7 +149,7 @@ function AssistantGroup({ thread }: { thread: Thread }) {
           tone="warning"
           icon={<HandIcon />}
           text={needsHumanReasonLabel(thread.needsHumanReason)}
-          detail="Contactá al lead desde tu WhatsApp y, cuando esté resuelto, devolvele la conversación al asistente."
+          detail="Respondele desde la conversación (el asistente queda pausado) o desde tu WhatsApp y, cuando esté resuelto, devolvele la conversación al asistente."
           action={
             <Button
               size="sm"
@@ -171,8 +171,9 @@ function AssistantGroup({ thread }: { thread: Thread }) {
     return (
       <Group title="Asistente" aside={<BotBadge activity="paused" />}>
         <p className="text-[13px] leading-relaxed text-muted-foreground">
-          Un asesor pausó el asistente en esta conversación. Los mensajes nuevos
-          se guardan, pero el asistente no responde.
+          Un asesor pausó el asistente en esta conversación, o le escribió al
+          lead desde el panel. Los mensajes nuevos se guardan, pero el asistente
+          no responde hasta que lo reanuden.
         </p>
       </Group>
     );

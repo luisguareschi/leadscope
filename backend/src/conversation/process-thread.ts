@@ -69,7 +69,7 @@ async function askModel(
         where: { threadId: thread.id },
         orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
         take: config.llm.historyLimit,
-        select: { direction: true, type: true, body: true },
+        select: { direction: true, type: true, body: true, sentByEmail: true },
       }),
     ]);
     const result = await ctx.integrations.llmFor(company).complete({
@@ -167,6 +167,16 @@ async function runTurn(
     : { input: { kind: "non_text" } as TurnInput, usage: null };
   const decision: TurnDecision = decideTurn(thread, input, rulesFor(company));
 
+  // A person who paused the thread or wrote to the lead while the model was answering wins.
+  const latest = await ctx.db.thread.findUnique({
+    where: { id: threadId },
+    select: { paused: true },
+  });
+  if (!latest || latest.paused) {
+    await markHandled();
+    return "silenced";
+  }
+
   let waMessageId: string | null = null;
   let sendError: string | null = null;
   try {
@@ -205,6 +215,7 @@ async function runTurn(
         body: decision.reply,
         waMessageId,
         status: sendError ? "failed" : "sent",
+        error: sendError?.slice(0, 500) ?? null,
         sentAt,
       },
     }),

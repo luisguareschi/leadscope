@@ -56,6 +56,7 @@ model Operator {
   contactedThreads    Thread[]          @relation("ThreadContactedBy")
   stageChangedThreads Thread[]          @relation("ThreadStageChangedBy")
   stageChanges        LeadStageChange[]
+  sentMessages        Message[]
 
   @@index([companyId])
 }
@@ -217,26 +218,36 @@ enum MessageDirection {
 }
 
 model Message {
-  id          String           @id @default(cuid())
-  companyId   String
-  threadId    String
-  direction   MessageDirection
+  id            String           @id @default(cuid())
+  companyId     String
+  threadId      String
+  direction     MessageDirection
   /// WhatsApp message type: text, template, image, audio, sticker, ...
-  type        String
-  body        String           @db.Text
-  waMessageId String?          @unique
+  type          String
+  body          String           @db.Text
+  waMessageId   String?          @unique
   /// Outbound delivery status from Meta: sent, delivered, read, failed.
-  status      String?
+  status        String?
+  /// Why WhatsApp refused an outbound message when it was sent.
+  error         String?
   /// Inbound only: when the engine took this message into a turn.
-  handledAt   DateTime?
-  sentAt      DateTime         @default(now())
-  createdAt   DateTime         @default(now())
-  company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  thread      Thread           @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  handledAt     DateTime?
+  /// Outbound only: the person who wrote it in the panel. Null for the assistant and templates.
+  sentByEmail   String?
+  /// Null through support access, or once that operator is deleted.
+  sentById      String?
+  /// A platform admin wrote it from inside the company (also in AdminAuditEntry).
+  sentBySupport Boolean          @default(false)
+  sentAt        DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+  company       Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  thread        Thread           @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sentBy        Operator?        @relation(fields: [sentById], references: [id], onDelete: SetNull)
 
   @@index([threadId, sentAt])
   @@index([companyId])
   @@index([direction, handledAt])
+  @@index([sentById])
 }
 
 model LlmUsage {

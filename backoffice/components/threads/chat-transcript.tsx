@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef } from "react";
 import {
+  BotIcon,
   CheckCheckIcon,
   CheckIcon,
   CircleAlertIcon,
@@ -12,12 +13,14 @@ import {
   MapPinIcon,
   MicIcon,
   StickerIcon,
-  TimerOffIcon,
+  UserRoundIcon,
   VideoIcon,
 } from "lucide-react";
 import { formatDayLabel, formatTime } from "@/lib/format";
+import { operatorName } from "@/lib/thread-status";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/types";
+import { renderWhatsapp } from "@/lib/whatsapp-format";
 
 const TYPE_META: Record<string, { label: string; icon: React.ReactNode }> = {
   audio: { label: "Audio", icon: <MicIcon /> },
@@ -91,7 +94,9 @@ function Bubble({
           </div>
         ) : null}
         {message.body ? (
-          <p className="break-words whitespace-pre-wrap">{message.body}</p>
+          <p className="break-words whitespace-pre-wrap">
+            {renderWhatsapp(message.body)}
+          </p>
         ) : null}
         {!message.body && !meta ? (
           <p
@@ -104,22 +109,46 @@ function Bubble({
           </p>
         ) : null}
       </div>
-      <div className="flex items-center gap-1 px-1 text-[11px] text-muted-foreground tabular-nums">
+      <div className="flex flex-wrap items-center justify-end gap-x-1 px-1 text-[11px] text-muted-foreground tabular-nums">
+        {outbound ? <Author sentBy={message.sentBy} /> : null}
         {formatTime(message.sentAt)}
         {outbound ? <DeliveryStatus status={message.status} /> : null}
       </div>
+      {message.status === "failed" && message.error ? (
+        <p className="max-w-full px-1 text-right text-[11px] break-words text-destructive">
+          {message.error}
+        </p>
+      ) : null}
     </div>
   );
 }
 
-export function ChatTranscript({
-  messages,
-  endNote,
-}: {
-  messages: ChatMessage[];
-  /** A line after the last message, like a system message in WhatsApp. */
-  endNote?: string | null;
-}) {
+/** Who wrote an outbound message: the assistant, or the person who sent it from the panel. */
+function Author({ sentBy }: { sentBy: ChatMessage["sentBy"] }) {
+  if (!sentBy) {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <BotIcon className="size-3" />
+        Asistente ·
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1 font-medium text-foreground/80"
+      title={sentBy.email}
+    >
+      <UserRoundIcon className="size-3" />
+      Enviado por{" "}
+      {sentBy.support
+        ? `${sentBy.email} (administrador)`
+        : operatorName(sentBy.email)}{" "}
+      ·
+    </span>
+  );
+}
+
+export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
   const bottom = useRef<HTMLDivElement>(null);
   const count = messages.length;
 
@@ -150,14 +179,6 @@ export function ChatTranscript({
           </Fragment>
         );
       })}
-      {endNote ? (
-        <div className="mt-5 flex justify-center">
-          <p className="flex max-w-sm items-start gap-2 rounded-lg border bg-background px-3 py-2 text-center text-xs leading-relaxed text-muted-foreground">
-            <TimerOffIcon className="mt-0.5 size-3.5 shrink-0" />
-            {endNote}
-          </p>
-        </div>
-      ) : null}
       <div ref={bottom} />
     </div>
   );

@@ -6,6 +6,7 @@ import { ArrowLeftIcon } from "lucide-react";
 import { Panel, StatusPill } from "@/components/panel";
 import { ChatTranscript } from "@/components/threads/chat-transcript";
 import { LeadDetails } from "@/components/threads/lead-details";
+import { MessageComposer } from "@/components/threads/message-composer";
 import {
   BotBadge,
   StageBadge,
@@ -55,8 +56,8 @@ function ReplyWindow({
       </TooltipTrigger>
       <TooltipContent className="max-w-64">
         WhatsApp deja responder hasta 24 horas después del último mensaje del
-        lead. Después, el asistente no puede escribirle hasta que el lead vuelva
-        a escribir.
+        lead. Después, ni el asistente ni el panel pueden escribirle hasta que
+        el lead vuelva a escribir.
       </TooltipContent>
     </Tooltip>
   );
@@ -162,17 +163,7 @@ export default function ThreadPage() {
             className="min-h-0 flex-1 overflow-y-auto bg-muted/20"
           >
             {data ? (
-              <ChatTranscript
-                messages={data.messages}
-                endNote={
-                  windowClosed(data.thread.replyWindowClosesAt) &&
-                  data.messages.length > 0 &&
-                  !data.thread.paused &&
-                  data.thread.state !== "closed"
-                    ? "Pasaron más de 24 horas desde el último mensaje del lead. El asistente no puede escribirle hasta que vuelva a escribir."
-                    : null
-                }
-              />
+              <ChatTranscript messages={data.messages} />
             ) : (
               <div className="flex flex-col gap-3 p-5">
                 <Skeleton className="h-12 w-2/3 rounded-2xl" />
@@ -181,6 +172,7 @@ export default function ThreadPage() {
               </div>
             )}
           </div>
+          {thread ? <MessageComposer thread={thread} /> : null}
         </Panel>
         {thread && data ? (
           <LeadDetails thread={thread} fields={data.fields} />

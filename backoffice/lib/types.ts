@@ -82,7 +82,11 @@ export type ChatMessage = {
   type: string;
   body: string;
   status: string | null;
+  /** Why WhatsApp refused it when it was sent. */
+  error: string | null;
   sentAt: string;
+  /** Who wrote it in the panel; null for the assistant, templates, and the lead. */
+  sentBy: { email: string; support: boolean } | null;
 };
 
 export type ThreadsPage = { threads: Thread[]; nextCursor: string | null };

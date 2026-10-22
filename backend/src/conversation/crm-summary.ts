@@ -1,6 +1,7 @@
 import type { CompanyConfig } from "../companies/company-config.js";
 import { collectedOf } from "../engine/turn.js";
 import type { LeadStage, ThreadState } from "../engine/types.js";
+import { senderLabel } from "../lib/operator-name.js";
 
 export type SummaryThread = {
   phone: string;
@@ -51,6 +52,9 @@ export type SummaryMessage = {
   type: string;
   body: string;
   sentAt: Date;
+  /** Set when a person wrote it in the panel. */
+  sentByEmail?: string | null;
+  sentBySupport?: boolean;
 };
 
 const STAGE_LABEL: Record<LeadStage, string> = {
@@ -105,7 +109,12 @@ function transcriptLine(
   message: SummaryMessage,
   config: CompanyConfig,
 ): string {
-  const who = message.direction === "inbound" ? "Lead" : "Asistente";
+  const who =
+    message.direction === "inbound"
+      ? "Lead"
+      : message.sentByEmail
+        ? `Asesor ${senderLabel({ sentByEmail: message.sentByEmail, sentBySupport: message.sentBySupport ?? false })}`
+        : "Asistente";
   const body =
     message.type === "text"
       ? message.body
