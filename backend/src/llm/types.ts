@@ -19,6 +19,8 @@ export type CompleteInput = {
   scenario: {
     thread: PromptThread;
     config: CompanyConfig;
+    /** `Company.name`. The assistant's own name is `config.assistantName`. */
+    companyName: string;
     documents: KnowledgeDocument[];
   };
 };

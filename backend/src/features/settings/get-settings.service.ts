@@ -11,6 +11,7 @@ export async function getSettings(ctx: AppContext, companyId: string) {
     where: { id: companyId },
     select: {
       slug: true,
+      name: true,
       config: true,
       instructions: true,
       whatsappPhoneNumberId: true,
@@ -22,23 +23,31 @@ export async function getSettings(ctx: AppContext, companyId: string) {
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       select: { id: true },
     });
-  const [configVersion, instructionsVersion, phoneNumberIdVersion] =
-    await Promise.all([
-      latest(SettingsKind.config),
-      latest(SettingsKind.instructions),
-      latest(SettingsKind.whatsappPhoneNumberId),
-    ]);
-  const config = parseCompanyConfig(company.config);
+  const [
+    configVersion,
+    instructionsVersion,
+    companyNameVersion,
+    phoneNumberIdVersion,
+  ] = await Promise.all([
+    latest(SettingsKind.config),
+    latest(SettingsKind.instructions),
+    latest(SettingsKind.companyName),
+    latest(SettingsKind.whatsappPhoneNumberId),
+  ]);
+  const config = parseCompanyConfig(company.config, company.name);
   return {
     config,
+    /** `Company.name`. The assistant's own name is `config.assistantName`. */
+    companyName: company.name,
     instructions: company.instructions,
     whatsappPhoneNumberId: company.whatsappPhoneNumberId,
     /** Append to the backend's public URL to get the webhook URL to paste in Kapso. */
     kapsoWebhookPath: kapsoWebhookPath(company.slug),
-    platformRules: buildPlatformRules(config),
+    platformRules: buildPlatformRules(config, company.name),
     currentVersions: {
       config: configVersion?.id ?? null,
       instructions: instructionsVersion?.id ?? null,
+      companyName: companyNameVersion?.id ?? null,
       whatsappPhoneNumberId: phoneNumberIdVersion?.id ?? null,
     },
     limits: { instructionsMaxChars: MAX_INSTRUCTIONS_CHARS },

@@ -7,8 +7,11 @@ import {
  * Altamira's company config. Seed data only: the application reads it from the Company row.
  * Values marked "week 1" are placeholders until Altamira confirms them.
  */
+/** `Company.name`. The assistant's own name is `altamiraConfig.assistantName`. */
+export const ALTAMIRA_NAME = "Altamira";
+
 export const altamiraConfig: CompanyConfigInput = {
-  displayName: "Altamira",
+  assistantName: "Almira",
   language: "es-UY",
   tone: 'Español de Uruguay, con voseo ("contame", "¿tenés…?"). Cálido, claro y profesional. Sin emojis salvo que el lead los use.',
   timezone: "America/Montevideo",
@@ -68,7 +71,7 @@ export const altamiraConfig: CompanyConfigInput = {
       name: "bienvenida_formulario",
       language: "es",
       bodyPreview:
-        "¡Hola! Gracias por tu interés en Altamira. Soy el asistente virtual. ¿Qué estás buscando?",
+        "¡Hola! Soy Almira, la asistente virtual de Altamira. Gracias por tu interés. ¿Qué estás buscando?",
     },
   },
 };

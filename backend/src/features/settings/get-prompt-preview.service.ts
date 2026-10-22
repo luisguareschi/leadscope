@@ -20,10 +20,16 @@ export async function getPromptPreview(ctx: AppContext, companyId: string) {
   const { system, documents } = await loadSystemPrompt(ctx, company);
   return {
     model: company.config.llm.model,
+    /** Who the prompt says is talking, and for whom. */
+    names: {
+      assistant: company.config.assistantName,
+      company: company.name,
+    },
     system,
     turnContext: buildTurnContext(
       FIRST_MESSAGE_LEAD,
       company.config,
+      company.name,
       ctx.now(),
     ),
     tool: submitTurnTool(company.config),

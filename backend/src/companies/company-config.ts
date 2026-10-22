@@ -40,10 +40,29 @@ const LEGACY_COLLECT = [
  * Turns that shape into today's: the three questions become three required items with the same
  * keys (their wording becomes the description), and the patterns are dropped. A current config
  * comes back unchanged. The SQL migration does the same to stored rows.
+ *
+ * Configs saved before the names were split had one `displayName`, labeled as the assistant's name
+ * but used in the prompt as the company's. It becomes `assistantName`, empty when it only repeated
+ * the company's name (`Company.name` is the company's name now). Without `companyName` it is kept
+ * as the assistant's name. Same mapping as the 20261022090000 migration.
  */
-export function upgradeLegacyConfig(value: unknown): unknown {
+export function upgradeLegacyConfig(
+  value: unknown,
+  companyName?: string,
+): unknown {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   const config = { ...(value as Record<string, unknown>) };
+  if ("displayName" in config) {
+    if (!("assistantName" in config)) {
+      const name =
+        typeof config.displayName === "string" ? config.displayName.trim() : "";
+      const repeatsCompany =
+        companyName !== undefined &&
+        name.toLowerCase() === companyName.trim().toLowerCase();
+      config.assistantName = repeatsCompany ? "" : name;
+    }
+    delete config.displayName;
+  }
   if (!("collect" in config) && config.questions) {
     const questions = config.questions as Record<string, unknown>;
     config.collect = LEGACY_COLLECT.map((item) => ({
@@ -66,7 +85,11 @@ export function upgradeLegacyConfig(value: unknown): unknown {
 }
 
 const configShape = z.object({
-  displayName: z.string().min(1),
+  /**
+   * The assistant's own name, e.g. "Almira". Empty: it introduces itself only as the company's
+   * virtual assistant. The company's name is `Company.name`, never this.
+   */
+  assistantName: z.string().default(""),
   /** BCP 47 language of the conversation, e.g. "es-UY". */
   language: z.string().min(1),
   /** How the assistant writes, in the company's own words. */
@@ -151,13 +174,17 @@ const configShape = z.object({
 });
 
 export const companyConfigSchema = z.preprocess(
-  upgradeLegacyConfig,
+  (value) => upgradeLegacyConfig(value),
   configShape,
 );
 
 export type CompanyConfig = z.infer<typeof configShape>;
 export type CompanyConfigInput = z.input<typeof configShape>;
 
-export function parseCompanyConfig(value: unknown): CompanyConfig {
-  return companyConfigSchema.parse(value);
+/** `companyName` lets a config from before the name split drop a display name that was the company's. */
+export function parseCompanyConfig(
+  value: unknown,
+  companyName?: string,
+): CompanyConfig {
+  return companyConfigSchema.parse(upgradeLegacyConfig(value, companyName));
 }

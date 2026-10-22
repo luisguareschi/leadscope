@@ -7,7 +7,9 @@ export type CollectItemDraft = CollectItem & { id: string };
 
 /** The config as the form edits it: numbers and text lists are strings until they are saved. */
 export type ConfigDraft = {
-  displayName: string;
+  assistantName: string;
+  /** `Company.name`, saved with the config but versioned on its own. */
+  companyName: string;
   language: string;
   timezone: string;
   defaultCountry: string;
@@ -35,7 +37,8 @@ export type ConfigDraft = {
 
 /** Where the API reports each form field's error. */
 export const FIELD_PATHS: Record<keyof ConfigDraft, string> = {
-  displayName: "displayName",
+  assistantName: "assistantName",
+  companyName: "companyName",
   language: "language",
   timezone: "timezone",
   defaultCountry: "defaultCountry",
@@ -123,10 +126,14 @@ const toNumber = (value: string) =>
   value.trim() === "" ? Number.NaN : Number(value.trim().replace(",", "."));
 const round = (value: number) => Math.round(value * 100) / 100;
 
-export function toDraft(config: CompanyConfig): ConfigDraft {
+export function toDraft(
+  config: CompanyConfig,
+  companyName: string,
+): ConfigDraft {
   const template = config.whatsapp.welcomeTemplate;
   return {
-    displayName: config.displayName,
+    assistantName: config.assistantName,
+    companyName,
     language: config.language,
     timezone: config.timezone,
     defaultCountry: config.defaultCountry,
@@ -153,9 +160,10 @@ export function toDraft(config: CompanyConfig): ConfigDraft {
   };
 }
 
+/** The config part of the draft. The company's name goes in the same request, apart from it. */
 export function fromDraft(draft: ConfigDraft): CompanyConfig {
   return {
-    displayName: draft.displayName,
+    assistantName: draft.assistantName,
     language: draft.language,
     tone: draft.tone,
     timezone: draft.timezone,

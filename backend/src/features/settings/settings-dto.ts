@@ -17,6 +17,7 @@ export function toSettingsVersionDto(
     config:
       version.kind === "config" ? upgradeLegacyConfig(version.config) : null,
     instructions: version.kind === "instructions" ? version.instructions : null,
+    companyName: version.kind === "companyName" ? version.companyName : null,
     whatsappPhoneNumberId:
       version.kind === "whatsappPhoneNumberId"
         ? version.whatsappPhoneNumberId

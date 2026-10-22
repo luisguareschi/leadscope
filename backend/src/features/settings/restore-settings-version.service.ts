@@ -14,6 +14,7 @@ import {
   type SettingsChange,
 } from "./save-settings.js";
 import {
+  companyNameValueSchema,
   updateInstructionsBodySchema,
   whatsappPhoneNumberIdValueSchema,
 } from "./settings-params.js";
@@ -25,8 +26,12 @@ async function changeFor(
   version: CompanySettingsVersion,
 ): Promise<SettingsChange> {
   if (version.kind === "config") {
+    const company = await ctx.db.company.findUniqueOrThrow({
+      where: { id: companyId },
+      select: { name: true },
+    });
     const config = parseEditableConfig(
-      upgradeLegacyConfig(version.config),
+      upgradeLegacyConfig(version.config, company.name),
       422,
     );
     await assertKnowledgeLimitsFit(ctx, companyId, config.knowledge, 422);
@@ -40,6 +45,14 @@ async function changeFor(
     );
     return { kind: "instructions", instructions };
   }
+  if (version.kind === "companyName") {
+    const { companyName } = parseSettingsInput(
+      companyNameValueSchema,
+      { companyName: version.companyName ?? "" },
+      422,
+    );
+    return { kind: "companyName", companyName };
+  }
   const { whatsappPhoneNumberId } = parseSettingsInput(
     whatsappPhoneNumberIdValueSchema,
     { whatsappPhoneNumberId: version.whatsappPhoneNumberId },
@@ -49,7 +62,7 @@ async function changeFor(
 }
 
 /**
- * Puts an earlier config, instructions, or WhatsApp phone number id back, saved as a new version
+ * Puts an earlier config, instructions, company name, or WhatsApp phone number id back, saved as a new version
  * that points to the old one. A number another company uses now is a 409.
  */
 export async function restoreSettingsVersion(

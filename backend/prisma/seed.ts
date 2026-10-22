@@ -13,6 +13,7 @@ import { parseEncryptionKey } from "../src/lib/crypto.js";
 import { e164ToWaId } from "../src/lib/phone.js";
 import { createPrisma, type Db } from "../src/lib/prisma.js";
 import {
+  ALTAMIRA_NAME,
   altamiraConfig,
   altamiraInstructions,
   SAMPLE_KNOWLEDGE,
@@ -25,6 +26,7 @@ async function recordSeedVersions(
   db: Db,
   company: {
     id: string;
+    name: string;
     config: CompanyConfig;
     instructions: string;
     whatsappPhoneNumberId: string | null;
@@ -32,11 +34,14 @@ async function recordSeedVersions(
 ) {
   const {
     id: companyId,
+    name,
     config,
     instructions,
     whatsappPhoneNumberId,
   } = company;
-  const latest = (kind: "config" | "instructions" | "whatsappPhoneNumberId") =>
+  const latest = (
+    kind: "config" | "instructions" | "companyName" | "whatsappPhoneNumberId",
+  ) =>
     db.companySettingsVersion.findFirst({
       where: { companyId, kind },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -44,7 +49,7 @@ async function recordSeedVersions(
   const lastConfig = await latest("config");
   if (
     !lastConfig?.config ||
-    JSON.stringify(parseCompanyConfig(lastConfig.config)) !==
+    JSON.stringify(parseCompanyConfig(lastConfig.config, name)) !==
       JSON.stringify(config)
   ) {
     await db.companySettingsVersion.create({
@@ -55,6 +60,12 @@ async function recordSeedVersions(
   if (lastInstructions?.instructions !== instructions) {
     await db.companySettingsVersion.create({
       data: { companyId, kind: "instructions", instructions },
+    });
+  }
+  const lastName = await latest("companyName");
+  if (lastName?.companyName !== name) {
+    await db.companySettingsVersion.create({
+      data: { companyId, kind: "companyName", companyName: name },
     });
   }
   const lastPhoneNumberId = await latest("whatsappPhoneNumberId");
@@ -105,13 +116,14 @@ async function main() {
     where: { slug: "altamira" },
     create: {
       slug: "altamira",
-      name: "Altamira",
+      name: ALTAMIRA_NAME,
       config,
       instructions: altamiraInstructions,
       whatsappPhoneNumberId: phoneNumberId,
       encryptedSecrets: encryptSecrets(secrets, key),
     },
     update: {
+      name: ALTAMIRA_NAME,
       config,
       instructions: altamiraInstructions,
       encryptedSecrets: encryptSecrets(secrets, key),
@@ -122,6 +134,7 @@ async function main() {
   });
   await recordSeedVersions(db, {
     id: company.id,
+    name: company.name,
     config,
     instructions: altamiraInstructions,
     whatsappPhoneNumberId: company.whatsappPhoneNumberId,

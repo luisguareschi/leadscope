@@ -38,7 +38,7 @@ export async function resetDb(db: Db = testDb()): Promise<void> {
 }
 
 export const baseConfig: CompanyConfigInput = {
-  displayName: "Constructora Test",
+  assistantName: "Sofía",
   language: "es-UY",
   tone: "Breve y cordial, con voseo.",
   collect: [
@@ -88,6 +88,8 @@ export async function createCompany(
   db: Db,
   options: {
     slug?: string;
+    /** `Company.name`; the slug when not given. */
+    name?: string;
     phoneNumberId?: string;
     config?: Partial<CompanyConfigInput>;
     instructions?: string;
@@ -95,13 +97,14 @@ export async function createCompany(
   } = {},
 ) {
   const slug = options.slug ?? "test-co";
+  const name = options.name ?? slug;
   const config = parseCompanyConfig({ ...baseConfig, ...options.config });
   const instructions = options.instructions ?? "";
   const whatsappPhoneNumberId = options.phoneNumberId ?? `PNID-${slug}`;
   return db.company.create({
     data: {
       slug,
-      name: slug,
+      name,
       config,
       instructions,
       whatsappPhoneNumberId,
@@ -116,6 +119,7 @@ export async function createCompany(
         create: [
           { kind: "config", config, createdAt: CREATED_AT },
           { kind: "instructions", instructions, createdAt: CREATED_AT },
+          { kind: "companyName", companyName: name, createdAt: CREATED_AT },
           {
             kind: "whatsappPhoneNumberId",
             whatsappPhoneNumberId,

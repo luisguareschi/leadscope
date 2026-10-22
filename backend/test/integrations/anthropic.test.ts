@@ -21,6 +21,7 @@ const input: CompleteInput = {
       source: "whatsapp",
     },
     config: parseCompanyConfig(baseConfig),
+    companyName: "Constructora Test",
     documents: [],
   },
 };
