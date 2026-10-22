@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  Building2Icon,
   FileTextIcon,
   HistoryIcon,
   PhoneIcon,
@@ -50,12 +51,14 @@ type Kind = SettingsVersion["kind"];
 const KIND_LABEL: Record<Kind, string> = {
   config: "Configuración",
   instructions: "Instrucciones",
+  companyName: "Nombre de la empresa",
   whatsappPhoneNumberId: "Número de WhatsApp",
 };
 
 const KIND_ICON: Record<Kind, LucideIcon> = {
   config: SlidersHorizontalIcon,
   instructions: FileTextIcon,
+  companyName: Building2Icon,
   whatsappPhoneNumberId: PhoneIcon,
 };
 
@@ -63,6 +66,7 @@ const KIND_ICON: Record<Kind, LucideIcon> = {
 const KIND_PHRASE: Record<Kind, string> = {
   config: "la configuración",
   instructions: "las instrucciones",
+  companyName: "el nombre de la empresa",
   whatsappPhoneNumberId: "el número de WhatsApp",
 };
 
@@ -70,12 +74,14 @@ const FILTERS: Array<{ value: Kind | "all"; label: string }> = [
   { value: "all", label: "Todo" },
   { value: "config", label: "Configuración" },
   { value: "instructions", label: "Instrucciones" },
+  { value: "companyName", label: "Empresa" },
   { value: "whatsappPhoneNumberId", label: "Número" },
 ];
 
 function contentOf(version: SettingsVersion): string {
   if (version.kind === "instructions")
     return version.instructions || "(sin instrucciones)";
+  if (version.kind === "companyName") return version.companyName ?? "";
   if (version.kind === "whatsappPhoneNumberId")
     return version.whatsappPhoneNumberId ?? "(sin número)";
   return JSON.stringify(version.config, null, 2);

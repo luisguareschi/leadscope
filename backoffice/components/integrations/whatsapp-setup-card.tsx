@@ -111,7 +111,7 @@ function PhoneNumberIdRow({ settings }: { settings: CompanySettings }) {
     event.preventDefault();
     save
       .mutateAsync({
-        config: fromDraft(toDraft(settings.config)),
+        config: fromDraft(toDraft(settings.config, settings.companyName)),
         whatsappPhoneNumberId: draft.trim() || null,
       })
       .then(

@@ -13,6 +13,8 @@ datasource db {
 model Company {
   id                    String                   @id @default(cuid())
   slug                  String                   @unique
+  /// What the prompt, Empresas, and the panel call the company. Operators edit it in Configuración
+  /// → General; the assistant's own name is `config.assistantName`.
   name                  String
   /// Validated by `companyConfigSchema` (src/companies/company-config.ts).
   config                Json
@@ -258,9 +260,10 @@ enum SettingsKind {
   config
   instructions
   whatsappPhoneNumberId
+  companyName
 }
 
-/// One saved version of a company's config, instructions, or WhatsApp phone number id. The newest
+/// One saved version of a company's config, instructions, name, or WhatsApp phone number id. The newest
 /// of each kind matches the Company row; restoring an older one saves it again as a new version.
 model CompanySettingsVersion {
   id                    String       @id @default(cuid())
@@ -272,6 +275,8 @@ model CompanySettingsVersion {
   instructions          String?      @db.Text
   /// When kind is whatsappPhoneNumberId: the value of `Company.whatsappPhoneNumberId`. Null means no number.
   whatsappPhoneNumberId String?
+  /// When kind is companyName: the value of `Company.name`.
+  companyName           String?
   /// Signed-in email of whoever saved it. Null for the version that existed before versioning.
   createdByEmail        String?
   /// Saved by a platform admin through support access.

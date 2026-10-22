@@ -85,7 +85,12 @@ function LoadedSettings({
   supportCompanyId: string | null;
   companyName?: string;
 }) {
-  const editor = useConfigEditorState(data.config, data.currentVersions.config);
+  // A save or restore of the config or of the company's name starts a fresh draft.
+  const editor = useConfigEditorState(
+    data.config,
+    data.companyName,
+    `${data.currentVersions.config}:${data.currentVersions.companyName}`,
+  );
   const pendingFocus = useRef<keyof ConfigDraft | null>(null);
   const { active } = nav;
 

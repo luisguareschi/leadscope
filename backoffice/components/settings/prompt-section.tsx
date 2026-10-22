@@ -20,6 +20,10 @@ import { Panel, Section } from "@/components/panel";
 
 const RULES = [
   {
+    title: "Cómo se presenta",
+    text: "Con el nombre del asistente, como asistente virtual de la empresa, los dos de General. Habla en nombre de la empresa y nunca usa un nombre por el otro. Sin nombre del asistente, se presenta solo como el asistente virtual de la empresa y no inventa uno.",
+  },
+  {
     title: "Formato de salida",
     text: "El modelo contesta con la herramienta submit_turn: la respuesta, lo que dijo el lead y la intención. El motor lee esos campos y decide el estado.",
   },
@@ -142,13 +146,20 @@ export function PromptSection({ rules }: { rules: string }) {
             </Alert>
           </div>
         ) : !preview ? (
-          <div className="grid grid-cols-3 gap-4 p-5">
+          <div className="grid grid-cols-5 gap-4 p-5">
+            <Skeleton className="h-9" />
+            <Skeleton className="h-9" />
             <Skeleton className="h-9" />
             <Skeleton className="h-9" />
             <Skeleton className="h-9" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="grid grid-cols-1 divide-y sm:grid-cols-5 sm:divide-x sm:divide-y-0">
+            <Stat
+              label="Nombre del asistente"
+              value={preview.names.assistant || "Sin nombre"}
+            />
+            <Stat label="Empresa" value={preview.names.company} />
             <Stat label="Modelo" value={preview.model} />
             <Stat
               label="Archivos de Conocimiento"

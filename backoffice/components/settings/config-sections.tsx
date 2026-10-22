@@ -174,6 +174,9 @@ function useChoices() {
 
 function GeneralSection() {
   const choices = useChoices();
+  const { draft } = useConfigEditor();
+  const company = draft.companyName.trim() || "la empresa";
+  const assistant = draft.assistantName.trim();
   return (
     <Section
       title="General"
@@ -181,10 +184,22 @@ function GeneralSection() {
     >
       <Panel>
         <TextRow
-          name="displayName"
-          label="Nombre del asistente"
-          hint="Cómo se presenta ante el lead."
+          name="companyName"
+          label="Nombre de la empresa"
+          hint="Para quién trabaja el asistente. También es el nombre en Empresas y en el panel."
+          placeholder="Altamira"
           maxLength={80}
+        />
+        <TextRow
+          name="assistantName"
+          label="Nombre del asistente"
+          hint={
+            assistant
+              ? `Se presenta como «${assistant}, asistente virtual de ${company}».`
+              : `Opcional. Vacío: se presenta como «el asistente virtual de ${company}», sin nombre propio.`
+          }
+          placeholder="Almira"
+          maxLength={60}
         />
         <SelectRow
           name="language"

@@ -13,7 +13,10 @@ export async function getThread(
 ) {
   const thread = await ctx.db.thread.findFirst({
     where: { id: threadId, companyId },
-    include: { ...threadInclude, company: { select: { config: true } } },
+    include: {
+      ...threadInclude,
+      company: { select: { name: true, config: true } },
+    },
   });
   if (!thread) throw notFound("Conversación no encontrada");
   const messages = await ctx.db.message.findMany({
@@ -33,7 +36,10 @@ export async function getThread(
   return {
     thread: toThreadDto(row),
     /** The company's items with what the lead said, then values under keys no item has anymore. */
-    fields: collectedRows(row.collected, parseCompanyConfig(company.config)),
+    fields: collectedRows(
+      row.collected,
+      parseCompanyConfig(company.config, company.name),
+    ),
     messages: messages.reverse(),
   };
 }

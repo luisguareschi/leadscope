@@ -447,22 +447,34 @@ function useSettingsMutation<T>(
     mutationFn: (input: T) => request(api, input),
     onSuccess: (result) => {
       client.setQueryData(["settings"], result.settings);
+      // The company's name also shows in the sidebar, the support bar, and Empresas.
+      void client.invalidateQueries({ queryKey: ["me"] });
+      void client.invalidateQueries({ queryKey: ["companies"] });
       return client.invalidateQueries({ queryKey: ["settings"] });
     },
   });
 }
 
-/** Leaving `whatsappPhoneNumberId` out keeps the stored one; null clears it. */
+/**
+ * Leaving `companyName` or `whatsappPhoneNumberId` out keeps the stored one; a null id clears it.
+ */
 export function useSaveConfig() {
   return useSettingsMutation(
     (
       api,
-      input: { config: CompanyConfig; whatsappPhoneNumberId?: string | null },
+      input: {
+        config: CompanyConfig;
+        companyName?: string;
+        whatsappPhoneNumberId?: string | null;
+      },
     ) =>
       api<SettingsSaveResult>("/internal/settings/config", {
         method: "PUT",
         body: JSON.stringify({
           ...input.config,
+          ...(input.companyName !== undefined
+            ? { companyName: input.companyName }
+            : {}),
           ...(input.whatsappPhoneNumberId !== undefined
             ? { whatsappPhoneNumberId: input.whatsappPhoneNumberId }
             : {}),

@@ -34,6 +34,7 @@ beforeEach(async () => {
   altamiraId = (
     await createCompany(db, {
       slug: "altamira",
+      name: "Altamira",
       instructions: "Altamira es una desarrolladora inmobiliaria en Uruguay.",
     })
   ).id;
@@ -102,8 +103,9 @@ describe("company settings", () => {
       "Altamira es una desarrolladora inmobiliaria en Uruguay.",
     );
     expect(settings.body.platformRules).toBe(
-      buildPlatformRules(settings.body.config),
+      buildPlatformRules(settings.body.config, "Altamira"),
     );
+    expect(settings.body.companyName).toBe("Altamira");
     expect(settings.body.limits.instructionsMaxChars).toBe(20_000);
 
     const next = {
@@ -255,7 +257,7 @@ describe("company settings", () => {
       await db.companySettingsVersion.count({
         where: { companyId: altamiraId },
       }),
-    ).toBe(3);
+    ).toBe(4);
   });
 
   it("caps the information to collect at 10 items and checks each one", async () => {
@@ -425,7 +427,7 @@ describe("company settings", () => {
 
   it("does not let the API change the platform rules", async () => {
     const config = await currentConfig(operator);
-    const rules = buildPlatformRules(parseCompanyConfig(config));
+    const rules = buildPlatformRules(parseCompanyConfig(config), "Altamira");
 
     const viaInstructions = await request(app)
       .put("/internal/settings/instructions")
@@ -609,6 +611,171 @@ describe("company settings", () => {
     await processThread(ctx, recorded.threadId);
     expect(ctx.llm.calls).toHaveLength(1);
     expect(ctx.llm.calls[0]?.system).toBe(prompt.body.system);
+  });
+});
+
+describe("company and assistant names", () => {
+  async function companyOf(companyId: string) {
+    return db.company.findUniqueOrThrow({
+      where: { id: companyId },
+      select: { name: true, config: true },
+    });
+  }
+
+  it("saves the company's name next to the config, each with its own version", async () => {
+    const config = await currentConfig(operator);
+    expect(config.assistantName).toBe("Sofía");
+    expect(config).not.toHaveProperty("displayName");
+
+    at("15:10");
+    const saved = await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({
+        ...config,
+        assistantName: " Almira ",
+        companyName: " Altamira Uruguay ",
+      })
+      .expect(200);
+    expect(saved.body.changed).toBe(true);
+    expect(saved.body.settings.companyName).toBe("Altamira Uruguay");
+    expect(saved.body.settings.config.assistantName).toBe("Almira");
+    const stored = await companyOf(altamiraId);
+    expect(stored.name).toBe("Altamira Uruguay");
+    expect(stored.config).toMatchObject({ assistantName: "Almira" });
+    expect(stored.config).not.toHaveProperty("companyName");
+
+    const listed = await request(app)
+      .get("/internal/settings/versions")
+      .set(operator)
+      .expect(200);
+    const names = listed.body.versions.filter(
+      (version: { kind: string }) => version.kind === "companyName",
+    );
+    expect(
+      names.map(
+        (version: {
+          companyName: string;
+          createdByEmail: string | null;
+          current: boolean;
+        }) => [version.companyName, version.createdByEmail, version.current],
+      ),
+    ).toEqual([
+      ["Altamira Uruguay", "operador@altamira.uy", true],
+      ["Altamira", null, false],
+    ]);
+    expect(saved.body.settings.currentVersions.companyName).toBe(names[0].id);
+
+    // The panel's me and Empresas read the same column.
+    const me = await request(app).get("/internal/me").set(operator).expect(200);
+    expect(me.body.company.name).toBe("Altamira Uruguay");
+
+    at("15:20");
+    const again = await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({ ...saved.body.settings.config, companyName: "Altamira Uruguay" })
+      .expect(200);
+    expect(again.body.changed).toBe(false);
+
+    at("15:30");
+    const restored = await request(app)
+      .post(`/internal/settings/versions/${names[1].id}/restore`)
+      .set(operator)
+      .expect(200);
+    expect(restored.body.changed).toBe(true);
+    expect(restored.body.settings.companyName).toBe("Altamira");
+    expect(restored.body.settings.config.assistantName).toBe("Almira");
+  });
+
+  it("leaves the name alone when the body has none, and validates it when it does", async () => {
+    const config = await currentConfig(operator);
+    await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({ ...config, tone: "Otro tono." })
+      .expect(200);
+    expect((await companyOf(altamiraId)).name).toBe("Altamira");
+
+    const empty = await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({ ...config, companyName: "   ", assistantName: "x".repeat(61) })
+      .expect(400);
+    expect(empty.body.error.fields).toEqual({
+      companyName: "No puede quedar vacío.",
+      assistantName: "Máximo 60 caracteres.",
+    });
+    const legacy = await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({ ...config, displayName: "Almira" })
+      .expect(400);
+    expect(legacy.body.error.fields).toEqual({
+      displayName: "Este campo no se puede guardar desde Configuración.",
+    });
+    expect((await companyOf(altamiraId)).name).toBe("Altamira");
+  });
+
+  it("allows an assistant with no name of its own", async () => {
+    const config = await currentConfig(operator);
+    const saved = await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({ ...config, assistantName: "" })
+      .expect(200);
+    expect(saved.body.settings.platformRules).toContain(
+      "You are the WhatsApp virtual assistant of Altamira.",
+    );
+    expect(saved.body.settings.platformRules).toContain(
+      "You have no personal name",
+    );
+  });
+
+  it("puts both names in the prompt preview and the engine's prompt, each where it belongs", async () => {
+    const config = await currentConfig(operator);
+    await request(app)
+      .put("/internal/settings/config")
+      .set(operator)
+      .send({ ...config, assistantName: "Almira", companyName: "Altamira" })
+      .expect(200);
+    await request(app)
+      .put("/internal/settings/instructions")
+      .set(operator)
+      .send({ instructions: "Vendemos en Pocitos." })
+      .expect(200);
+
+    const prompt = await request(app)
+      .get("/internal/settings/prompt")
+      .set(operator)
+      .expect(200);
+    expect(prompt.body.names).toEqual({
+      assistant: "Almira",
+      company: "Altamira",
+    });
+    expect(prompt.body.system).toContain(
+      "You are Almira, the WhatsApp virtual assistant of Altamira.",
+    );
+    expect(prompt.body.system).toContain("# Instructions from Altamira");
+    expect(prompt.body.system).not.toContain("Instructions from Almira");
+    expect(prompt.body.turnContext).toContain(
+      "introduce yourself as Almira, the virtual assistant of Altamira",
+    );
+
+    const company = await db.company.findUniqueOrThrow({
+      where: { id: altamiraId },
+    });
+    const recorded = await recordInboundMessage(
+      ctx,
+      inbound(company.whatsappPhoneNumberId!, { sentAt: now }),
+    );
+    if (recorded.status !== "recorded") throw new Error(recorded.status);
+    await processThread(ctx, recorded.threadId);
+    expect(ctx.llm.calls[0]?.system).toBe(prompt.body.system);
+    expect(ctx.llm.calls[0]?.turnContext).toContain(
+      "introduce yourself as Almira, the virtual assistant of Altamira",
+    );
+    expect(ctx.llm.calls[0]?.scenario.companyName).toBe("Altamira");
   });
 });
 

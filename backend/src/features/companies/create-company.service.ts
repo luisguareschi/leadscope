@@ -24,7 +24,7 @@ function uniqueFields(error: unknown): string {
 }
 
 /**
- * Company row, slug, starter config and instructions, no WhatsApp number yet (each saved as its
+ * Company row, slug, name, starter config and instructions, no WhatsApp number yet (each saved as its
  * first version), and the first operator, who gets the Supabase invitation like any operator added
  * later. Secrets stay empty; that company's operator sets them later from Configuración. Does not
  * move an email that already belongs to a company.
@@ -66,6 +66,11 @@ export async function createCompany(
           create: [
             { kind: "config", config, createdByEmail: adminEmail },
             { kind: "instructions", instructions, createdByEmail: adminEmail },
+            {
+              kind: "companyName",
+              companyName: input.name,
+              createdByEmail: adminEmail,
+            },
             {
               kind: "whatsappPhoneNumberId",
               whatsappPhoneNumberId: null,

@@ -77,9 +77,9 @@ async function askModel(
       temperature: config.llm.temperature,
       timeoutMs: config.llm.timeoutMs,
       system,
-      turnContext: buildTurnContext(thread, config, ctx.now()),
+      turnContext: buildTurnContext(thread, config, company.name, ctx.now()),
       messages: buildChatTurns(recent.reverse(), config.llm.historyLimit),
-      scenario: { thread, config, documents },
+      scenario: { thread, config, companyName: company.name, documents },
     });
     return {
       input: { kind: "model", output: result.output },

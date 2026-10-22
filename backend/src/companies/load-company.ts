@@ -33,7 +33,7 @@ export function loadCompany(
     slug: row.slug,
     name: row.name,
     whatsappPhoneNumberId: row.whatsappPhoneNumberId,
-    config: parseCompanyConfig(row.config),
+    config: parseCompanyConfig(row.config, row.name),
     instructions: row.instructions,
     secrets: decryptSecrets(row.encryptedSecrets, encryptionKey),
   };

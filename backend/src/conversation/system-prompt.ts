@@ -15,6 +15,7 @@ export async function loadSystemPrompt(
   return {
     system: buildSystemPrompt({
       config: company.config,
+      companyName: company.name,
       instructions: company.instructions,
       documents,
     }),

@@ -78,7 +78,8 @@ export const CONFIG_SECTION_FIELDS: Record<
   Array<keyof ConfigDraft>
 > = {
   general: [
-    "displayName",
+    "companyName",
+    "assistantName",
     "language",
     "timezone",
     "defaultCountry",

@@ -222,7 +222,7 @@ export function createFakeLlm(): LlmClient {
   return {
     kind: "fake",
     async complete(input: CompleteInput): Promise<CompleteResult> {
-      const { thread, config, documents } = input.scenario;
+      const { thread, config, companyName, documents } = input.scenario;
       const items = config.collect;
       const lastLead =
         [...input.messages].reverse().find((turn) => turn.role === "user")
@@ -311,7 +311,9 @@ export function createFakeLlm(): LlmClient {
           : "";
         const intro =
           stage === "greeting"
-            ? `¡Hola! Soy el asistente virtual de ${config.displayName}.`
+            ? config.assistantName.trim()
+              ? `¡Hola! Soy ${config.assistantName.trim()}, asistente virtual de ${companyName}.`
+              : `¡Hola! Soy el asistente virtual de ${companyName}.`
             : "";
         reply = [intro, answer, nextAsk()].filter(Boolean).join(" ");
       }

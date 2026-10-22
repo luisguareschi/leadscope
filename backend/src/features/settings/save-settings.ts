@@ -11,9 +11,11 @@ import { isUniqueViolation } from "../../lib/prisma.js";
 export type SettingsChange =
   | { kind: "config"; config: CompanyConfig }
   | { kind: "instructions"; instructions: string }
+  | { kind: "companyName"; companyName: string }
   | { kind: "whatsappPhoneNumberId"; whatsappPhoneNumberId: string | null };
 
 type StoredSettings = {
+  name: string;
   config: unknown;
   instructions: string;
   whatsappPhoneNumberId: string | null;
@@ -33,10 +35,10 @@ export function phoneNumberIdTaken(): HttpError {
   );
 }
 
-function sameConfig(stored: unknown, next: CompanyConfig): boolean {
+function sameConfig(stored: StoredSettings, next: CompanyConfig): boolean {
   try {
     return (
-      JSON.stringify(parseCompanyConfig(stored)) ===
+      JSON.stringify(parseCompanyConfig(stored.config, stored.name)) ===
       JSON.stringify(parseCompanyConfig(next))
     );
   } catch {
@@ -45,17 +47,26 @@ function sameConfig(stored: unknown, next: CompanyConfig): boolean {
 }
 
 function isUnchanged(stored: StoredSettings, change: SettingsChange): boolean {
-  if (change.kind === "config") return sameConfig(stored.config, change.config);
+  if (change.kind === "config") return sameConfig(stored, change.config);
   if (change.kind === "instructions")
     return stored.instructions === change.instructions;
+  if (change.kind === "companyName") return stored.name === change.companyName;
   return stored.whatsappPhoneNumberId === change.whatsappPhoneNumberId;
 }
 
+/** The version's own column for each kind. */
 function valueOf(change: SettingsChange) {
   if (change.kind === "config") return { config: change.config };
   if (change.kind === "instructions")
     return { instructions: change.instructions };
+  if (change.kind === "companyName") return { companyName: change.companyName };
   return { whatsappPhoneNumberId: change.whatsappPhoneNumberId };
+}
+
+/** The company's name lives in `Company.name`; the other kinds in a column of the same name. */
+function companyValueOf(change: SettingsChange) {
+  if (change.kind === "companyName") return { name: change.companyName };
+  return valueOf(change);
 }
 
 /** Lower knowledge limits must still fit the files already uploaded. */
@@ -103,6 +114,7 @@ export async function saveCompanySettings(
       const stored = await tx.company.findUniqueOrThrow({
         where: { id: access.companyId },
         select: {
+          name: true,
           config: true,
           instructions: true,
           whatsappPhoneNumberId: true,
@@ -126,7 +138,7 @@ export async function saveCompanySettings(
 
       await tx.company.update({
         where: { id: access.companyId },
-        data: Object.assign({}, ...pending.map(valueOf)),
+        data: Object.assign({}, ...pending.map(companyValueOf)),
       });
       const createdAt = ctx.now();
       for (const change of pending) {
