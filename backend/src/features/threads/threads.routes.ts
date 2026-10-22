@@ -1,13 +1,13 @@
 import { Router } from "express";
 import type { AppContext } from "../../context.js";
 import { assignThreadController } from "./assign-thread.controller.js";
+import { changeStageController } from "./change-stage.controller.js";
 import { clearNeedsHumanController } from "./clear-needs-human.controller.js";
 import { deleteThreadController } from "./delete-thread.controller.js";
 import { getThreadController } from "./get-thread.controller.js";
 import { getThreadsSummaryController } from "./get-threads-summary.controller.js";
 import { listAssigneesController } from "./list-assignees.controller.js";
 import { listThreadsController } from "./list-threads.controller.js";
-import { markContactedController } from "./mark-contacted.controller.js";
 import { pauseThreadController } from "./pause-thread.controller.js";
 import { resumeThreadController } from "./resume-thread.controller.js";
 import { retryCrmSyncController } from "./retry-crm-sync.controller.js";
@@ -25,7 +25,7 @@ export function threadsRoutes(ctx: AppContext): Router {
   router.post("/:id/crm-sync", retryCrmSyncController(ctx));
   router.post("/:id/take", takeThreadController(ctx));
   router.post("/:id/assign", assignThreadController(ctx));
-  router.post("/:id/contacted", markContactedController(ctx));
+  router.post("/:id/stage", changeStageController(ctx));
   router.delete("/:id", deleteThreadController(ctx));
   return router;
 }

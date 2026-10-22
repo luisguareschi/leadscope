@@ -113,6 +113,10 @@ export function toThreadDto(thread: ThreadRow) {
     assignedAt: thread.assignedAt,
     contactedAt: thread.contactedAt,
     contactedBy: thread.contactedByEmail,
+    /** The last stage change; `by` is null when the assistant made it. */
+    stageChange: thread.stageChangedAt
+      ? { at: thread.stageChangedAt, by: thread.stageChangedByEmail }
+      : null,
     /** By collect item key. The thread view also sends them labeled, in config order (`fields`). */
     collected: collectedOf(thread.collected),
     summary: thread.summary,

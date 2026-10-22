@@ -4,7 +4,7 @@ export type Intent = (typeof INTENTS)[number];
 export type ThreadState =
   "greeting" | "qualify" | "answer" | "handoff" | "closed";
 
-/** Where the lead is for the sales team. See `nextStage` for the forward-only rule. */
+/** Where the lead is for the sales team. The bot only moves it forward (`nextStage`); a person can set any. */
 export type LeadStage =
   "qualifying" | "to_contact" | "contacted" | "not_interested";
 
@@ -23,6 +23,8 @@ export type ThreadSnapshot = {
   state: ThreadState;
   /** Qualifying when absent. */
   stage?: LeadStage;
+  /** Who set the current stage: an email when a person picked it in the panel, null for the bot. */
+  stageChangedByEmail?: string | null;
   /** `Thread.collected` as stored (JSON). Read with `collectedOf`. */
   collected: unknown;
   callTime: string | null;

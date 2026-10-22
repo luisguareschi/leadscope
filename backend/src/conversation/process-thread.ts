@@ -215,7 +215,6 @@ async function runTurn(
     ctx.db.thread.update({
       where: { id: threadId },
       data: {
-        state: decision.state,
         collected: decision.fields.collected,
         callTime: decision.fields.callTime,
         summary: decision.summary,
@@ -225,15 +224,33 @@ async function runTurn(
         ...(crmAction ? crmRequest(crmAction) : {}),
       },
     }),
-    // Conditional, so a person who marked the lead contacted during this turn is not overwritten.
-    ...(decision.stage !== thread.stage
+    // Conditional, so a person who picked a stage during this turn keeps it, with the
+    // conversation step that goes with it.
+    ctx.db.thread.updateMany({
+      where: {
+        id: threadId,
+        stage: thread.stage,
+        stageChangedAt: thread.stageChangedAt,
+      },
+      data: {
+        state: decision.state,
+        ...(decision.stage !== thread.stage
+          ? {
+              stage: decision.stage,
+              stageChangedAt: sentAt,
+              stageChangedById: null,
+              stageChangedByEmail: null,
+              ...(handedOff ? { handedOffAt: qualifiedAt } : {}),
+            }
+          : {}),
+      },
+    }),
+    // The lead has been greeted even when a person's change kept this turn's step from being saved.
+    ...(thread.state === "greeting" && decision.state !== "greeting"
       ? [
           ctx.db.thread.updateMany({
-            where: { id: threadId, stage: thread.stage },
-            data: {
-              stage: decision.stage,
-              ...(handedOff ? { handedOffAt: qualifiedAt } : {}),
-            },
+            where: { id: threadId, state: "greeting" },
+            data: { state: decision.state },
           }),
         ]
       : []),

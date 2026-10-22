@@ -237,65 +237,10 @@ describe("assignment", () => {
   });
 });
 
-describe("Marcar contactado", () => {
-  it("records who and when, and assigns the thread to me when nobody had it", async () => {
-    const thread = await makeThread("+59899000001", handedOff(30));
-    const response = await request(app)
-      .post(`/internal/threads/${thread.id}/contacted`)
-      .set(asAna)
-      .expect(200);
-    expect(response.body.thread).toMatchObject({
-      stage: "contacted",
-      contactedBy: "ana@altamira.uy",
-      assignee: { id: ana },
-      wroteAgain: false,
-    });
-    const saved = await db.thread.findUniqueOrThrow({
-      where: { id: thread.id },
-    });
-    expect(saved.contactedById).toBe(ana);
-    expect(saved.contactedAt).not.toBeNull();
-
-    await request(app)
-      .post(`/internal/threads/${thread.id}/contacted`)
-      .set(asAna)
-      .expect(409);
-  });
-
-  it("keeps the assignee when someone else had it", async () => {
-    const thread = await makeThread("+59899000001", {
-      ...handedOff(30),
-      assignedToId: bruno,
-    });
-    const response = await request(app)
-      .post(`/internal/threads/${thread.id}/contacted`)
-      .set(asAna)
-      .expect(200);
-    expect(response.body.thread).toMatchObject({
-      contactedBy: "ana@altamira.uy",
-      assignee: { id: bruno },
-    });
-  });
-
-  it("shows that the lead wrote after being contacted", async () => {
-    const thread = await makeThread("+59899000001", {
-      ...handedOff(30),
-      stage: "contacted",
-      contactedAt: minutesAgo(20),
-      lastInboundAt: minutesAgo(1),
-    });
-    const response = await request(app)
-      .get(`/internal/threads/${thread.id}`)
-      .set(asAna)
-      .expect(200);
-    expect(response.body.thread.wroteAgain).toBe(true);
-  });
-});
-
 describe("through support access", () => {
   const enter = () => ({ "X-Company-Id": companyId });
 
-  it("cannot Tomar, but assigns and marks contacted, and every write is audited", async () => {
+  it("cannot Tomar, but assigns, and every write is audited", async () => {
     const thread = await makeThread("+59899000001", handedOff(30));
     const refused = await request(app)
       .post(`/internal/threads/${thread.id}/take`)
@@ -310,27 +255,12 @@ describe("through support access", () => {
       .set(enter())
       .send({ operatorId: bruno })
       .expect(200);
-    const contacted = await request(app)
-      .post(`/internal/threads/${thread.id}/contacted`)
-      .set(admin)
-      .set(enter())
-      .expect(200);
-    expect(contacted.body.thread).toMatchObject({
-      contactedBy: "admin@example.com",
-      assignee: { id: bruno },
-    });
-    expect(
-      (await db.thread.findUniqueOrThrow({ where: { id: thread.id } }))
-        .contactedById,
-    ).toBeNull();
-
     const audit = await db.adminAuditEntry.findMany({
       orderBy: { createdAt: "asc" },
     });
     expect(audit.map((entry) => entry.action)).toEqual([
       `POST /internal/threads/${thread.id}/take`,
       `POST /internal/threads/${thread.id}/assign`,
-      `POST /internal/threads/${thread.id}/contacted`,
     ]);
     expect(
       audit.every((entry) => entry.adminEmail === "admin@example.com"),

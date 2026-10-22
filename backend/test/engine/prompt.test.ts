@@ -220,6 +220,50 @@ describe("turn context", () => {
     expect(step).toContain("Do not ask for anything");
     expect(step).not.toContain("still missing");
   });
+
+  it("does not qualify a lead a person marked Sin interés, but still asks one the bot closed", () => {
+    const byPerson = nextStepFor(
+      {
+        state: "closed",
+        stage: "not_interested",
+        stageChangedByEmail: "vicky@altamira.uy",
+        collected: {},
+        callTime: null,
+      },
+      config,
+    );
+    expect(byPerson).toContain("marked this lead as not interested");
+    expect(byPerson).toContain("Do not ask for anything");
+    expect(byPerson).toContain("set callNow");
+    expect(byPerson).not.toContain("still missing");
+
+    const byBot = nextStepFor(
+      {
+        state: "closed",
+        stage: "not_interested",
+        stageChangedByEmail: null,
+        collected: {},
+        callTime: null,
+      },
+      config,
+    );
+    expect(byBot).toContain("one thing still missing");
+  });
+
+  it("asks for the missing required items again after a person moves the lead back to Calificando", () => {
+    const step = nextStepFor(
+      {
+        state: "qualify",
+        stage: "qualifying",
+        stageChangedByEmail: "vicky@altamira.uy",
+        collected: { interest: "2 dormitorios" },
+        callTime: "mañana",
+      },
+      config,
+    );
+    expect(step).toContain("ask naturally about one thing still missing");
+    expect(step).toContain("Presupuesto [budget]");
+  });
 });
 
 describe("buildChatTurns", () => {
