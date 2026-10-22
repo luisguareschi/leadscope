@@ -70,7 +70,7 @@ export function ThreadActions({ thread }: { thread: Thread }) {
           </TooltipTrigger>
           <TooltipContent className="max-w-64">
             Cuando un asesor toma la conversación desde su WhatsApp, así el
-            asistente no se mete.
+            asistente no se mete. Escribirle al lead desde el panel ya lo pausa.
           </TooltipContent>
         </Tooltip>
       )}

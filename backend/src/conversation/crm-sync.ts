@@ -50,7 +50,14 @@ export async function syncThreadToCrm(
     const messages = await ctx.db.message.findMany({
       where: { threadId },
       orderBy: [{ sentAt: "asc" }, { createdAt: "asc" }],
-      select: { direction: true, type: true, body: true, sentAt: true },
+      select: {
+        direction: true,
+        type: true,
+        body: true,
+        sentAt: true,
+        sentByEmail: true,
+        sentBySupport: true,
+      },
     });
     const summary = buildCrmSummary({
       thread,

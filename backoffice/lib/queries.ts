@@ -13,6 +13,7 @@ import { COMPANY_ID_HEADER, supportCompanyIdFor } from "./support";
 import type {
   Assignee,
   AuthUserRemoval,
+  ChatMessage,
   KnowledgeFile,
   KnowledgeList,
   LeadStage,
@@ -189,6 +190,20 @@ export function useChangeStage(id: string) {
         method: "POST",
         body: JSON.stringify({ stage }),
       }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["threads"] }),
+  });
+}
+
+/** An operator writes to the lead through the company's WhatsApp number. */
+export function useSendMessage(id: string) {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) =>
+      api<{ thread: Thread; message: ChatMessage }>(
+        `/internal/threads/${id}/messages`,
+        { method: "POST", body: JSON.stringify({ body }) },
+      ),
     onSuccess: () => client.invalidateQueries({ queryKey: ["threads"] }),
   });
 }

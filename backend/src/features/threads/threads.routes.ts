@@ -11,6 +11,7 @@ import { listThreadsController } from "./list-threads.controller.js";
 import { pauseThreadController } from "./pause-thread.controller.js";
 import { resumeThreadController } from "./resume-thread.controller.js";
 import { retryCrmSyncController } from "./retry-crm-sync.controller.js";
+import { sendMessageController } from "./send-message.controller.js";
 import { takeThreadController } from "./take-thread.controller.js";
 
 export function threadsRoutes(ctx: AppContext): Router {
@@ -26,6 +27,7 @@ export function threadsRoutes(ctx: AppContext): Router {
   router.post("/:id/take", takeThreadController(ctx));
   router.post("/:id/assign", assignThreadController(ctx));
   router.post("/:id/stage", changeStageController(ctx));
+  router.post("/:id/messages", sendMessageController(ctx));
   router.delete("/:id", deleteThreadController(ctx));
   return router;
 }

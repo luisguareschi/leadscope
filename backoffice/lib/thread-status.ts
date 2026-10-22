@@ -52,7 +52,7 @@ export const BOT_META: Record<
     label: "Pausado",
     tone: "muted",
     description:
-      "Un asesor pausó el asistente en esta conversación. Los mensajes se guardan, pero no responde hasta que lo reanuden.",
+      "Un asesor pausó el asistente en esta conversación, o le escribió al lead desde el panel. Los mensajes se guardan, pero no responde hasta que lo reanuden.",
   },
   needs_human: {
     label: "Requiere asesor",

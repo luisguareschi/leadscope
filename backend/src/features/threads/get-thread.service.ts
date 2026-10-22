@@ -2,6 +2,7 @@ import { parseCompanyConfig } from "../../companies/company-config.js";
 import type { AppContext } from "../../context.js";
 import { collectedRows } from "../../conversation/crm-summary.js";
 import { notFound } from "../../lib/http-error.js";
+import { messageSelect, toMessageDto } from "./message-dto.js";
 import { threadInclude, toThreadDto } from "./thread-dto.js";
 
 const MAX_MESSAGES = 500;
@@ -23,14 +24,7 @@ export async function getThread(
     where: { threadId },
     orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
     take: MAX_MESSAGES,
-    select: {
-      id: true,
-      direction: true,
-      type: true,
-      body: true,
-      status: true,
-      sentAt: true,
-    },
+    select: messageSelect,
   });
   const { company, ...row } = thread;
   return {
@@ -40,6 +34,6 @@ export async function getThread(
       row.collected,
       parseCompanyConfig(company.config, company.name),
     ),
-    messages: messages.reverse(),
+    messages: messages.reverse().map(toMessageDto),
   };
 }
