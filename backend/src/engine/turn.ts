@@ -140,11 +140,41 @@ export function isWithSalesTeam(stage: LeadStage): boolean {
   return stage === "to_contact" || stage === "contacted";
 }
 
+/** The current stage was picked by a person in the panel, not reached by the bot. */
+export function stageSetByPerson(
+  thread: Pick<ThreadSnapshot, "stageChangedByEmail">,
+): boolean {
+  return Boolean(thread.stageChangedByEmail);
+}
+
 /**
- * Forward-only. Calificando moves to Por contactar once every required item is stored (with no
- * required items, once there is a call time), or right away on `callNow`, or to Sin interés. From Por contactar only a person moves the lead (to Contactado); nothing the lead writes
- * moves it back. Sin interés comes back to Por contactar only when the lead re-qualifies: the turn
- * completes the required items, or the model says they accept a call.
+ * The conversation step that goes with a stage a person picked, so the next turn behaves like that
+ * stage: Calificando asks for what is still missing (then the call time), Sin interés closes, and
+ * Por contactar or Contactado reopen a closed conversation. A thread nobody has answered yet keeps
+ * its greeting.
+ */
+export function stateForManualStage(
+  thread: ThreadSnapshot,
+  stage: LeadStage,
+  items: CollectRule[],
+): ThreadState {
+  if (thread.state === "greeting") return "greeting";
+  if (stage === "not_interested") return "closed";
+  if (stage === "qualifying") {
+    const fields = fieldsOf(thread);
+    if (!hasRequiredItems(fields, items)) return "qualify";
+    return fields.callTime === null ? "handoff" : "answer";
+  }
+  return thread.state === "closed" ? "answer" : thread.state;
+}
+
+/**
+ * Forward-only for the bot, from whatever stage the thread is in (a person may have set it by
+ * hand). Calificando moves to Por contactar once every required item is stored (with no required
+ * items, once there is a call time), or right away on `callNow`, or to Sin interés. From Por
+ * contactar only a person moves the lead; nothing the lead writes moves it back. Sin interés comes
+ * back to Por contactar only when the lead re-qualifies: the turn completes the required items, or
+ * the model says they accept a call.
  */
 function nextStage(
   previous: ThreadSnapshot,

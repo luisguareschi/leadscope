@@ -74,7 +74,7 @@ const COLUMN_HELP: Record<
   stage: {
     label: "Qué significa cada etapa",
     intro:
-      "Dónde está el lead para el equipo de ventas. Solo avanza: el asistente lo pasa a Por contactar y un asesor lo marca como contactado.",
+      "Dónde está el lead para el equipo de ventas. El asistente solo la mueve hacia adelante; cualquiera del equipo la puede cambiar, en cualquier sentido, haciendo clic en la etapa.",
     items: STAGE_META,
   },
   bot: {

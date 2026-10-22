@@ -1,25 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { PhoneCallIcon } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime, formatWaiting } from "@/lib/format";
-import { useMe } from "@/lib/queries";
 import { operatorName } from "@/lib/thread-status";
 import type { Thread } from "@/lib/types";
 import { AssigneePicker } from "./assignee-picker";
-import { BotBadge, StageBadge } from "./status-badge";
-import { useThreadActionWithToast } from "./use-thread-action";
+import { StagePicker } from "./stage-picker";
+import { BotBadge } from "./status-badge";
 
 function waitingLabel(since: string | null): string {
   const waiting = formatWaiting(since);
@@ -43,18 +29,13 @@ function Row({
 
 /** Where the lead is for the sales team, what the assistant is doing, and who has the lead. */
 export function FollowUpGroup({ thread }: { thread: Thread }) {
-  const me = useMe();
-  const { run, pending } = useThreadActionWithToast(thread.id);
-  const [confirming, setConfirming] = useState(false);
-  const canBeAssigned = me.data ? !me.data.supportAccess : false;
-  const contacted = thread.stage === "contacted";
-
+  const change = thread.stageChange;
   return (
     <div className="flex flex-col gap-3 px-5 py-4">
       <h4 className="text-xs font-medium text-muted-foreground">Seguimiento</h4>
       <div className="flex flex-col gap-1.5">
         <Row label="Etapa">
-          <StageBadge stage={thread.stage} />
+          <StagePicker thread={thread} size="compact" />
         </Row>
         <Row label="Asistente">
           <BotBadge activity={thread.botActivity} />
@@ -69,6 +50,15 @@ export function FollowUpGroup({ thread }: { thread: Thread }) {
             ) : null}
           </span>
         </Row>
+        {change ? (
+          <Row label="Cambio de etapa">
+            {formatDateTime(change.at)}
+            <span className="text-muted-foreground">
+              {" "}
+              · {change.by ? operatorName(change.by) : "el asistente"}
+            </span>
+          </Row>
+        ) : null}
         {thread.handedOffAt ? (
           <Row label="Por contactar">
             {formatDateTime(thread.handedOffAt)}
@@ -80,7 +70,7 @@ export function FollowUpGroup({ thread }: { thread: Thread }) {
             ) : null}
           </Row>
         ) : null}
-        {contacted ? (
+        {thread.stage === "contacted" ? (
           <Row label="Contactado">
             {formatDateTime(thread.contactedAt)}
             {thread.contactedBy ? (
@@ -92,50 +82,6 @@ export function FollowUpGroup({ thread }: { thread: Thread }) {
           </Row>
         ) : null}
       </div>
-      {contacted ? null : (
-        <div>
-          <Button
-            size="sm"
-            variant={thread.stage === "to_contact" ? "default" : "outline"}
-            className={
-              thread.stage === "to_contact" ? undefined : "bg-background"
-            }
-            onClick={() => setConfirming(true)}
-            disabled={pending !== null}
-          >
-            {pending === "contacted" ? <Spinner /> : <PhoneCallIcon />}
-            Marcar contactado
-          </Button>
-        </div>
-      )}
-
-      <AlertDialog open={confirming} onOpenChange={setConfirming}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Ya hablaste con este lead?</AlertDialogTitle>
-            <AlertDialogDescription>
-              La conversación pasa a Contactado y queda registrado quién y
-              cuándo.{" "}
-              {!thread.assignee && canBeAssigned
-                ? "Como no tenía a nadie asignado, queda asignada a vos. "
-                : ""}
-              El asistente sigue respondiendo sus preguntas sin volver a pedirle
-              datos. No se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <Button
-              onClick={() => {
-                setConfirming(false);
-                run("contacted");
-              }}
-            >
-              Marcar contactado
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

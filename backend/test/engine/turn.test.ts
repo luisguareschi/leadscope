@@ -7,6 +7,7 @@ import {
   MAX_SUMMARY_CHARS,
   mergeFields,
   stageForPrompt,
+  stateForManualStage,
 } from "../../src/engine/turn.js";
 import type {
   ModelTurn,
@@ -563,6 +564,92 @@ describe("stageForPrompt", () => {
     ).toBe("handoff");
     expect(stageForPrompt(thread({ state: "closed" }), rules.collect)).toBe(
       "answer",
+    );
+  });
+});
+
+describe("after a person picks the stage", () => {
+  it("puts the conversation step where that stage expects it", () => {
+    const answered = thread({
+      state: "answer",
+      collected: qualified,
+      callTime: "mañana",
+    });
+    expect(stateForManualStage(answered, "not_interested", rules.collect)).toBe(
+      "closed",
+    );
+    expect(
+      stateForManualStage(
+        thread({ state: "answer", collected: { interest: "x" } }),
+        "qualifying",
+        rules.collect,
+      ),
+    ).toBe("qualify");
+    expect(
+      stateForManualStage(
+        thread({ state: "closed", collected: qualified }),
+        "qualifying",
+        rules.collect,
+      ),
+    ).toBe("handoff");
+    expect(stateForManualStage(answered, "qualifying", rules.collect)).toBe(
+      "answer",
+    );
+    expect(
+      stateForManualStage(
+        thread({ state: "closed" }),
+        "to_contact",
+        rules.collect,
+      ),
+    ).toBe("answer");
+    expect(
+      stateForManualStage(
+        thread({ state: "closed" }),
+        "contacted",
+        rules.collect,
+      ),
+    ).toBe("answer");
+    expect(
+      stateForManualStage(
+        thread({ state: "handoff" }),
+        "to_contact",
+        rules.collect,
+      ),
+    ).toBe("handoff");
+    expect(
+      stateForManualStage(
+        thread({ state: "greeting" }),
+        "not_interested",
+        rules.collect,
+      ),
+    ).toBe("greeting");
+  });
+
+  it("moves forward again from a stage a person set back: Calificando with every item goes to Por contactar", () => {
+    const backToQualifying = thread({
+      state: "handoff",
+      stage: "qualifying",
+      stageChangedByEmail: "vicky@altamira.uy",
+      collected: qualified,
+    });
+    expect(decideTurn(backToQualifying, model(), rules).stage).toBe(
+      "to_contact",
+    );
+  });
+
+  it("keeps a Sin interés a person set until the lead re-qualifies or asks for a person", () => {
+    const marked = thread({
+      state: "closed",
+      stage: "not_interested",
+      stageChangedByEmail: "vicky@altamira.uy",
+      collected: qualified,
+    });
+    expect(
+      decideTurn(marked, model({ reply: "La entrega es en 2027." }), rules)
+        .stage,
+    ).toBe("not_interested");
+    expect(decideTurn(marked, model({ callNow: true }), rules).stage).toBe(
+      "to_contact",
     );
   });
 });

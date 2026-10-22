@@ -9,6 +9,7 @@ import {
   missingItems,
   stageForPrompt,
   stageOf,
+  stageSetByPerson,
 } from "./turn.js";
 import type { ThreadSnapshot } from "./types.js";
 
@@ -202,6 +203,14 @@ export function nextStepFor(
       return `This lead is already with an advisor, who will call ${fields.callTime}. Answer their questions from <knowledge>. Do not ask again for what you already know. You may remind them that an advisor will contact them. If they give a new call time, return it in callTime.`;
     }
     return `This lead already goes to an advisor.${optional ? ` Still missing, optional: ${optional}.` : ""} Briefly answer anything they asked, then ask when an advisor can call them (respect the business hours if they are set). Do not ask again for what you already know.`;
+  }
+
+  if (leadStage === "not_interested" && stageSetByPerson(thread)) {
+    const greet =
+      stage === "greeting"
+        ? `First message to this lead: greet them and introduce yourself as ${introduction(config, companyName)}. `
+        : "";
+    return `${greet}Someone from ${companyName} marked this lead as not interested. Answer their questions from <knowledge>. Do not ask for anything: no items, no call time. If they ask to talk to a person or to be called, set callNow.`;
   }
 
   if (stage === "greeting") {

@@ -3,6 +3,7 @@ import { recordInboundMessage } from "../../src/conversation/inbound.js";
 import { processThread } from "../../src/conversation/process-thread.js";
 import { sweepOnce } from "../../src/conversation/sweeper.js";
 import { withThreadLease } from "../../src/conversation/thread-lease.js";
+import { changeThreadStage } from "../../src/features/threads/change-stage.service.js";
 import type { Crm, CrmLead } from "../../src/integrations/crm/crm.js";
 import { createIntegrations } from "../../src/integrations/registry.js";
 import {
@@ -325,6 +326,73 @@ describe("a bot turn", () => {
     });
     await processThread(ctx, threadId);
     expect((await thread()).stage).toBe("contacted");
+  });
+
+  it("keeps a stage a person picked during the turn, with its conversation step, even after a round trip", async () => {
+    const { threadId } = await receive("Hola");
+    ctx.llm.push({ reply: "¡Hola! ¿Qué estás buscando?" });
+    await processThread(ctx, threadId);
+    await receive(
+      "Busco 2 dormitorios, tengo 150 mil y no conozco los proyectos",
+    );
+    const { companyId } = await thread();
+    const vicky = {
+      companyId,
+      operatorId: null,
+      actorEmail: "vicky@altamira.uy",
+      support: false,
+    };
+    ctx.llm.push(async () => {
+      // Out of the queue and back while the model answers: same stage, newer change.
+      await changeThreadStage(ctx, vicky, threadId, "not_interested");
+      await changeThreadStage(ctx, vicky, threadId, "qualifying");
+      return {
+        reply: "¿Cuándo te puede llamar un asesor?",
+        collected: {
+          interest: "2 dormitorios",
+          budget: "USD 150.000",
+          knowsProjects: "No",
+        },
+        summary: "- Busca 2 dormitorios",
+      };
+    });
+    await processThread(ctx, threadId);
+    const saved = await thread();
+    expect(saved).toMatchObject({
+      stage: "qualifying",
+      state: "qualify",
+      stageChangedByEmail: "vicky@altamira.uy",
+      handedOffAt: null,
+      summary: "- Busca 2 dormitorios",
+      collected: { budget: "USD 150.000" },
+    });
+    expect(saved.messages.at(-1)?.body).toBe(
+      "¿Cuándo te puede llamar un asesor?",
+    );
+  });
+
+  it("does not greet twice when a person picks a stage during the first turn", async () => {
+    const { threadId } = await receive("Hola, busco 2 dormitorios");
+    const { companyId } = await thread();
+    ctx.llm.push(async () => {
+      await changeThreadStage(
+        ctx,
+        {
+          companyId,
+          operatorId: null,
+          actorEmail: "vicky@altamira.uy",
+          support: false,
+        },
+        threadId,
+        "to_contact",
+      );
+      return { reply: "¡Hola! ¿Con qué presupuesto contás?" };
+    });
+    await processThread(ctx, threadId);
+    expect(await thread()).toMatchObject({
+      stage: "to_contact",
+      state: "qualify",
+    });
   });
 
   it("hands off on the company's own items: required ones gate, optional ones do not", async () => {
@@ -705,5 +773,109 @@ describe("a lead who wants to talk to a person now", () => {
       callTime: "Lo antes posible",
     });
     expect(saved.messages.at(-1)?.body).toContain("+598 2600 1234");
+  });
+});
+
+describe("after a person changes the stage", () => {
+  const vicky = async () => ({
+    companyId: (await thread()).companyId,
+    operatorId: null,
+    actorEmail: "vicky@altamira.uy",
+    support: false,
+  });
+
+  async function handOff() {
+    const { threadId } = await receive(
+      "Busco 2 dormitorios, tengo 150 mil y no conozco los proyectos",
+      { sentAt: new Date(Date.now() - 30 * 60_000) },
+    );
+    ctx.llm.push({
+      reply: "¿Cuándo te puede llamar un asesor?",
+      collected: {
+        interest: "2 dormitorios",
+        budget: "USD 150.000",
+        knowsProjects: "No",
+      },
+    });
+    await processThread(ctx, threadId);
+    return threadId;
+  }
+
+  it("back to Calificando: asks what is missing, and returns the lead to the end of the queue once it is all in", async () => {
+    const { threadId } = await receive("Hola, busco 2 dormitorios");
+    ctx.llm.push({
+      reply: "¿Con qué presupuesto contás?",
+      callNow: true,
+      collected: { interest: "2 dormitorios" },
+    });
+    await processThread(ctx, threadId);
+    expect((await thread()).stage).toBe("to_contact");
+
+    await changeThreadStage(ctx, await vicky(), threadId, "qualifying");
+    await receive("Igual primero quiero saber precios");
+    ctx.llm.push({ reply: "Desde USD 120.000. ¿Con qué presupuesto contás?" });
+    await processThread(ctx, threadId);
+    expect(ctx.llm.calls.at(-1)?.turnContext).toContain(
+      "ask naturally about one thing still missing: Presupuesto [budget], Conoce los proyectos [knowsProjects] (required)",
+    );
+    let saved = await thread();
+    expect(saved).toMatchObject({ stage: "qualifying", state: "qualify" });
+
+    const lastAt = new Date();
+    await receive("150 mil, y no conozco los proyectos", { sentAt: lastAt });
+    ctx.llm.push({
+      reply: "Perfecto, un asesor te va a llamar.",
+      collected: { budget: "USD 150.000", knowsProjects: "No" },
+    });
+    await processThread(ctx, threadId);
+    saved = await thread();
+    expect(saved).toMatchObject({
+      stage: "to_contact",
+      stageChangedByEmail: null,
+    });
+    expect(saved.handedOffAt).toEqual(lastAt);
+  });
+
+  it("Sin interés: keeps answering without qualifying, until the lead asks for a person", async () => {
+    const threadId = await handOff();
+    await changeThreadStage(ctx, await vicky(), threadId, "not_interested");
+    await ctx.crm.drain();
+    expect(
+      ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary,
+    ).toContain("Etapa: Sin interés (la eligió vicky@altamira.uy el ");
+
+    await receive("¿La entrega es en 2027?");
+    ctx.llm.push({ reply: "Sí, en diciembre de 2027." });
+    await processThread(ctx, threadId);
+    expect(ctx.llm.calls.at(-1)?.turnContext).toContain(
+      "marked this lead as not interested",
+    );
+    expect((await thread()).stage).toBe("not_interested");
+
+    await receive("Bueno, llámenme");
+    ctx.llm.push({ reply: "Un asesor te va a contactar.", callNow: true });
+    await processThread(ctx, threadId);
+    expect(await thread()).toMatchObject({
+      stage: "to_contact",
+      callTime: "Lo antes posible",
+      stageChangedByEmail: null,
+    });
+  });
+
+  it("Contactado and back to Por contactar: the bot only asks for a call time, never moves the stage", async () => {
+    const threadId = await handOff();
+    await changeThreadStage(ctx, await vicky(), threadId, "contacted");
+    await changeThreadStage(ctx, await vicky(), threadId, "to_contact");
+    await receive("¿Tienen cochera?");
+    ctx.llm.push({ reply: "Sí. ¿Cuándo te puede llamar un asesor?" });
+    await processThread(ctx, threadId);
+    expect(ctx.llm.calls.at(-1)?.turnContext).toContain(
+      "ask when an advisor can call them",
+    );
+    expect(await thread()).toMatchObject({
+      stage: "to_contact",
+      contactedAt: null,
+      stageChangedByEmail: "vicky@altamira.uy",
+    });
   });
 });

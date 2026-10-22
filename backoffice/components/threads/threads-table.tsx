@@ -34,12 +34,8 @@ import {
 import type { Thread } from "@/lib/types";
 import { AssigneePicker } from "./assignee-picker";
 import { CrmIndicator } from "./crm-indicator";
-import {
-  BotBadge,
-  ColumnHelp,
-  StageBadge,
-  WroteAgainBadge,
-} from "./status-badge";
+import { StagePicker } from "./stage-picker";
+import { BotBadge, ColumnHelp, WroteAgainBadge } from "./status-badge";
 
 const HEAD = "h-10 text-xs font-medium text-muted-foreground";
 
@@ -84,7 +80,7 @@ export function ThreadsTable({
       <TableHeader className="bg-muted/40">
         <TableRow className="hover:bg-transparent">
           <TableHead className={`${HEAD} w-[26%] pl-5`}>Lead</TableHead>
-          <TableHead className={`${HEAD} w-36`}>
+          <TableHead className={`${HEAD} w-40`}>
             <span className="flex items-center gap-1">
               Etapa
               <ColumnHelp column="stage" />
@@ -184,8 +180,8 @@ export function ThreadsTable({
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>
-                  <StageBadge stage={thread.stage} />
+                <TableCell onClick={(event) => event.stopPropagation()}>
+                  <StagePicker thread={thread} size="compact" />
                 </TableCell>
                 <TableCell>
                   <BotBadge activity={thread.botActivity} />

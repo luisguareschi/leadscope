@@ -15,6 +15,7 @@ import type {
   AuthUserRemoval,
   KnowledgeFile,
   KnowledgeList,
+  LeadStage,
   CompaniesList,
   CompanyConfig,
   CompanyListStatus,
@@ -139,7 +140,7 @@ export function useThread(id: string) {
 }
 
 export type ThreadAction =
-  "pause" | "resume" | "clear-needs-human" | "crm-sync" | "take" | "contacted";
+  "pause" | "resume" | "clear-needs-human" | "crm-sync" | "take";
 
 export function useThreadAction(id: string) {
   const api = useApi();
@@ -173,6 +174,20 @@ export function useAssignThread(id: string) {
       api<{ thread: Thread }>(`/internal/threads/${id}/assign`, {
         method: "POST",
         body: JSON.stringify({ operatorId }),
+      }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["threads"] }),
+  });
+}
+
+/** A person picks the lead stage, in any direction. */
+export function useChangeStage(id: string) {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (stage: LeadStage) =>
+      api<{ thread: Thread }>(`/internal/threads/${id}/stage`, {
+        method: "POST",
+        body: JSON.stringify({ stage }),
       }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["threads"] }),
   });

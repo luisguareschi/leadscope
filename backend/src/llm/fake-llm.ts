@@ -7,6 +7,7 @@ import {
   missingItems,
   stageForPrompt,
   stageOf,
+  stageSetByPerson,
 } from "../engine/turn.js";
 import type { Collected, Intent, ModelTurn } from "../engine/types.js";
 import type { CompleteInput, CompleteResult, LlmClient } from "./types.js";
@@ -248,7 +249,11 @@ export function createFakeLlm(): LlmClient {
       const nextAsk = (): string => {
         const missing = missingItems({ collected, callTime: null }, items);
         const required = missing.find((item) => item.required);
-        if (leadStage === "contacted") return "¿Te puedo ayudar con algo más?";
+        if (
+          leadStage === "contacted" ||
+          (leadStage === "not_interested" && stageSetByPerson(thread))
+        )
+          return "¿Te puedo ayudar con algo más?";
         if (required && !isWithSalesTeam(leadStage)) return askFor(required);
         if (fields.callTime === null)
           return "¿En qué día y horario te puede llamar un asesor?";

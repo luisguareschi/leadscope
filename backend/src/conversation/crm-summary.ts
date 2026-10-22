@@ -13,6 +13,9 @@ export type SummaryThread = {
   callTime: string | null;
   needsHuman: boolean;
   needsHumanReason: string | null;
+  stageChangedAt?: Date | null;
+  /** Set when a person picked the stage in the panel. */
+  stageChangedByEmail?: string | null;
 };
 
 /**
@@ -124,7 +127,11 @@ export function buildCrmSummary(input: {
   const header = [
     `Resumen del asistente de WhatsApp (actualizado ${stamp(input.now, config, "full")})`,
     `Estado: ${statusOf(thread)}`,
-    `Etapa: ${STAGE_LABEL[thread.stage]}`,
+    `Etapa: ${STAGE_LABEL[thread.stage]}${
+      thread.stageChangedByEmail && thread.stageChangedAt
+        ? ` (la eligió ${thread.stageChangedByEmail} el ${stamp(thread.stageChangedAt, config, "full")})`
+        : ""
+    }`,
     `Teléfono: ${thread.phone}`,
     `Nombre en WhatsApp: ${thread.name ?? "—"}`,
     thread.email ? `Email: ${thread.email}` : null,

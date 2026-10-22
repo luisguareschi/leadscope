@@ -34,25 +34,28 @@ model Company {
   llmUsages             LlmUsage[]
   adminAuditEntries     AdminAuditEntry[]
   settingsVersions      CompanySettingsVersion[]
+  leadStageChanges      LeadStageChange[]
 }
 
 /// Maps a backoffice login to the one company it belongs to.
 model Operator {
-  id             String          @id @default(cuid())
-  companyId      String
-  email          String          @unique
-  supabaseUserId String?         @unique
+  id                  String            @id @default(cuid())
+  companyId           String
+  email               String            @unique
+  supabaseUserId      String?           @unique
   /// Set while archived: this login cannot use the panel.
-  archivedAt     DateTime?
+  archivedAt          DateTime?
   /// Last time Supabase accepted an invitation (or password-reset) email for this operator.
-  invitedAt      DateTime?
+  invitedAt           DateTime?
   /// Why the last invitation failed, in Spanish. Cleared when one succeeds.
-  inviteError    String?
-  createdAt      DateTime        @default(now())
-  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  uploads        KnowledgeFile[]
-  assignedThreads  Thread[]      @relation("ThreadAssignee")
-  contactedThreads Thread[]      @relation("ThreadContactedBy")
+  inviteError         String?
+  createdAt           DateTime          @default(now())
+  company             Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  uploads             KnowledgeFile[]
+  assignedThreads     Thread[]          @relation("ThreadAssignee")
+  contactedThreads    Thread[]          @relation("ThreadContactedBy")
+  stageChangedThreads Thread[]          @relation("ThreadStageChangedBy")
+  stageChanges        LeadStageChange[]
 
   @@index([companyId])
 }
@@ -112,7 +115,7 @@ enum CrmAction {
 }
 
 model Thread {
-  id                  String       @id @default(cuid())
+  id                  String            @id @default(cuid())
   companyId           String
   /// E.164, e.g. +59899123456. Matches form contacts and WhatsApp contacts.
   phone               String
@@ -122,10 +125,10 @@ model Thread {
   name                String?
   /// Only from a form payload. The assistant does not ask for email.
   email               String?
-  source              ThreadSource @default(whatsapp)
+  source              ThreadSource      @default(whatsapp)
   /// The engine's conversation step (what the prompt asks next, and when HubSpot is written).
-  state               ThreadState  @default(greeting)
-  stage               LeadStage    @default(qualifying)
+  state               ThreadState       @default(greeting)
+  stage               LeadStage         @default(qualifying)
   /// When the thread reached Por contactar: the lead message that completed the required items.
   handedOffAt         DateTime?
   /// The operator (advisor) who has the lead. Any operator of the company can take or reassign it.
@@ -135,14 +138,20 @@ model Thread {
   contactedById       String?
   /// Who marked it contacted, kept when that operator is deleted or when it was a platform admin.
   contactedByEmail    String?
-  paused              Boolean      @default(false)
+  /// The last stage change, by a person or by the assistant. The turn writes its stage only if
+  /// this is still what it read, so a person's change during a turn wins.
+  stageChangedAt      DateTime?
+  stageChangedById    String?
+  /// Null when the assistant moved the stage. Kept when that operator is deleted.
+  stageChangedByEmail String?
+  paused              Boolean           @default(false)
   pausedAt            DateTime?
-  needsHuman          Boolean      @default(false)
+  needsHuman          Boolean           @default(false)
   needsHumanReason    String?
   /// What the lead told the assistant, keyed by the company's `config.collect[].key`. Values are text.
-  collected           Json         @default("{}")
+  collected           Json              @default("{}")
   /// Short bullets from the model, rewritten every turn: the conversation and what the lead wants.
-  summary             String?      @db.Text
+  summary             String?           @db.Text
   callTime            String?
   /// Start of WhatsApp's 24-hour free-form reply window.
   lastInboundAt       DateTime?
@@ -154,19 +163,21 @@ model Thread {
   /// Set when a CRM write is owed; cleared once it succeeds. Failed writes are retried.
   crmPendingAction    CrmAction?
   /// Bumped on every request, so a write that finishes after a newer request does not clear it.
-  crmRequestVersion   Int          @default(0)
+  crmRequestVersion   Int               @default(0)
   /// Lease for CRM writes, apart from `processingUntil`: a slow HubSpot never holds up a reply.
   crmLeaseUntil       DateTime?
-  crmAttempts         Int          @default(0)
+  crmAttempts         Int               @default(0)
   crmNextAttemptAt    DateTime?
   crmLastError        String?
   crmSyncedAt         DateTime?
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-  company             Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  assignedTo          Operator?    @relation("ThreadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  contactedBy         Operator?    @relation("ThreadContactedBy", fields: [contactedById], references: [id], onDelete: SetNull)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  company             Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignedTo          Operator?         @relation("ThreadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  contactedBy         Operator?         @relation("ThreadContactedBy", fields: [contactedById], references: [id], onDelete: SetNull)
+  stageChangedBy      Operator?         @relation("ThreadStageChangedBy", fields: [stageChangedById], references: [id], onDelete: SetNull)
   messages            Message[]
+  stageChanges        LeadStageChange[]
   llmUsages           LlmUsage[]
 
   @@unique([companyId, phone])
@@ -174,7 +185,30 @@ model Thread {
   @@index([companyId, stage, handedOffAt])
   @@index([assignedToId])
   @@index([contactedById])
+  @@index([stageChangedById])
   @@index([crmPendingAction])
+}
+
+/// A stage a person picked in the panel (any direction). The assistant's own moves are not here.
+model LeadStageChange {
+  id             String    @id @default(cuid())
+  companyId      String
+  threadId       String
+  fromStage      LeadStage
+  toStage        LeadStage
+  /// Null through support access, or once that operator is deleted.
+  changedById    String?
+  changedByEmail String
+  /// A platform admin made it from inside the company (also in AdminAuditEntry).
+  support        Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  thread         Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  changedBy      Operator? @relation(fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([threadId, createdAt])
+  @@index([companyId])
+  @@index([changedById])
 }
 
 enum MessageDirection {
