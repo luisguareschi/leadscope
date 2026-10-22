@@ -10,7 +10,6 @@ const SUCCESS: Record<ThreadAction, string> = {
   pause: "Pausaste el asistente en esta conversación.",
   "crm-sync": "Guardado en HubSpot.",
   take: "Tomaste esta conversación.",
-  contacted: "Marcada como contactada.",
 };
 
 export function useThreadActionWithToast(threadId: string) {

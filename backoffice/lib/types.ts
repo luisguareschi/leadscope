@@ -1,6 +1,6 @@
 export type ThreadState =
   "greeting" | "qualify" | "answer" | "handoff" | "closed";
-/** Where the lead is for the sales team. Forward-only; only a person sets Contactado. */
+/** Where the lead is for the sales team. The bot only moves it forward; a person can pick any. */
 export type LeadStage =
   "qualifying" | "to_contact" | "contacted" | "not_interested";
 /** What the assistant is doing in the thread, independent of the stage. */
@@ -41,6 +41,8 @@ export type Thread = {
   contactedAt: string | null;
   /** Email of whoever marked it contacted. */
   contactedBy: string | null;
+  /** The last stage change; `by` is null when the assistant made it. */
+  stageChange: { at: string; by: string | null } | null;
   /** What the lead said, by collect item key. */
   collected: Record<string, string>;
   /** Bullets from the assistant, rewritten every turn: the conversation and what the lead wants. */

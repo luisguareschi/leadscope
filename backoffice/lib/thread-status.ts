@@ -15,21 +15,29 @@ export const STAGE_META: Record<
     label: "Por contactar",
     tone: "warning",
     description:
-      "El lead ya dio los datos necesarios, o pidió hablar con alguien ya (horario «Lo antes posible»), y espera a un asesor. Queda acá aunque vuelva a escribir, hasta que alguien lo marque como contactado.",
+      "El lead ya dio los datos necesarios, o pidió hablar con alguien ya (horario «Lo antes posible»), y espera a un asesor. Queda acá aunque vuelva a escribir, hasta que alguien le cambie la etapa.",
   },
   contacted: {
     label: "Contactado",
     tone: "ok",
     description:
-      "Un asesor ya habló con el lead. El asistente sigue respondiendo sus preguntas, sin volver a pedirle datos.",
+      "Un asesor ya habló con el lead (queda registrado quién y cuándo). El asistente sigue respondiendo sus preguntas, sin volver a pedirle datos.",
   },
   not_interested: {
     label: "Sin interés",
     tone: "muted",
     description:
-      "El lead dijo que no le interesa. Queda en HubSpot sin asesor; si vuelve a escribir y da los datos, pasa a Por contactar.",
+      "El lead dijo que no le interesa, o alguien del equipo lo marcó así. Queda en HubSpot sin asesor; si vuelve a escribir y da los datos, o pide hablar con alguien, pasa a Por contactar.",
   },
 };
+
+/** The order of the stage picker. */
+export const STAGE_ORDER: LeadStage[] = [
+  "qualifying",
+  "to_contact",
+  "contacted",
+  "not_interested",
+];
 
 export const BOT_META: Record<
   BotActivity,
