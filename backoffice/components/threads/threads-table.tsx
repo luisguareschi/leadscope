@@ -80,7 +80,7 @@ export function ThreadsTable({
       <TableHeader className="bg-muted/40">
         <TableRow className="hover:bg-transparent">
           <TableHead className={`${HEAD} w-[26%] pl-5`}>Lead</TableHead>
-          <TableHead className={`${HEAD} w-36`}>
+          <TableHead className={`${HEAD} w-40`}>
             <span className="flex items-center gap-1">
               Etapa
               <ColumnHelp column="stage" />
