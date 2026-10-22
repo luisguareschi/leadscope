@@ -1,4 +1,4 @@
-import { RadarIcon } from "lucide-react";
+import { AppLogo } from "@/components/app-logo";
 import {
   Card,
   CardContent,
@@ -19,10 +19,8 @@ export function AuthCard({
   return (
     <div className="flex min-h-svh items-center justify-center bg-muted/40 p-6">
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <div className="flex items-center gap-2 self-center font-semibold">
-          <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <RadarIcon className="size-4" />
-          </div>
+        <div className="flex items-center gap-2 self-center font-semibold text-lg">
+          <AppLogo className="size-12 overflow-hidden rounded-md" />
           LeadScope
         </div>
         <Card>

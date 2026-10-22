@@ -5,9 +5,9 @@ import {
   BookOpenTextIcon,
   Building2Icon,
   MessagesSquareIcon,
-  RadarIcon,
   SlidersHorizontalIcon,
 } from "lucide-react";
+import { AppLogo } from "@/components/app-logo";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -71,9 +71,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               size="lg"
               render={<Link href={hasCompany ? "/threads" : "/companies"} />}
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <RadarIcon className="size-4" />
-              </div>
+              <AppLogo className="min-w-9 min-h-9" />
               <div className="grid flex-1 text-left leading-tight">
                 <span className="truncate text-base font-semibold">
                   LeadScope
