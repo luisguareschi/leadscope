@@ -160,7 +160,7 @@ export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
 
   const days = messages.map((message) => formatDayLabel(message.sentAt));
   return (
-    <div className="flex flex-col px-5 pt-2 pb-5">
+    <div className="flex flex-col px-3 pt-2 pb-5 lg:px-5">
       {messages.map((message, index) => {
         const day = days[index]!;
         const showDay = index === 0 || days[index - 1] !== day;

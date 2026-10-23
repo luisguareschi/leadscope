@@ -267,10 +267,12 @@ function SummaryGroup({ summary }: { summary: string | null }) {
 export function LeadDetails({
   thread,
   fields,
+  className,
 }: {
   thread: Thread;
   /** The company's items with the lead's values, from the thread view. */
   fields: LeadField[];
+  className?: string;
 }) {
   const asked = fields.filter((field) => field.required !== null);
   const required = asked.filter((field) => field.required);
@@ -279,7 +281,12 @@ export function LeadDetails({
   const crmFailed = thread.crm.status === "failed";
 
   return (
-    <Panel title="Lead" className="flex min-h-0 flex-col">
+    // Below lg the thread view's Lead tab already names this panel.
+    <Panel
+      title="Lead"
+      className={cn("flex min-h-0 flex-col", className)}
+      headerClassName="max-lg:hidden"
+    >
       <div className="min-h-0 flex-1 divide-y overflow-y-auto">
         <AssistantGroup thread={thread} />
         <FollowUpGroup thread={thread} />

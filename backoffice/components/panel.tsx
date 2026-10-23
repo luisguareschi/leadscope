@@ -44,12 +44,14 @@ export function Panel({
   description,
   actions,
   className,
+  headerClassName,
   children,
 }: {
   title?: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
   className?: string;
+  headerClassName?: string;
   children: ReactNode;
 }) {
   return (
@@ -60,7 +62,12 @@ export function Panel({
       )}
     >
       {title ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/40 px-5 py-3.5">
+        <div
+          className={cn(
+            "flex flex-wrap items-center justify-between gap-3 bg-muted/40 px-5 py-3.5",
+            headerClassName,
+          )}
+        >
           <div className="flex min-w-0 flex-col gap-0.5">
             <h3 className="text-sm font-medium">{title}</h3>
             {description ? (

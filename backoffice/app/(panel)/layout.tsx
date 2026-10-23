@@ -105,7 +105,8 @@ export default function PanelLayout({
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <div className="@container/main max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] overflow-y-auto flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
+        {/* Below md the inset has no outer margin to leave room for. */}
+        <div className="@container/main max-h-[calc(100svh-var(--header-height))] md:max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] overflow-y-auto flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
           {children}
         </div>
       </SidebarInset>

@@ -195,7 +195,7 @@ export function AssigneePicker({
               ) : (
                 <Initials email={option.email} />
               )}
-              <span className="truncate">{option.label}</span>
+              <span className="truncate max-lg:shrink-0">{option.label}</span>
               {option.kind === "none" ? null : (
                 <span className="ml-auto truncate pl-2 text-xs text-muted-foreground">
                   {option.email}

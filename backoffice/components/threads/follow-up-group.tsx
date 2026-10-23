@@ -41,7 +41,7 @@ export function FollowUpGroup({ thread }: { thread: Thread }) {
           <BotBadge activity={thread.botActivity} />
         </Row>
         <Row label="Asignado">
-          <span className="flex min-w-0 items-center gap-2">
+          <span className="flex min-w-0 items-center gap-2 max-lg:flex-wrap max-lg:gap-y-0.5">
             <AssigneePicker thread={thread} size="compact" />
             {thread.assignedAt ? (
               <span className="shrink-0 text-xs text-muted-foreground">
