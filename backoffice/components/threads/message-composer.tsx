@@ -67,6 +67,14 @@ function remaining(ms: number): string {
 
 const noSubscription = () => () => {};
 
+const TOUCH_QUERY = "(hover: none) and (pointer: coarse)";
+
+function subscribeTouch(onChange: () => void) {
+  const query = window.matchMedia(TOUCH_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
 function useNow(intervalMs: number): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -87,6 +95,12 @@ export function MessageComposer({ thread }: { thread: Thread }) {
   const isMac = useSyncExternalStore(
     noSubscription,
     () => /Mac|iPhone|iPad/.test(navigator.userAgent),
+    () => false,
+  );
+  // A phone keyboard has no Shift+Enter: there Enter is a new line and the button sends.
+  const touch = useSyncExternalStore(
+    subscribeTouch,
+    () => window.matchMedia(TOUCH_QUERY).matches,
     () => false,
   );
   const input = useRef<HTMLTextAreaElement>(null);
@@ -142,7 +156,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.nativeEvent.isComposing) return;
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey && !touch) {
       event.preventDefault();
       submit();
       return;
@@ -196,6 +210,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
                     type="button"
                     variant="ghost"
                     size="icon-xs"
+                    className="max-lg:size-8"
                     aria-label={`${format.label} (${shortcut(format.key, format.shift)})`}
                     disabled={!open}
                     onMouseDown={(event) => event.preventDefault()}
@@ -213,9 +228,11 @@ export function MessageComposer({ thread }: { thread: Thread }) {
               </TooltipContent>
             </Tooltip>
           ))}
-          <span className="ml-auto px-1.5 text-[11px] text-muted-foreground">
-            Enter envía · Shift+Enter, nueva línea
-          </span>
+          {touch ? null : (
+            <span className="ml-auto px-1.5 text-[11px] text-muted-foreground max-sm:hidden">
+              Enter envía · Shift+Enter, nueva línea
+            </span>
+          )}
         </div>
         <div className="flex items-end gap-2 p-1.5 pl-0">
           <Textarea
@@ -225,17 +242,19 @@ export function MessageComposer({ thread }: { thread: Thread }) {
             onKeyDown={onKeyDown}
             disabled={!open}
             rows={1}
+            enterKeyHint={touch ? "enter" : "send"}
             aria-label="Mensaje para el lead"
             placeholder={
               open
                 ? "Escribile al lead por WhatsApp…"
                 : "La ventana de 24 h está cerrada"
             }
-            className="max-h-40 min-h-9 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 dark:bg-transparent"
+            className="max-h-40 min-h-9 resize-none max-lg:max-h-28 border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 dark:bg-transparent"
           />
           <Button
             type="button"
             size="icon-sm"
+            className="max-lg:size-9"
             aria-label="Enviar"
             disabled={!canSend}
             onClick={submit}

@@ -23,6 +23,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
@@ -47,6 +48,7 @@ export function ThreadActions({ thread }: { thread: Thread }) {
         <Button
           variant="outline"
           size="sm"
+          className="max-lg:hidden"
           onClick={() => run("resume")}
           disabled={pending !== null}
         >
@@ -60,6 +62,7 @@ export function ThreadActions({ thread }: { thread: Thread }) {
               <Button
                 variant="outline"
                 size="sm"
+                className="max-lg:hidden"
                 onClick={() => run("pause")}
                 disabled={pending !== null}
               />
@@ -83,6 +86,16 @@ export function ThreadActions({ thread }: { thread: Thread }) {
           <EllipsisVerticalIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-52">
+          {/* Below lg the pause button lives here instead of in the header. */}
+          <DropdownMenuItem
+            className="lg:hidden"
+            disabled={pending !== null}
+            onClick={() => run(thread.paused ? "resume" : "pause")}
+          >
+            {thread.paused ? <PlayIcon /> : <PauseIcon />}
+            {thread.paused ? "Reanudar asistente" : "Pausar asistente"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="lg:hidden" />
           <DropdownMenuItem
             variant="destructive"
             onClick={() => setConfirming(true)}

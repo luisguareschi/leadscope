@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileTextIcon, MessagesSquareIcon, SearchXIcon } from "lucide-react";
+import {
+  ClockIcon,
+  FileTextIcon,
+  MessagesSquareIcon,
+  SearchXIcon,
+} from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Empty,
@@ -51,8 +56,6 @@ export function ThreadsTable({
   /** Por contactar: the last column is how long each lead has waited. */
   queue: boolean;
 }) {
-  const router = useRouter();
-
   if (!loading && threads.length === 0) {
     return (
       <Empty className="border-0">
@@ -75,6 +78,120 @@ export function ThreadsTable({
     );
   }
 
+  return (
+    // One child for the Panel's divide-y: the table from lg up, stacked rows below.
+    <div>
+      <div className="max-lg:hidden">
+        <DesktopTable threads={threads} loading={loading} queue={queue} />
+      </div>
+      <ul className="divide-y lg:hidden">
+        {loading
+          ? Array.from({ length: 6 }, (_, index) => (
+              <ThreadRowSkeleton key={index} />
+            ))
+          : threads.map((thread) => (
+              <ThreadRow key={thread.id} thread={thread} queue={queue} />
+            ))}
+      </ul>
+    </div>
+  );
+}
+
+function ThreadRowSkeleton() {
+  return (
+    <li className="flex gap-3 px-4 py-3.5">
+      <Skeleton className="size-9 shrink-0 rounded-full" />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex justify-between gap-3">
+          <Skeleton className="h-3.5 w-32" />
+          <Skeleton className="h-3 w-12" />
+        </div>
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-3 w-full" />
+        <div className="flex gap-2">
+          <Skeleton className="h-6 w-24 rounded-full" />
+          <Skeleton className="h-6 w-24 rounded-full" />
+        </div>
+      </div>
+    </li>
+  );
+}
+
+/** Below lg: the same columns as the table, stacked; the whole row opens the thread. */
+function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
+  return (
+    <li className="relative flex gap-3 px-4 py-3.5 has-[a[data-row-link]:active]:bg-muted/40">
+      <Avatar className="size-9">
+        <AvatarFallback className="text-xs">
+          {initials(thread.name ?? thread.phone.slice(-2))}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Link
+            href={`/threads/${thread.id}`}
+            data-row-link
+            className="truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+          >
+            {thread.name ?? "Sin nombre"}
+          </Link>
+          {thread.source === "form" ? (
+            <FileTextIcon
+              className="size-3.5 shrink-0 text-muted-foreground"
+              aria-label="Llegó por un formulario"
+            />
+          ) : null}
+          <span
+            className="ml-auto inline-flex shrink-0 items-center gap-1 pl-2 text-xs text-muted-foreground tabular-nums"
+            title={
+              queue ? "Esperando desde que pasó a Por contactar" : undefined
+            }
+          >
+            {queue ? <ClockIcon className="size-3" /> : null}
+            {queue
+              ? formatWaiting(thread.handedOffAt)
+              : formatRelative(thread.lastMessageAt)}
+          </span>
+        </div>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-xs text-muted-foreground tabular-nums">
+            {formatPhone(thread.phone)}
+          </span>
+          <WroteAgainBadge thread={thread} />
+        </div>
+        {thread.lastMessagePreview ? (
+          <p className="truncate text-[13px] text-muted-foreground">
+            {thread.lastMessagePreview}
+          </p>
+        ) : null}
+        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+          {/* The pickers sit above the row's link, so their taps do not open the thread. */}
+          <span className="relative z-10 flex max-w-full shrink-0 [&>button]:max-w-[calc(100%+0.5rem)]">
+            <StagePicker thread={thread} size="compact" />
+          </span>
+          <BotBadge activity={thread.botActivity} />
+          <span className="relative z-10 flex max-w-full shrink-0 [&>button]:max-w-[calc(100%+0.5rem)]">
+            <AssigneePicker thread={thread} size="compact" />
+          </span>
+          {thread.crm.status === "none" ? null : (
+            <CrmIndicator crm={thread.crm} />
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function DesktopTable({
+  threads,
+  loading,
+  queue,
+}: {
+  threads: Thread[];
+  loading: boolean;
+  queue: boolean;
+}) {
+  const router = useRouter();
   return (
     <Table className="table-fixed">
       <TableHeader className="bg-muted/40">

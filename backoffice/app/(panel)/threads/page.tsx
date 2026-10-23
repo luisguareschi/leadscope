@@ -186,7 +186,7 @@ function ThreadsView() {
         </InputGroup>
       </div>
 
-      <div className="-mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="-mt-1 flex flex-wrap items-center gap-x-2 gap-y-2 lg:gap-x-3">
         {canBeAssigned ? (
           <Button
             size="sm"
