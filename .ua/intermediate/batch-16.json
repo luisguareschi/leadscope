@@ -1,0 +1,100 @@
+{
+  "nodes": [
+    {
+      "id": "config:backend/.env.example",
+      "type": "config",
+      "name": ".env.example",
+      "filePath": "backend/.env.example",
+      "summary": "Template environment variables for local backend development: database URLs, Supabase auth, encryption key, CORS origins, platform admin allowlist, and optional integration fakes.",
+      "tags": ["configuration", "environment", "security", "development"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:backend/.prettierrc.json",
+      "type": "config",
+      "name": ".prettierrc.json",
+      "filePath": "backend/.prettierrc.json",
+      "summary": "Prettier formatting defaults for the backend codebase: semicolons, single quotes, trailing commas, and an 80-column print width.",
+      "tags": ["configuration", "formatting", "prettier", "build-system"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:backend/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "backend/package.json",
+      "summary": "Backend npm manifest defining Node 22 engines, dev/build/test scripts, Prisma lifecycle hooks, and dependencies for Express, Anthropic, Kapso integrations, and observability.",
+      "tags": ["configuration", "npm", "build-system", "dependencies"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:backend/tsconfig.build.json",
+      "type": "config",
+      "name": "tsconfig.build.json",
+      "filePath": "backend/tsconfig.build.json",
+      "summary": "Production TypeScript build profile extending the base config, emitting compiled JavaScript to dist from src for Docker and npm run build.",
+      "tags": ["configuration", "typescript", "build-system", "compiler"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:backend/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "filePath": "backend/tsconfig.json",
+      "summary": "Base TypeScript compiler options for the backend including strict mode, ES modules, path resolution, and inclusion of src and test sources for typechecking.",
+      "tags": ["configuration", "typescript", "strict-mode", "compiler"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "config:backend/.env.example",
+      "target": "file:backend/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:backend/.prettierrc.json",
+      "target": "file:backend/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:backend/package.json",
+      "target": "file:backend/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:backend/tsconfig.json",
+      "target": "file:backend/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:backend/tsconfig.build.json",
+      "target": "file:backend/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:backend/tsconfig.build.json",
+      "target": "config:backend/tsconfig.json",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:backend/package.json",
+      "target": "config:backend/tsconfig.build.json",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    }
+  ]
+}

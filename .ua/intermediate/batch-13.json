@@ -1,0 +1,108 @@
+{
+  "nodes": [
+    {
+      "id": "resource:backend/.dockerignore",
+      "type": "resource",
+      "name": ".dockerignore",
+      "filePath": "backend/.dockerignore",
+      "summary": "Excludes dev artifacts, tests, and secrets from the backend Docker build context so production images stay small and do not leak local env files.",
+      "tags": ["infrastructure", "containerization", "build-system", "security"],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:backend/Dockerfile",
+      "type": "service",
+      "name": "Dockerfile",
+      "filePath": "backend/Dockerfile",
+      "summary": "Multi-stage Node 22 image that compiles the Express API, runs Prisma migrations on startup, and serves the backend on port 3001 as a single production container.",
+      "tags": ["containerization", "infrastructure", "deployment", "nodejs"],
+      "complexity": "moderate",
+      "languageNotes": "Final stage runs prisma migrate deploy before node dist/index.js, requiring DIRECT_URL for migrations."
+    },
+    {
+      "id": "service:backend/Dockerfile:base",
+      "type": "service",
+      "name": "base",
+      "filePath": "backend/Dockerfile",
+      "summary": "Base stage on node:22-slim with OpenSSL installed and /app as the working directory for build and runtime stages.",
+      "tags": ["containerization", "base-image", "openssl", "nodejs"],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:backend/Dockerfile:build",
+      "type": "service",
+      "name": "build",
+      "filePath": "backend/Dockerfile",
+      "summary": "Build stage that installs dependencies, copies Prisma schema and TypeScript sources, and produces trimmed production node_modules and dist output.",
+      "tags": ["containerization", "build-system", "typescript", "prisma"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "service:backend/Dockerfile:runtime",
+      "type": "service",
+      "name": "runtime",
+      "filePath": "backend/Dockerfile",
+      "summary": "Production runtime stage copying compiled artifacts from build, running as the node user, exposing 3001, and starting migrations plus the HTTP server.",
+      "tags": ["containerization", "deployment", "production", "express"],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "resource:backend/.dockerignore",
+      "target": "service:backend/Dockerfile",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "service:backend/Dockerfile",
+      "target": "service:backend/Dockerfile:base",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "service:backend/Dockerfile",
+      "target": "service:backend/Dockerfile:build",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "service:backend/Dockerfile",
+      "target": "service:backend/Dockerfile:runtime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "service:backend/Dockerfile",
+      "target": "file:backend/src/index.ts",
+      "type": "deploys",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "service:backend/Dockerfile",
+      "target": "config:backend/package.json",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "service:backend/Dockerfile",
+      "target": "config:backend/tsconfig.build.json",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "service:backend/Dockerfile",
+      "target": "schema:backend/prisma/schema.prisma",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    }
+  ]
+}
