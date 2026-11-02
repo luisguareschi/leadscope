@@ -147,3 +147,6 @@ backend/src/generated/
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Understand Anything (local knowledge graph; do not commit)
+.ua/
