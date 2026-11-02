@@ -16,6 +16,8 @@ import type { ThreadSnapshot } from "./types.js";
 
 export type KnowledgeDocument = {
   name: string;
+  /** Folder names from the root down to the file's folder. Empty at the root. */
+  folders: string[];
   updatedAt: Date;
   text: string;
 };
@@ -36,16 +38,26 @@ function isoDay(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** "Proyectos / Tres Cruces / Precios.xlsx", or just the file name at the root. */
+export function documentPath(doc: KnowledgeDocument): string {
+  return [...doc.folders, doc.name].join(" / ");
+}
+
+/** Documents come in folder order (see `knowledgeDocuments`), each headed by its folder path. */
 export function formatKnowledge(documents: KnowledgeDocument[]): string {
   if (documents.length === 0)
     return "<knowledge>\n(No documents uploaded yet.)\n</knowledge>";
+  const inFolders = documents.some((doc) => doc.folders.length > 0);
+  const intro = inFolders
+    ? "Documents are grouped by folder. A document's path (its folders, then its file name) tells you what it covers, for example which project a price list belongs to.\n"
+    : "";
   const body = documents
     .map(
       (doc) =>
-        `<document name="${escapeAttribute(doc.name)}" updated="${isoDay(doc.updatedAt)}">\n${doc.text.trim()}\n</document>`,
+        `<document path="${escapeAttribute(documentPath(doc))}" updated="${isoDay(doc.updatedAt)}">\n${doc.text.trim()}\n</document>`,
     )
     .join("\n");
-  return `<knowledge>\n${body}\n</knowledge>`;
+  return `<knowledge>\n${intro}${body}\n</knowledge>`;
 }
 
 /** How an item is named to the model: its label, and the key submit_turn uses for it. */

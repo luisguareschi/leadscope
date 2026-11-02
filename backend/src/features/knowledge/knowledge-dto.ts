@@ -1,4 +1,7 @@
-import type { KnowledgeFile } from "../../generated/prisma/client.js";
+import type {
+  KnowledgeFile,
+  KnowledgeFolder,
+} from "../../generated/prisma/client.js";
 import {
   KNOWLEDGE_FORMATS,
   type KnowledgeFormat,
@@ -9,6 +12,7 @@ export function toKnowledgeFileDto(
 ) {
   return {
     id: file.id,
+    folderId: file.folderId,
     name: file.name,
     format: file.format,
     formatLabel:
@@ -22,3 +26,13 @@ export function toKnowledgeFileDto(
 }
 
 export type KnowledgeFileDto = ReturnType<typeof toKnowledgeFileDto>;
+
+export function toKnowledgeFolderDto(folder: KnowledgeFolder) {
+  return {
+    id: folder.id,
+    parentId: folder.parentId,
+    name: folder.name,
+    createdAt: folder.createdAt,
+    updatedAt: folder.updatedAt,
+  };
+}
