@@ -6,9 +6,15 @@ import {
   buildPlatformRules,
   buildSystemPrompt,
   buildTurnContext,
+  documentPath,
   formatKnowledge,
   nextStepFor,
 } from "../../src/engine/prompt.js";
+import {
+  folderPath,
+  isSameOrInside,
+  knowledgeDocuments,
+} from "../../src/engine/knowledge-tree.js";
 import { baseConfig } from "../support/harness.js";
 
 const config = parseCompanyConfig({
@@ -31,11 +37,13 @@ describe("buildSystemPrompt", () => {
       documents: [
         {
           name: "precios.xlsx",
+          folders: [],
           updatedAt: new Date("2026-10-01"),
           text: "Torre Sur desde USD 150.000",
         },
         {
           name: 'faq "v2".md',
+          folders: [],
           updatedAt: new Date("2026-10-05"),
           text: "Entrega: 2027",
         },
@@ -50,9 +58,10 @@ describe("buildSystemPrompt", () => {
     );
     expect(prompt).toContain("- Rentabilidad futura");
     expect(prompt).toContain(
-      '<document name="precios.xlsx" updated="2026-10-01">\nTorre Sur desde USD 150.000\n</document>',
+      '<document path="precios.xlsx" updated="2026-10-01">\nTorre Sur desde USD 150.000\n</document>',
     );
-    expect(prompt).toContain('name="faq &quot;v2&quot;.md"');
+    expect(prompt).toContain('path="faq &quot;v2&quot;.md"');
+    expect(prompt).not.toContain("Documents are grouped by folder");
     expect(prompt).not.toContain("<company_instructions>");
   });
 
@@ -93,6 +102,84 @@ describe("buildSystemPrompt", () => {
 
   it("says so when there are no documents", () => {
     expect(formatKnowledge([])).toContain("No documents uploaded yet");
+  });
+});
+
+describe("knowledge in folders", () => {
+  const day = new Date("2026-10-01");
+  const folders = [
+    { id: "f-proyectos", parentId: null, name: "Proyectos" },
+    { id: "f-tres", parentId: "f-proyectos", name: "Tres Cruces" },
+    { id: "f-pocitos", parentId: "f-proyectos", name: "Pocitos" },
+    { id: "f-torre10", parentId: null, name: "Torre 10" },
+    { id: "f-torre2", parentId: null, name: "Torre 2" },
+    { id: "f-ventas", parentId: null, name: "ventas" },
+  ];
+  const file = (id: string, folderId: string | null, name: string) => ({
+    id,
+    folderId,
+    name,
+    updatedAt: day,
+    text: `texto de ${name}`,
+  });
+  const files = [
+    file("1", "f-tres", "Precios.xlsx"),
+    file("2", null, "faq.md"),
+    file("3", "f-proyectos", "General.pdf"),
+    file("4", "f-pocitos", "Precios.xlsx"),
+    file("5", null, "Acerca.txt"),
+    file("6", "f-tres", "Amenities.docx"),
+    file("7", "f-torre10", "a.txt"),
+    file("8", "f-torre2", "b.txt"),
+    file("9", "f-ventas", "c.txt"),
+  ];
+
+  it("lists files depth-first, each folder's files before its subfolders, by name", () => {
+    const documents = knowledgeDocuments(folders, files);
+    expect(documents.map(documentPath)).toEqual([
+      "Acerca.txt",
+      "faq.md",
+      "Proyectos / General.pdf",
+      "Proyectos / Pocitos / Precios.xlsx",
+      "Proyectos / Tres Cruces / Amenities.docx",
+      "Proyectos / Tres Cruces / Precios.xlsx",
+      "Torre 2 / b.txt",
+      "Torre 10 / a.txt",
+      "ventas / c.txt",
+    ]);
+    // Same input in another order: the cached prompt must not change.
+    expect(
+      knowledgeDocuments([...folders].reverse(), [...files].reverse()),
+    ).toEqual(documents);
+  });
+
+  it("heads each document with its folder path in the prompt", () => {
+    const knowledge = formatKnowledge(knowledgeDocuments(folders, files));
+    expect(knowledge).toContain("Documents are grouped by folder.");
+    expect(knowledge).toContain(
+      '<document path="Proyectos / Tres Cruces / Precios.xlsx" updated="2026-10-01">\ntexto de Precios.xlsx\n</document>',
+    );
+    expect(
+      knowledge.indexOf('path="Proyectos / Pocitos / Precios.xlsx"'),
+    ).toBeLessThan(
+      knowledge.indexOf('path="Proyectos / Tres Cruces / Amenities.docx"'),
+    );
+  });
+
+  it("knows which folders are inside which, and stops on a broken chain", () => {
+    const byId = new Map(folders.map((folder) => [folder.id, folder]));
+    expect(folderPath(byId, "f-tres")).toEqual(["Proyectos", "Tres Cruces"]);
+    expect(folderPath(byId, null)).toEqual([]);
+    expect(isSameOrInside(byId, "f-proyectos", "f-tres")).toBe(true);
+    expect(isSameOrInside(byId, "f-proyectos", "f-proyectos")).toBe(true);
+    expect(isSameOrInside(byId, "f-tres", "f-proyectos")).toBe(false);
+    expect(isSameOrInside(byId, "f-tres", null)).toBe(false);
+    const loop = new Map([
+      ["a", { id: "a", parentId: "b", name: "A" }],
+      ["b", { id: "b", parentId: "a", name: "B" }],
+    ]);
+    expect(isSameOrInside(loop, "c", "a")).toBe(false);
+    expect(folderPath(loop, "a")).toEqual(["B", "A"]);
   });
 });
 

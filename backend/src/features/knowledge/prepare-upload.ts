@@ -1,11 +1,11 @@
 import type { LoadedCompany } from "../../companies/load-company.js";
-import type { AppContext } from "../../context.js";
 import {
   extractKnowledgeText,
   KnowledgeExtractionError,
 } from "../../integrations/knowledge/extract-text.js";
 import { sha256Hex } from "../../lib/crypto.js";
 import { HttpError } from "../../lib/http-error.js";
+import type { KnowledgeTx } from "./knowledge-folders.js";
 
 export type UploadedFile = {
   originalname: string;
@@ -91,12 +91,12 @@ export async function prepareKnowledgeFile(
 
 /** Rejects the upload if all the company's files together would no longer fit in the prompt. */
 export async function assertFitsCompanyTotal(
-  ctx: AppContext,
+  tx: KnowledgeTx,
   company: LoadedCompany,
   charCount: number,
   replacingId: string | null,
 ): Promise<void> {
-  const others = await ctx.db.knowledgeFile.aggregate({
+  const others = await tx.knowledgeFile.aggregate({
     where: {
       companyId: company.id,
       ...(replacingId ? { NOT: { id: replacingId } } : {}),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState } from "react";
 import {
   CircleAlertIcon,
   CircleCheckIcon,
@@ -15,17 +15,28 @@ import { cn } from "@/lib/utils";
 type UploadStatus = {
   id: number;
   name: string;
+  /** Folder path, or null for the root. */
+  place: string | null;
   state: "uploading" | "done" | "error";
   message?: string;
 };
+
+/** Where picked or dropped files go: a folder (with its path for the status rows) or the root. */
+export type UploadTarget = { folderId: string | null; place: string | null };
+
+const ROOT: UploadTarget = { folderId: null, place: null };
 
 let nextId = 0;
 
 export type UploadQueue = ReturnType<typeof useUploadQueue>;
 
-/** Uploads picked or dropped files and keeps the last few outcomes on screen. */
-export function useUploadQueue(accept: string[]) {
+/** Uploads picked or dropped files into a folder and keeps the last few outcomes on screen. */
+export function useUploadQueue(
+  accept: string[],
+  onUploaded?: (target: UploadTarget) => void,
+) {
   const input = useRef<HTMLInputElement>(null);
+  const pickTarget = useRef<UploadTarget>(ROOT);
   const upload = useUploadKnowledgeFile();
   const [statuses, setStatuses] = useState<UploadStatus[]>([]);
 
@@ -36,10 +47,11 @@ export function useUploadQueue(accept: string[]) {
       ),
     );
 
-  async function uploadAll(files: File[]) {
+  async function uploadAll(files: File[], target: UploadTarget = ROOT) {
     const queued = files.map((file) => ({
       id: nextId++,
       name: file.name,
+      place: target.place,
       state: "uploading" as const,
     }));
     setStatuses((current) => [...queued, ...current].slice(0, 12));
@@ -47,13 +59,17 @@ export function useUploadQueue(accept: string[]) {
     for (const [index, file] of files.entries()) {
       const id = queued[index]!.id;
       try {
-        const result = await upload.mutateAsync({ file });
+        const result = await upload.mutateAsync({
+          file,
+          folderId: target.folderId,
+        });
         update(id, {
           state: "done",
           message: result.replaced
             ? "Reemplazó a la versión anterior"
             : "Subido",
         });
+        onUploaded?.(target);
       } catch (error) {
         update(id, {
           state: "error",
@@ -66,7 +82,10 @@ export function useUploadQueue(accept: string[]) {
   return {
     statuses,
     uploadAll,
-    pick: () => input.current?.click(),
+    pick: (target: UploadTarget = ROOT) => {
+      pickTarget.current = target;
+      input.current?.click();
+    },
     dismiss: (id: number) =>
       setStatuses((current) => current.filter((item) => item.id !== id)),
     input: (
@@ -79,59 +98,18 @@ export function useUploadQueue(accept: string[]) {
         onChange={(event) => {
           const files = Array.from(event.target.files ?? []);
           event.target.value = "";
-          if (files.length > 0) void uploadAll(files);
+          if (files.length > 0) void uploadAll(files, pickTarget.current);
         }}
       />
     ),
   };
 }
 
-/** Lets files be dropped anywhere on its children, with an overlay while dragging. */
-export function DropTarget({
-  queue,
-  children,
-}: {
-  queue: UploadQueue;
-  children: ReactNode;
-}) {
-  const [dragging, setDragging] = useState(false);
-  return (
-    <div
-      className="relative"
-      onDragOver={(event) => {
-        if (!event.dataTransfer.types.includes("Files")) return;
-        event.preventDefault();
-        setDragging(true);
-      }}
-      onDragLeave={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
-          setDragging(false);
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        setDragging(false);
-        const files = Array.from(event.dataTransfer.files);
-        if (files.length > 0) void queue.uploadAll(files);
-      }}
-    >
-      {children}
-      {dragging ? (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-primary bg-primary/5 backdrop-blur-[1px]">
-          <span className="flex items-center gap-2 rounded-full bg-background px-3 py-1.5 text-sm font-medium shadow-sm">
-            <UploadIcon className="size-4 text-primary" />
-            Soltá para subir
-          </span>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 export function EmptyDropzone({ queue }: { queue: UploadQueue }) {
   return (
     <button
       type="button"
-      onClick={queue.pick}
+      onClick={() => queue.pick()}
       className="m-3 flex w-[calc(100%-1.5rem)] flex-col items-center gap-3 rounded-lg border border-dashed border-muted-foreground/30 px-6 py-12 text-center transition-colors outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       <span className="flex size-10 items-center justify-center rounded-lg border bg-background text-muted-foreground shadow-xs">
@@ -143,7 +121,8 @@ export function EmptyDropzone({ queue }: { queue: UploadQueue }) {
         </span>
         <span className="text-[13px] text-muted-foreground">
           Arrastrá los archivos acá o hacé clic para elegirlos. PDF, Word,
-          Excel, PowerPoint, CSV, texto o Markdown.
+          Excel, PowerPoint, CSV, texto o Markdown. Después podés ordenarlos en
+          carpetas.
         </span>
       </span>
     </button>
@@ -176,6 +155,9 @@ export function UploadRows({ queue }: { queue: UploadQueue }) {
               )}
             >
               {status.state === "uploading" ? "Subiendo…" : status.message}
+              {status.place && status.state !== "error"
+                ? ` · en ${status.place}`
+                : ""}
             </span>
           </span>
           {status.state !== "uploading" ? (

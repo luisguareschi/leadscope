@@ -3,6 +3,7 @@ generator client {
   output              = "../src/generated/prisma"
   moduleFormat        = "esm"
   importFileExtension = "js"
+  previewFeatures     = ["partialIndexes"]
 }
 
 datasource db {
@@ -28,6 +29,7 @@ model Company {
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   operators             Operator[]
+  knowledgeFolders      KnowledgeFolder[]
   knowledgeFiles        KnowledgeFile[]
   threads               Thread[]
   messages              Message[]
@@ -61,26 +63,53 @@ model Operator {
   @@index([companyId])
 }
 
+/// A folder operators make in Conocimiento to organize files, nested to any depth. The prompt
+/// heads each file with its folder path. Deleting a folder deletes everything inside it.
+model KnowledgeFolder {
+  id        String            @id @default(cuid())
+  companyId String
+  /// Null at the root. Always a folder of the same company, never this one or one inside it.
+  parentId  String?
+  name      String
+  /// Lower-cased name, unique among the folders of one parent.
+  nameKey   String
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  parent    KnowledgeFolder?  @relation("KnowledgeFolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  KnowledgeFolder[] @relation("KnowledgeFolderTree")
+  files     KnowledgeFile[]
+
+  @@unique([parentId, nameKey])
+  @@unique([companyId, nameKey], map: "KnowledgeFolder_root_nameKey_key", where: { parentId: null })
+  @@index([companyId])
+}
+
 /// Text extracted from a file an operator uploaded. Only the text is kept, not the original file.
 model KnowledgeFile {
-  id           String    @id @default(cuid())
+  id           String           @id @default(cuid())
   companyId    String
+  /// Null at the root.
+  folderId     String?
   name         String
-  /// Lower-cased name. Uploading a file with the same name replaces this row.
+  /// Lower-cased name. Uploading a file with the same name to the same folder replaces this row.
   nameKey      String
   format       String
   mimeType     String
   sizeBytes    Int
   sha256       String
-  text         String    @db.Text
+  text         String           @db.Text
   charCount    Int
   uploadedById String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  uploadedBy   Operator? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  folder       KnowledgeFolder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  uploadedBy   Operator?        @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
-  @@unique([companyId, nameKey])
+  @@unique([folderId, nameKey])
+  @@unique([companyId, nameKey], map: "KnowledgeFile_root_nameKey_key", where: { folderId: null })
+  @@index([companyId])
 }
 
 enum ThreadState {

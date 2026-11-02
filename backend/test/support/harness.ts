@@ -33,7 +33,7 @@ export function testDb(): Db {
 
 export async function resetDb(db: Db = testDb()): Promise<void> {
   await db.$executeRawUnsafe(
-    'TRUNCATE "CompanySettingsVersion", "AdminAuditEntry", "LlmUsage", "Message", "Thread", "KnowledgeFile", "Operator", "Company" RESTART IDENTITY CASCADE',
+    'TRUNCATE "CompanySettingsVersion", "AdminAuditEntry", "LlmUsage", "Message", "Thread", "KnowledgeFile", "KnowledgeFolder", "Operator", "Company" RESTART IDENTITY CASCADE',
   );
 }
 

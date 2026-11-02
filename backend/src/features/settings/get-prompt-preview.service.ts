@@ -1,7 +1,11 @@
 import { loadCompanyById } from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
 import { loadSystemPrompt } from "../../conversation/system-prompt.js";
-import { buildTurnContext, type PromptThread } from "../../engine/prompt.js";
+import {
+  buildTurnContext,
+  documentPath,
+  type PromptThread,
+} from "../../engine/prompt.js";
 import { submitTurnTool } from "../../llm/anthropic.js";
 
 /** The turn context is per lead; the preview shows it for someone writing for the first time. */
@@ -36,6 +40,11 @@ export async function getPromptPreview(ctx: AppContext, companyId: string) {
     knowledge: {
       files: documents.length,
       chars: documents.reduce((sum, doc) => sum + doc.text.length, 0),
+      /** In the order the prompt lists them. */
+      documents: documents.map((doc) => ({
+        path: documentPath(doc),
+        chars: doc.text.length,
+      })),
     },
   };
 }

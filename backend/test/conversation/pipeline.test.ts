@@ -150,7 +150,7 @@ describe("a bot turn", () => {
     });
     const { threadId } = await receive("¿Cuánto sale Torre Sur?");
     await processThread(ctx, threadId);
-    expect(ctx.llm.calls[0]?.system).toContain('<document name="precios.csv"');
+    expect(ctx.llm.calls[0]?.system).toContain('<document path="precios.csv"');
     expect(ctx.llm.calls[0]?.system).toContain("Torre Sur;USD 150.000");
   });
 
