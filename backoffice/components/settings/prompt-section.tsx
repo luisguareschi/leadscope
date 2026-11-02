@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatNumber } from "@/lib/format";
 import { usePromptPreview } from "@/lib/queries";
+import type { PromptPreview } from "@/lib/types";
 import { Panel, Section } from "@/components/panel";
 
 const RULES = [
@@ -48,12 +49,16 @@ const RULES = [
     text: "Una respuesta que los menciona no se envía: el lead recibe el mensaje de respaldo.",
   },
   {
+    title: "Conocimiento por carpetas",
+    text: "Cada archivo de Conocimiento llega con su ruta, por ejemplo «Proyectos / Tres Cruces / Precios.xlsx», agrupado por carpeta: así el asistente sabe de qué proyecto habla cada uno. Los límites de caracteres son los mismos.",
+  },
+  {
     title: "Ventana de 24 horas",
     text: "Solo responde dentro de las 24 horas del último mensaje del lead y nunca escribe primero.",
   },
 ];
 
-type Block = "rules" | "system" | "turn" | "tool";
+type Block = "rules" | "system" | "knowledge" | "turn" | "tool";
 
 function copy(text: string, done: string) {
   navigator.clipboard.writeText(text).then(
@@ -71,6 +76,59 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** The files in the order the model reads them, each with the folder path that heads it. */
+function KnowledgeOrder({
+  documents,
+}: {
+  documents: PromptPreview["knowledge"]["documents"];
+}) {
+  if (documents.length === 0)
+    return (
+      <p className="p-5 text-sm text-muted-foreground">
+        Todavía no hay archivos en Conocimiento.
+      </p>
+    );
+  return (
+    <div className="flex flex-col gap-3 p-5">
+      <p className="text-[13px] text-muted-foreground">
+        En este orden van en el bloque fijo, agrupados por carpeta. Cada uno
+        empieza con su ruta (
+        <code className="font-mono text-xs">
+          &lt;document path=&quot;…&quot;&gt;
+        </code>
+        ), que le dice al asistente de qué trata.
+      </p>
+      <ol className="divide-y rounded-lg border">
+        {documents.map((doc, index) => {
+          const parts = doc.path.split(" / ");
+          const name = parts.pop();
+          return (
+            <li
+              key={`${index}-${doc.path}`}
+              className="flex items-center gap-3 px-3 py-2 text-sm"
+            >
+              <span className="w-6 shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="min-w-0 flex-1 break-words">
+                {parts.length ? (
+                  <span className="text-muted-foreground">
+                    {parts.join(" / ")} /{" "}
+                  </span>
+                ) : null}
+                <span className="font-medium">{name}</span>
+              </span>
+              <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                {formatNumber(doc.chars)}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
 export function PromptSection({ rules }: { rules: string }) {
   const query = usePromptPreview();
   const preview = query.data;
@@ -80,6 +138,8 @@ export function PromptSection({ rules }: { rules: string }) {
   const texts: Record<Block, string> = {
     rules,
     system: preview?.system ?? "",
+    knowledge:
+      preview?.knowledge.documents.map((doc) => doc.path).join("\n") ?? "",
     turn: preview?.turnContext ?? "",
     tool: preview ? JSON.stringify(preview.tool.input_schema, null, 2) : "",
   };
@@ -189,8 +249,12 @@ export function PromptSection({ rules }: { rules: string }) {
             className="min-h-0 flex-1 gap-0"
           >
             <div className="flex items-center justify-between gap-2 border-b px-4 py-2">
-              <TabsList variant="line">
+              <TabsList
+                variant="line"
+                className="min-w-0 justify-start overflow-x-auto overflow-y-hidden pb-[7px] [scrollbar-width:none] group-data-horizontal/tabs:h-11"
+              >
                 <TabsTrigger value="system">Bloque fijo</TabsTrigger>
+                <TabsTrigger value="knowledge">Conocimiento</TabsTrigger>
                 <TabsTrigger value="turn">Contexto del turno</TabsTrigger>
                 <TabsTrigger value="tool">
                   {preview?.tool.name ?? "Herramienta"}
@@ -213,9 +277,14 @@ export function PromptSection({ rules }: { rules: string }) {
                 value={key}
                 className="min-h-0 overflow-y-auto"
               >
-                <pre className="p-5 font-mono text-xs leading-relaxed whitespace-pre-wrap">
-                  {texts[key] || (key === "rules" ? "" : "Armando el prompt…")}
-                </pre>
+                {key === "knowledge" && preview ? (
+                  <KnowledgeOrder documents={preview.knowledge.documents} />
+                ) : (
+                  <pre className="p-5 font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                    {texts[key] ||
+                      (key === "rules" ? "" : "Armando el prompt…")}
+                  </pre>
+                )}
               </TabsContent>
             ))}
           </Tabs>

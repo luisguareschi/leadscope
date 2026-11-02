@@ -100,8 +100,19 @@ export type ThreadsSummary = {
   unassignedToContact: number;
 };
 
+export type KnowledgeFolder = {
+  id: string;
+  /** Null at the root. */
+  parentId: string | null;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type KnowledgeFile = {
   id: string;
+  /** Null at the root. */
+  folderId: string | null;
   name: string;
   format: string;
   formatLabel: string;
@@ -113,6 +124,7 @@ export type KnowledgeFile = {
 };
 
 export type KnowledgeList = {
+  folders: KnowledgeFolder[];
   files: KnowledgeFile[];
   usage: {
     usedChars: number;
@@ -312,7 +324,12 @@ export type PromptPreview = {
   system: string;
   turnContext: string;
   tool: { name: string; description: string; input_schema: unknown };
-  knowledge: { files: number; chars: number };
+  knowledge: {
+    files: number;
+    chars: number;
+    /** In the order the prompt lists them: "Proyectos / Tres Cruces / Precios.xlsx". */
+    documents: { path: string; chars: number }[];
+  };
 };
 
 export type ConnectionCheckStatus = "ok" | "warning" | "error" | "skipped";

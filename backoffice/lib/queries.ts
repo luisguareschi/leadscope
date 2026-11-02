@@ -15,6 +15,7 @@ import type {
   AuthUserRemoval,
   ChatMessage,
   KnowledgeFile,
+  KnowledgeFolder,
   KnowledgeList,
   LeadStage,
   CompaniesList,
@@ -243,12 +244,28 @@ export function useKnowledgeFileText(id: string | null) {
 
 type UploadResult = { file: KnowledgeFile; replaced: boolean };
 
+/** Knowledge changes what the prompt preview shows, so both refresh. */
+function refreshKnowledge(client: ReturnType<typeof useQueryClient>) {
+  void client.invalidateQueries({ queryKey: ["settings", "prompt"] });
+  return client.invalidateQueries({ queryKey: ["knowledge"] });
+}
+
 export function useUploadKnowledgeFile() {
   const api = useApi();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ file, replaceId }: { file: File; replaceId?: string }) => {
+    mutationFn: ({
+      file,
+      replaceId,
+      folderId,
+    }: {
+      file: File;
+      replaceId?: string;
+      /** Where a new upload goes; null or missing is the root. */
+      folderId?: string | null;
+    }) => {
       const body = new FormData();
+      if (folderId) body.append("folderId", folderId);
       body.append("file", file);
       return replaceId
         ? api<UploadResult>(`/internal/knowledge/files/${replaceId}`, {
@@ -260,7 +277,7 @@ export function useUploadKnowledgeFile() {
             body,
           });
     },
-    onSuccess: () => client.invalidateQueries({ queryKey: ["knowledge"] }),
+    onSuccess: () => refreshKnowledge(client),
   });
 }
 
@@ -270,7 +287,114 @@ export function useDeleteKnowledgeFile() {
   return useMutation({
     mutationFn: (id: string) =>
       api<void>(`/internal/knowledge/files/${id}`, { method: "DELETE" }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["knowledge"] }),
+    onSuccess: () => refreshKnowledge(client),
+  });
+}
+
+/** Applies a rename or move to the cached list right away and puts it back if the API refuses. */
+function optimisticKnowledge(
+  client: ReturnType<typeof useQueryClient>,
+  apply: (list: KnowledgeList) => KnowledgeList,
+) {
+  return async () => {
+    await client.cancelQueries({ queryKey: ["knowledge"], exact: true });
+    const previous = client.getQueryData<KnowledgeList>(["knowledge"]);
+    if (previous) client.setQueryData(["knowledge"], apply(previous));
+    return { previous };
+  };
+}
+
+export type KnowledgeFileChange = {
+  id: string;
+  name?: string;
+  folderId?: string | null;
+};
+
+export function useUpdateKnowledgeFile() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...change }: KnowledgeFileChange) =>
+      api<{ file: KnowledgeFile }>(`/internal/knowledge/files/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(change),
+      }),
+    onMutate: (change) =>
+      change.folderId === undefined
+        ? { previous: undefined }
+        : optimisticKnowledge(client, (list) => ({
+            ...list,
+            files: list.files.map((file) =>
+              file.id === change.id
+                ? { ...file, folderId: change.folderId ?? null }
+                : file,
+            ),
+          }))(),
+    onError: (_error, _change, context) => {
+      if (context?.previous)
+        client.setQueryData(["knowledge"], context.previous);
+    },
+    onSettled: () => refreshKnowledge(client),
+  });
+}
+
+export function useCreateKnowledgeFolder() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; parentId: string | null }) =>
+      api<{ folder: KnowledgeFolder }>("/internal/knowledge/folders", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => refreshKnowledge(client),
+  });
+}
+
+export type KnowledgeFolderChange = {
+  id: string;
+  name?: string;
+  parentId?: string | null;
+};
+
+export function useUpdateKnowledgeFolder() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...change }: KnowledgeFolderChange) =>
+      api<{ folder: KnowledgeFolder }>(`/internal/knowledge/folders/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(change),
+      }),
+    onMutate: (change) =>
+      change.parentId === undefined
+        ? { previous: undefined }
+        : optimisticKnowledge(client, (list) => ({
+            ...list,
+            folders: list.folders.map((folder) =>
+              folder.id === change.id
+                ? { ...folder, parentId: change.parentId ?? null }
+                : folder,
+            ),
+          }))(),
+    onError: (_error, _change, context) => {
+      if (context?.previous)
+        client.setQueryData(["knowledge"], context.previous);
+    },
+    onSettled: () => refreshKnowledge(client),
+  });
+}
+
+export function useDeleteKnowledgeFolder() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api<{ deletedFolders: number; deletedFiles: number }>(
+        `/internal/knowledge/folders/${id}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: () => refreshKnowledge(client),
   });
 }
 
