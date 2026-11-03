@@ -12,8 +12,8 @@ function Cell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 px-5 py-4">
-      <span className="text-xs text-muted-foreground">{label}</span>
+    <div className="flex min-w-0 flex-col gap-1.5 px-5 py-4">
+      <span className="text-[13px] text-muted-foreground">{label}</span>
       {children}
     </div>
   );
@@ -38,7 +38,7 @@ export function UsageCard({
         <Cell label="Texto que lee el asistente en cada respuesta">
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-sm tabular-nums">
-              <span className="font-medium">
+              <span className="font-heading text-2xl font-medium tracking-tight">
                 {formatNumber(usage.usedChars)}
               </span>
               <span className="text-muted-foreground">
@@ -50,7 +50,7 @@ export function UsageCard({
               className={cn(
                 "text-xs tabular-nums",
                 high
-                  ? "font-medium text-amber-700 dark:text-amber-400"
+                  ? "font-medium text-status-warning"
                   : "text-muted-foreground",
               )}
             >
@@ -67,12 +67,12 @@ export function UsageCard({
           />
         </Cell>
         <Cell label="Archivos">
-          <span className="text-sm font-medium tabular-nums">
+          <span className="font-heading text-2xl font-medium tracking-tight tabular-nums">
             {formatNumber(fileCount)}
           </span>
         </Cell>
         <Cell label="Máximo por archivo">
-          <span className="truncate text-sm tabular-nums">
+          <span className="truncate text-sm leading-8 tabular-nums">
             {formatNumber(usage.maxCharsPerFile)} caracteres ·{" "}
             {formatBytes(usage.maxFileBytes)}
           </span>

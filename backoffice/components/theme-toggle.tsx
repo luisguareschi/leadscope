@@ -22,7 +22,7 @@ const THEMES = [
 ] as const;
 
 /** Must match `--background` in globals.css. */
-const THEME_COLOR = { light: "#f3f4f7", dark: "#080b12" } as const;
+const THEME_COLOR = { light: "#f2f3f7", dark: "#03040b" } as const;
 
 /** The theme choices, for any dropdown menu (the header's and the user menu). */
 export function ThemeMenuItems() {

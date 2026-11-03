@@ -1,14 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { cn } from "cn";
 import { useRouter } from "next/navigation";
-import {
-  ClockIcon,
-  FileTextIcon,
-  MessagesSquareIcon,
-  SearchXIcon,
-} from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ClockIcon, MessagesSquareIcon, SearchXIcon } from "lucide-react";
 import {
   Empty,
   EmptyDescription,
@@ -25,19 +20,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  formatPhone,
-  formatRelative,
-  formatWaiting,
-  initials,
-} from "@/lib/format";
+import { formatPhone, formatRelative, formatWaiting } from "@/lib/format";
 import type { Thread } from "@/lib/types";
 import { AssigneePicker } from "./assignee-picker";
+import { LeadAvatar } from "./lead-avatar";
 import { CrmIndicator } from "./crm-indicator";
 import { StagePicker } from "./stage-picker";
 import { BotBadge, ColumnHelp, WroteAgainBadge } from "./status-badge";
@@ -100,7 +86,7 @@ export function ThreadsTable({
 function ThreadRowSkeleton() {
   return (
     <li className="flex gap-3 px-4 py-3.5">
-      <Skeleton className="size-9 shrink-0 rounded-full" />
+      <Skeleton className="size-10 shrink-0 rounded-full" />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex justify-between gap-3">
           <Skeleton className="h-3.5 w-32" />
@@ -120,12 +106,8 @@ function ThreadRowSkeleton() {
 /** Below lg: the same columns as the table, stacked; the whole row opens the thread. */
 function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
   return (
-    <li className="relative flex gap-3 px-4 py-3.5 has-[a[data-row-link]:active]:bg-muted/40">
-      <Avatar className="size-9">
-        <AvatarFallback className="text-xs">
-          {initials(thread.name ?? thread.phone.slice(-2))}
-        </AvatarFallback>
-      </Avatar>
+    <li className="relative flex gap-3 px-4 py-3.5 has-[a[data-row-link]:active]:bg-accent">
+      <LeadAvatar thread={thread} className="size-10" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 items-center gap-1.5">
           <Link
@@ -135,12 +117,6 @@ function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
           >
             {thread.name ?? "Sin nombre"}
           </Link>
-          {thread.source === "form" ? (
-            <FileTextIcon
-              className="size-3.5 shrink-0 text-muted-foreground"
-              aria-label="Llegó por un formulario"
-            />
-          ) : null}
           <span
             className="ml-auto inline-flex shrink-0 items-center gap-1 pl-2 text-xs text-muted-foreground tabular-nums"
             title={
@@ -169,7 +145,7 @@ function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
           <span className="relative z-10 flex max-w-full shrink-0 [&>button]:max-w-[calc(100%+0.5rem)]">
             <StagePicker thread={thread} size="compact" />
           </span>
-          <BotBadge activity={thread.botActivity} />
+          <BotBadge activity={thread.botActivity} variant="text" />
           <span className="relative z-10 flex max-w-full shrink-0 [&>button]:max-w-[calc(100%+0.5rem)]">
             <AssigneePicker thread={thread} size="compact" />
           </span>
@@ -225,7 +201,7 @@ function DesktopTable({
               <TableRow key={index} className="hover:bg-transparent">
                 <TableCell className="pl-3">
                   <div className="flex items-center gap-3">
-                    <Skeleton className="size-8 rounded-full" />
+                    <Skeleton className="size-10 rounded-full" />
                     <div className="flex flex-col gap-1.5">
                       <Skeleton className="h-3.5 w-32" />
                       <Skeleton className="h-3 w-24" />
@@ -250,19 +226,18 @@ function DesktopTable({
                 </TableCell>
               </TableRow>
             ))
-          : threads.map((thread) => (
+          : threads.map((thread, index) => (
               <TableRow
                 key={thread.id}
-                className="cursor-pointer"
+                className={cn(
+                  "cursor-pointer",
+                  index % 2 === 0 && "[--avatar-ring:var(--muted)] *:bg-muted",
+                )}
                 onClick={() => router.push(`/threads/${thread.id}`)}
               >
                 <TableCell className="pl-3">
                   <div className="flex min-w-0 items-center gap-3">
-                    <Avatar className="size-9">
-                      <AvatarFallback className="text-xs">
-                        {initials(thread.name ?? thread.phone.slice(-2))}
-                      </AvatarFallback>
-                    </Avatar>
+                    <LeadAvatar thread={thread} className="size-10" />
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <div className="flex min-w-0 items-center gap-1.5">
                         <Link
@@ -272,23 +247,6 @@ function DesktopTable({
                         >
                           {thread.name ?? "Sin nombre"}
                         </Link>
-                        {thread.source === "form" ? (
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <span
-                                  className="inline-flex text-muted-foreground"
-                                  aria-label="Llegó por un formulario"
-                                />
-                              }
-                            >
-                              <FileTextIcon className="size-3.5" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Llegó por un formulario
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : null}
                         <WroteAgainBadge thread={thread} />
                       </div>
                       <span className="truncate text-xs text-muted-foreground tabular-nums">
@@ -301,7 +259,7 @@ function DesktopTable({
                   <StagePicker thread={thread} size="compact" />
                 </TableCell>
                 <TableCell>
-                  <BotBadge activity={thread.botActivity} />
+                  <BotBadge activity={thread.botActivity} variant="text" />
                 </TableCell>
                 <TableCell className="hidden @5xl/content:table-cell">
                   <p className="truncate text-muted-foreground">

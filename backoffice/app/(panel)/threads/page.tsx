@@ -122,7 +122,7 @@ function ThreadsView() {
           action={
             <Button
               size="sm"
-              variant="outline"
+              variant="accent"
               onClick={() => setParams({ bot: "needs_human", stage: "all" })}
             >
               Ver
@@ -134,150 +134,160 @@ function ThreadsView() {
         </Notice>
       ) : null}
 
-      <div className="flex flex-col gap-3 @3xl/content:flex-row @3xl/content:items-center @3xl/content:justify-between">
-        <div
-          role="group"
-          aria-label="Filtrar por etapa"
-          className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] lg:-mx-6 lg:px-6 @3xl/content:mx-0 @3xl/content:px-0"
-        >
-          {STAGE_FILTERS.map((filter) => {
-            const count = countFor(counts, filter.value);
-            const selected = stage === filter.value;
-            const attention = filter.value === "to_contact" && (count ?? 0) > 0;
-            return (
+      {/* From md up the search is the one in the header. */}
+      <InputGroup className="h-10 rounded-full bg-card ring-1 ring-border/60 md:hidden dark:bg-secondary dark:ring-0">
+        <InputGroupAddon>
+          <SearchIcon />
+        </InputGroupAddon>
+        <InputGroupInput
+          placeholder="Buscar por nombre o teléfono"
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          aria-label="Buscar conversaciones"
+        />
+      </InputGroup>
+
+      <Panel className="divide-y-0">
+        <div className="flex flex-col gap-2 px-3 pt-3 pb-1 @3xl/content:flex-row @3xl/content:items-center @3xl/content:justify-between">
+          <div
+            role="group"
+            aria-label="Filtrar por etapa"
+            className="-mx-3 flex gap-1 overflow-x-auto px-3 [scrollbar-width:none] @3xl/content:mx-0 @3xl/content:px-0"
+          >
+            {STAGE_FILTERS.map((filter) => {
+              const count = countFor(counts, filter.value);
+              const selected = stage === filter.value;
+              const attention =
+                filter.value === "to_contact" && (count ?? 0) > 0;
+              return (
+                <Button
+                  key={filter.value}
+                  aria-pressed={selected}
+                  size="sm"
+                  variant={selected ? "secondary" : "ghost"}
+                  className={cn(
+                    "shrink-0",
+                    selected ? "text-foreground" : "text-muted-foreground",
+                  )}
+                  onClick={() => setParams({ stage: filter.value })}
+                >
+                  {filter.label}
+                  {count !== undefined ? (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 text-xs tabular-nums",
+                        attention
+                          ? "bg-[#ec7e00]/12 font-medium text-status-warning dark:bg-[#ec7e00]/18"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {count}
+                    </span>
+                  ) : null}
+                </Button>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {canBeAssigned ? (
               <Button
-                key={filter.value}
-                aria-pressed={selected}
                 size="sm"
-                variant={selected ? "secondary" : "ghost"}
-                className={cn(
-                  "shrink-0",
-                  selected ? "text-foreground" : "text-muted-foreground",
-                )}
-                onClick={() => setParams({ stage: filter.value })}
+                variant={mine ? "secondary" : "outline"}
+                aria-pressed={mine}
+                className={cn(mine && "text-foreground")}
+                onClick={() => setParams({ mine: !mine })}
               >
-                {filter.label}
-                {count !== undefined ? (
-                  <span
-                    className={cn(
-                      "rounded px-1 text-xs tabular-nums",
-                      attention
-                        ? "bg-amber-500/15 font-medium text-amber-800 dark:text-amber-300"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {count}
+                <UserRoundCheckIcon />
+                Asignadas a mí
+                {counts?.mine ? (
+                  <span className="rounded px-1 text-xs text-muted-foreground tabular-nums">
+                    {stage === "to_contact"
+                      ? counts.mine.toContact
+                      : counts.mine.all}
                   </span>
                 ) : null}
               </Button>
-            );
-          })}
-        </div>
-        <InputGroup className="h-9 rounded-full bg-card ring-1 ring-border/60 @3xl/content:max-w-72 dark:ring-0">
-          <InputGroupAddon>
-            <SearchIcon />
-          </InputGroupAddon>
-          <InputGroupInput
-            placeholder="Buscar por nombre o teléfono"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            aria-label="Buscar conversaciones"
-          />
-        </InputGroup>
-      </div>
-
-      <div className="-mt-1 flex flex-wrap items-center gap-x-2 gap-y-2 lg:gap-x-3">
-        {canBeAssigned ? (
-          <Button
-            size="sm"
-            variant={mine ? "secondary" : "outline"}
-            aria-pressed={mine}
-            className={cn(mine && "text-foreground")}
-            onClick={() => setParams({ mine: !mine })}
-          >
-            <UserRoundCheckIcon />
-            Asignadas a mí
-            {counts?.mine ? (
-              <span className="rounded px-1 text-xs text-muted-foreground tabular-nums">
-                {stage === "to_contact"
-                  ? counts.mine.toContact
-                  : counts.mine.all}
-              </span>
             ) : null}
-          </Button>
-        ) : null}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                size="sm"
-                variant={bot === "all" ? "outline" : "secondary"}
-                aria-label="Filtrar por asistente"
-              />
-            }
-          >
-            <BotIcon />
-            {botLabel}
-            <ChevronDownIcon className="text-muted-foreground" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-48">
-            <DropdownMenuRadioGroup
-              value={bot}
-              onValueChange={(value) => {
-                if (isBotFilter(value)) setParams({ bot: value });
-              }}
-            >
-              {BOT_FILTERS.map((filter) => (
-                <DropdownMenuRadioItem key={filter.value} value={filter.value}>
-                  {filter.value === "all" ? "Todos" : filter.label}
-                  {filter.value !== "all" && counts ? (
-                    <span className="ml-auto pl-3 text-xs text-muted-foreground tabular-nums">
-                      {counts.bot[filter.value]}
-                    </span>
-                  ) : null}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    size="sm"
+                    variant={bot === "all" ? "outline" : "secondary"}
+                    aria-label="Filtrar por asistente"
+                  />
+                }
+              >
+                <BotIcon />
+                {botLabel}
+                <ChevronDownIcon className="text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-48">
+                <DropdownMenuRadioGroup
+                  value={bot}
+                  onValueChange={(value) => {
+                    if (isBotFilter(value)) setParams({ bot: value });
+                  }}
+                >
+                  {BOT_FILTERS.map((filter) => (
+                    <DropdownMenuRadioItem
+                      key={filter.value}
+                      value={filter.value}
+                    >
+                      {filter.value === "all" ? "Todos" : filter.label}
+                      {filter.value !== "all" && counts ? (
+                        <span className="ml-auto pl-3 text-xs text-muted-foreground tabular-nums">
+                          {counts.bot[filter.value]}
+                        </span>
+                      ) : null}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
         {stage === "to_contact" ? (
-          <p className="text-[13px] text-muted-foreground">
+          <p className="px-4 pt-1 text-[13px] text-muted-foreground">
             Primero los que más esperan. Siguen acá aunque vuelvan a escribir,
             hasta que alguien los marque como contactados.
           </p>
         ) : null}
-      </div>
 
-      {threads.isError ? (
-        <Alert variant="destructive">
-          <AlertTitle>No se pudieron cargar las conversaciones</AlertTitle>
-          <AlertDescription>{threads.error.message}</AlertDescription>
-        </Alert>
-      ) : (
-        <Panel>
-          <ThreadsTable
-            threads={rows}
-            loading={threads.isPending}
-            filtered={
-              stage !== "all" || bot !== "all" || mine || Boolean(search)
-            }
-            queue={stage === "to_contact"}
-          />
-          {threads.hasNextPage ? (
-            <div className="flex justify-center p-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => threads.fetchNextPage()}
-                disabled={threads.isFetchingNextPage}
-              >
-                {threads.isFetchingNextPage ? <Spinner /> : null}
-                Ver más conversaciones
-              </Button>
-            </div>
-          ) : null}
-        </Panel>
-      )}
+        {threads.isError ? (
+          <div className="p-3">
+            <Alert variant="destructive">
+              <AlertTitle>No se pudieron cargar las conversaciones</AlertTitle>
+              <AlertDescription>{threads.error.message}</AlertDescription>
+            </Alert>
+          </div>
+        ) : (
+          <>
+            <ThreadsTable
+              threads={rows}
+              loading={threads.isPending}
+              filtered={
+                stage !== "all" || bot !== "all" || mine || Boolean(search)
+              }
+              queue={stage === "to_contact"}
+            />
+            {threads.hasNextPage ? (
+              <div className="flex justify-center pt-1 pb-4">
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="font-semibold"
+                  onClick={() => threads.fetchNextPage()}
+                  disabled={threads.isFetchingNextPage}
+                >
+                  {threads.isFetchingNextPage ? <Spinner /> : null}
+                  Ver más conversaciones
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )}
+      </Panel>
     </div>
   );
 }

@@ -7,9 +7,8 @@ import {
   MessagesSquareIcon,
   SlidersHorizontalIcon,
 } from "lucide-react";
-import { AppLogo } from "@/components/app-logo";
+import { AppLogoTile } from "@/components/app-logo";
 import { NavMain } from "@/components/nav-main";
-import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +17,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { useMe, useThreadsSummary } from "@/lib/queries";
 import { SupportBar } from "./support-bar";
@@ -69,11 +69,12 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
+              className="hover:bg-transparent active:bg-transparent"
               render={<Link href={hasCompany ? "/threads" : "/companies"} />}
             >
-              <AppLogo className="min-h-9 min-w-9" />
+              <AppLogoTile />
               <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate font-heading text-lg font-semibold tracking-tight">
+                <span className="truncate font-heading text-[21px] font-semibold tracking-tight">
                   LeadScope
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
@@ -92,9 +93,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         {me.data?.supportAccess && me.data?.company && (
           <SupportBar companyName={me.data?.company.name} />
         )}
-        <NavUser
-          email={me.data?.operator?.email ?? ""}
-          label={hasCompany && !supportAccess ? "Operador" : "Administración"}
+        <SidebarTrigger
+          className="text-muted-foreground max-md:hidden"
+          aria-label="Ocultar el menú"
         />
       </SidebarFooter>
     </Sidebar>

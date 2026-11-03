@@ -7,6 +7,7 @@ import { ArrowLeftIcon } from "lucide-react";
 import { cn } from "cn";
 import { Panel, StatusDot, StatusPill, type Tone } from "@/components/panel";
 import { ChatTranscript } from "@/components/threads/chat-transcript";
+import { LeadAvatar } from "@/components/threads/lead-avatar";
 import { LeadDetails } from "@/components/threads/lead-details";
 import { MessageComposer } from "@/components/threads/message-composer";
 import {
@@ -16,7 +17,6 @@ import {
 } from "@/components/threads/status-badge";
 import { ThreadActions } from "@/components/threads/thread-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,7 +31,6 @@ import {
   formatNumber,
   formatPhone,
   formatTime,
-  initials,
 } from "@/lib/format";
 import { useThread } from "@/lib/queries";
 import type { Thread } from "@/lib/types";
@@ -123,11 +122,10 @@ export default function ThreadPage() {
         {back}
         {thread ? (
           <>
-            <Avatar className="size-10 max-sm:hidden">
-              <AvatarFallback className="text-xs">
-                {initials(thread.name ?? thread.phone.slice(-2))}
-              </AvatarFallback>
-            </Avatar>
+            <LeadAvatar
+              thread={thread}
+              className="size-10 [--avatar-ring:var(--background)] max-sm:hidden"
+            />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <h2 className="truncate font-heading text-xl leading-tight font-semibold tracking-tight">

@@ -482,15 +482,36 @@ React Query with polling (every 10 seconds on lists, 5 on an open conversation) 
 
 ### Visual style
 
-Shadcn on the `dashboard-01` layout (sidebar, header, content), restyled in Nov 2026 after Revolut Business's admin dashboard. Everything goes through the theme tokens in `backoffice/app/globals.css` and the shadcn primitives in `components/ui`, so pages rarely carry their own colours.
+Shadcn on the `dashboard-01` layout (sidebar, header, content), restyled in Nov 2026 after Revolut Business's admin dashboard and the current Revolut web app (references in the Project store, `internal/revolut-redesign/`). Everything goes through the theme tokens in `backoffice/app/globals.css` and the shadcn primitives in `components/ui`, so pages rarely carry their own colours.
 
-- **Light and dark.** `next-themes` puts `.dark` on `<html>`. The default follows the system; the header's sun/moon button and the user menu offer Según el sistema, Claro, and Oscuro, saved in the browser (`localStorage`). The browser and PWA chrome colour follows the chosen theme. The offline page follows the system.
-- **Surfaces.** Light: a soft grey canvas (`#f3f4f7`) with white cards. Dark: a deep navy, near-black canvas (`#080b12`) with a faint blue glow in the top-left corner, and slate cards (`#131922`); depth comes from surface steps, not shadows. The sidebar and the page sit on the canvas; content lives in rounded cards (about 20px).
-- **Controls.** Every button is a pill. The main action is ink on light and white on dark (Revolut's "white pill"); secondary actions are grey pills. Inputs and selects are filled fields (about 12px corners) with a cobalt focus ring. Menus, pickers, and dialogs are rounded popovers.
-- **Accent.** Cobalt `#494fdf` (a lighter `#6e7dff` in dark mode) is for links, focus, switches, the active nav icon, empty-state icons, and the bubbles of the company's messages in a thread. Status dots use Revolut's teal, orange, blue, and red. Initials avatars get a tint from the same palette, fixed per name.
-- **Tables and lists.** No rules between rows, a muted header, and rows that light up as a rounded strip on hover.
-- **Type.** Inter for text, Geist (a free stand-in for Revolut's Aeonik Pro) for page titles, card titles, and dialog titles.
-- **Phones.** Below `lg` the layouts are the same as before the restyle (stacked rows, Conversación / Lead tabs).
+- **Light and dark.**
+  - `next-themes` puts `.dark` on `<html>`, and the default follows the system.
+  - The header's sun/moon button, the account menu, and the sign-in pages' footer offer Según el sistema, Claro, and Oscuro. The choice is saved in the browser (`localStorage`).
+  - The browser and PWA chrome colour follows the chosen theme. The offline page follows the system.
+- **Surfaces.**
+  - Light: a soft grey canvas (`#f2f3f7`) with white cards.
+  - Dark: the Revolut app's near-black canvas (`#03040b`) with a faint navy wash at the top, and navy-tinted surfaces (cards `#12141f`, filled pills `#1d2030`, fields `#202334`).
+  - Depth comes from surface steps, not shadows. The sidebar and the page sit on the canvas, and content lives in rounded cards (about 20px). Page content stops at 1400px wide.
+- **Sidebar.** The logo glyph sits on a rounded tile (ink in light mode, white in dark), next to the wordmark and the company. Items are 15px regular with 20px icons; the active one is a soft fill with the accent icon. A collapse button sits at the bottom, and the support-access bar sits above it.
+- **Header.**
+  - The page title is 24px, weight 500.
+  - From `md` up, a pill search ("Buscar conversaciones", ⌘K or Ctrl+K) sits in the middle. It is the Conversaciones search (the `q` parameter): it filters as you type on Conversaciones, and Enter on any other page opens Conversaciones with it. Below `md` the search stays at the top of Conversaciones.
+  - On the right are the theme button and the account avatar. Its menu shows who is signed in, the theme, and Cerrar sesión.
+  - The sidebar toggle shows in the header only on phones or while the sidebar is collapsed.
+- **Controls.**
+  - Every button is a pill. The main action is ink on light and white on dark (Revolut's "white pill"). Secondary and outline actions are filled pills in dark mode (white with a hairline in light mode).
+  - There are two accent pills: `accent` (solid, for example Ver on the "espera a un asesor" notice) and `soft` (tinted).
+  - Inputs and selects are filled fields (about 12px corners) with an accent focus ring. Menus, pickers, and dialogs are rounded popovers.
+- **Accent.** Cobalt `#494fdf` in light mode and periwinkle `#6b7fff` in dark. It is used for links (for example "Ver más conversaciones"), focus, switches, the active nav icon, empty-state icons, and the bubbles of the company's messages in a thread.
+- **Status colours.** `status-ok` (teal), `status-warning` (orange), and `status-info` (blue) are tokens per theme; red is `destructive`.
+- **Conversaciones list.**
+  - It follows Revolut's transaction lists. The stage filters, Asignadas a mí, and the Asistente filter sit in the card's top bar.
+  - Rows are zebra bands with a rounded hover strip, and the header text is muted.
+  - Each lead has a 40px solid-colour initials avatar (the colour is fixed per name) with a corner badge for where it came from: a message icon for WhatsApp, a file icon on the accent for a form.
+  - The Asistente column is coloured text (Requiere asesor in orange, Pausado muted), not a pill. Notices are neutral cards with a tinted icon and one action.
+- **Sign-in pages.** These follow Revolut's SSO page: no card, a narrow left-aligned form in the middle of the page, 48px fields and button, the wordmark at the top left, and the theme button with "Panel del asistente de WhatsApp" at the bottom left. In light mode the page is white.
+- **Type.** Inter for text. Geist (a free stand-in for Revolut's Aeonik Pro) for page titles, card titles, dialog titles, and large figures (for example Conocimiento's usage), at weight 500 for display sizes.
+- **Phones.** Below `lg` the layouts are as before the restyle (stacked rows, Conversación / Lead tabs). Only the account menu moved to the header avatar.
 
 Per-company branding is not in v1.
 

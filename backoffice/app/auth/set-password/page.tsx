@@ -62,7 +62,7 @@ export default function SetPasswordPage() {
       >
         <Button
           size="lg"
-          className="w-full"
+          className="h-12 w-full"
           onClick={() => router.replace("/login")}
         >
           Ir al ingreso
@@ -91,7 +91,12 @@ export default function SetPasswordPage() {
             <FieldDescription>Al menos 8 caracteres.</FieldDescription>
           </Field>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" size="lg" className="w-full" disabled={pending}>
+          <Button
+            type="submit"
+            size="lg"
+            className="h-12 w-full"
+            disabled={pending}
+          >
             {pending ? <Spinner /> : null}
             Guardar y entrar
           </Button>

@@ -21,3 +21,17 @@ export function AppLogo({ className }: { className?: string }) {
     </svg>
   );
 }
+
+/** The glyph on a rounded tile, like Revolut's app icon: ink on light, white on dark. */
+export function AppLogoTile({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-[#191c1f] dark:bg-white",
+        className,
+      )}
+    >
+      <AppLogo className="size-[92%] text-white dark:text-[#191c1f]" />
+    </span>
+  );
+}

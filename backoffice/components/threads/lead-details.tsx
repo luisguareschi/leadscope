@@ -31,7 +31,7 @@ function Group({
   return (
     <div className="flex flex-col gap-3 px-5 py-4">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-xs font-medium text-muted-foreground">{title}</h4>
+        <h4 className="text-[13px] font-semibold">{title}</h4>
         {aside}
       </div>
       <div className="flex flex-col gap-3">{children}</div>

@@ -24,7 +24,7 @@ export function Section({
     <section className={cn("flex flex-col gap-5", className)}>
       <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="flex max-w-2xl flex-col gap-1">
-          <h2 className="font-heading text-xl font-semibold tracking-tight">
+          <h2 className="font-heading text-lg font-semibold tracking-tight">
             {title}
           </h2>
           {description ? (
@@ -130,10 +130,10 @@ export function FieldRow({
 }
 
 const DOT: Record<Tone, string> = {
-  ok: "bg-[#00a87e]",
-  warning: "bg-[#ec7e00]",
+  ok: "bg-status-ok",
+  warning: "bg-[#ec7e00] dark:bg-status-warning",
   error: "bg-destructive",
-  info: "bg-[#007bc2] dark:bg-[#3aa6e8]",
+  info: "bg-status-info",
   pending: "bg-primary",
   muted: "bg-muted-foreground/40",
 };
@@ -179,6 +179,38 @@ export function StatusPill({
   );
 }
 
+const TEXT: Record<Tone, string> = {
+  ok: "text-status-ok",
+  warning: "text-status-warning",
+  error: "text-destructive",
+  info: "text-foreground",
+  pending: "text-primary",
+  muted: "text-muted-foreground",
+};
+
+/** A status as coloured words, like the Estado column of Revolut's transaction lists. */
+export function StatusText({
+  tone,
+  children,
+  className,
+}: {
+  tone: Tone;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex w-fit shrink-0 items-center text-[13px] whitespace-nowrap",
+        TEXT[tone],
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function InlineCode({ children }: { children: ReactNode }) {
   return (
     <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[12px] text-foreground">
@@ -189,9 +221,9 @@ export function InlineCode({ children }: { children: ReactNode }) {
 
 const NOTICE: Record<"warning" | "error" | "neutral", string> = {
   warning:
-    "bg-amber-500/10 ring-amber-500/25 [&_[data-slot=notice-icon]]:bg-amber-500/15 [&_[data-slot=notice-icon]]:text-amber-600 dark:[&_[data-slot=notice-icon]]:text-amber-400",
+    "bg-card ring-border/60 dark:ring-0 [&_[data-slot=notice-icon]]:bg-[#ec7e00]/15 [&_[data-slot=notice-icon]]:text-status-warning",
   error:
-    "bg-destructive/8 ring-destructive/25 [&_[data-slot=notice-icon]]:bg-destructive/15 [&_[data-slot=notice-icon]]:text-destructive",
+    "bg-card ring-destructive/30 dark:ring-destructive/25 [&_[data-slot=notice-icon]]:bg-destructive/15 [&_[data-slot=notice-icon]]:text-destructive",
   neutral:
     "bg-card ring-border/60 dark:ring-0 [&_[data-slot=notice-icon]]:bg-muted [&_[data-slot=notice-icon]]:text-muted-foreground",
 };
@@ -214,14 +246,14 @@ export function Notice({
     <div
       role={tone === "neutral" ? undefined : "alert"}
       className={cn(
-        "flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl px-4 py-3.5 ring-1",
+        "flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl p-4 ring-1",
         NOTICE[tone],
       )}
     >
       <div className="flex min-w-0 flex-1 basis-72 gap-3">
         <span
           data-slot="notice-icon"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full [&_svg]:size-4"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full [&_svg]:size-5"
         >
           {icon}
         </span>
