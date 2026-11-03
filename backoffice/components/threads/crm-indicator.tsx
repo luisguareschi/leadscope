@@ -20,7 +20,7 @@ export function crmLabel(crm: Thread["crm"]): string {
   }
 }
 
-/** A dash until there is a HubSpot write to report; a failure is the only loud state. */
+/** A dash until there is a HubSpot write to report; then green when saved, red when it failed. */
 export function CrmIndicator({ crm }: { crm: Thread["crm"] }) {
   if (crm.status === "none")
     return (
@@ -30,7 +30,7 @@ export function CrmIndicator({ crm }: { crm: Thread["crm"] }) {
     );
   const icon =
     crm.status === "synced" ? (
-      <CircleCheckIcon className="size-4 text-muted-foreground/70" />
+      <CircleCheckIcon className="size-4 text-status-ok" />
     ) : crm.status === "failed" ? (
       <CircleAlertIcon className="size-4 text-destructive" />
     ) : (
