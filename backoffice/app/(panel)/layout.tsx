@@ -98,6 +98,8 @@ export default function PanelLayout({
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 64)",
+          // Room for the 40px icon buttons once the sidebar is collapsed to icons.
+          "--sidebar-width-icon": "3.5rem",
           "--header-height": "calc(var(--spacing) * 16)",
         } as React.CSSProperties
       }

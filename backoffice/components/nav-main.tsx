@@ -54,6 +54,12 @@ export function NavMain({ items }: { items: NavItem[] }) {
                   {item.badge}
                 </SidebarMenuBadge>
               ) : null}
+              {item.badge ? (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute top-2 left-7 hidden size-2 rounded-full bg-primary ring-2 ring-sidebar group-data-[collapsible=icon]:block"
+                />
+              ) : null}
             </SidebarMenuItem>
           ))}
         </SidebarMenu>

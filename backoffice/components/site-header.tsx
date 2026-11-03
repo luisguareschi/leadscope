@@ -19,7 +19,7 @@ export function SiteHeader() {
   const pathname = usePathname();
   const me = useMe();
   const isIOSPWA = useIsIOSPWA();
-  const { state, isMobile } = useSidebar();
+  const { isMobile } = useSidebar();
   const hasCompany = Boolean(me.data?.company);
   const supportAccess = me.data?.supportAccess === true;
 
@@ -32,8 +32,8 @@ export function SiteHeader() {
     >
       <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-2">
-          {/* The sidebar has its own collapse button; this one brings it back. */}
-          {isMobile || state === "collapsed" ? (
+          {/* On desktop the sidebar has its own collapse button; on phones it is a sheet. */}
+          {isMobile ? (
             <SidebarTrigger className="-ml-1.5 text-muted-foreground" />
           ) : null}
           <h1 className="truncate font-heading text-[22px] font-medium tracking-tight lg:text-2xl">

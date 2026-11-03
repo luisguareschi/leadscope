@@ -492,12 +492,12 @@ Shadcn on the `dashboard-01` layout (sidebar, header, content), restyled in Nov 
   - Light: a soft grey canvas (`#f2f3f7`) with white cards.
   - Dark: the Revolut app's near-black canvas (`#03040b`) with a faint navy wash at the top, and navy-tinted surfaces (cards `#12141f`, filled pills `#1d2030`, fields `#202334`).
   - Depth comes from surface steps, not shadows. The sidebar and the page sit on the canvas, and content lives in rounded cards (about 20px). Page content stops at 1400px wide.
-- **Sidebar.** The logo glyph sits on a rounded tile (ink in light mode, white in dark), next to the wordmark and the company. Items are 15px regular with 20px icons; the active one is a soft fill with the accent icon. A collapse button sits at the bottom, and the support-access bar sits above it.
+- **Sidebar.** The logo glyph sits on a rounded tile (ink in light mode, white in dark), next to the wordmark and the company. Items are 15px regular with 20px icons; the active one is a soft fill with the accent icon. A small collapse icon at the right of the logo row, shown while the pointer is over the sidebar (or on keyboard focus), or ⌘B / Ctrl+B, collapses the sidebar to a rail of icons with tooltips rather than hiding it: the logo tile, the item icons (Conversaciones gets a dot while it has Por contactar threads nobody has taken), and the support-access shield (its tooltip names the company and it goes back to Empresas). Hovering the collapsed logo tile turns it into the expand icon; clicking it expands the sidebar. The choice is remembered. The support-access bar sits at the bottom. On phones the sidebar is a sheet opened from the header.
 - **Header.**
   - The page title is 24px, weight 500.
   - There is no search in the header. Conversaciones has its own pill search at the top of the page, under the header, on every screen size ("Buscar por nombre o teléfono", the `q` parameter): it filters as you type, ⌘K or Ctrl+K focuses it, and Escape clears it. Other pages have no search.
   - On the right is the account avatar. Its menu shows who is signed in, the theme (Según el sistema, Claro, Oscuro), and Cerrar sesión. There is no separate theme button in the header.
-  - The sidebar toggle shows in the header only on phones or while the sidebar is collapsed.
+  - The sidebar toggle shows in the header only on phones.
 - **Controls.**
   - Every button is a pill. The main action is ink on light and white on dark (Revolut's "white pill"). Secondary and outline actions are filled pills in dark mode (white with a hairline in light mode).
   - There are two accent pills: `accent` (solid, for example Ver on the "espera a un asesor" notice) and `soft` (tinted).
