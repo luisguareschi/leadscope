@@ -65,7 +65,7 @@ function ItemRow({
       className="flex gap-3 px-5 py-4"
       aria-label={`Dato ${index + 1}: ${item.name || "sin nombre"}`}
     >
-      <span className="mt-1.5 flex size-6 shrink-0 items-center justify-center rounded-full border bg-muted/40 text-xs font-medium text-muted-foreground tabular-nums">
+      <span className="mt-1.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground tabular-nums">
         {index + 1}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -254,7 +254,7 @@ export function CollectEditor() {
             />
           ))}
         </ol>
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/20 px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
           <p
             role={errors.collect ? "alert" : undefined}
             className={cn(

@@ -81,7 +81,7 @@ export function ThreadsTable({
   return (
     // One child for the Panel's divide-y: the table from lg up, stacked rows below.
     <div>
-      <div className="max-lg:hidden">
+      <div className="px-2 pt-1 pb-2 max-lg:hidden">
         <DesktopTable threads={threads} loading={loading} queue={queue} />
       </div>
       <ul className="divide-y lg:hidden">
@@ -194,9 +194,9 @@ function DesktopTable({
   const router = useRouter();
   return (
     <Table className="table-fixed">
-      <TableHeader className="bg-muted/40">
+      <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <TableHead className={`${HEAD} w-[26%] pl-5`}>Lead</TableHead>
+          <TableHead className={`${HEAD} w-[26%] pl-3`}>Lead</TableHead>
           <TableHead className={`${HEAD} w-40`}>
             <span className="flex items-center gap-1">
               Etapa
@@ -214,7 +214,7 @@ function DesktopTable({
           </TableHead>
           <TableHead className={`${HEAD} w-40`}>Asignado</TableHead>
           <TableHead className={`${HEAD} w-20 text-center`}>HubSpot</TableHead>
-          <TableHead className={`${HEAD} w-28 pr-5 text-right`}>
+          <TableHead className={`${HEAD} w-28 pr-3 text-right`}>
             {queue ? "Esperando" : "Actividad"}
           </TableHead>
         </TableRow>
@@ -223,7 +223,7 @@ function DesktopTable({
         {loading
           ? Array.from({ length: 6 }, (_, index) => (
               <TableRow key={index} className="hover:bg-transparent">
-                <TableCell className="py-3 pl-5">
+                <TableCell className="pl-3">
                   <div className="flex items-center gap-3">
                     <Skeleton className="size-8 rounded-full" />
                     <div className="flex flex-col gap-1.5">
@@ -245,7 +245,7 @@ function DesktopTable({
                   <Skeleton className="h-3.5 w-20" />
                 </TableCell>
                 <TableCell />
-                <TableCell className="pr-5">
+                <TableCell className="pr-3">
                   <Skeleton className="ml-auto h-3 w-12" />
                 </TableCell>
               </TableRow>
@@ -253,12 +253,12 @@ function DesktopTable({
           : threads.map((thread) => (
               <TableRow
                 key={thread.id}
-                className="cursor-pointer hover:bg-muted/40"
+                className="cursor-pointer"
                 onClick={() => router.push(`/threads/${thread.id}`)}
               >
-                <TableCell className="py-3 pl-5">
+                <TableCell className="pl-3">
                   <div className="flex min-w-0 items-center gap-3">
-                    <Avatar className="size-8">
+                    <Avatar className="size-9">
                       <AvatarFallback className="text-xs">
                         {initials(thread.name ?? thread.phone.slice(-2))}
                       </AvatarFallback>
@@ -317,7 +317,7 @@ function DesktopTable({
                 >
                   <CrmIndicator crm={thread.crm} />
                 </TableCell>
-                <TableCell className="pr-5 text-right text-xs text-muted-foreground tabular-nums">
+                <TableCell className="pr-3 text-right text-xs text-muted-foreground tabular-nums">
                   {queue
                     ? formatWaiting(thread.handedOffAt)
                     : formatRelative(thread.lastMessageAt)}

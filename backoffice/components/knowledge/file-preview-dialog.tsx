@@ -31,7 +31,7 @@ export function FilePreviewDialog({
             ve desordenado, exportá el archivo de nuevo o pasalo a otro formato.
           </DialogDescription>
         </DialogHeader>
-        <div className="max-h-[60vh] overflow-y-auto rounded-md border bg-muted/40 p-4">
+        <div className="max-h-[60vh] overflow-y-auto rounded-xl bg-muted p-4">
           {query.data ? (
             <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap">
               {query.data.file.text}

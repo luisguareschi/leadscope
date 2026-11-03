@@ -5,7 +5,7 @@ WhatsApp lead assistant for real-estate developers. It greets leads, finds out w
 | Folder | What it is |
 | --- | --- |
 | `backend/` | Express 5 + Prisma 7 (Postgres). WhatsApp through Kapso (webhook and sends), conversation engine, Anthropic, HubSpot, knowledge uploads. Ships as a Docker image. |
-| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn (preset `b1Z5bafVA`), React Query. Conversations (the Por contactar queue, assigning leads to advisors, marking them contacted, writing to the lead from the company's number), pause/resume, knowledge files in folders, company settings, instructions, and secrets, and (for a platform admin) creating, archiving, and deleting companies, managing their operators, and entering one through support access. |
+| `backoffice/` | Client-side Next.js 16, Tailwind 4, shadcn, React Query, styled after Revolut Business with light and dark mode. Conversations (the Por contactar queue, assigning leads to advisors, marking them contacted, writing to the lead from the company's number), pause/resume, knowledge files in folders, company settings, instructions, and secrets, and (for a platform admin) creating, archiving, and deleting companies, managing their operators, and entering one through support access. |
 | `docs/` | Design, proposals, meeting notes. |
 
 ## Run it locally

@@ -173,7 +173,7 @@ function ThreadsView() {
             );
           })}
         </div>
-        <InputGroup className="@3xl/content:max-w-72">
+        <InputGroup className="h-9 rounded-full bg-card ring-1 ring-border/60 @3xl/content:max-w-72 dark:ring-0">
           <InputGroupAddon>
             <SearchIcon />
           </InputGroupAddon>

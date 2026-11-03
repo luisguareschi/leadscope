@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useMe } from "@/lib/queries";
 import { useIsIOSPWA } from "@/hooks/use-is-ios-pwa";
@@ -23,19 +23,16 @@ export function SiteHeader() {
   return (
     <header
       className={cn(
-        "flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)",
+        "flex h-(--header-height) shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)",
         isIOSPWA ? "mt-4" : "mt-0",
       )}
     >
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
-        <Separator
-          orientation="vertical"
-          className="mx-2 h-4 data-vertical:self-auto"
-        />
-        <h1 className="text-base font-medium">
+      <div className="flex w-full items-center gap-2 px-4 lg:px-6">
+        <SidebarTrigger className="-ml-1.5 text-muted-foreground" />
+        <h1 className="font-heading text-xl font-semibold tracking-tight lg:text-2xl">
           {titleFor(pathname, me.data?.platformAdmin === true)}
         </h1>
+        <ThemeToggle className="ml-auto -mr-1.5" />
       </div>
     </header>
   );

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { EllipsisVerticalIcon, LogOutIcon } from "lucide-react";
+import { ThemeMenuItems } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -42,10 +43,8 @@ export function NavUser({
               <SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
             }
           >
-            <Avatar className="size-8 rounded-lg">
-              <AvatarFallback className="rounded-lg">
-                {initials(shown)}
-              </AvatarFallback>
+            <Avatar className="size-9">
+              <AvatarFallback>{initials(shown)}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{label}</span>
@@ -53,10 +52,10 @@ export function NavUser({
                 {shown}
               </span>
             </div>
-            <EllipsisVerticalIcon className="ml-auto size-4" />
+            <EllipsisVerticalIcon className="ml-auto size-4 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="min-w-56"
+            className="min-w-60"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
@@ -66,6 +65,8 @@ export function NavUser({
                 {shown}
               </DropdownMenuLabel>
             </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <ThemeMenuItems />
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={async () => {

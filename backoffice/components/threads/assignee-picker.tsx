@@ -152,7 +152,7 @@ export function AssigneePicker({
             disabled={pending}
             className={cn(
               "max-w-full min-w-0 justify-start gap-1.5 font-normal",
-              compact ? "-ml-2 h-7 px-2" : "bg-background",
+              compact ? "-ml-2 h-7 px-2" : "font-medium",
             )}
           />
         }

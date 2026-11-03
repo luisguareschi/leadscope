@@ -18,7 +18,7 @@ One repo, two apps. No Turborepo.
 
 ```
 backend/      TypeScript HTTP service (Express). Kapso WhatsApp webhook, conversation engine, CRM, knowledge uploads.
-backoffice/   Next.js (client-side), shadcn (preset b1Z5bafVA), Tailwind, React Query. Threads, pause, writing to a lead, knowledge files, company secrets.
+backoffice/   Next.js (client-side), shadcn, Tailwind, React Query (Revolut Business look, light and dark). Threads, pause, writing to a lead, knowledge files, company secrets.
 docs/         Proposal, meeting notes, this design.
 docker-compose.yml   Local Postgres (plus a test database).
 ```
@@ -54,7 +54,7 @@ The engine never imports HubSpot, Google, Kapso, or Meta directly. It talks to s
 | --- | --- | --- |
 | Language | TypeScript | Same language in both apps. |
 | Backend | Express 5 on Node 22, deployed as a Docker image | Familiar HTTP server. A small always-on container so the webhook and LLM call are not cut off. The container applies migrations on start. |
-| Backoffice | Next.js 16 + shadcn (preset `b1Z5bafVA`: base-vega style on Base UI, blue theme) + Tailwind 4 + React Query, client-first | UI and routing only. Pages are client components, data via React Query against the backend. Cache Components are off. Layout from the shadcn `dashboard-01` block. |
+| Backoffice | Next.js 16 + shadcn (base-vega style on Base UI, restyled after Revolut Business) + Tailwind 4 + React Query, client-first | UI and routing only. Pages are client components, data via React Query against the backend. Cache Components are off. Layout from the shadcn `dashboard-01` block. Light and dark themes from CSS variables (see [Visual style](#visual-style)). |
 | Database | Supabase Postgres | Managed Postgres. |
 | ORM | Prisma 7 with the `pg` driver adapter | Schema and all queries from the backend. Runtime uses the Supabase pooled connection; migrations use the direct connection (`prisma.config.ts`). |
 | Auth | Supabase Auth (browser client in the backoffice) | Email login. Public signup off. The backoffice sends the Supabase JWT to the backend. An operator row maps the login to one company. A signed-in email on `PLATFORM_ADMIN_EMAILS` can open Empresas with no operator row and no companies. |
@@ -480,7 +480,19 @@ One shared backoffice for all companies: one Vercel app, one URL. The operator�
 
 React Query with polling (every 10 seconds on lists, 5 on an open conversation) is enough at this volume. No realtime subscription in v1.
 
-Shadcn with Luis's preset `b1Z5bafVA` and the `dashboard-01` layout. Per-company branding is not in v1.
+### Visual style
+
+Shadcn on the `dashboard-01` layout (sidebar, header, content), restyled in Nov 2026 after Revolut Business's admin dashboard. Everything goes through the theme tokens in `backoffice/app/globals.css` and the shadcn primitives in `components/ui`, so pages rarely carry their own colours.
+
+- **Light and dark.** `next-themes` puts `.dark` on `<html>`. The default follows the system; the header's sun/moon button and the user menu offer Según el sistema, Claro, and Oscuro, saved in the browser (`localStorage`). The browser and PWA chrome colour follows the chosen theme. The offline page follows the system.
+- **Surfaces.** Light: a soft grey canvas (`#f3f4f7`) with white cards. Dark: a deep navy, near-black canvas (`#080b12`) with a faint blue glow in the top-left corner, and slate cards (`#131922`); depth comes from surface steps, not shadows. The sidebar and the page sit on the canvas; content lives in rounded cards (about 20px).
+- **Controls.** Every button is a pill. The main action is ink on light and white on dark (Revolut's "white pill"); secondary actions are grey pills. Inputs and selects are filled fields (about 12px corners) with a cobalt focus ring. Menus, pickers, and dialogs are rounded popovers.
+- **Accent.** Cobalt `#494fdf` (a lighter `#6e7dff` in dark mode) is for links, focus, switches, the active nav icon, empty-state icons, and the bubbles of the company's messages in a thread. Status dots use Revolut's teal, orange, blue, and red. Initials avatars get a tint from the same palette, fixed per name.
+- **Tables and lists.** No rules between rows, a muted header, and rows that light up as a rounded strip on hover.
+- **Type.** Inter for text, Geist (a free stand-in for Revolut's Aeonik Pro) for page titles, card titles, and dialog titles.
+- **Phones.** Below `lg` the layouts are the same as before the restyle (stacked rows, Conversación / Lead tabs).
+
+Per-company branding is not in v1.
 
 ## Hosting, environments, and operations
 

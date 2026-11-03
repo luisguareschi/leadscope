@@ -71,9 +71,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               size="lg"
               render={<Link href={hasCompany ? "/threads" : "/companies"} />}
             >
-              <AppLogo className="min-w-9 min-h-9" />
+              <AppLogo className="min-h-9 min-w-9" />
               <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate text-base font-semibold">
+                <span className="truncate font-heading text-lg font-semibold tracking-tight">
                   LeadScope
                 </span>
                 <span className="truncate text-xs text-muted-foreground">

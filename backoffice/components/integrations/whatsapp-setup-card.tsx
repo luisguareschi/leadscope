@@ -85,7 +85,7 @@ function Step({
 }) {
   return (
     <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-3">
-      <span className="flex size-6 items-center justify-center rounded-full border bg-background font-mono text-[11px] text-muted-foreground">
+      <span className="flex size-6 items-center justify-center rounded-full bg-primary/10 font-mono text-[11px] font-semibold text-primary">
         {n}
       </span>
       <div className="flex flex-col gap-1 pt-0.5 text-[13px] leading-relaxed">
@@ -256,7 +256,7 @@ export function WhatsappSetupCard({
       description="La API oficial de WhatsApp, a través del proyecto de Kapso de la empresa."
       actions={
         <>
-          <span className="flex items-center gap-2 rounded-full border bg-background px-2.5 py-1 text-xs font-medium">
+          <span className="flex items-center gap-2 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">
             <StatusDot tone={status.tone} />
             {status.label}
           </span>
@@ -299,7 +299,7 @@ export function WhatsappSetupCard({
       >
         {webhookUrl ? (
           <div className="flex min-w-0 gap-2">
-            <code className="flex h-9 min-w-0 flex-1 items-center truncate rounded-md border bg-muted/50 px-3 font-mono text-xs">
+            <code className="flex h-9 min-w-0 flex-1 items-center truncate rounded-md bg-input px-3 font-mono text-xs">
               {webhookUrl}
             </code>
             <Button
@@ -356,8 +356,8 @@ export function WhatsappSetupCard({
           Guía de conexión paso a paso
         </button>
         {showGuide ? (
-          <div className="flex flex-col gap-6 border-t bg-muted/30 px-5 py-5">
-            <div className="flex flex-col gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+          <div className="flex flex-col gap-6 border-t border-border/70 bg-muted/50 px-5 py-5">
+            <div className="flex flex-col gap-2 rounded-xl bg-amber-500/10 p-4 ring-1 ring-amber-500/25">
               <p className="text-[13px] font-medium">Antes de empezar</p>
               <ul className="flex flex-col gap-1.5 text-[13px] leading-relaxed text-muted-foreground">
                 {CONDITIONS.map((condition) => (

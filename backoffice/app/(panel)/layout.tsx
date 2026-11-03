@@ -98,7 +98,7 @@ export default function PanelLayout({
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 64)",
-          "--header-height": "calc(var(--spacing) * 12)",
+          "--header-height": "calc(var(--spacing) * 14)",
         } as React.CSSProperties
       }
     >

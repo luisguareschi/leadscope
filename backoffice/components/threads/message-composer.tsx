@@ -185,7 +185,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
       {!open ? (
         <p
           role="status"
-          className="flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-[13px] leading-relaxed text-muted-foreground"
+          className="flex items-start gap-2 rounded-xl bg-muted px-3.5 py-2.5 text-[13px] leading-relaxed text-muted-foreground"
         >
           <TimerOffIcon className="mt-0.5 size-4 shrink-0" />
           <span>
@@ -197,11 +197,11 @@ export function MessageComposer({ thread }: { thread: Thread }) {
       ) : null}
       <div
         className={cn(
-          "flex flex-col rounded-lg border bg-background shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
+          "flex flex-col rounded-2xl border border-transparent bg-input transition-[color,box-shadow,border-color] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/20",
           !open && "opacity-60",
         )}
       >
-        <div className="flex items-center gap-0.5 border-b px-1.5 py-1">
+        <div className="flex items-center gap-0.5 border-b border-border/70 px-2 py-1">
           {FORMATS.map((format) => (
             <Tooltip key={format.marker}>
               <TooltipTrigger
@@ -249,7 +249,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
                 ? "Escribile al lead por WhatsApp…"
                 : "La ventana de 24 h está cerrada"
             }
-            className="max-h-40 min-h-9 resize-none max-lg:max-h-28 border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 dark:bg-transparent"
+            className="max-h-40 min-h-9 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 max-lg:max-h-28"
           />
           <Button
             type="button"

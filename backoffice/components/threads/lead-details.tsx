@@ -59,7 +59,7 @@ function Detail({
           className={cn(
             "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border",
             answered
-              ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+              ? "border-transparent bg-[#00a87e]/15 text-[#00785a] dark:text-[#4fd8b0]"
               : "border-dashed",
           )}
         >
@@ -113,10 +113,10 @@ function AttentionBlock({
     <div
       role="alert"
       className={cn(
-        "flex flex-col gap-3 rounded-lg border p-3",
+        "flex flex-col gap-3 rounded-xl p-3.5 ring-1",
         tone === "warning"
-          ? "border-amber-500/30 bg-amber-500/5 [&_[data-slot=attention-icon]]:text-amber-600"
-          : "border-destructive/30 bg-destructive/5 [&_[data-slot=attention-icon]]:text-destructive",
+          ? "bg-amber-500/10 ring-amber-500/25 [&_[data-slot=attention-icon]]:text-amber-600 dark:[&_[data-slot=attention-icon]]:text-amber-400"
+          : "bg-destructive/8 ring-destructive/25 [&_[data-slot=attention-icon]]:text-destructive",
       )}
     >
       <div className="flex gap-2">
@@ -154,7 +154,7 @@ function AssistantGroup({ thread }: { thread: Thread }) {
             <Button
               size="sm"
               variant="outline"
-              className="w-full bg-background"
+              className="w-full"
               onClick={() => run("clear-needs-human")}
               disabled={pending !== null}
             >
@@ -209,7 +209,7 @@ function HubSpotGroup({ thread }: { thread: Thread }) {
             <Button
               size="sm"
               variant="outline"
-              className="w-full bg-background"
+              className="w-full"
               onClick={() => run("crm-sync")}
               disabled={pending !== null}
             >

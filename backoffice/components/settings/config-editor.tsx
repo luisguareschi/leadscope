@@ -148,7 +148,7 @@ export function ConfigSaveBar() {
   const count = editor.changedKeys.length;
   if (count === 0 && !editor.formError) return null;
   return (
-    <div className="sticky bottom-4 z-10 mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border bg-background/95 py-2.5 pr-2.5 pl-4 shadow-lg backdrop-blur animate-in duration-200 fade-in slide-in-from-bottom-2">
+    <div className="sticky bottom-4 z-10 mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-full bg-popover/95 py-2 pr-2 pl-5 shadow-xl ring-1 shadow-black/10 ring-border/70 backdrop-blur dark:shadow-black/40 dark:ring-white/10 animate-in duration-200 fade-in slide-in-from-bottom-2">
       <p
         role={editor.formError ? "alert" : undefined}
         className={cn(

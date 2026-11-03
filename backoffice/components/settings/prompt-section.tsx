@@ -98,7 +98,7 @@ function KnowledgeOrder({
         </code>
         ), que le dice al asistente de qué trata.
       </p>
-      <ol className="divide-y rounded-lg border">
+      <ol className="divide-y divide-border/70 rounded-xl bg-muted/60">
         {documents.map((doc, index) => {
           const parts = doc.path.split(" / ");
           const name = parts.pop();

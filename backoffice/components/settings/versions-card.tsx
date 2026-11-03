@@ -168,7 +168,7 @@ export function VersionsCard() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <ul className="divide-y overflow-hidden rounded-xl border bg-card shadow-xs">
+        <ul className="divide-y divide-border/70 overflow-hidden rounded-xl bg-card ring-1 ring-border/60 dark:ring-0">
           {shown.map((version) => {
             const Icon = KIND_ICON[version.kind];
             const restoredFrom = version.restoredFromId
@@ -179,7 +179,7 @@ export function VersionsCard() {
                 key={version.id}
                 className="flex items-center gap-4 px-5 py-3.5"
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <Icon className="size-4" />
                 </span>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -254,7 +254,7 @@ export function VersionsCard() {
                 : "La que había antes de que se guardaran versiones."}
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto rounded-md border bg-muted/40 p-4">
+          <div className="max-h-[60vh] overflow-y-auto rounded-xl bg-muted p-4">
             <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap">
               {viewing ? contentOf(viewing) : null}
             </pre>

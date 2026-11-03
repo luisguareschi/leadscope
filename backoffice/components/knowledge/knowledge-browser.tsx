@@ -355,8 +355,8 @@ export function KnowledgeBrowser({
     <>
       <div
         className={cn(
-          "relative divide-y overflow-hidden rounded-xl border bg-card shadow-xs transition-shadow",
-          dropTarget === null && "ring-2 ring-primary",
+          "relative divide-y divide-border/70 overflow-hidden rounded-xl bg-card ring-1 ring-border/60 dark:ring-0 transition-shadow",
+          dropTarget === null && "ring-2 ring-primary dark:ring-2",
         )}
         onDragOver={onDragOver}
         onDragLeave={(event) => {
@@ -368,7 +368,7 @@ export function KnowledgeBrowser({
         <div
           data-drop-folder=""
           className={cn(
-            "flex min-h-12 items-center justify-between gap-3 bg-muted/40 px-5 py-2.5 transition-colors",
+            "flex min-h-12 items-center justify-between gap-3 px-5 py-2.5 transition-colors",
             dropTarget === null && "bg-primary/10",
           )}
         >
@@ -462,7 +462,7 @@ export function KnowledgeBrowser({
                     style={style}
                     className={cn(
                       rowGrid,
-                      "hover:bg-muted/40",
+                      "hover:bg-muted",
                       highlighted && "bg-primary/5 hover:bg-primary/5",
                       isTarget && "ring-2 ring-primary ring-inset",
                       dragged?.id === folder.id && "opacity-50",
@@ -476,7 +476,7 @@ export function KnowledgeBrowser({
                           open && "rotate-90",
                         )}
                       />
-                      <span className="flex size-9 items-center justify-center rounded-lg border bg-amber-50 dark:bg-amber-500/10">
+                      <span className="flex size-9 items-center justify-center rounded-full bg-amber-500/12 dark:bg-amber-500/15">
                         {open ? (
                           <FolderOpenIcon className="size-4 text-amber-600" />
                         ) : (
@@ -594,14 +594,14 @@ export function KnowledgeBrowser({
                   style={style}
                   className={cn(
                     rowGrid,
-                    "hover:bg-muted/40",
+                    "hover:bg-muted",
                     highlighted && "bg-primary/5 hover:bg-primary/5",
                     dragged?.id === file.id && "opacity-50",
                   )}
                 >
                   <span className="flex items-center gap-1">
                     <span aria-hidden className="size-4" />
-                    <span className="flex size-9 items-center justify-center rounded-lg border bg-muted/40">
+                    <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <FormatIcon format={file.format} />
                     </span>
                   </span>

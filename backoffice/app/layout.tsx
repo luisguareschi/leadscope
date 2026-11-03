@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Inter } from "next/font/google";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 import { ServiceWorker } from "@/components/service-worker";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const geist = Geist({ subsets: ["latin"], variable: "--font-display" });
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
@@ -23,7 +24,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f3f4f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#080b12" },
+  ],
   // The on-screen keyboard shrinks the layout, so the thread composer stays above it.
   interactiveWidget: "resizes-content",
 };
@@ -36,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={cn(
         "h-full antialiased font-sans",
         inter.variable,
+        geist.variable,
         geistMono.variable,
       )}
     >

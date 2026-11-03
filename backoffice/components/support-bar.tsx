@@ -6,9 +6,9 @@ import { leaveCompany } from "@/lib/support";
 
 export function SupportBar({ companyName }: { companyName: string }) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-background p-3 shadow-xs">
+    <div className="flex flex-col gap-3 rounded-2xl bg-card p-3 ring-1 ring-border/60 dark:ring-0">
       <div className="flex min-w-0 items-center gap-2.5">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary ring-1 ring-primary/20 ring-inset">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
           <ShieldCheckIcon className="size-4" />
         </span>
         <div className="flex min-w-0 flex-col">
