@@ -1,8 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
 import { usePathname } from "next/navigation";
-import { HeaderSearch } from "@/components/header-search";
 import { NavUser } from "@/components/nav-user";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useMe } from "@/lib/queries";
@@ -32,7 +30,7 @@ export function SiteHeader() {
         isIOSPWA ? "mt-4" : "mt-0",
       )}
     >
-      <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)] lg:px-6">
+      <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-2">
           {/* The sidebar has its own collapse button; this one brings it back. */}
           {isMobile || state === "collapsed" ? (
@@ -42,13 +40,6 @@ export function SiteHeader() {
             {titleFor(pathname, me.data?.platformAdmin === true)}
           </h1>
         </div>
-        {hasCompany ? (
-          <Suspense fallback={<div className="max-md:hidden" />}>
-            <HeaderSearch className="max-md:hidden" />
-          </Suspense>
-        ) : (
-          <div className="max-md:hidden" />
-        )}
         <div className="flex items-center justify-end gap-1.5">
           <NavUser
             email={me.data?.operator?.email ?? ""}

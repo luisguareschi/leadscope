@@ -495,7 +495,7 @@ Shadcn on the `dashboard-01` layout (sidebar, header, content), restyled in Nov 
 - **Sidebar.** The logo glyph sits on a rounded tile (ink in light mode, white in dark), next to the wordmark and the company. Items are 15px regular with 20px icons; the active one is a soft fill with the accent icon. A collapse button sits at the bottom, and the support-access bar sits above it.
 - **Header.**
   - The page title is 24px, weight 500.
-  - From `md` up, a pill search ("Buscar conversaciones", ⌘K or Ctrl+K) sits in the middle. It is the Conversaciones search (the `q` parameter): it filters as you type on Conversaciones, and Enter on any other page opens Conversaciones with it. Below `md` the search stays at the top of Conversaciones.
+  - There is no search in the header. Conversaciones has its own pill search at the top of the page, under the header, on every screen size ("Buscar por nombre o teléfono", the `q` parameter): it filters as you type, ⌘K or Ctrl+K focuses it, and Escape clears it. Other pages have no search.
   - On the right is the account avatar. Its menu shows who is signed in, the theme (Según el sistema, Claro, Oscuro), and Cerrar sesión. There is no separate theme button in the header.
   - The sidebar toggle shows in the header only on phones or while the sidebar is collapsed.
 - **Controls.**

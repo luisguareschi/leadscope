@@ -1,16 +1,16 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import {
   BotIcon,
   ChevronDownIcon,
   HandIcon,
-  SearchIcon,
   UserRoundCheckIcon,
 } from "lucide-react";
 import { cn } from "cn";
 import { Notice, Panel } from "@/components/panel";
+import { ThreadsSearch } from "@/components/threads/threads-search";
 import { ThreadsTable } from "@/components/threads/threads-table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
 import { useMe, useThreads, useThreadsSummary } from "@/lib/queries";
 import {
@@ -57,7 +52,6 @@ function ThreadsView() {
   const canBeAssigned = me.data ? !me.data.supportAccess : false;
   const mine = canBeAssigned && params.get("mine") === "1";
   const search = params.get("q") ?? "";
-  const [searchInput, setSearchInput] = useState(search);
 
   const summary = useThreadsSummary();
   const threads = useThreads({
@@ -94,14 +88,6 @@ function ThreadsView() {
     });
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchInput.trim() !== search) setParams({ q: searchInput.trim() });
-    }, 300);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchInput]);
-
   const rows = threads.data?.pages.flatMap((page) => page.threads) ?? [];
   const counts = summary.data;
   const waiting = counts?.bot.needs_human ?? 0;
@@ -110,6 +96,8 @@ function ThreadsView() {
 
   return (
     <div className="@container/content flex flex-col gap-4 px-4 lg:px-6">
+      <ThreadsSearch search={search} onSearch={(q) => setParams({ q })} />
+
       {waiting > 0 && bot !== "needs_human" ? (
         <Notice
           tone="warning"
@@ -133,19 +121,6 @@ function ThreadsView() {
           atendida.
         </Notice>
       ) : null}
-
-      {/* From md up the search is the one in the header. */}
-      <InputGroup className="h-10 rounded-full bg-card ring-1 ring-border/60 md:hidden dark:bg-secondary dark:ring-0">
-        <InputGroupAddon>
-          <SearchIcon />
-        </InputGroupAddon>
-        <InputGroupInput
-          placeholder="Buscar por nombre o teléfono"
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          aria-label="Buscar conversaciones"
-        />
-      </InputGroup>
 
       <Panel className="divide-y-0">
         <div className="flex flex-col gap-2 px-3 pt-3 pb-1 @3xl/content:flex-row @3xl/content:items-center @3xl/content:justify-between">
