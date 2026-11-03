@@ -476,11 +476,11 @@ export function KnowledgeBrowser({
                           open && "rotate-90",
                         )}
                       />
-                      <span className="flex size-9 items-center justify-center rounded-full bg-amber-500/12 dark:bg-amber-500/15">
+                      <span className="flex size-9 items-center justify-center rounded-full bg-primary/10">
                         {open ? (
-                          <FolderOpenIcon className="size-4 text-amber-600" />
+                          <FolderOpenIcon className="size-4 text-primary" />
                         ) : (
-                          <FolderIcon className="size-4 text-amber-600" />
+                          <FolderIcon className="size-4 text-primary" />
                         )}
                       </span>
                     </span>

@@ -496,7 +496,7 @@ Shadcn on the `dashboard-01` layout (sidebar, header, content), restyled in Nov 
 - **Header.**
   - The page title is 24px, weight 500.
   - From `md` up, a pill search ("Buscar conversaciones", ⌘K or Ctrl+K) sits in the middle. It is the Conversaciones search (the `q` parameter): it filters as you type on Conversaciones, and Enter on any other page opens Conversaciones with it. Below `md` the search stays at the top of Conversaciones.
-  - On the right are the theme button and the account avatar. Its menu shows who is signed in, the theme, and Cerrar sesión.
+  - On the right is the account avatar. Its menu shows who is signed in, the theme (Según el sistema, Claro, Oscuro), and Cerrar sesión. There is no separate theme button in the header.
   - The sidebar toggle shows in the header only on phones or while the sidebar is collapsed.
 - **Controls.**
   - Every button is a pill. The main action is ink on light and white on dark (Revolut's "white pill"). Secondary and outline actions are filled pills in dark mode (white with a hairline in light mode).

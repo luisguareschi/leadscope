@@ -145,7 +145,7 @@ function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
           <span className="relative z-10 flex max-w-full shrink-0 [&>button]:max-w-[calc(100%+0.5rem)]">
             <StagePicker thread={thread} size="compact" />
           </span>
-          <BotBadge activity={thread.botActivity} variant="text" />
+          <BotBadge activity={thread.botActivity} />
           <span className="relative z-10 flex max-w-full shrink-0 [&>button]:max-w-[calc(100%+0.5rem)]">
             <AssigneePicker thread={thread} size="compact" />
           </span>
@@ -259,7 +259,7 @@ function DesktopTable({
                   <StagePicker thread={thread} size="compact" />
                 </TableCell>
                 <TableCell>
-                  <BotBadge activity={thread.botActivity} variant="text" />
+                  <BotBadge activity={thread.botActivity} />
                 </TableCell>
                 <TableCell className="hidden @5xl/content:table-cell">
                   <p className="truncate text-muted-foreground">

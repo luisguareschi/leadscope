@@ -62,7 +62,7 @@ const CONDITIONS = [
 
 const STATUS_ICON: Record<ConnectionCheckStatus, ReactNode> = {
   ok: <CheckCircle2Icon className="size-4 text-emerald-600" />,
-  warning: <TriangleAlertIcon className="size-4 text-amber-500" />,
+  warning: <TriangleAlertIcon className="size-4 text-primary" />,
   error: <XCircleIcon className="size-4 text-destructive" />,
   skipped: <CircleMinusIcon className="size-4 text-muted-foreground" />,
 };
@@ -357,7 +357,7 @@ export function WhatsappSetupCard({
         </button>
         {showGuide ? (
           <div className="flex flex-col gap-6 border-t border-border/70 bg-muted/50 px-5 py-5">
-            <div className="flex flex-col gap-2 rounded-xl bg-amber-500/10 p-4 ring-1 ring-amber-500/25">
+            <div className="flex flex-col gap-2 rounded-xl bg-primary/10 p-4 ring-1 ring-primary/25">
               <p className="text-[13px] font-medium">Antes de empezar</p>
               <ul className="flex flex-col gap-1.5 text-[13px] leading-relaxed text-muted-foreground">
                 {CONDITIONS.map((condition) => (

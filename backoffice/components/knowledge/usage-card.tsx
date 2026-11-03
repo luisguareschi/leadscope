@@ -50,7 +50,7 @@ export function UsageCard({
               className={cn(
                 "text-xs tabular-nums",
                 high
-                  ? "font-medium text-status-warning"
+                  ? "font-medium text-primary"
                   : "text-muted-foreground",
               )}
             >
@@ -62,7 +62,7 @@ export function UsageCard({
             aria-label="Espacio usado"
             className={cn(
               "mt-1",
-              high && "[&_[data-slot=progress-indicator]]:bg-amber-500",
+              high && "[&_[data-slot=progress-indicator]]:bg-primary",
             )}
           />
         </Cell>

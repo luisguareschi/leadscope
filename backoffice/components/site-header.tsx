@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { HeaderSearch } from "@/components/header-search";
 import { NavUser } from "@/components/nav-user";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useMe } from "@/lib/queries";
 import { useIsIOSPWA } from "@/hooks/use-is-ios-pwa";
@@ -51,7 +50,6 @@ export function SiteHeader() {
           <div className="max-md:hidden" />
         )}
         <div className="flex items-center justify-end gap-1.5">
-          <ThemeToggle />
           <NavUser
             email={me.data?.operator?.email ?? ""}
             label={hasCompany && !supportAccess ? "Operador" : "Administración"}

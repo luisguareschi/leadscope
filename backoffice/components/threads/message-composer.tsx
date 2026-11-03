@@ -269,7 +269,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
           <span
             className={cn(
               "inline-flex items-center gap-1 tabular-nums",
-              left < 60 * 60_000 && "text-amber-700 dark:text-amber-400",
+              left < 60 * 60_000 && "text-primary",
               tooLong && "text-destructive",
             )}
             title="WhatsApp deja escribir mensajes libres hasta 24 horas después del último mensaje del lead."

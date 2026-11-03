@@ -134,7 +134,7 @@ export function VersionsCard() {
             variant={filter === item.value ? "secondary" : "ghost"}
             className={cn(
               filter === item.value
-                ? "text-foreground"
+                ? "text-foreground hover:bg-secondary"
                 : "text-muted-foreground",
             )}
             onClick={() => setFilter(item.value)}

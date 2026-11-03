@@ -65,7 +65,7 @@ export function WroteAgainBadge({
     <Tooltip>
       <TooltipTrigger
         render={
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#ec7e00]/12 px-2 py-0.5 text-[11px] font-medium text-status-warning dark:bg-[#ec7e00]/18" />
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/12 px-2 py-0.5 text-[11px] font-medium text-primary" />
         }
       >
         <MessageCircleMoreIcon className="size-3" />

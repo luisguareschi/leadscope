@@ -131,10 +131,10 @@ export function FieldRow({
 
 const DOT: Record<Tone, string> = {
   ok: "bg-status-ok",
-  warning: "bg-[#ec7e00] dark:bg-status-warning",
+  warning: "bg-primary",
   error: "bg-destructive",
   info: "bg-status-info",
-  pending: "bg-primary",
+  pending: "bg-transparent ring-[1.5px] ring-inset ring-primary",
   muted: "bg-muted-foreground/40",
 };
 
@@ -181,10 +181,10 @@ export function StatusPill({
 
 const TEXT: Record<Tone, string> = {
   ok: "text-status-ok",
-  warning: "text-status-warning",
+  warning: "text-primary",
   error: "text-destructive",
   info: "text-foreground",
-  pending: "text-primary",
+  pending: "text-foreground",
   muted: "text-muted-foreground",
 };
 
@@ -221,7 +221,7 @@ export function InlineCode({ children }: { children: ReactNode }) {
 
 const NOTICE: Record<"warning" | "error" | "neutral", string> = {
   warning:
-    "bg-card ring-border/60 dark:ring-0 [&_[data-slot=notice-icon]]:bg-[#ec7e00]/15 [&_[data-slot=notice-icon]]:text-status-warning",
+    "bg-card ring-border/60 dark:ring-0 [&_[data-slot=notice-icon]]:bg-primary/15 [&_[data-slot=notice-icon]]:text-primary",
   error:
     "bg-card ring-destructive/30 dark:ring-destructive/25 [&_[data-slot=notice-icon]]:bg-destructive/15 [&_[data-slot=notice-icon]]:text-destructive",
   neutral:

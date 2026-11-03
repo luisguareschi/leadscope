@@ -167,7 +167,9 @@ function ThreadsView() {
                   variant={selected ? "secondary" : "ghost"}
                   className={cn(
                     "shrink-0",
-                    selected ? "text-foreground" : "text-muted-foreground",
+                    selected
+                      ? "text-foreground hover:bg-secondary"
+                      : "text-muted-foreground",
                   )}
                   onClick={() => setParams({ stage: filter.value })}
                 >
@@ -177,7 +179,7 @@ function ThreadsView() {
                       className={cn(
                         "rounded-full px-1.5 text-xs tabular-nums",
                         attention
-                          ? "bg-[#ec7e00]/12 font-medium text-status-warning dark:bg-[#ec7e00]/18"
+                          ? "bg-primary/12 font-medium text-primary"
                           : "text-muted-foreground",
                       )}
                     >

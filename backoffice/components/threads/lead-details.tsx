@@ -115,7 +115,7 @@ function AttentionBlock({
       className={cn(
         "flex flex-col gap-3 rounded-xl p-3.5 ring-1",
         tone === "warning"
-          ? "bg-amber-500/10 ring-amber-500/25 [&_[data-slot=attention-icon]]:text-amber-600 dark:[&_[data-slot=attention-icon]]:text-amber-400"
+          ? "bg-primary/10 ring-primary/25 [&_[data-slot=attention-icon]]:text-primary"
           : "bg-destructive/8 ring-destructive/25 [&_[data-slot=attention-icon]]:text-destructive",
       )}
     >

@@ -79,8 +79,8 @@
   --ring: #494fdf;
   --bubble: #494fdf;
   --bubble-foreground: #ffffff;
-  --status-ok: #00866a;
-  --status-warning: #b35f00;
+  --status-ok: #00b386;
+  --status-warning: var(--primary);
   --status-info: #0070b8;
   --canvas-glow: rgb(73 79 223 / 0.06);
   --chart-1: #8b96ff;
@@ -121,7 +121,7 @@
   --bubble: #4f5ae8;
   --bubble-foreground: #ffffff;
   --status-ok: #2fd3a3;
-  --status-warning: #ff9d42;
+  --status-warning: var(--primary);
   --status-info: #5cb8f5;
   --canvas-glow: rgb(28 52 140 / 0.2);
   --chart-1: #8b96ff;
