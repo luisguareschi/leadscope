@@ -16,7 +16,7 @@ export function AppLogo({ className }: { className?: string }) {
       />
       <path
         d="M78.2992 92.1291L82.9256 100.142C82.0271 100.692 80.9806 100.997 79.8908 100.997H39.8386C37.762 100.997 35.8431 99.8895 34.8048 98.0912L14.7787 63.405C14.242 62.4754 13.9827 61.4343 14.0009 60.3969L57.4933 60.3966C59.0541 60.3966 60.4958 61.2311 61.2733 62.5845L78.2724 92.1755L78.2992 92.1291Z"
-        fill="#005EFF"
+        fill="#494fdf"
       />
     </svg>
   );
@@ -25,13 +25,8 @@ export function AppLogo({ className }: { className?: string }) {
 /** The glyph on a rounded tile, like Revolut's app icon: ink on light, white on dark. */
 export function AppLogoTile({ className }: { className?: string }) {
   return (
-    <span
-      className={cn(
-        "flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-[#191c1f] dark:bg-white",
-        className,
-      )}
-    >
-      <AppLogo className="size-[92%] text-white dark:text-[#191c1f]" />
+    <span className={cn("", className)}>
+      <AppLogo className="size-9 min-h-9 min-w-9  dark:text-white" />
     </span>
   );
 }
