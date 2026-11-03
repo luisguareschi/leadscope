@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useMe } from "@/lib/queries";
+import { useIsIOSPWA } from "@/hooks/use-is-ios-pwa";
+import { cn } from "cn";
 
 function titleFor(pathname: string, platformAdmin: boolean): string {
   if (pathname.startsWith("/knowledge")) return "Conocimiento";
@@ -16,8 +18,15 @@ function titleFor(pathname: string, platformAdmin: boolean): string {
 export function SiteHeader() {
   const pathname = usePathname();
   const me = useMe();
+  const isIOSPWA = useIsIOSPWA();
+
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) mt-2 sm:mt-0">
+    <header
+      className={cn(
+        "flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)",
+        isIOSPWA ? "mt-4" : "mt-0",
+      )}
+    >
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator
