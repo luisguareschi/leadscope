@@ -8,6 +8,7 @@ import {
   type DragEvent,
 } from "react";
 import { toast } from "sonner";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
   ArrowRightLeftIcon,
   ChevronRightIcon,
@@ -67,6 +68,7 @@ import type {
 import { cn } from "@/lib/utils";
 import { MoveDialog, type MoveRequest } from "./move-dialog";
 import { NameDialog, splitExtension, type NameRequest } from "./name-dialog";
+import { rowMotion } from "./row-motion";
 import {
   EmptyDropzone,
   UploadRows,
@@ -352,7 +354,7 @@ export function KnowledgeBrowser({
   const folderCount = data.folders.length;
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <div
         className={cn(
           "relative divide-y divide-border/70 overflow-hidden rounded-xl bg-card ring-1 ring-border/60 dark:ring-0 transition-shadow",
@@ -386,7 +388,7 @@ export function KnowledgeBrowser({
           {dragging ? (
             <span
               className={cn(
-                "flex h-8 shrink-0 items-center text-xs",
+                "flex h-8 shrink-0 items-center text-xs animate-in fade-in",
                 dropTarget === null
                   ? "font-medium text-primary"
                   : "text-muted-foreground",
@@ -400,7 +402,7 @@ export function KnowledgeBrowser({
             <Button
               variant="ghost"
               size="sm"
-              className="shrink-0"
+              className="shrink-0 animate-in fade-in"
               onClick={() => askNewFolder(null)}
             >
               <FolderPlusIcon />
@@ -417,276 +419,300 @@ export function KnowledgeBrowser({
           </div>
         ) : (
           <ul className="divide-y">
-            {rows.map((row) => {
-              const folderId = rowFolder(row);
-              const highlighted = inTarget(folderId);
-              const style = { "--depth": row.depth } as CSSProperties;
-              if (row.kind === "empty") {
-                return (
-                  <li
-                    key={`empty-${row.folderId}`}
-                    data-drop-folder={row.folderId}
-                    style={style}
-                    className={cn(
-                      rowGrid,
-                      "py-2.5 text-xs text-muted-foreground",
-                      highlighted && "bg-primary/5",
-                    )}
-                  >
-                    <span className="w-14" />
-                    <span className="col-span-2 @3xl/content:col-span-4">
-                      Carpeta vacía. Arrastrá archivos acá o usá Subir archivos
-                      acá en su menú.
-                    </span>
-                  </li>
-                );
-              }
-              if (row.kind === "folder") {
-                const { folder } = row;
-                const open = !collapsed.has(folder.id);
-                const stats = tree.stats(folder.id);
-                const isTarget = dropTarget === folder.id;
+            <AnimatePresence initial={false}>
+              {rows.map((row) => {
+                const folderId = rowFolder(row);
+                const highlighted = inTarget(folderId);
+                const style = { "--depth": row.depth } as CSSProperties;
+                if (row.kind === "empty") {
+                  return (
+                    <motion.li
+                      key={`empty-${row.folderId}`}
+                      {...rowMotion}
+                      className="overflow-hidden"
+                    >
+                      <div
+                        data-drop-folder={row.folderId}
+                        style={style}
+                        className={cn(
+                          rowGrid,
+                          "py-2.5 text-xs text-muted-foreground",
+                          highlighted && "bg-primary/5",
+                        )}
+                      >
+                        <span className="w-14" />
+                        <span className="col-span-2 @3xl/content:col-span-4">
+                          Carpeta vacía. Arrastrá archivos acá o usá Subir
+                          archivos acá en su menú.
+                        </span>
+                      </div>
+                    </motion.li>
+                  );
+                }
+                if (row.kind === "folder") {
+                  const { folder } = row;
+                  const open = !collapsed.has(folder.id);
+                  const stats = tree.stats(folder.id);
+                  const isTarget = dropTarget === folder.id;
+                  const item: MoveRequest = {
+                    kind: "folder",
+                    id: folder.id,
+                    name: folder.name,
+                    from: folder.parentId,
+                  };
+                  return (
+                    <motion.li
+                      key={folder.id}
+                      {...rowMotion}
+                      className="overflow-hidden"
+                    >
+                      <div
+                        data-drop-folder={folder.id}
+                        draggable
+                        onDragStart={(event) => startDrag(event, item)}
+                        onDragEnd={endDrag}
+                        style={style}
+                        className={cn(
+                          rowGrid,
+                          "hover:bg-muted",
+                          highlighted && "bg-primary/5 hover:bg-primary/5",
+                          isTarget && "ring-2 ring-primary ring-inset",
+                          dragged?.id === folder.id && "opacity-50",
+                        )}
+                      >
+                        <span className="flex items-center gap-1">
+                          <ChevronRightIcon
+                            aria-hidden
+                            className={cn(
+                              "size-4 text-muted-foreground transition-transform",
+                              open && "rotate-90",
+                            )}
+                          />
+                          <span className="flex size-9 items-center justify-center rounded-full bg-primary/10">
+                            {open ? (
+                              <FolderOpenIcon className="size-4 text-primary" />
+                            ) : (
+                              <FolderIcon className="size-4 text-primary" />
+                            )}
+                          </span>
+                        </span>
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                          <button
+                            type="button"
+                            aria-expanded={open}
+                            onClick={() => setOpen(folder.id, !open)}
+                            className="min-w-0 truncate text-left text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+                          >
+                            {folder.name}
+                          </button>
+                          <span className="truncate text-xs text-muted-foreground tabular-nums">
+                            {isTarget && !dragged ? (
+                              <span className="font-medium text-primary">
+                                Soltá para subir acá
+                              </span>
+                            ) : isTarget ? (
+                              <span className="font-medium text-primary">
+                                Soltá para mover acá
+                              </span>
+                            ) : (
+                              <>
+                                {describeContents(stats)}
+                                <span className="@3xl/content:hidden">
+                                  {" "}
+                                  · {formatNumber(stats.chars)} caracteres
+                                </span>
+                              </>
+                            )}
+                          </span>
+                        </div>
+                        <span className="hidden text-right text-sm tabular-nums @3xl/content:block">
+                          {formatNumber(stats.chars)}
+                          <span className="block text-xs text-muted-foreground">
+                            caracteres
+                          </span>
+                        </span>
+                        <span className="hidden @3xl/content:block" />
+                        <div className="relative">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label={`Acciones para la carpeta ${folder.name}`}
+                                />
+                              }
+                            >
+                              <EllipsisVerticalIcon />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="min-w-48"
+                            >
+                              <DropdownMenuItem
+                                onClick={() => queue.pick(target(folder.id))}
+                              >
+                                <UploadIcon />
+                                Subir archivos acá
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => askNewFolder(folder.id)}
+                              >
+                                <FolderPlusIcon />
+                                Nueva subcarpeta
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => askRenameFolder(folder)}
+                              >
+                                <PencilIcon />
+                                Renombrar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setMoveRequest(item)}
+                              >
+                                <ArrowRightLeftIcon />
+                                Mover a…
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() =>
+                                  stats.files === 0 && stats.folders === 0
+                                    ? deleteFolder(folder)
+                                    : setDeletingFolder(folder)
+                                }
+                              >
+                                <Trash2Icon />
+                                Eliminar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </motion.li>
+                  );
+                }
+                const { file } = row;
                 const item: MoveRequest = {
-                  kind: "folder",
-                  id: folder.id,
-                  name: folder.name,
-                  from: folder.parentId,
+                  kind: "file",
+                  id: file.id,
+                  name: file.name,
+                  from: file.folderId,
                 };
                 return (
-                  <li
-                    key={folder.id}
-                    data-drop-folder={folder.id}
-                    draggable
-                    onDragStart={(event) => startDrag(event, item)}
-                    onDragEnd={endDrag}
-                    style={style}
-                    className={cn(
-                      rowGrid,
-                      "hover:bg-muted",
-                      highlighted && "bg-primary/5 hover:bg-primary/5",
-                      isTarget && "ring-2 ring-primary ring-inset",
-                      dragged?.id === folder.id && "opacity-50",
-                    )}
+                  <motion.li
+                    key={file.id}
+                    {...rowMotion}
+                    className="overflow-hidden"
                   >
-                    <span className="flex items-center gap-1">
-                      <ChevronRightIcon
-                        aria-hidden
-                        className={cn(
-                          "size-4 text-muted-foreground transition-transform",
-                          open && "rotate-90",
-                        )}
-                      />
-                      <span className="flex size-9 items-center justify-center rounded-full bg-primary/10">
-                        {open ? (
-                          <FolderOpenIcon className="size-4 text-primary" />
-                        ) : (
-                          <FolderIcon className="size-4 text-primary" />
-                        )}
+                    <div
+                      data-drop-folder={file.folderId ?? ""}
+                      draggable
+                      onDragStart={(event) => startDrag(event, item)}
+                      onDragEnd={endDrag}
+                      style={style}
+                      className={cn(
+                        rowGrid,
+                        "hover:bg-muted",
+                        highlighted && "bg-primary/5 hover:bg-primary/5",
+                        dragged?.id === file.id && "opacity-50",
+                      )}
+                    >
+                      <span className="flex items-center gap-1">
+                        <span aria-hidden className="size-4" />
+                        <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <FormatIcon format={file.format} />
+                        </span>
                       </span>
-                    </span>
-                    <div className="flex min-w-0 flex-col gap-0.5">
-                      <button
-                        type="button"
-                        aria-expanded={open}
-                        onClick={() => setOpen(folder.id, !open)}
-                        className="min-w-0 truncate text-left text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
-                      >
-                        {folder.name}
-                      </button>
-                      <span className="truncate text-xs text-muted-foreground tabular-nums">
-                        {isTarget && !dragged ? (
-                          <span className="font-medium text-primary">
-                            Soltá para subir acá
-                          </span>
-                        ) : isTarget ? (
-                          <span className="font-medium text-primary">
-                            Soltá para mover acá
-                          </span>
-                        ) : (
-                          <>
-                            {describeContents(stats)}
-                            <span className="@3xl/content:hidden">
-                              {" "}
-                              · {formatNumber(stats.chars)} caracteres
-                            </span>
-                          </>
-                        )}
-                      </span>
-                    </div>
-                    <span className="hidden text-right text-sm tabular-nums @3xl/content:block">
-                      {formatNumber(stats.chars)}
-                      <span className="block text-xs text-muted-foreground">
-                        caracteres
-                      </span>
-                    </span>
-                    <span className="hidden @3xl/content:block" />
-                    <div className="relative">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={`Acciones para la carpeta ${folder.name}`}
-                            />
-                          }
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => onPreview(file)}
+                          className="flex min-w-0 items-center gap-2 text-left text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
                         >
-                          <EllipsisVerticalIcon />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="min-w-48">
-                          <DropdownMenuItem
-                            onClick={() => queue.pick(target(folder.id))}
-                          >
-                            <UploadIcon />
-                            Subir archivos acá
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => askNewFolder(folder.id)}
-                          >
-                            <FolderPlusIcon />
-                            Nueva subcarpeta
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => askRenameFolder(folder)}
-                          >
-                            <PencilIcon />
-                            Renombrar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setMoveRequest(item)}
-                          >
-                            <ArrowRightLeftIcon />
-                            Mover a…
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() =>
-                              stats.files === 0 && stats.folders === 0
-                                ? deleteFolder(folder)
-                                : setDeletingFolder(folder)
+                          <span className="truncate">{file.name}</span>
+                          {upload.isPending && replacing?.id === file.id ? (
+                            <Spinner className="size-3.5 shrink-0" />
+                          ) : null}
+                        </button>
+                        <span className="truncate text-xs text-muted-foreground tabular-nums">
+                          {file.formatLabel} · {formatBytes(file.sizeBytes)}
+                          <span className="@3xl/content:hidden">
+                            {" "}
+                            · {formatNumber(file.charCount)} caracteres
+                          </span>
+                        </span>
+                      </div>
+                      <span className="hidden text-right text-sm tabular-nums @3xl/content:block">
+                        {formatNumber(file.charCount)}
+                        <span className="block text-xs text-muted-foreground">
+                          caracteres
+                        </span>
+                      </span>
+                      <span className="hidden min-w-0 text-right text-sm text-muted-foreground @3xl/content:block">
+                        {formatRelative(file.updatedAt)}
+                        {file.uploadedBy ? (
+                          <span className="block truncate text-xs">
+                            {file.uploadedBy}
+                          </span>
+                        ) : null}
+                      </span>
+                      <div className="relative">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`Acciones para ${file.name}`}
+                              />
                             }
                           >
-                            <Trash2Icon />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <EllipsisVerticalIcon />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="min-w-44">
+                            <DropdownMenuItem onClick={() => onPreview(file)}>
+                              <EyeIcon />
+                              Ver texto
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => askRenameFile(file)}
+                            >
+                              <PencilIcon />
+                              Renombrar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setMoveRequest(item)}
+                            >
+                              <ArrowRightLeftIcon />
+                              Mover a…
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setReplacing(file);
+                                replaceInput.current?.click();
+                              }}
+                            >
+                              <RefreshCwIcon />
+                              Reemplazar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => setDeletingFile(file)}
+                            >
+                              <Trash2Icon />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                  </li>
+                  </motion.li>
                 );
-              }
-              const { file } = row;
-              const item: MoveRequest = {
-                kind: "file",
-                id: file.id,
-                name: file.name,
-                from: file.folderId,
-              };
-              return (
-                <li
-                  key={file.id}
-                  data-drop-folder={file.folderId ?? ""}
-                  draggable
-                  onDragStart={(event) => startDrag(event, item)}
-                  onDragEnd={endDrag}
-                  style={style}
-                  className={cn(
-                    rowGrid,
-                    "hover:bg-muted",
-                    highlighted && "bg-primary/5 hover:bg-primary/5",
-                    dragged?.id === file.id && "opacity-50",
-                  )}
-                >
-                  <span className="flex items-center gap-1">
-                    <span aria-hidden className="size-4" />
-                    <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <FormatIcon format={file.format} />
-                    </span>
-                  </span>
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <button
-                      type="button"
-                      onClick={() => onPreview(file)}
-                      className="flex min-w-0 items-center gap-2 text-left text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
-                    >
-                      <span className="truncate">{file.name}</span>
-                      {upload.isPending && replacing?.id === file.id ? (
-                        <Spinner className="size-3.5 shrink-0" />
-                      ) : null}
-                    </button>
-                    <span className="truncate text-xs text-muted-foreground tabular-nums">
-                      {file.formatLabel} · {formatBytes(file.sizeBytes)}
-                      <span className="@3xl/content:hidden">
-                        {" "}
-                        · {formatNumber(file.charCount)} caracteres
-                      </span>
-                    </span>
-                  </div>
-                  <span className="hidden text-right text-sm tabular-nums @3xl/content:block">
-                    {formatNumber(file.charCount)}
-                    <span className="block text-xs text-muted-foreground">
-                      caracteres
-                    </span>
-                  </span>
-                  <span className="hidden min-w-0 text-right text-sm text-muted-foreground @3xl/content:block">
-                    {formatRelative(file.updatedAt)}
-                    {file.uploadedBy ? (
-                      <span className="block truncate text-xs">
-                        {file.uploadedBy}
-                      </span>
-                    ) : null}
-                  </span>
-                  <div className="relative">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`Acciones para ${file.name}`}
-                          />
-                        }
-                      >
-                        <EllipsisVerticalIcon />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="min-w-44">
-                        <DropdownMenuItem onClick={() => onPreview(file)}>
-                          <EyeIcon />
-                          Ver texto
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => askRenameFile(file)}>
-                          <PencilIcon />
-                          Renombrar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setMoveRequest(item)}>
-                          <ArrowRightLeftIcon />
-                          Mover a…
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setReplacing(file);
-                            replaceInput.current?.click();
-                          }}
-                        >
-                          <RefreshCwIcon />
-                          Reemplazar
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setDeletingFile(file)}
-                        >
-                          <Trash2Icon />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </li>
-              );
-            })}
+              })}
+            </AnimatePresence>
           </ul>
         )}
       </div>
@@ -764,7 +790,7 @@ export function KnowledgeBrowser({
         onConfirm={deleteFolder}
         onClose={() => setDeletingFolder(null)}
       />
-    </>
+    </MotionConfig>
   );
 }
 

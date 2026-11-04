@@ -7,10 +7,12 @@ import {
   UploadIcon,
   XIcon,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useUploadKnowledgeFile } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { rowMotion } from "./row-motion";
 
 type UploadStatus = {
   id: number;
@@ -129,49 +131,70 @@ export function EmptyDropzone({ queue }: { queue: UploadQueue }) {
   );
 }
 
+/** The list unmounts when empty so the card's dividers stay single; it shrinks out first. */
 export function UploadRows({ queue }: { queue: UploadQueue }) {
-  if (queue.statuses.length === 0) return null;
   return (
-    <ul className="divide-y divide-border/70">
-      {queue.statuses.map((status) => (
-        <li key={status.id} className="flex items-center gap-3 px-5 py-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center">
-            {status.state === "uploading" ? (
-              <Spinner className="size-4 text-muted-foreground" />
-            ) : status.state === "done" ? (
-              <CircleCheckIcon className="size-4 text-emerald-600" />
-            ) : (
-              <CircleAlertIcon className="size-4 text-destructive" />
-            )}
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="truncate text-sm font-medium">{status.name}</span>
-            <span
-              className={cn(
-                "text-xs",
-                status.state === "error"
-                  ? "text-destructive"
-                  : "text-muted-foreground",
-              )}
-            >
-              {status.state === "uploading" ? "Subiendo…" : status.message}
-              {status.place && status.state !== "error"
-                ? ` · en ${status.place}`
-                : ""}
-            </span>
-          </span>
-          {status.state !== "uploading" ? (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Quitar de la lista"
-              onClick={() => queue.dismiss(status.id)}
-            >
-              <XIcon />
-            </Button>
-          ) : null}
-        </li>
-      ))}
-    </ul>
+    <AnimatePresence initial={false}>
+      {queue.statuses.length > 0 ? (
+        <motion.ul
+          key="uploads"
+          {...rowMotion}
+          layout={false}
+          className="divide-y divide-border/70 overflow-hidden"
+        >
+          <AnimatePresence initial={false}>
+            {queue.statuses.map((status) => (
+              <motion.li
+                key={status.id}
+                {...rowMotion}
+                className="overflow-hidden"
+              >
+                <div className="flex items-center gap-3 px-5 py-2.5">
+                  <span className="flex size-9 shrink-0 items-center justify-center">
+                    {status.state === "uploading" ? (
+                      <Spinner className="size-4 text-muted-foreground" />
+                    ) : status.state === "done" ? (
+                      <CircleCheckIcon className="size-4 text-emerald-600" />
+                    ) : (
+                      <CircleAlertIcon className="size-4 text-destructive" />
+                    )}
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate text-sm font-medium">
+                      {status.name}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-xs",
+                        status.state === "error"
+                          ? "text-destructive"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {status.state === "uploading"
+                        ? "Subiendo…"
+                        : status.message}
+                      {status.place && status.state !== "error"
+                        ? ` · en ${status.place}`
+                        : ""}
+                    </span>
+                  </span>
+                  {status.state !== "uploading" ? (
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="Quitar de la lista"
+                      onClick={() => queue.dismiss(status.id)}
+                    >
+                      <XIcon />
+                    </Button>
+                  ) : null}
+                </div>
+              </motion.li>
+            ))}
+          </AnimatePresence>
+        </motion.ul>
+      ) : null}
+    </AnimatePresence>
   );
 }
