@@ -94,7 +94,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               <>
                 <SidebarMenuButton
                   size="lg"
-                  className="pr-12 hover:bg-transparent active:bg-transparent"
+                  className="pr-12 text-sidebar-foreground hover:bg-transparent hover:text-sidebar-foreground active:bg-transparent active:text-sidebar-foreground"
                   render={
                     <Link href={hasCompany ? "/threads" : "/companies"} />
                   }

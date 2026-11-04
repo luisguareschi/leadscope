@@ -475,19 +475,20 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/menu-button flex w-full items-center gap-3 overflow-hidden rounded-xl p-2.5 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-2.5! hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground data-active:[&>svg]:text-sidebar-primary [&_svg]:size-5 [&>svg]:text-sidebar-foreground/75 [&_svg]:shrink-0 [&>span:last-child]:truncate",
+  // Same pill colors as Configuración's section nav; keep the sidebar item size.
+  "peer/menu-button group/menu-button flex w-full items-center gap-3 overflow-hidden rounded-full p-2.5 text-left text-sm text-muted-foreground ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-2.5! hover:bg-card/70 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 active:bg-card/70 active:text-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-card/70 data-open:hover:text-foreground data-active:bg-card data-active:font-semibold data-active:text-foreground data-active:shadow-xs dark:hover:bg-white/5 dark:data-active:bg-white/8 dark:data-active:shadow-none data-active:[&>svg]:text-primary [&_svg]:size-5 [&>svg]:text-muted-foreground [&_svg]:shrink-0 [&>span:last-child]:truncate",
   {
     variants: {
       variant: {
-        default:
-          "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+        default: "",
         outline:
           "bg-background shadow-[0_0_0_1px_var(--sidebar-border)] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--sidebar-accent)]",
       },
       size: {
         default: "h-11 text-[15px]",
         sm: "h-7 text-xs",
-        lg: "h-14 text-sm group-data-[collapsible=icon]:p-0.5!",
+        // Logo / header row: keep the larger tile, not the section-nav pill.
+        lg: "h-14 rounded-xl text-sm text-sidebar-foreground [&>svg]:text-sidebar-foreground group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:p-0.5!",
       },
     },
     defaultVariants: {
@@ -590,7 +591,7 @@ function SidebarMenuBadge({
       data-slot="sidebar-menu-badge"
       data-sidebar="menu-badge"
       className={cn(
-        "pointer-events-none absolute right-2 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-medium text-sidebar-foreground tabular-nums select-none group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[size=default]/menu-button:top-3 peer-data-[size=lg]/menu-button:top-4.5 peer-data-[size=sm]/menu-button:top-1 peer-data-active/menu-button:text-sidebar-accent-foreground",
+        "pointer-events-none absolute top-1/2 right-2 flex h-5 min-w-5 -translate-y-1/2 items-center justify-center rounded-full px-1.5 text-xs font-medium text-sidebar-foreground tabular-nums select-none group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-sidebar-accent-foreground peer-data-active/menu-button:text-sidebar-accent-foreground",
         className,
       )}
       {...props}
