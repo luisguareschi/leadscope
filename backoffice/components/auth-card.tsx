@@ -18,7 +18,7 @@ export function AuthCard({
         LeadScope
       </header>
       <main className="flex flex-1 items-center justify-center py-10">
-        <div className="flex w-full max-w-[22.5rem] flex-col gap-7">
+        <div className="flex w-full max-w-90 flex-col gap-7">
           <div className="flex flex-col gap-2">
             <h1 className="font-heading text-[26px] leading-tight font-medium tracking-tight">
               {title}
@@ -27,7 +27,7 @@ export function AuthCard({
               {description}
             </p>
           </div>
-          <div className="[&_[data-slot=input]]:h-12 [&_[data-slot=input]]:rounded-xl [&_[data-slot=input]]:px-4 [&_[data-slot=input]]:text-[15px]">
+          <div className="**:data-[slot=input]:h-12 **:data-[slot=input]:rounded-xl **:data-[slot=input]:px-4 **:data-[slot=input]:text-[15px]">
             {children}
           </div>
         </div>

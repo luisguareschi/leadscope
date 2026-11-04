@@ -60,7 +60,7 @@ export function UsageCard({
             aria-label="Espacio usado"
             className={cn(
               "mt-1",
-              high && "[&_[data-slot=progress-indicator]]:bg-primary",
+              high && "**:data-[slot=progress-indicator]:bg-primary",
             )}
           />
         </Cell>

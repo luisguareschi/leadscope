@@ -92,7 +92,7 @@ function Bubble({
           </div>
         ) : null}
         {message.body ? (
-          <p className="break-words whitespace-pre-wrap">
+          <p className="wrap-break-word whitespace-pre-wrap">
             {renderWhatsapp(message.body)}
           </p>
         ) : null}
@@ -113,7 +113,7 @@ function Bubble({
         {outbound ? <DeliveryStatus status={message.status} /> : null}
       </div>
       {message.status === "failed" && message.error ? (
-        <p className="max-w-full px-1 text-right text-[11px] break-words text-destructive">
+        <p className="max-w-full px-1 text-right text-[11px] wrap-break-word text-destructive">
           {message.error}
         </p>
       ) : null}

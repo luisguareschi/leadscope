@@ -221,11 +221,11 @@ export function InlineCode({ children }: { children: ReactNode }) {
 
 const NOTICE: Record<"warning" | "error" | "neutral", string> = {
   warning:
-    "bg-card ring-border/60 dark:ring-0 [&_[data-slot=notice-icon]]:bg-primary/15 [&_[data-slot=notice-icon]]:text-primary",
+    "bg-card ring-border/60 dark:ring-0 **:data-[slot=notice-icon]:bg-primary/15 **:data-[slot=notice-icon]:text-primary",
   error:
-    "bg-card ring-destructive/30 dark:ring-destructive/25 [&_[data-slot=notice-icon]]:bg-destructive/15 [&_[data-slot=notice-icon]]:text-destructive",
+    "bg-card ring-destructive/30 dark:ring-destructive/25 **:data-[slot=notice-icon]:bg-destructive/15 **:data-[slot=notice-icon]:text-destructive",
   neutral:
-    "bg-card ring-border/60 dark:ring-0 [&_[data-slot=notice-icon]]:bg-muted [&_[data-slot=notice-icon]]:text-muted-foreground",
+    "bg-card ring-border/60 dark:ring-0 **:data-[slot=notice-icon]:bg-muted **:data-[slot=notice-icon]:text-muted-foreground",
 };
 
 /** A state the operator should act on: what happened, and the one action that fixes it. */

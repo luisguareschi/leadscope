@@ -24,7 +24,7 @@ export function LeadAvatar({
         title={form ? "Llegó por un formulario" : "Llegó por WhatsApp"}
         aria-label={form ? "Llegó por un formulario" : "Llegó por WhatsApp"}
         className={cn(
-          "absolute -right-1 -bottom-1 flex size-[18px] items-center justify-center rounded-full ring-2 ring-(--avatar-ring,var(--card)) [&_svg]:size-2.5",
+          "absolute -right-1 -bottom-1 flex size-4.5 items-center justify-center rounded-full ring-2 ring-(--avatar-ring,var(--card)) [&_svg]:size-2.5",
           form
             ? "bg-primary text-primary-foreground"
             : "bg-foreground text-background",

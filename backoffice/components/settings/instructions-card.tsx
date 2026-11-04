@@ -51,7 +51,7 @@ export function InstructionsCard({
       <form
         onSubmit={onSubmit}
         className={cn(
-          "overflow-hidden rounded-xl bg-card ring-1 ring-border/60 dark:ring-0 transition-[box-shadow] focus-within:ring-2 focus-within:ring-ring/50",
+          "overflow-hidden rounded-xl bg-card ring-1 ring-border/60 dark:ring-0 transition-shadow focus-within:ring-2 focus-within:ring-ring/50",
           error &&
             "ring-2 ring-destructive focus-within:ring-destructive/60 dark:ring-2",
         )}

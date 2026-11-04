@@ -17,7 +17,7 @@ export function SettingsNav({
   return (
     <nav
       aria-label="Secciones de configuración"
-      className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] lg:-mx-6 lg:px-6 @4xl/main:mx-0 @4xl/main:overflow-visible @4xl/main:px-0"
+      className="-mx-4 overflow-x-auto px-4 scrollbar-none lg:-mx-6 lg:px-6 @4xl/main:mx-0 @4xl/main:overflow-visible @4xl/main:px-0"
     >
       <div className="flex w-max gap-1 @4xl/main:w-auto @4xl/main:flex-col @4xl/main:gap-6">
         {groups.map((group) => (

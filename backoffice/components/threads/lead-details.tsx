@@ -73,7 +73,7 @@ function Detail({
             <span className="text-[11px] text-muted-foreground/70">{tag}</span>
           ) : null}
         </dt>
-        <dd className="text-sm break-words">
+        <dd className="text-sm wrap-break-word">
           {empty ? <span className="text-muted-foreground/70">—</span> : value}
         </dd>
       </dl>
@@ -115,8 +115,8 @@ function AttentionBlock({
       className={cn(
         "flex flex-col gap-3 rounded-xl p-3.5 ring-1",
         tone === "warning"
-          ? "bg-primary/10 ring-primary/25 [&_[data-slot=attention-icon]]:text-primary"
-          : "bg-destructive/8 ring-destructive/25 [&_[data-slot=attention-icon]]:text-destructive",
+          ? "bg-primary/10 ring-primary/25 **:data-[slot=attention-icon]:text-primary"
+          : "bg-destructive/8 ring-destructive/25 **:data-[slot=attention-icon]:text-destructive",
       )}
     >
       <div className="flex gap-2">
@@ -127,7 +127,7 @@ function AttentionBlock({
           {icon}
         </span>
         <div className="flex min-w-0 flex-col gap-1">
-          <p className="text-[13px] leading-relaxed break-words">{text}</p>
+          <p className="text-[13px] leading-relaxed wrap-break-word">{text}</p>
           <p className="text-xs leading-relaxed text-muted-foreground">
             {detail}
           </p>
@@ -250,7 +250,7 @@ function SummaryGroup({ summary }: { summary: string | null }) {
       {bullets.length > 0 ? (
         <ul className="flex list-disc flex-col gap-1.5 pl-4 text-sm leading-relaxed marker:text-muted-foreground/60">
           {bullets.map((bullet, index) => (
-            <li key={index} className="break-words">
+            <li key={index} className="wrap-break-word">
               {bullet}
             </li>
           ))}

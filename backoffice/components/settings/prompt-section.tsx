@@ -110,7 +110,7 @@ function KnowledgeOrder({
               <span className="w-6 shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <span className="min-w-0 flex-1 break-words">
+              <span className="min-w-0 flex-1 wrap-break-word">
                 {parts.length ? (
                   <span className="text-muted-foreground">
                     {parts.join(" / ")} /{" "}
@@ -251,7 +251,7 @@ export function PromptSection({ rules }: { rules: string }) {
             <div className="flex items-center justify-between gap-2 border-b px-4 py-2">
               <TabsList
                 variant="line"
-                className="min-w-0 justify-start overflow-x-auto overflow-y-hidden pb-[7px] [scrollbar-width:none] group-data-horizontal/tabs:h-11"
+                className="min-w-0 justify-start overflow-x-auto overflow-y-hidden pb-1.75 scrollbar-none group-data-horizontal/tabs:h-11"
               >
                 <TabsTrigger value="system">Bloque fijo</TabsTrigger>
                 <TabsTrigger value="knowledge">Conocimiento</TabsTrigger>

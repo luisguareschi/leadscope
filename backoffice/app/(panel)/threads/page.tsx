@@ -127,7 +127,7 @@ function ThreadsView() {
           <div
             role="group"
             aria-label="Filtrar por etapa"
-            className="-mx-3 flex gap-1 overflow-x-auto px-3 [scrollbar-width:none] @3xl/content:mx-0 @3xl/content:px-0"
+            className="-mx-3 flex gap-1 overflow-x-auto px-3 scrollbar-none @3xl/content:mx-0 @3xl/content:px-0"
           >
             {STAGE_FILTERS.map((filter) => {
               const count = countFor(counts, filter.value);

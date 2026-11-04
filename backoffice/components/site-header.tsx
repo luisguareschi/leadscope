@@ -30,7 +30,7 @@ export function SiteHeader() {
         isIOSPWA ? "mt-4" : "mt-0",
       )}
     >
-      <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 lg:px-6">
+      <div className="mx-auto grid w-full max-w-350 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-2">
           {/* On desktop the sidebar has its own collapse button; on phones it is a sheet. */}
           {isMobile ? (
