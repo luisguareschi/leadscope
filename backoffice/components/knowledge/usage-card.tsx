@@ -49,9 +49,7 @@ export function UsageCard({
             <span
               className={cn(
                 "text-xs tabular-nums",
-                high
-                  ? "font-medium text-primary"
-                  : "text-muted-foreground",
+                high ? "font-medium text-primary" : "text-muted-foreground",
               )}
             >
               {percent}%
