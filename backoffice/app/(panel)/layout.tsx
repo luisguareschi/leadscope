@@ -98,7 +98,9 @@ export default function PanelLayout({
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 64)",
-          "--header-height": "calc(var(--spacing) * 12)",
+          // Room for the 40px icon buttons once the sidebar is collapsed to icons.
+          "--sidebar-width-icon": "3.5rem",
+          "--header-height": "calc(var(--spacing) * 16)",
         } as React.CSSProperties
       }
     >
@@ -106,7 +108,7 @@ export default function PanelLayout({
       <SidebarInset>
         <SiteHeader />
         {/* Below md the inset has no outer margin to leave room for. */}
-        <div className="@container/main max-h-[calc(100svh-var(--header-height))] md:max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] overflow-y-auto flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
+        <div className="@container/main max-h-[calc(100svh-var(--header-height))] md:max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] overflow-y-auto flex flex-1 flex-col gap-4 pt-2 pb-4 md:gap-6 md:pb-6 *:mx-auto *:w-full *:max-w-350">
           {children}
         </div>
       </SidebarInset>

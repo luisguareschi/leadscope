@@ -121,8 +121,8 @@ export function CompaniesTable({
             >
               <span
                 className={cn(
-                  "flex size-9 items-center justify-center rounded-lg border bg-muted/40 text-xs font-medium",
-                  archived && "text-muted-foreground",
+                  "flex size-9 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary",
+                  archived && "bg-muted text-muted-foreground",
                 )}
               >
                 {initials(company.name)}

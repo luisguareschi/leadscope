@@ -31,7 +31,7 @@ function Group({
   return (
     <div className="flex flex-col gap-3 px-5 py-4">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-xs font-medium text-muted-foreground">{title}</h4>
+        <h4 className="text-[13px] font-semibold">{title}</h4>
         {aside}
       </div>
       <div className="flex flex-col gap-3">{children}</div>
@@ -59,7 +59,7 @@ function Detail({
           className={cn(
             "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border",
             answered
-              ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+              ? "border-transparent bg-[#00a87e]/15 text-[#00785a] dark:text-[#4fd8b0]"
               : "border-dashed",
           )}
         >
@@ -73,7 +73,7 @@ function Detail({
             <span className="text-[11px] text-muted-foreground/70">{tag}</span>
           ) : null}
         </dt>
-        <dd className="text-sm break-words">
+        <dd className="text-sm wrap-break-word">
           {empty ? <span className="text-muted-foreground/70">—</span> : value}
         </dd>
       </dl>
@@ -113,10 +113,10 @@ function AttentionBlock({
     <div
       role="alert"
       className={cn(
-        "flex flex-col gap-3 rounded-lg border p-3",
+        "flex flex-col gap-3 rounded-xl p-3.5 ring-1",
         tone === "warning"
-          ? "border-amber-500/30 bg-amber-500/5 [&_[data-slot=attention-icon]]:text-amber-600"
-          : "border-destructive/30 bg-destructive/5 [&_[data-slot=attention-icon]]:text-destructive",
+          ? "bg-primary/10 ring-primary/25 **:data-[slot=attention-icon]:text-primary"
+          : "bg-destructive/8 ring-destructive/25 **:data-[slot=attention-icon]:text-destructive",
       )}
     >
       <div className="flex gap-2">
@@ -127,7 +127,7 @@ function AttentionBlock({
           {icon}
         </span>
         <div className="flex min-w-0 flex-col gap-1">
-          <p className="text-[13px] leading-relaxed break-words">{text}</p>
+          <p className="text-[13px] leading-relaxed wrap-break-word">{text}</p>
           <p className="text-xs leading-relaxed text-muted-foreground">
             {detail}
           </p>
@@ -154,7 +154,7 @@ function AssistantGroup({ thread }: { thread: Thread }) {
             <Button
               size="sm"
               variant="outline"
-              className="w-full bg-background"
+              className="w-full"
               onClick={() => run("clear-needs-human")}
               disabled={pending !== null}
             >
@@ -209,7 +209,7 @@ function HubSpotGroup({ thread }: { thread: Thread }) {
             <Button
               size="sm"
               variant="outline"
-              className="w-full bg-background"
+              className="w-full"
               onClick={() => run("crm-sync")}
               disabled={pending !== null}
             >
@@ -250,7 +250,7 @@ function SummaryGroup({ summary }: { summary: string | null }) {
       {bullets.length > 0 ? (
         <ul className="flex list-disc flex-col gap-1.5 pl-4 text-sm leading-relaxed marker:text-muted-foreground/60">
           {bullets.map((bullet, index) => (
-            <li key={index} className="break-words">
+            <li key={index} className="wrap-break-word">
               {bullet}
             </li>
           ))}

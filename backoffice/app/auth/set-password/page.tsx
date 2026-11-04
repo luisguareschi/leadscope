@@ -60,7 +60,11 @@ export default function SetPasswordPage() {
         title="El enlace venció"
         description="Pedí uno nuevo desde la pantalla de ingreso."
       >
-        <Button className="w-full" onClick={() => router.replace("/login")}>
+        <Button
+          size="lg"
+          className="h-12 w-full"
+          onClick={() => router.replace("/login")}
+        >
           Ir al ingreso
         </Button>
       </AuthCard>
@@ -87,7 +91,12 @@ export default function SetPasswordPage() {
             <FieldDescription>Al menos 8 caracteres.</FieldDescription>
           </Field>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Button
+            type="submit"
+            size="lg"
+            className="h-12 w-full"
+            disabled={pending}
+          >
             {pending ? <Spinner /> : null}
             Guardar y entrar
           </Button>

@@ -44,10 +44,7 @@ function DeliveryStatus({ status }: { status: string | null }) {
   }
   if (status === "read")
     return (
-      <CheckCheckIcon
-        className="size-3.5 text-emerald-600"
-        aria-label="Leído"
-      />
+      <CheckCheckIcon className="size-3.5 text-[#00a87e]" aria-label="Leído" />
     );
   if (status === "delivered")
     return <CheckCheckIcon className="size-3.5" aria-label="Entregado" />;
@@ -74,12 +71,13 @@ function Bubble({
     >
       <div
         className={cn(
-          "rounded-2xl border px-3.5 py-2 text-sm",
+          "rounded-[20px] px-4 py-2.5 text-sm leading-relaxed",
           outbound
-            ? "border-primary/10 bg-primary/80 text-primary-foreground"
-            : "bg-card shadow-xs",
+            ? "bg-bubble text-bubble-foreground"
+            : "bg-card ring-1 ring-border/60 dark:bg-secondary dark:ring-0",
           !continued && (outbound ? "rounded-tr-md" : "rounded-tl-md"),
-          message.status === "failed" && "border-destructive/40",
+          message.status === "failed" &&
+            "ring-2 ring-destructive/60 dark:ring-2",
         )}
       >
         {meta ? (
@@ -94,7 +92,7 @@ function Bubble({
           </div>
         ) : null}
         {message.body ? (
-          <p className="break-words whitespace-pre-wrap">
+          <p className="wrap-break-word whitespace-pre-wrap">
             {renderWhatsapp(message.body)}
           </p>
         ) : null}
@@ -115,7 +113,7 @@ function Bubble({
         {outbound ? <DeliveryStatus status={message.status} /> : null}
       </div>
       {message.status === "failed" && message.error ? (
-        <p className="max-w-full px-1 text-right text-[11px] break-words text-destructive">
+        <p className="max-w-full px-1 text-right text-[11px] wrap-break-word text-destructive">
           {message.error}
         </p>
       ) : null}
@@ -169,10 +167,10 @@ export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
         return (
           <Fragment key={message.id}>
             {showDay ? (
-              <div className="mt-4 mb-1 flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="h-px flex-1 bg-border" />
-                {day}
-                <span className="h-px flex-1 bg-border" />
+              <div className="mt-5 mb-1 flex justify-center">
+                <span className="rounded-full bg-card px-3 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border/60 dark:bg-secondary dark:ring-0">
+                  {day}
+                </span>
               </div>
             ) : null}
             <Bubble message={message} continued={continued} />

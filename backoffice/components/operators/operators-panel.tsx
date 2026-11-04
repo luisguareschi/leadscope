@@ -184,7 +184,7 @@ export function OperatorsPanel({
           </EmptyHeader>
         </Empty>
       ) : (
-        <ul className="divide-y overflow-hidden rounded-xl border bg-card shadow-xs">
+        <ul className="divide-y divide-border/70 overflow-hidden rounded-xl bg-card ring-1 ring-border/60 dark:ring-0">
           {query.data.operators.map((operator) => {
             const busy =
               (resend.isPending && resend.variables === operator.id) ||

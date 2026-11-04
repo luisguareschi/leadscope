@@ -5,11 +5,13 @@ import {
   BookOpenTextIcon,
   Building2Icon,
   MessagesSquareIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
   SlidersHorizontalIcon,
 } from "lucide-react";
-import { AppLogo } from "@/components/app-logo";
+import { AppLogoTile } from "@/components/app-logo";
 import { NavMain } from "@/components/nav-main";
-import { NavUser } from "@/components/nav-user";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +20,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useMe, useThreadsSummary } from "@/lib/queries";
 import { SupportBar } from "./support-bar";
 
@@ -27,6 +35,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const hasCompany = Boolean(me.data?.company);
   const supportAccess = me.data?.supportAccess === true;
   const summary = useThreadsSummary(hasCompany);
+  const { state, isMobile, toggleSidebar } = useSidebar();
+  const collapsed = state === "collapsed";
 
   const items = [
     ...(hasCompany
@@ -63,25 +73,64 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   ];
 
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              render={<Link href={hasCompany ? "/threads" : "/companies"} />}
-            >
-              <AppLogo className="min-w-9 min-h-9" />
-              <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate text-base font-semibold">
-                  LeadScope
+            {collapsed ? (
+              // Collapsed: the logo tile is the way back; hovering it turns it into the expand icon.
+              <SidebarMenuButton
+                size="lg"
+                tooltip="Expandir menú"
+                aria-label="Expandir menú"
+                onClick={toggleSidebar}
+              >
+                <span className="relative flex size-9 shrink-0 items-center justify-center">
+                  <AppLogoTile className="transition-opacity group-hover/menu-button:opacity-0 group-focus-visible/menu-button:opacity-0" />
+                  <PanelLeftOpenIcon className="absolute text-muted-foreground opacity-0 transition-opacity group-hover/menu-button:opacity-100 group-focus-visible/menu-button:opacity-100" />
                 </span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {me.data?.company?.name ??
-                    (me.data?.platformAdmin ? "Plataforma" : " ")}
-                </span>
-              </div>
-            </SidebarMenuButton>
+              </SidebarMenuButton>
+            ) : (
+              <>
+                <SidebarMenuButton
+                  size="lg"
+                  className="pr-12 text-sidebar-foreground hover:bg-transparent hover:text-sidebar-foreground active:bg-transparent active:text-sidebar-foreground"
+                  render={
+                    <Link href={hasCompany ? "/threads" : "/companies"} />
+                  }
+                >
+                  <AppLogoTile />
+                  <div className="grid flex-1 text-left leading-tight">
+                    <span className="truncate font-heading text-[21px] font-semibold tracking-tight">
+                      LeadScope
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {me.data?.company?.name ??
+                        (me.data?.platformAdmin ? "Plataforma" : " ")}
+                    </span>
+                  </div>
+                </SidebarMenuButton>
+                {/* Shown while the pointer is over the sidebar. Phones use the header's sheet button. */}
+                {isMobile ? null : (
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Contraer menú"
+                          className="absolute top-1/2 right-1 -translate-y-1/2 text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-sidebar-accent"
+                          onClick={toggleSidebar}
+                        />
+                      }
+                    >
+                      <PanelLeftCloseIcon />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Contraer menú</TooltipContent>
+                  </Tooltip>
+                )}
+              </>
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
@@ -92,10 +141,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         {me.data?.supportAccess && me.data?.company && (
           <SupportBar companyName={me.data?.company.name} />
         )}
-        <NavUser
-          email={me.data?.operator?.email ?? ""}
-          label={hasCompany && !supportAccess ? "Operador" : "Administración"}
-        />
       </SidebarFooter>
     </Sidebar>
   );

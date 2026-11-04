@@ -59,7 +59,7 @@ export default function LoginPage() {
       <form onSubmit={onSubmit}>
         <FieldGroup>
           {mode === "dev" ? (
-            <Alert>
+            <Alert className="bg-secondary ring-0">
               <AlertDescription>
                 Modo desarrollo: entrá con un email, sin contraseña.
               </AlertDescription>
@@ -83,7 +83,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={onForgotPassword}
-                  className="ml-auto text-sm text-muted-foreground underline-offset-4 hover:underline"
+                  className="ml-auto text-sm font-medium text-primary underline-offset-4 hover:underline"
                 >
                   ¿La olvidaste?
                 </button>
@@ -99,7 +99,12 @@ export default function LoginPage() {
             </Field>
           ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Button
+            type="submit"
+            size="lg"
+            className="h-12 w-full"
+            disabled={pending}
+          >
             {pending ? <Spinner /> : null}
             Entrar
           </Button>

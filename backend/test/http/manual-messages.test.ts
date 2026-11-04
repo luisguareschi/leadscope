@@ -1,5 +1,5 @@
 import request from "supertest";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../../src/app.js";
 import { parseCompanyConfig } from "../../src/companies/company-config.js";
 import { recordInboundMessage } from "../../src/conversation/inbound.js";
@@ -292,15 +292,18 @@ describe("company scoping and who may send", () => {
       sentByEmail: "admin@example.com",
       sentBySupport: true,
     });
-    const audit = await db.adminAuditEntry.findMany();
-    expect(audit).toMatchObject([
-      {
-        adminEmail: "admin@example.com",
-        companyId,
-        action: `POST /internal/threads/${thread.id}/messages`,
-        status: 201,
-      },
-    ]);
+    // The status is written when the response closes, after supertest has it.
+    await vi.waitFor(async () => {
+      const audit = await db.adminAuditEntry.findMany();
+      expect(audit).toMatchObject([
+        {
+          adminEmail: "admin@example.com",
+          companyId,
+          action: `POST /internal/threads/${thread.id}/messages`,
+          status: 201,
+        },
+      ]);
+    });
   });
 });
 

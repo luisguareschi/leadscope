@@ -16,7 +16,7 @@ function Avatar({
       data-slot="avatar"
       data-size={size}
       className={cn(
-        "group/avatar relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:border-border after:mix-blend-darken data-[size=lg]:size-10 data-[size=sm]:size-6 dark:after:mix-blend-lighten",
+        "group/avatar relative flex size-8 shrink-0 rounded-full select-none data-[size=lg]:size-10 data-[size=sm]:size-6",
         className,
       )}
       {...props}
@@ -37,19 +37,41 @@ function AvatarImage({ className, ...props }: AvatarPrimitive.Image.Props) {
   );
 }
 
+/** Revolut-style solid initials: the same text always gets the same colour. */
+const FALLBACK_TINTS = [
+  "bg-[#6b7fff] text-white",
+  "bg-[#1fb88f] text-white",
+  "bg-[#2b8fd6] text-white",
+  "bg-[#e5487a] text-white",
+  "bg-[#f08c2e] text-white",
+  "bg-[#a35be0] text-white",
+  "bg-[#a17a6e] text-white",
+];
+
+function tintFor(children: React.ReactNode): string | null {
+  if (typeof children !== "string" || !children.trim()) return null;
+  let hash = 0;
+  for (const char of children) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return FALLBACK_TINTS[hash % FALLBACK_TINTS.length]!;
+}
+
 function AvatarFallback({
   className,
+  children,
   ...props
 }: AvatarPrimitive.Fallback.Props) {
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
+        "flex size-full items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground group-data-[size=sm]/avatar:text-xs",
+        tintFor(children),
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+    </AvatarPrimitive.Fallback>
   );
 }
 

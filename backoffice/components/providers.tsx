@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { useEffect, useRef, useState } from "react";
+import { ThemeColorSync } from "@/components/theme-toggle";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -43,10 +44,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme="light"
-      enableSystem={false}
+      defaultTheme="system"
+      enableSystem
       disableTransitionOnChange
     >
+      <ThemeColorSync />
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <AuthQueryCache />

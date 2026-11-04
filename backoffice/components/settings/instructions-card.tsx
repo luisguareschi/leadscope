@@ -51,9 +51,9 @@ export function InstructionsCard({
       <form
         onSubmit={onSubmit}
         className={cn(
-          "overflow-hidden rounded-xl border bg-card shadow-xs transition-[box-shadow,border-color] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30",
+          "overflow-hidden rounded-xl bg-card ring-1 ring-border/60 dark:ring-0 transition-shadow focus-within:ring-2 focus-within:ring-ring/50",
           error &&
-            "border-destructive focus-within:border-destructive focus-within:ring-destructive/20",
+            "ring-2 ring-destructive focus-within:ring-destructive/60 dark:ring-2",
         )}
       >
         <label htmlFor="company-instructions" className="sr-only">
@@ -71,7 +71,7 @@ export function InstructionsCard({
             setError(null);
           }}
         />
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t bg-muted/40 px-5 py-2.5">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/70 px-5 py-2.5">
           <p
             role={error ? "alert" : undefined}
             className={cn(

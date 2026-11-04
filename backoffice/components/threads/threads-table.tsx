@@ -1,14 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { cn } from "cn";
 import { useRouter } from "next/navigation";
-import {
-  ClockIcon,
-  FileTextIcon,
-  MessagesSquareIcon,
-  SearchXIcon,
-} from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ClockIcon, MessagesSquareIcon, SearchXIcon } from "lucide-react";
 import {
   Empty,
   EmptyDescription,
@@ -25,19 +20,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  formatPhone,
-  formatRelative,
-  formatWaiting,
-  initials,
-} from "@/lib/format";
+import { formatPhone, formatRelative, formatWaiting } from "@/lib/format";
 import type { Thread } from "@/lib/types";
 import { AssigneePicker } from "./assignee-picker";
+import { LeadAvatar } from "./lead-avatar";
 import { CrmIndicator } from "./crm-indicator";
 import { StagePicker } from "./stage-picker";
 import { BotBadge, ColumnHelp, WroteAgainBadge } from "./status-badge";
@@ -81,7 +67,7 @@ export function ThreadsTable({
   return (
     // One child for the Panel's divide-y: the table from lg up, stacked rows below.
     <div>
-      <div className="max-lg:hidden">
+      <div className="px-2 pt-1 pb-2 max-lg:hidden">
         <DesktopTable threads={threads} loading={loading} queue={queue} />
       </div>
       <ul className="divide-y lg:hidden">
@@ -100,7 +86,7 @@ export function ThreadsTable({
 function ThreadRowSkeleton() {
   return (
     <li className="flex gap-3 px-4 py-3.5">
-      <Skeleton className="size-9 shrink-0 rounded-full" />
+      <Skeleton className="size-10 shrink-0 rounded-full" />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex justify-between gap-3">
           <Skeleton className="h-3.5 w-32" />
@@ -120,12 +106,8 @@ function ThreadRowSkeleton() {
 /** Below lg: the same columns as the table, stacked; the whole row opens the thread. */
 function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
   return (
-    <li className="relative flex gap-3 px-4 py-3.5 has-[a[data-row-link]:active]:bg-muted/40">
-      <Avatar className="size-9">
-        <AvatarFallback className="text-xs">
-          {initials(thread.name ?? thread.phone.slice(-2))}
-        </AvatarFallback>
-      </Avatar>
+    <li className="relative flex gap-3 px-4 py-3.5 has-[a[data-row-link]:active]:bg-accent">
+      <LeadAvatar thread={thread} className="size-10" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 items-center gap-1.5">
           <Link
@@ -135,12 +117,6 @@ function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
           >
             {thread.name ?? "Sin nombre"}
           </Link>
-          {thread.source === "form" ? (
-            <FileTextIcon
-              className="size-3.5 shrink-0 text-muted-foreground"
-              aria-label="Llegó por un formulario"
-            />
-          ) : null}
           <span
             className="ml-auto inline-flex shrink-0 items-center gap-1 pl-2 text-xs text-muted-foreground tabular-nums"
             title={
@@ -194,9 +170,9 @@ function DesktopTable({
   const router = useRouter();
   return (
     <Table className="table-fixed">
-      <TableHeader className="bg-muted/40">
+      <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <TableHead className={`${HEAD} w-[26%] pl-5`}>Lead</TableHead>
+          <TableHead className={`${HEAD} w-[26%] pl-3`}>Lead</TableHead>
           <TableHead className={`${HEAD} w-40`}>
             <span className="flex items-center gap-1">
               Etapa
@@ -214,7 +190,7 @@ function DesktopTable({
           </TableHead>
           <TableHead className={`${HEAD} w-40`}>Asignado</TableHead>
           <TableHead className={`${HEAD} w-20 text-center`}>HubSpot</TableHead>
-          <TableHead className={`${HEAD} w-28 pr-5 text-right`}>
+          <TableHead className={`${HEAD} w-28 pr-3 text-right`}>
             {queue ? "Esperando" : "Actividad"}
           </TableHead>
         </TableRow>
@@ -223,9 +199,9 @@ function DesktopTable({
         {loading
           ? Array.from({ length: 6 }, (_, index) => (
               <TableRow key={index} className="hover:bg-transparent">
-                <TableCell className="py-3 pl-5">
+                <TableCell className="pl-3">
                   <div className="flex items-center gap-3">
-                    <Skeleton className="size-8 rounded-full" />
+                    <Skeleton className="size-10 rounded-full" />
                     <div className="flex flex-col gap-1.5">
                       <Skeleton className="h-3.5 w-32" />
                       <Skeleton className="h-3 w-24" />
@@ -245,24 +221,23 @@ function DesktopTable({
                   <Skeleton className="h-3.5 w-20" />
                 </TableCell>
                 <TableCell />
-                <TableCell className="pr-5">
+                <TableCell className="pr-3">
                   <Skeleton className="ml-auto h-3 w-12" />
                 </TableCell>
               </TableRow>
             ))
-          : threads.map((thread) => (
+          : threads.map((thread, index) => (
               <TableRow
                 key={thread.id}
-                className="cursor-pointer hover:bg-muted/40"
+                className={cn(
+                  "cursor-pointer",
+                  index % 2 === 0 && "[--avatar-ring:var(--muted)] *:bg-muted",
+                )}
                 onClick={() => router.push(`/threads/${thread.id}`)}
               >
-                <TableCell className="py-3 pl-5">
+                <TableCell className="pl-3">
                   <div className="flex min-w-0 items-center gap-3">
-                    <Avatar className="size-8">
-                      <AvatarFallback className="text-xs">
-                        {initials(thread.name ?? thread.phone.slice(-2))}
-                      </AvatarFallback>
-                    </Avatar>
+                    <LeadAvatar thread={thread} className="size-10" />
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <div className="flex min-w-0 items-center gap-1.5">
                         <Link
@@ -272,23 +247,6 @@ function DesktopTable({
                         >
                           {thread.name ?? "Sin nombre"}
                         </Link>
-                        {thread.source === "form" ? (
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <span
-                                  className="inline-flex text-muted-foreground"
-                                  aria-label="Llegó por un formulario"
-                                />
-                              }
-                            >
-                              <FileTextIcon className="size-3.5" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Llegó por un formulario
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : null}
                         <WroteAgainBadge thread={thread} />
                       </div>
                       <span className="truncate text-xs text-muted-foreground tabular-nums">
@@ -317,7 +275,7 @@ function DesktopTable({
                 >
                   <CrmIndicator crm={thread.crm} />
                 </TableCell>
-                <TableCell className="pr-5 text-right text-xs text-muted-foreground tabular-nums">
+                <TableCell className="pr-3 text-right text-xs text-muted-foreground tabular-nums">
                   {queue
                     ? formatWaiting(thread.handedOffAt)
                     : formatRelative(thread.lastMessageAt)}

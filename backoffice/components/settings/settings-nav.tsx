@@ -17,7 +17,7 @@ export function SettingsNav({
   return (
     <nav
       aria-label="Secciones de configuración"
-      className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] lg:-mx-6 lg:px-6 @4xl/main:mx-0 @4xl/main:overflow-visible @4xl/main:px-0"
+      className="-mx-4 overflow-x-auto px-4 scrollbar-none lg:-mx-6 lg:px-6 @4xl/main:mx-0 @4xl/main:overflow-visible @4xl/main:px-0"
     >
       <div className="flex w-max gap-1 @4xl/main:w-auto @4xl/main:flex-col @4xl/main:gap-6">
         {groups.map((group) => (
@@ -25,7 +25,7 @@ export function SettingsNav({
             key={group.label}
             className="flex gap-1 @4xl/main:flex-col @4xl/main:gap-0.5"
           >
-            <p className="hidden px-2.5 pb-1.5 text-xs font-medium text-muted-foreground @4xl/main:block">
+            <p className="hidden px-3 pb-1.5 text-xs font-medium text-muted-foreground @4xl/main:block">
               {group.label}
             </p>
             {group.items.map((item) => {
@@ -39,16 +39,16 @@ export function SettingsNav({
                   aria-current={current ? "page" : undefined}
                   onClick={() => onSelect(item.id)}
                   className={cn(
-                    "flex shrink-0 items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "flex shrink-0 items-center gap-2.5 rounded-full px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
                     current
-                      ? "bg-muted font-medium text-foreground"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                      ? "bg-card font-semibold text-foreground shadow-xs dark:bg-white/8 dark:shadow-none"
+                      : "text-muted-foreground hover:bg-card/70 hover:text-foreground dark:hover:bg-white/5",
                   )}
                 >
                   <Icon
                     className={cn(
                       "size-4 shrink-0",
-                      current ? "text-foreground" : "text-muted-foreground",
+                      current ? "text-primary" : "text-muted-foreground",
                     )}
                   />
                   <span className="flex-1 text-left">{item.label}</span>

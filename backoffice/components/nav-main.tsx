@@ -49,10 +49,16 @@ export function NavMain({ items }: { items: NavItem[] }) {
               {item.badge ? (
                 <SidebarMenuBadge
                   aria-label={`${item.badge} ${item.badgeLabel ?? ""}`}
-                  className="bg-amber-500/15 text-amber-800 dark:text-amber-300"
+                  className="bg-primary/15 text-primary peer-hover/menu-button:bg-primary/15 peer-hover/menu-button:text-primary peer-data-active/menu-button:bg-primary/15 peer-data-active/menu-button:text-primary"
                 >
                   {item.badge}
                 </SidebarMenuBadge>
+              ) : null}
+              {item.badge ? (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute top-2 left-7 hidden size-2 rounded-full bg-primary ring-2 ring-sidebar group-data-[collapsible=icon]:block"
+                />
               ) : null}
             </SidebarMenuItem>
           ))}

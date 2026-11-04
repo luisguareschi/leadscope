@@ -7,6 +7,7 @@ import { ArrowLeftIcon } from "lucide-react";
 import { cn } from "cn";
 import { Panel, StatusDot, StatusPill, type Tone } from "@/components/panel";
 import { ChatTranscript } from "@/components/threads/chat-transcript";
+import { LeadAvatar } from "@/components/threads/lead-avatar";
 import { LeadDetails } from "@/components/threads/lead-details";
 import { MessageComposer } from "@/components/threads/message-composer";
 import {
@@ -16,7 +17,6 @@ import {
 } from "@/components/threads/status-badge";
 import { ThreadActions } from "@/components/threads/thread-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,7 +31,6 @@ import {
   formatNumber,
   formatPhone,
   formatTime,
-  initials,
 } from "@/lib/format";
 import { useThread } from "@/lib/queries";
 import type { Thread } from "@/lib/types";
@@ -123,14 +122,13 @@ export default function ThreadPage() {
         {back}
         {thread ? (
           <>
-            <Avatar className="size-9 max-sm:hidden">
-              <AvatarFallback className="text-xs">
-                {initials(thread.name ?? thread.phone.slice(-2))}
-              </AvatarFallback>
-            </Avatar>
+            <LeadAvatar
+              thread={thread}
+              className="size-10 [--avatar-ring:var(--background)] max-sm:hidden"
+            />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <h2 className="truncate text-lg leading-tight font-semibold tracking-tight">
+                <h2 className="truncate font-heading text-xl leading-tight font-semibold tracking-tight">
                   {thread.name ?? formatPhone(thread.phone)}
                 </h2>
                 <span className="contents max-lg:hidden">
@@ -153,7 +151,7 @@ export default function ThreadPage() {
           </>
         ) : (
           <div className="flex flex-1 items-center gap-3">
-            <Skeleton className="size-9 rounded-full" />
+            <Skeleton className="size-10 rounded-full" />
             <div className="flex flex-col gap-1.5">
               <Skeleton className="h-5 w-48" />
               <Skeleton className="h-3.5 w-32" />
@@ -206,15 +204,15 @@ export default function ThreadPage() {
         >
           <div
             data-chat-scroll
-            className="min-h-0 flex-1 overflow-y-auto bg-muted/20"
+            className="min-h-0 flex-1 overflow-y-auto bg-muted/70 dark:bg-black/25"
           >
             {data ? (
               <ChatTranscript messages={data.messages} />
             ) : (
               <div className="flex flex-col gap-3 p-5">
-                <Skeleton className="h-12 w-2/3 rounded-2xl" />
-                <Skeleton className="ml-auto h-16 w-2/3 rounded-2xl" />
-                <Skeleton className="h-10 w-1/2 rounded-2xl" />
+                <Skeleton className="h-12 w-2/3 rounded-[20px]" />
+                <Skeleton className="ml-auto h-16 w-2/3 rounded-[20px]" />
+                <Skeleton className="h-10 w-1/2 rounded-[20px]" />
               </div>
             )}
           </div>

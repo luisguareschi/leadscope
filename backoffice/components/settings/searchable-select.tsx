@@ -78,9 +78,9 @@ export function SearchableSelect({
         render={
           <Button
             id={id}
-            variant="outline"
+            variant="ghost"
             aria-invalid={invalid ? true : undefined}
-            className="w-full justify-between font-normal"
+            className="w-full justify-between rounded-md border-transparent bg-input px-3 font-normal hover:bg-[color-mix(in_oklch,var(--input),var(--foreground)_4%)] focus-visible:border-ring focus-visible:ring-ring/20 aria-expanded:bg-input dark:hover:bg-[color-mix(in_oklch,var(--input),var(--foreground)_4%)] dark:aria-expanded:bg-input"
           />
         }
       >

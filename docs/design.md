@@ -18,7 +18,7 @@ One repo, two apps. No Turborepo.
 
 ```
 backend/      TypeScript HTTP service (Express). Kapso WhatsApp webhook, conversation engine, CRM, knowledge uploads.
-backoffice/   Next.js (client-side), shadcn (preset b1Z5bafVA), Tailwind, React Query. Threads, pause, writing to a lead, knowledge files, company secrets.
+backoffice/   Next.js (client-side), shadcn, Tailwind, React Query (Revolut Business look, light and dark). Threads, pause, writing to a lead, knowledge files, company secrets.
 docs/         Proposal, meeting notes, this design.
 docker-compose.yml   Local Postgres (plus a test database).
 ```
@@ -54,7 +54,7 @@ The engine never imports HubSpot, Google, Kapso, or Meta directly. It talks to s
 | --- | --- | --- |
 | Language | TypeScript | Same language in both apps. |
 | Backend | Express 5 on Node 22, deployed as a Docker image | Familiar HTTP server. A small always-on container so the webhook and LLM call are not cut off. The container applies migrations on start. |
-| Backoffice | Next.js 16 + shadcn (preset `b1Z5bafVA`: base-vega style on Base UI, blue theme) + Tailwind 4 + React Query, client-first | UI and routing only. Pages are client components, data via React Query against the backend. Cache Components are off. Layout from the shadcn `dashboard-01` block. |
+| Backoffice | Next.js 16 + shadcn (base-vega style on Base UI, restyled after Revolut Business) + Tailwind 4 + React Query, client-first | UI and routing only. Pages are client components, data via React Query against the backend. Cache Components are off. Layout from the shadcn `dashboard-01` block. Light and dark themes from CSS variables (see [Visual style](#visual-style)). |
 | Database | Supabase Postgres | Managed Postgres. |
 | ORM | Prisma 7 with the `pg` driver adapter | Schema and all queries from the backend. Runtime uses the Supabase pooled connection; migrations use the direct connection (`prisma.config.ts`). |
 | Auth | Supabase Auth (browser client in the backoffice) | Email login. Public signup off. The backoffice sends the Supabase JWT to the backend. An operator row maps the login to one company. A signed-in email on `PLATFORM_ADMIN_EMAILS` can open Empresas with no operator row and no companies. |
@@ -480,7 +480,40 @@ One shared backoffice for all companies: one Vercel app, one URL. The operator�
 
 React Query with polling (every 10 seconds on lists, 5 on an open conversation) is enough at this volume. No realtime subscription in v1.
 
-Shadcn with Luis's preset `b1Z5bafVA` and the `dashboard-01` layout. Per-company branding is not in v1.
+### Visual style
+
+Shadcn on the `dashboard-01` layout (sidebar, header, content), restyled in Nov 2026 after Revolut Business's admin dashboard and the current Revolut web app (references in the Project store, `internal/revolut-redesign/`). Everything goes through the theme tokens in `backoffice/app/globals.css` and the shadcn primitives in `components/ui`, so pages rarely carry their own colours.
+
+- **Light and dark.**
+  - `next-themes` puts `.dark` on `<html>`, and the default follows the system.
+  - The header's sun/moon button, the account menu, and the sign-in pages' footer offer Según el sistema, Claro, and Oscuro. The choice is saved in the browser (`localStorage`).
+  - The browser and PWA chrome colour follows the chosen theme. The offline page follows the system.
+- **Surfaces.**
+  - Light: a soft grey canvas (`#f2f3f7`) with white cards.
+  - Dark: the Revolut app's near-black canvas (`#03040b`) with a faint navy wash at the top, and navy-tinted surfaces (cards `#12141f`, filled pills `#1d2030`, fields `#202334`).
+  - Depth comes from surface steps, not shadows. The sidebar and the page sit on the canvas, and content lives in rounded cards (about 20px). Page content stops at 1400px wide.
+- **Sidebar.** The logo glyph sits on a rounded tile (ink in light mode, white in dark), next to the wordmark and the company. Items are 15px regular with 20px icons; the active one is a soft fill with the accent icon. A small collapse icon at the right of the logo row, shown while the pointer is over the sidebar (or on keyboard focus), or ⌘B / Ctrl+B, collapses the sidebar to a rail of icons with tooltips rather than hiding it: the logo tile, the item icons (Conversaciones gets a dot while it has Por contactar threads nobody has taken), and the support-access shield (its tooltip names the company and it goes back to Empresas). Hovering the collapsed logo tile turns it into the expand icon; clicking it expands the sidebar. The choice is remembered. The support-access bar sits at the bottom. On phones the sidebar is a sheet opened from the header.
+- **Header.**
+  - The page title is 24px, weight 500.
+  - There is no search in the header. Conversaciones has its own pill search at the top of the page, under the header, on every screen size ("Buscar por nombre o teléfono", the `q` parameter): it filters as you type, ⌘K or Ctrl+K focuses it, and Escape clears it. Other pages have no search.
+  - On the right is the account avatar. Its menu shows who is signed in, the theme (Según el sistema, Claro, Oscuro), and Cerrar sesión. There is no separate theme button in the header.
+  - The sidebar toggle shows in the header only on phones.
+- **Controls.**
+  - Every button is a pill. The main action is ink on light and white on dark (Revolut's "white pill"). Secondary and outline actions are filled pills in dark mode (white with a hairline in light mode).
+  - There are two accent pills: `accent` (solid, for example Ver on the "espera a un asesor" notice) and `soft` (tinted).
+  - Inputs and selects are filled fields (about 12px corners) with an accent focus ring. Menus, pickers, and dialogs are rounded popovers.
+- **Accent.** Cobalt `#494fdf` in light mode and periwinkle `#6b7fff` in dark. It is used for links (for example "Ver más conversaciones"), focus, switches, the active nav icon, empty-state icons, and the bubbles of the company's messages in a thread.
+- **Status colours.** `status-ok` (teal), `status-warning` (orange), and `status-info` (blue) are tokens per theme; red is `destructive`.
+- **Conversaciones list.**
+  - It follows Revolut's transaction lists. The stage filters, Asignadas a mí, and the Asistente filter sit in the card's top bar.
+  - Rows are zebra bands with a rounded hover strip, and the header text is muted.
+  - Each lead has a 40px solid-colour initials avatar (the colour is fixed per name) with a corner badge for where it came from: a message icon for WhatsApp, a file icon on the accent for a form.
+  - The Asistente column is coloured text (Requiere asesor in orange, Pausado muted), not a pill. Notices are neutral cards with a tinted icon and one action.
+- **Sign-in pages.** These follow Revolut's SSO page: no card, a narrow left-aligned form in the middle of the page, 48px fields and button, the wordmark at the top left, and the theme button with "Panel del asistente de WhatsApp" at the bottom left. In light mode the page is white.
+- **Type.** Inter for text. Geist (a free stand-in for Revolut's Aeonik Pro) for page titles, card titles, dialog titles, and large figures (for example Conocimiento's usage), at weight 500 for display sizes.
+- **Phones.** Below `lg` the layouts are as before the restyle (stacked rows, Conversación / Lead tabs). Only the account menu moved to the header avatar.
+
+Per-company branding is not in v1.
 
 ## Hosting, environments, and operations
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { NavUser } from "@/components/nav-user";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useMe } from "@/lib/queries";
 import { useIsIOSPWA } from "@/hooks/use-is-ios-pwa";
 import { cn } from "cn";
@@ -19,23 +19,33 @@ export function SiteHeader() {
   const pathname = usePathname();
   const me = useMe();
   const isIOSPWA = useIsIOSPWA();
+  const { isMobile } = useSidebar();
+  const hasCompany = Boolean(me.data?.company);
+  const supportAccess = me.data?.supportAccess === true;
 
   return (
     <header
       className={cn(
-        "flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)",
+        "flex h-(--header-height) shrink-0 items-center transition-[width,height] ease-linear",
         isIOSPWA ? "mt-4" : "mt-0",
       )}
     >
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
-        <Separator
-          orientation="vertical"
-          className="mx-2 h-4 data-vertical:self-auto"
-        />
-        <h1 className="text-base font-medium">
-          {titleFor(pathname, me.data?.platformAdmin === true)}
-        </h1>
+      <div className="mx-auto grid w-full max-w-350 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 lg:px-6">
+        <div className="flex min-w-0 items-center gap-2">
+          {/* On desktop the sidebar has its own collapse button; on phones it is a sheet. */}
+          {isMobile ? (
+            <SidebarTrigger className="-ml-1.5 text-muted-foreground" />
+          ) : null}
+          <h1 className="truncate font-heading text-[22px] font-medium tracking-tight lg:text-2xl">
+            {titleFor(pathname, me.data?.platformAdmin === true)}
+          </h1>
+        </div>
+        <div className="flex items-center justify-end gap-1.5">
+          <NavUser
+            email={me.data?.operator?.email ?? ""}
+            label={hasCompany && !supportAccess ? "Operador" : "Administración"}
+          />
+        </div>
       </div>
     </header>
   );

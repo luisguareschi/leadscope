@@ -42,7 +42,7 @@ export default function KnowledgePage() {
         {query.data ? (
           <UsageCard usage={query.data.usage} fileCount={files.length} />
         ) : (
-          <Skeleton className="h-[4.5rem] w-full rounded-xl" />
+          <Skeleton className="h-18 w-full rounded-xl" />
         )}
 
         {query.data ? (
