@@ -49,7 +49,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
               {item.badge ? (
                 <SidebarMenuBadge
                   aria-label={`${item.badge} ${item.badgeLabel ?? ""}`}
-                  className="bg-primary/15 text-primary"
+                  className="bg-primary/15 text-primary peer-hover/menu-button:bg-primary/15 peer-hover/menu-button:text-primary peer-data-active/menu-button:bg-primary/15 peer-data-active/menu-button:text-primary"
                 >
                   {item.badge}
                 </SidebarMenuBadge>
