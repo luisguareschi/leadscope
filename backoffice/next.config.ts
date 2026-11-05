@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/integrations",
-        destination: "/settings?tab=integrations",
+        destination: "/settings?tab=whatsapp",
         permanent: true,
       },
     ];

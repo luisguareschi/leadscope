@@ -70,7 +70,7 @@ type MobileView = "chat" | "lead";
 /** The Lead tab's dot below lg: the panel has something to act on. */
 function attentionTone(thread: Thread | undefined): Tone | null {
   if (!thread) return null;
-  if (thread.crm.status === "failed") return "error";
+  if (thread.crm?.status === "failed") return "error";
   if (thread.needsHuman) return "warning";
   return null;
 }

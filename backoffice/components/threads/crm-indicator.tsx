@@ -7,7 +7,9 @@ import {
 import { formatDateTime } from "@/lib/format";
 import type { Thread } from "@/lib/types";
 
-export function crmLabel(crm: Thread["crm"]): string {
+type Crm = NonNullable<Thread["crm"]>;
+
+export function crmLabel(crm: Crm): string {
   switch (crm.status) {
     case "synced":
       return `Guardado en HubSpot (${formatDateTime(crm.syncedAt)})`;
@@ -21,7 +23,7 @@ export function crmLabel(crm: Thread["crm"]): string {
 }
 
 /** A dash until there is a HubSpot write to report; then green when saved, red when it failed. */
-export function CrmIndicator({ crm }: { crm: Thread["crm"] }) {
+export function CrmIndicator({ crm }: { crm: Crm }) {
   if (crm.status === "none")
     return (
       <span className="text-muted-foreground/60" aria-label={crmLabel(crm)}>

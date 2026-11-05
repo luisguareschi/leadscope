@@ -52,13 +52,16 @@ export type Thread = {
   lastMessageAt: string | null;
   lastMessagePreview: string | null;
   replyWindowClosesAt: string | null;
+  /** Null while the company has HubSpot off. */
   crm: {
     status: CrmStatus;
     contactId: string | null;
+    /** The contact's record in HubSpot, once the account is known. */
+    url: string | null;
     syncedAt: string | null;
     lastError: string | null;
     retriesExhausted: boolean;
-  };
+  } | null;
   createdAt: string;
 };
 
@@ -285,6 +288,9 @@ export type CompanySettings = {
   whatsappPhoneNumberId: string | null;
   /** Append to the API's public URL to get the webhook URL to paste in Kapso. */
   kapsoWebhookPath: string;
+  /** Append to the API's public URL to get the URL the form workflow posts to. */
+  formLeadPath: string;
+  hubspot: HubspotSettings;
   /** Read-only: written in code and filled in with the config. */
   platformRules: string;
   currentVersions: {
@@ -332,16 +338,31 @@ export type PromptPreview = {
   };
 };
 
+export type HubspotSettings = {
+  /** Off: no contact is created or updated, and the panel hides HubSpot in threads. */
+  enabled: boolean;
+  /** From HubSpot's account info, for the "Abrir en HubSpot" link. */
+  portalId: string | null;
+  uiDomain: string | null;
+};
+
 export type ConnectionCheckStatus = "ok" | "warning" | "error" | "skipped";
 
-export type WhatsappConnectionCheck = {
-  webhookPath: string;
-  /** Every check passed, possibly with warnings. */
-  ready: boolean;
-  checks: Array<{
-    id: "phoneNumberId" | "apiKey" | "webhookSecret" | "number" | "webhook";
-    status: ConnectionCheckStatus;
-    label: string;
-    detail: string;
-  }>;
+export type IntegrationCheck = {
+  id: string;
+  status: ConnectionCheckStatus;
+  label: string;
+  detail: string;
 };
+
+/** A Probar conexión result. `ready`: every check passed, possibly with warnings. */
+export type IntegrationCheckResult = {
+  ready: boolean;
+  checks: IntegrationCheck[];
+};
+
+export type WhatsappConnectionCheck = IntegrationCheckResult & {
+  webhookPath: string;
+};
+
+export type IntegrationCheckTarget = "hubspot" | "anthropic" | "forms";

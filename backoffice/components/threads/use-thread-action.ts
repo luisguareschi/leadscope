@@ -17,9 +17,9 @@ export function useThreadActionWithToast(threadId: string) {
   const run = (action: ThreadAction) =>
     mutation.mutate(action, {
       onSuccess: ({ thread }) => {
-        if (action === "crm-sync" && thread.crm.status !== "synced") {
+        if (action === "crm-sync" && thread.crm?.status !== "synced") {
           toast.error(
-            `HubSpot sigue fallando: ${thread.crm.lastError ?? "error desconocido"}`,
+            `HubSpot sigue fallando: ${thread.crm?.lastError ?? "error desconocido"}`,
           );
         } else {
           toast.success(SUCCESS[action]);

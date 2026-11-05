@@ -18,6 +18,7 @@ WhatsApp assistant for Altamira, a real-estate developer in Uruguay (not Altamir
 - The same day he asked for operators to write to the lead from the thread view, so advisors do not need their own phones. That is built: a composer sends from the company's bot number.
 - In Nov 2026 Conocimiento gained folders (nested, renamed, moved by drag and drop or Mover a…), and the prompt heads each file with its folder path. That is built.
 - In Nov 2026 the panel copy moved from Uruguayan voseo to neutral Spanish with tú forms (tienes, sube, elige). New panel text follows that. What the bot says to leads is company config and keeps each company's own tone.
+- In Nov 2026 Luis asked for each integration to be set up in one place, with a test, and for HubSpot to be used only when the client has it. That is built: Configuración has an Integraciones group (WhatsApp (Kapso), Formularios, HubSpot, Anthropic), each with its own Probar conexión, and HubSpot has a per-company switch. Altamira stays on.
 
 **Product goal.** Altamira is the first client. The system is a multi-company product so it can be sold to other developers later: one shared deployment, every row scoped by company, and company-specific behavior in config. Version 1 still ships only Altamira's scope, with no resale features yet (signup, billing, a customer admin for their own company). Software ownership must be settled in Altamira's signed contract before resale.
 
@@ -58,9 +59,13 @@ Allowlisted public site pages (address, amenities) are optional and secondary, a
 
 Altamira has had HubSpot live for about 2 months. Fabio wants every lead in the database, even the ones disqualified later.
 
+- HubSpot is optional per company: a switch in Configuración → Integraciones → HubSpot. Off, LeadScope creates and updates nothing, queues no write, retries nothing (turning it off drops pending writes), and the panel hides the HubSpot status and link. Turning it on writes nothing by itself: each lead HubSpot never had is created on their next message, with no backfill. New companies start off. Companies from before the switch were set on start from whether they had a HubSpot token, so Altamira stays on.
+- The bullets below apply while it is on.
 - The backend creates the HubSpot contact on the lead's first inbound message, or when a form lead arrives. It searches by phone first so nobody is duplicated. The contact gets the WhatsApp profile name and the phone; the bot does not ask for email. The contact id is stored on the thread.
 - After each bot turn that changed something (collected fields, summary, stage, call time), and on handoff, close, or when the bot stops itself, the backend updates the same contact. It writes one long text property through the HubSpot API: the assistant's bullet summary and the collected fields at the top, then the transcript. There are no per-field properties.
 - Writes run in the background, so the reply to the lead never waits on HubSpot. Failed writes retry with backoff and show in the panel.
+- The thread's Lead panel has Abrir en HubSpot once the thread has a contact id. The link is `https://<uiDomain>/contacts/<portalId>/record/0-1/<contactId>`, with the portal id and UI host (for example `app-eu1.hubspot.com`) read from HubSpot's account info API (`GET /account-info/v3/details`) when the token is saved or tested, and stored on the company.
+- LeadScope does not create the long-text property. The company creates it by hand (Contact, Multi-line text), and the private app needs `crm.objects.contacts.read` and `crm.objects.contacts.write` only.
 - LeadScope never changes the HubSpot lead status. Vicky disqualifies by hand (automating that is v2).
 - Do not use HubSpot's native AI. José estimated that route at about USD 1,800 a month at this volume.
 
@@ -111,7 +116,7 @@ The panel has a thread list, a way to pause the assistant when a person takes ov
 - Filters by lead stage, by bot activity, and by "Asignadas a mí". Por contactar is the advisors' queue: oldest handoff first, with the time waiting and an "Escribió de nuevo" badge when the lead wrote after the handoff.
 - The sidebar badge counts Por contactar threads nobody has taken.
 
-**Thread view.** The same split (Etapa, Asistente, Asignado) with both pickers and the last stage change. A composer under the conversation writes to the lead (see Handoff). Every bubble renders WhatsApp's markup, and outbound bubbles say "Asistente" or `Enviado por <name>`.
+**Thread view.** The same split (Etapa, Asistente, Asignado) with both pickers and the last stage change. A composer under the conversation writes to the lead (see Handoff). Every bubble renders WhatsApp's markup, and outbound bubbles say "Asistente" or `Enviado por <name>`. With HubSpot on, the Lead panel shows its status and Abrir en HubSpot; with it off, neither the thread nor the list shows HubSpot.
 
 **On a phone.** Below the `lg` breakpoint, Conversaciones is a list of stacked rows with the same pickers, and the thread view has Conversación / Lead tabs with Pausar in the ⋯ menu. From `lg` up the desktop layout is unchanged. Luis asked for this on 23 Oct 2026.
 
@@ -120,24 +125,27 @@ The panel has a thread list, a way to pause the assistant when a person takes ov
 **Configuración.** Any operator of the company can edit it. There are no admin/member roles in the MVP. A platform admin can too, through support access.
 
 - The layout is a grouped section nav, one section at a time:
-  - Asistente: General, Conversación, Temas prohibidos, Mensajes fijos, Bienvenida y CRM, Modelo y límites.
+  - Asistente: General, Conversación, Temas prohibidos, Mensajes fijos, Respuestas y límites (temperature, history, wait, and knowledge limits).
   - Prompt: Instrucciones, Reglas y prompt.
-  - Empresa: Integraciones, Historial, and Operadores for support access.
-- One config draft spans the Asistente sections. A save bar shows only when there are unsaved changes.
+  - Integraciones: WhatsApp (Kapso), Formularios, HubSpot, Anthropic. See Integraciones below.
+  - Empresa: Historial, and Operadores for support access.
+- One config draft spans the Asistente sections and the config fields that moved to Integraciones (welcome template, HubSpot property, model). A save bar shows only when there are unsaved changes. Those fields are still in the config, so Historial versions and restores them as before.
 - General has two separate name fields. "Nombre de la empresa" is `Company.name`, the one value that the prompt, Empresas, and the panel read. "Nombre del asistente" is `config.assistantName` (for example "Almira"), and it is optional. The prompt says "Almira, the virtual assistant of Altamira" and never swaps them. Until 22 Oct 2026 a single `displayName`, labeled as the assistant's name, was used by the prompt as the company's name. The migration split it in two.
 - The company config covers tone, the information to collect, forbidden topics, fixed messages, business hours, the welcome template, the HubSpot property name, the model, and knowledge limits. The panel validates it before saving.
   - The information to collect is up to 10 items. Each has a key, a name, a short description for the prompt, and a choice between "Necesario para Por contactar" and optional.
   - Forbidden topics are plain language, with no regex patterns.
-  - Idioma, Zona horaria (IANA), País de los teléfonos (country and calling code), and Modelo de Anthropic are searchable selects. The model list comes from Anthropic's API when the company has its key, and from a fixed list otherwise. A saved value outside the list stays valid.
+  - Idioma, Zona horaria (IANA), País de los teléfonos (country and calling code), and the model (in Integraciones → Anthropic) are searchable selects. The model list comes from Anthropic's API when the company has its key, and from a fixed list otherwise. A saved value outside the list stays valid.
 - The WhatsApp phone number id is a unique column on the company that routes inbound webhooks. It is empty until the company has a number.
 - The company instructions are free text.
 - The platform rules the engine depends on stay in code and are shown read-only, next to the full prompt the model would receive. They cover the submit_turn output format, the required-items handoff, the needsHuman and forbidden-topic flags, and the 24-hour window.
 - Each save of the config, the instructions, the company's name, or the phone number id keeps a version with who and when. Any version can be restored.
 
-**Integraciones.** A section (tab) of Configuración. The old `/integrations` route redirects there.
+**Integraciones.** A group of Configuración with one section per provider, each with what it needs, a Spanish guide, and a Probar conexión that checks something real without sending a message to anyone. Results are in Spanish, one line per check, with the reason for each failure. The old `/integrations` route and `?tab=integrations` open WhatsApp (Kapso); `?tab=crm` opens Formularios and `?tab=model` Respuestas y límites.
 
-- An operator connects WhatsApp through Kapso here. The section has the Phone number ID, a step-by-step guide in Spanish, the company's exact webhook URL with a copy button, and Probar conexión. Probar conexión asks Kapso for the number's health and for the webhook that points at the company.
-- The operator sets the company's secrets: Kapso API key, Kapso webhook secret, Anthropic API key, HubSpot access token, and form-lead secret.
+- **WhatsApp (Kapso).** The Phone number ID, the Kapso API key, the company's exact webhook URL with a copy button, the webhook secret, and the guide. Probar conexión asks Kapso for the number's health and for the webhook that points at the company.
+- **Formularios.** The form-lead hook URL with a copy button, the form-lead secret, a guide for the HubSpot "Send a webhook" workflow, and the welcome template (moved from the old Bienvenida y CRM). Probar conexión checks the secret is set and that the welcome template exists, in that language and approved, in the number's WhatsApp account (Kapso's Get phone number for the account id, then List message templates).
+- **HubSpot.** The on/off switch, the access token, the long-text property name (moved from Bienvenida y CRM), the account it belongs to, and a guide (private app, the two contact scopes, creating the property by hand, where to paste the token). Probar conexión checks the token (account info), its scopes (private-app token info), and that the property exists and is text. It reads only, and saves the account for the record link.
+- **Anthropic.** The API key and the model (moved from Modelo y límites). Probar conexión retrieves the saved model from Anthropic's Models API with the key (no message is generated), so a wrong key and a model the key cannot use read differently.
 - Secrets are write-only. The panel shows whether each one is set, and the last 4 characters when that does not reveal the whole value. It never shows the full secret. An empty field does not clear a secret; Quitar does.
 - `SECRETS_ENCRYPTION_KEY` stays a server env var. `npm run company:secret` remains for debugging.
 
@@ -187,7 +195,7 @@ Creating the next company is in the panel for a platform admin. It is not a cust
 - Knowledge changes often (units, prices, quotas). Uploaded files are the commercial source, not a prompt frozen at kickoff. Re-uploading with the same name to the same folder replaces the previous file, and prices go stale if operators do not re-upload. Folders give the model context, since each file is headed by its folder path. The character limits are the same with or without folders. Public site notes are optional and for stable facts only. Commercial facts in the uploaded files win over site notes.
 - There are two kinds of WhatsApp number: the API number for the bot, and advisors' personal numbers. Advisors may reply from the bot number inside the panel, through the thread view's composer, which pauses the bot. Answering from their personal phones is still fine. The bot never lives on an advisor's phone, and the panel does not connect personal numbers.
 - The bot only moves the lead stage forward. It moves Calificando to Por contactar, or to Sin interés. Sin interés comes back to Por contactar only if the lead re-qualifies or asks to talk to a person now. From Por contactar and Contactado only a person moves the stage. A person can set any stage in any direction from the stage picker. The bot then continues forward from there, and a person's change wins over a turn that was running.
-- HubSpot gets the contact from the first message, and the same content after every turn that changes it. The status line in the property follows the thread (stage, needsHuman, closed).
+- HubSpot, when the company has it on, gets the contact from the first message, and the same content after every turn that changes it. The status line in the property follows the thread (stage, needsHuman, closed). With it off, nothing reaches HubSpot.
 - The model returns structured fields through `submit_turn`: the reply, collected values by item key, the call time, an intent with an explicit not-interested, needsHuman, `callNow` for a lead who wants to talk to a person now, a forbidden-topic flag, and a short bullet summary of the conversation and what the lead wants. The summary is stored on the thread every turn. The engine owns the conversation state.
 - Handoff starts only once every required item is stored, or on `callNow`. Optional items never hold it up. On `callNow` the platform rule tells the model to answer that an advisor will contact the lead as soon as possible. A phone number to call right away comes only from the company instructions: there is no setting for it, no business-hours logic, and never a hardcoded number. The thread's Lead panel shows the summary and the collected fields.
 - The bot stops itself (`needsHuman`) in three cases: a lead asks something only a person can answer (a complaint, an existing purchase), the model flags a forbidden topic (the lead asked about one, or its reply would touch one), or the model or WhatsApp fails. The engine then sends one fixed line from company config, never the model's own words on a forbidden topic. It writes HubSpot and waits until an operator marks the thread attended. Forbidden topics are plain language only, and there is no regex check on replies.

@@ -122,7 +122,7 @@ async function main() {
       whatsappPhoneNumberId: phoneNumberId,
       encryptedSecrets: encryptSecrets(secrets, key),
       // Altamira uses HubSpot. The account is a placeholder so "Abrir en HubSpot" shows locally;
-      // saving or testing a real token replaces it.
+      // saving or testing a token replaces it, and seeding again puts it back if it went.
       hubspotEnabled: true,
       hubspotPortalId: "12345678",
       hubspotUiDomain: "app.hubspot.com",
@@ -135,6 +135,9 @@ async function main() {
       ...(phoneNumberIdOverride
         ? { whatsappPhoneNumberId: phoneNumberIdOverride }
         : {}),
+      ...(existing?.hubspotPortalId
+        ? {}
+        : { hubspotPortalId: "12345678", hubspotUiDomain: "app.hubspot.com" }),
     },
   });
   await recordSeedVersions(db, {
