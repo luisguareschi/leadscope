@@ -451,7 +451,7 @@ describe("Anthropic check", () => {
 });
 
 function kapsoApi(
-  templates: Array<{ name: string; language: string; status: string }>,
+  templates: Array<{ name: string; language: string; status?: string }>,
 ) {
   return fakeFetch((url, init) => {
     expect(init?.method ?? "GET").toBe("GET");
@@ -501,7 +501,7 @@ describe("Formularios check", () => {
 
   it("explains a template that is pending, missing, or in another language", async () => {
     const cases: Array<
-      [Array<{ name: string; language: string; status: string }>, string]
+      [Array<{ name: string; language: string; status?: string }>, string]
     > = [
       [[{ name: "bienvenida", language: "es", status: "PENDING" }], "revisión"],
       [[], "No hay una plantilla bienvenida"],
@@ -509,6 +509,7 @@ describe("Formularios check", () => {
         [{ name: "bienvenida", language: "es_AR", status: "APPROVED" }],
         "es_AR",
       ],
+      [[{ name: "bienvenida", language: "es" }], "no informa"],
     ];
     for (const [templates, expected] of cases) {
       const app = await setup({

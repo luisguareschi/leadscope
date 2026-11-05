@@ -4,6 +4,7 @@ import { createApp } from "../../src/app.js";
 import { encryptSecrets } from "../../src/companies/company-secrets.js";
 import { backfillHubspotEnabled } from "../../src/companies/load-company.js";
 import { recordInboundMessage } from "../../src/conversation/inbound.js";
+import { syncWithCrmLease } from "../../src/conversation/crm-sync.js";
 import { sweepOnce } from "../../src/conversation/sweeper.js";
 import { parseEncryptionKey } from "../../src/lib/crypto.js";
 import {
@@ -183,6 +184,61 @@ describe("turning HubSpot on and off", () => {
       .set(operator)
       .send({ enabled: "yes" })
       .expect(400);
+  });
+});
+
+describe("turning HubSpot off during a write", () => {
+  it("waits for the write already talking to HubSpot, and no later write starts", async () => {
+    await setup(true);
+    let release!: () => void;
+    const started: string[] = [];
+    const blocked = new Promise<void>((resolve) => (release = resolve));
+    ctx = createTestContext({
+      integrations: {
+        crmFor: () => ({
+          kind: "fake",
+          async upsertLead(lead) {
+            started.push(lead.phone);
+            await blocked;
+            return { contactId: "77" };
+          },
+        }),
+      },
+    });
+    app = createApp(ctx);
+    const result = await recordInboundMessage(
+      ctx,
+      inbound(pnid, { body: "Hola" }),
+    );
+    if (result.status !== "recorded") throw new Error(result.status);
+    await vi.waitFor(() => expect(started).toHaveLength(1));
+
+    let disabled = false;
+    const disabling = request(app)
+      .put("/internal/integrations/hubspot")
+      .set(operator)
+      .send({ enabled: false })
+      .then((response) => {
+        disabled = true;
+        return response;
+      });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(disabled).toBe(false);
+
+    release();
+    expect((await disabling).status).toBe(200);
+    await settle(ctx);
+
+    await db.thread.update({
+      where: { id: result.threadId },
+      data: { crmPendingAction: "update" },
+    });
+    await syncWithCrmLease(ctx, result.threadId);
+    expect(started).toHaveLength(1);
+    expect(
+      (await db.thread.findUniqueOrThrow({ where: { id: result.threadId } }))
+        .crmPendingAction,
+    ).toBeNull();
   });
 });
 

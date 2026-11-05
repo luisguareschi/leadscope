@@ -109,12 +109,14 @@ export async function checkWelcomeTemplate(
         : `No hay una plantilla ${template.name} en la cuenta de WhatsApp de este número. Revisa el nombre exacto en Kapso o en Meta.`,
     };
   }
-  if (match.status && match.status !== "APPROVED")
+  if (match.status !== "APPROVED")
     return {
       id: "template",
       status: "error",
       label: LABEL,
-      detail: `${template.name} (${template.language}) ${STATUS_TEXT[match.status] ?? `tiene el estado ${match.status}`}. Solo se puede enviar una plantilla aprobada.`,
+      detail: match.status
+        ? `${template.name} (${template.language}) ${STATUS_TEXT[match.status] ?? `tiene el estado ${match.status}`}. Solo se puede enviar una plantilla aprobada.`
+        : `Kapso no informa si ${template.name} (${template.language}) está aprobada. Revísala en Kapso o en Meta y prueba de nuevo.`,
     };
   return {
     id: "template",

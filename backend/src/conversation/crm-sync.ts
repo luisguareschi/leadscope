@@ -27,6 +27,32 @@ export function crmRequest(action: CrmActionKind) {
   } satisfies Prisma.ThreadUpdateInput;
 }
 
+/** Up to three HubSpot calls of 15 s each run inside the gate. */
+const HUBSPOT_GATE_TIMEOUT_MS = 60_000;
+
+/**
+ * A per-company advisory lock between CRM writes (shared, held across the HubSpot call) and
+ * turning HubSpot off (exclusive), so no write reaches HubSpot once the switch is off. It touches
+ * nothing else, so saving settings or secrets never waits for HubSpot.
+ */
+export function withHubspotGate<T>(
+  ctx: AppContext,
+  companyId: string,
+  mode: "shared" | "exclusive",
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  const key = `hubspot:${companyId}`;
+  return ctx.db.$transaction(
+    async (tx) => {
+      if (mode === "shared")
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock_shared(hashtext(${key}))`;
+      else await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
+      return fn(tx);
+    },
+    { maxWait: HUBSPOT_GATE_TIMEOUT_MS, timeout: HUBSPOT_GATE_TIMEOUT_MS },
+  );
+}
+
 /** An outbox with nothing owed: what turning HubSpot off leaves on every thread of the company. */
 export const CRM_OUTBOX_CLEARED = {
   crmPendingAction: null,
@@ -49,13 +75,14 @@ export async function syncThreadToCrm(
     include: { company: true },
   });
   if (!thread?.crmPendingAction) return "nothing";
-  if (thread.company.hubspotEnabled !== true) {
+  const dropPending = async () => {
     await ctx.db.thread.updateMany({
       where: { id: threadId, crmRequestVersion: thread.crmRequestVersion },
       data: CRM_OUTBOX_CLEARED,
     });
-    return "nothing";
-  }
+    return "nothing" as const;
+  };
+  if (thread.company.hubspotEnabled !== true) return dropPending();
   // Backing off after a failure; a new request (or Reintentar) clears this.
   if (thread.crmNextAttemptAt && thread.crmNextAttemptAt > ctx.now())
     return "nothing";
@@ -80,13 +107,28 @@ export async function syncThreadToCrm(
       config: company.config,
       now: ctx.now(),
     });
-    const { contactId } = await ctx.integrations.crmFor(company).upsertLead({
-      phone: thread.phone,
-      name: thread.name,
-      email: thread.email,
-      existingContactId: thread.crmContactId,
-      summary,
-    });
+    const written = await withHubspotGate(
+      ctx,
+      company.id,
+      "shared",
+      async (tx) => {
+        // Re-read under the gate: turning HubSpot off waits for this write, or this sees it off.
+        const current = await tx.company.findUniqueOrThrow({
+          where: { id: company.id },
+          select: { hubspotEnabled: true },
+        });
+        if (current.hubspotEnabled !== true) return null;
+        return ctx.integrations.crmFor(company).upsertLead({
+          phone: thread.phone,
+          name: thread.name,
+          email: thread.email,
+          existingContactId: thread.crmContactId,
+          summary,
+        });
+      },
+    );
+    if (!written) return await dropPending();
+    const { contactId } = written;
     await ctx.db.thread.update({
       where: { id: threadId },
       data: {
