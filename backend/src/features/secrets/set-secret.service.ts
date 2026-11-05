@@ -1,6 +1,7 @@
 import type { CompanySecretName } from "../../companies/company-secrets.js";
 import type { AppContext } from "../../context.js";
 import { badRequest } from "../../lib/http-error.js";
+import { refreshHubspotAccount } from "../integrations/hubspot-account.js";
 import { toSecretStatus, type SecretStatus } from "./secret-dto.js";
 import { updateCompanySecrets } from "./update-company-secrets.js";
 
@@ -20,5 +21,7 @@ export async function setSecret(
   await updateCompanySecrets(ctx, companyId, (secrets) => {
     secrets[name] = trimmed;
   });
+  if (name === "hubspotAccessToken")
+    await refreshHubspotAccount(ctx, companyId, trimmed);
   return toSecretStatus(name, trimmed);
 }

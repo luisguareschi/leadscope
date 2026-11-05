@@ -94,6 +94,8 @@ export async function createCompany(
     config?: Partial<CompanyConfigInput>;
     instructions?: string;
     secrets?: CompanySecrets;
+    /** On by default, so the CRM tests write to the fake HubSpot. */
+    hubspotEnabled?: boolean | null;
   } = {},
 ) {
   const slug = options.slug ?? "test-co";
@@ -108,6 +110,8 @@ export async function createCompany(
       config,
       instructions,
       whatsappPhoneNumberId,
+      hubspotEnabled:
+        options.hubspotEnabled === undefined ? true : options.hubspotEnabled,
       encryptedSecrets: encryptSecrets(
         options.secrets ?? {
           formLeadSecret: "form-secret",

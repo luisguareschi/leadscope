@@ -1,9 +1,11 @@
 import { parseCompanyConfig } from "../../companies/company-config.js";
 import { MAX_INSTRUCTIONS_CHARS } from "../../companies/editable-config.js";
+import { hubspotSettingsOf } from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
 import { buildPlatformRules } from "../../engine/prompt.js";
 import { SettingsKind } from "../../generated/prisma/enums.js";
 import { kapsoWebhookPath } from "../../integrations/whatsapp/kapso/kapso-webhook-path.js";
+import { formLeadPath } from "../form-leads/form-lead-path.js";
 
 /** The company's editable settings, and the platform rules they fill in (read-only). */
 export async function getSettings(ctx: AppContext, companyId: string) {
@@ -15,6 +17,9 @@ export async function getSettings(ctx: AppContext, companyId: string) {
       config: true,
       instructions: true,
       whatsappPhoneNumberId: true,
+      hubspotEnabled: true,
+      hubspotPortalId: true,
+      hubspotUiDomain: true,
     },
   });
   const latest = (kind: SettingsKind) =>
@@ -43,6 +48,9 @@ export async function getSettings(ctx: AppContext, companyId: string) {
     whatsappPhoneNumberId: company.whatsappPhoneNumberId,
     /** Append to the backend's public URL to get the webhook URL to paste in Kapso. */
     kapsoWebhookPath: kapsoWebhookPath(company.slug),
+    /** Append to the backend's public URL to get the URL the form workflow posts to. */
+    formLeadPath: formLeadPath(company.slug),
+    hubspot: hubspotSettingsOf(company),
     platformRules: buildPlatformRules(config, company.name),
     currentVersions: {
       config: configVersion?.id ?? null,

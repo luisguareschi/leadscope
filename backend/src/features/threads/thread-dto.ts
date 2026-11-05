@@ -2,6 +2,7 @@ import type { Prisma } from "../../generated/prisma/client.js";
 import { MAX_CRM_ATTEMPTS } from "../../conversation/crm-sync.js";
 import { replyWindowClosesAt } from "../../conversation/reply-window.js";
 import { collectedOf } from "../../engine/turn.js";
+import { hubspotRecordUrl } from "../../integrations/crm/hubspot-check.js";
 import { badRequest } from "../../lib/http-error.js";
 import type { Db } from "../../lib/prisma.js";
 
@@ -20,9 +21,17 @@ export type BotFilter = (typeof BOT_FILTERS)[number];
 export type AssigneeFilter = (typeof ASSIGNEE_FILTERS)[number];
 export type BotActivity = Exclude<BotFilter, "all">;
 
-/** Every thread view sends the assignee, so every thread read includes it. */
+/** What a thread view needs from its company: whether HubSpot is on, and its record link. */
+export const threadCompanySelect = {
+  hubspotEnabled: true,
+  hubspotPortalId: true,
+  hubspotUiDomain: true,
+} satisfies Prisma.CompanySelect;
+
+/** Every thread view sends the assignee and the HubSpot state, so every thread read includes them. */
 export const threadInclude = {
   assignedTo: { select: { id: true, email: true, archivedAt: true } },
+  company: { select: threadCompanySelect },
 } satisfies Prisma.ThreadInclude;
 
 export type ThreadRow = Prisma.ThreadGetPayload<{
@@ -125,15 +134,27 @@ export function toThreadDto(thread: ThreadRow) {
     lastMessageAt: thread.lastMessageAt,
     lastMessagePreview: thread.lastMessagePreview,
     replyWindowClosesAt: replyWindowClosesAt(thread.lastInboundAt),
-    crm: {
-      status: crmStatus(thread),
-      contactId: thread.crmContactId,
-      syncedAt: thread.crmSyncedAt,
-      lastError: thread.crmLastError,
-      retriesExhausted:
-        thread.crmPendingAction !== null &&
-        thread.crmAttempts >= MAX_CRM_ATTEMPTS,
-    },
+    /** Null while the company has HubSpot off: the panel shows no HubSpot status or link. */
+    crm:
+      thread.company.hubspotEnabled === true
+        ? {
+            status: crmStatus(thread),
+            contactId: thread.crmContactId,
+            /** The contact's record in HubSpot, once the account is known. */
+            url: hubspotRecordUrl(
+              {
+                portalId: thread.company.hubspotPortalId,
+                uiDomain: thread.company.hubspotUiDomain,
+              },
+              thread.crmContactId,
+            ),
+            syncedAt: thread.crmSyncedAt,
+            lastError: thread.crmLastError,
+            retriesExhausted:
+              thread.crmPendingAction !== null &&
+              thread.crmAttempts >= MAX_CRM_ATTEMPTS,
+          }
+        : null,
     createdAt: thread.createdAt,
   };
 }

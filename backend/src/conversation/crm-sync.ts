@@ -27,6 +27,14 @@ export function crmRequest(action: CrmActionKind) {
   } satisfies Prisma.ThreadUpdateInput;
 }
 
+/** An outbox with nothing owed: what turning HubSpot off leaves on every thread of the company. */
+export const CRM_OUTBOX_CLEARED = {
+  crmPendingAction: null,
+  crmAttempts: 0,
+  crmNextAttemptAt: null,
+  crmLastError: null,
+} satisfies Prisma.ThreadUpdateManyMutationInput;
+
 /**
  * Writes the thread's pending CRM action (contact upsert + summary). Call it while holding the CRM
  * lease. A failure is recorded on the thread and retried later by the sweeper. "changed" means a
@@ -41,6 +49,13 @@ export async function syncThreadToCrm(
     include: { company: true },
   });
   if (!thread?.crmPendingAction) return "nothing";
+  if (thread.company.hubspotEnabled !== true) {
+    await ctx.db.thread.updateMany({
+      where: { id: threadId, crmRequestVersion: thread.crmRequestVersion },
+      data: CRM_OUTBOX_CLEARED,
+    });
+    return "nothing";
+  }
   // Backing off after a failure; a new request (or Reintentar) clears this.
   if (thread.crmNextAttemptAt && thread.crmNextAttemptAt > ctx.now())
     return "nothing";

@@ -3,6 +3,7 @@ import express, { type Express } from "express";
 import type { AppContext } from "./context.js";
 import { companiesRoutes } from "./features/companies/companies.routes.js";
 import { formLeadsRoutes } from "./features/form-leads/form-leads.routes.js";
+import { integrationsRoutes } from "./features/integrations/integrations.routes.js";
 import { kapsoWebhookRoutes } from "./features/kapso-webhook/kapso-webhook.routes.js";
 import { knowledgeRoutes } from "./features/knowledge/knowledge.routes.js";
 import { meRoutes } from "./features/me/me.routes.js";
@@ -65,6 +66,7 @@ export function createApp(ctx: AppContext): Express {
   backoffice.use("/secrets", company, secretsRoutes(ctx));
   backoffice.use("/settings", company, settingsRoutes(ctx));
   backoffice.use("/whatsapp", company, whatsappConnectionRoutes(ctx));
+  backoffice.use("/integrations", company, integrationsRoutes(ctx));
   backoffice.use("/companies", requirePlatformAdmin(ctx), companiesRoutes(ctx));
   app.use("/internal", backoffice);
 

@@ -38,7 +38,7 @@ async function recordOnce(
 ): Promise<RecordResult> {
   const company = await ctx.db.company.findUnique({
     where: { whatsappPhoneNumberId: message.phoneNumberId },
-    select: { id: true, archivedAt: true },
+    select: { id: true, archivedAt: true, hubspotEnabled: true },
   });
   if (!company) return { status: "unknown_company" };
   // Archived: the number is ignored, as if it belonged to no company. Nothing is stored.
@@ -75,8 +75,12 @@ async function recordOnce(
       },
     });
     // Every lead goes to the CRM from their first message, even one who is disqualified later.
+    // With HubSpot off nothing is queued; once it is on, a lead it never had is written on their
+    // next message.
     const crmRequested =
-      thread.crmSyncedAt === null && thread.crmPendingAction === null;
+      company.hubspotEnabled === true &&
+      thread.crmSyncedAt === null &&
+      thread.crmPendingAction === null;
     if (crmRequested) {
       await tx.thread.update({
         where: { id: thread.id },

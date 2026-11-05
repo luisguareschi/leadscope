@@ -121,6 +121,11 @@ async function main() {
       instructions: altamiraInstructions,
       whatsappPhoneNumberId: phoneNumberId,
       encryptedSecrets: encryptSecrets(secrets, key),
+      // Altamira uses HubSpot. The account is a placeholder so "Abrir en HubSpot" shows locally;
+      // saving or testing a real token replaces it.
+      hubspotEnabled: true,
+      hubspotPortalId: "12345678",
+      hubspotUiDomain: "app.hubspot.com",
     },
     update: {
       name: ALTAMIRA_NAME,
@@ -218,7 +223,7 @@ async function main() {
           lastMessageAt: sentAt(last),
           lastMessagePreview: messagePreview(last.type ?? "text", last.text),
           createdAt: sentAt(demo.messages[0]!),
-          crmContactId: crm?.synced ? `demo-${demo.phone.slice(-3)}` : null,
+          crmContactId: crm?.synced ? `900${demo.phone.slice(-3)}` : null,
           crmSyncedAt: crm?.synced ? at(last.minutesAgo) : null,
           crmPendingAction:
             crm && !crm.synced ? (crm.action ?? "handoff") : null,

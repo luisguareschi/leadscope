@@ -25,7 +25,7 @@ function uniqueFields(error: unknown): string {
 
 /**
  * Company row, slug, name, starter config and instructions, no WhatsApp number yet (each saved as its
- * first version), and the first operator, who gets the Supabase invitation like any operator added
+ * first version), HubSpot off until the company turns it on, and the first operator, who gets the Supabase invitation like any operator added
  * later. Secrets stay empty; that company's operator sets them later from Configuración. Does not
  * move an email that already belongs to a company.
  */
@@ -61,6 +61,7 @@ export async function createCompany(
         slug: input.slug,
         config,
         instructions,
+        hubspotEnabled: false,
         operators: { create: { email: input.operatorEmail } },
         settingsVersions: {
           create: [
