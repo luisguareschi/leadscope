@@ -48,6 +48,7 @@ export async function checkHubspotConnection(
     company.config.crm.transcriptProperty,
   );
   if (result.account) await saveHubspotAccount(ctx, companyId, result.account);
+  else if (result.tokenRejected) await saveHubspotAccount(ctx, companyId, null);
   return {
     ...checkResult([enabled, ...result.checks]),
     account: result.account,

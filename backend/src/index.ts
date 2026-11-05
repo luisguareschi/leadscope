@@ -12,7 +12,11 @@ initMonitoring(env.SENTRY_DSN, env.NODE_ENV);
 const ctx = createContext(env);
 const app = createApp(ctx);
 
-const decided = await backfillHubspotEnabled(ctx.db, ctx.encryptionKey);
+const decided = await backfillHubspotEnabled(
+  ctx.db,
+  ctx.encryptionKey,
+  ctx.logger,
+);
 if (decided > 0)
   logger.info({ companies: decided }, "hubspot switch set from saved tokens");
 

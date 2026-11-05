@@ -254,6 +254,69 @@ describe("HubSpot check", () => {
     expect(response.body.checks[1].detail).toContain("rechazó el token");
   });
 
+  const storedAccount = {
+    hubspotPortalId: "999",
+    hubspotUiDomain: "app.hubspot.com",
+  };
+  const account = () =>
+    db.company.findUniqueOrThrow({
+      where: { id: companyId },
+      select: { hubspotPortalId: true, hubspotUiDomain: true },
+    });
+
+  it("forgets the stored account when the test gets a 401, and keeps it on other failures", async () => {
+    const failing = (status: number) =>
+      fakeFetch(() => Response.json({ message: "nope" }, { status }));
+    for (const [status, expected] of [
+      [500, storedAccount],
+      [429, storedAccount],
+      [401, { hubspotPortalId: null, hubspotUiDomain: null }],
+    ] as const) {
+      const app = await setup({
+        secrets: { hubspotAccessToken: "pat-eu1-good" },
+        hubspotFetch: failing(status),
+      });
+      await db.company.update({
+        where: { id: companyId },
+        data: storedAccount,
+      });
+      await request(app)
+        .post("/internal/integrations/hubspot/check")
+        .set(operator)
+        .expect(200);
+      expect(await account()).toEqual(expected);
+    }
+  });
+
+  it("keeps the stored account when saving a token hits a transient failure", async () => {
+    for (const [response, expected] of [
+      [() => Response.json({}, { status: 503 }), storedAccount],
+      [() => Response.json({}, { status: 429 }), storedAccount],
+      [
+        () => {
+          throw new TypeError("fetch failed");
+        },
+        storedAccount,
+      ],
+      [
+        () => Response.json({}, { status: 401 }),
+        { hubspotPortalId: null, hubspotUiDomain: null },
+      ],
+    ] as const) {
+      const app = await setup({ hubspotFetch: fakeFetch(response) });
+      await db.company.update({
+        where: { id: companyId },
+        data: storedAccount,
+      });
+      await request(app)
+        .put("/internal/secrets/hubspotAccessToken")
+        .set(operator)
+        .send({ value: "pat-eu1-new" })
+        .expect(200);
+      expect(await account()).toEqual(expected);
+    }
+  });
+
   it("saves the account when the token is saved, and forgets it when removed", async () => {
     const app = await setup({ hubspotFetch: hubspotApi() });
     await request(app)

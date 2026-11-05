@@ -1,4 +1,5 @@
 import type { IntegrationCheck } from "../integration-check.js";
+import { HubSpotError } from "./hubspot.js";
 
 const API = "https://api.hubapi.com";
 
@@ -65,7 +66,10 @@ function accountOf(json: Record<string, unknown>): HubspotAccount | null {
   return { portalId: String(portalId), uiDomain };
 }
 
-/** GET /account-info/v3/details: the account's id (`portalId`) and UI host (`uiDomain`). */
+/**
+ * GET /account-info/v3/details: the account's id (`portalId`) and UI host (`uiDomain`). Null only
+ * when HubSpot rejects the token (401); any other failure throws, so a stored account survives it.
+ */
 export async function fetchHubspotAccount(
   fetchImpl: typeof fetch,
   token: string,
@@ -76,7 +80,14 @@ export async function fetchHubspotAccount(
     "GET",
     "/account-info/v3/details",
   );
-  return response.ok ? accountOf(response.json) : null;
+  if (response.status === 401) return null;
+  const account = response.ok ? accountOf(response.json) : null;
+  if (!account)
+    throw new HubSpotError(
+      `HubSpot account info returned ${response.status}`,
+      response.status,
+    );
+  return account;
 }
 
 function failure(response: Response, what: string): string {
@@ -98,6 +109,8 @@ export type HubspotCheckResult = {
   checks: IntegrationCheck[];
   /** Set when the token reached the account; the caller saves it on the company. */
   account: HubspotAccount | null;
+  /** HubSpot answered 401: the stored account is no longer this token's. */
+  tokenRejected: boolean;
 };
 
 /**
@@ -121,6 +134,7 @@ export async function checkHubspot(
   } catch {
     return {
       account: null,
+      tokenRejected: false,
       checks: [
         {
           id: "token",
@@ -134,6 +148,7 @@ export async function checkHubspot(
   if (!accountResponse.ok)
     return {
       account: null,
+      tokenRejected: accountResponse.status === 401,
       checks: [
         {
           id: "token",
@@ -221,7 +236,7 @@ export async function checkHubspot(
   }
 
   checks.push(await checkProperty(fetchImpl, token, transcriptProperty));
-  return { account, checks };
+  return { account, tokenRejected: false, checks };
 }
 
 /** GET /crm/v3/properties/contacts/{name}: the property exists and is multi-line text. */

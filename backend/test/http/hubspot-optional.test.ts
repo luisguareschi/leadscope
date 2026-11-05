@@ -1,5 +1,5 @@
 import request from "supertest";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../../src/app.js";
 import { encryptSecrets } from "../../src/companies/company-secrets.js";
 import { backfillHubspotEnabled } from "../../src/companies/load-company.js";
@@ -188,8 +188,12 @@ describe("turning HubSpot on and off", () => {
 
 describe("HubSpot defaults", () => {
   const key = parseEncryptionKey(TEST_ENCRYPTION_KEY);
+  const silent = { error: vi.fn() };
 
-  beforeEach(() => resetDb());
+  beforeEach(async () => {
+    silent.error.mockClear();
+    await resetDb();
+  });
 
   it("turns on companies from before the switch only when they have a token", async () => {
     const withToken = await createCompany(db, {
@@ -216,7 +220,7 @@ describe("HubSpot defaults", () => {
       },
     });
 
-    expect(await backfillHubspotEnabled(db, key)).toBe(3);
+    expect(await backfillHubspotEnabled(db, key, silent)).toBe(3);
     const enabled = async (id: string) =>
       (await db.company.findUniqueOrThrow({ where: { id } })).hubspotEnabled;
     expect(await enabled(withToken.id)).toBe(true);
@@ -226,7 +230,40 @@ describe("HubSpot defaults", () => {
       (await db.company.findUniqueOrThrow({ where: { slug: "sin-secretos" } }))
         .hubspotEnabled,
     ).toBe(false);
-    expect(await backfillHubspotEnabled(db, key)).toBe(0);
+    expect(await backfillHubspotEnabled(db, key, silent)).toBe(0);
+  });
+
+  it("skips a company whose secrets cannot be decrypted and still decides the rest", async () => {
+    const broken = await db.company.create({
+      data: {
+        slug: "rota",
+        name: "Rota",
+        config: {},
+        encryptedSecrets: encryptSecrets(
+          { hubspotAccessToken: "pat" },
+          parseEncryptionKey(Buffer.alloc(32, 9).toString("base64")),
+        ),
+      },
+    });
+    const fine = await createCompany(db, {
+      slug: "bien",
+      hubspotEnabled: null,
+      secrets: { hubspotAccessToken: "pat-na1-xyz" },
+    });
+
+    expect(await backfillHubspotEnabled(db, key, silent)).toBe(1);
+    expect(
+      (await db.company.findUniqueOrThrow({ where: { id: broken.id } }))
+        .hubspotEnabled,
+    ).toBeNull();
+    expect(
+      (await db.company.findUniqueOrThrow({ where: { id: fine.id } }))
+        .hubspotEnabled,
+    ).toBe(true);
+    expect(silent.error).toHaveBeenCalledWith(
+      expect.objectContaining({ companyId: broken.id }),
+      expect.any(String),
+    );
   });
 
   it("leaves the migration's null column for the backfill", async () => {

@@ -20,8 +20,8 @@ export async function saveHubspotAccount(
 
 /**
  * Right after a new token is saved: reads the account it belongs to, for the "Abrir en HubSpot"
- * link. A token HubSpot refuses forgets the old account; a network failure keeps it, and Probar
- * conexión tries again.
+ * link. A token HubSpot refuses (401) forgets the old account; any other failure keeps it, and
+ * Probar conexión tries again.
  */
 export async function refreshHubspotAccount(
   ctx: AppContext,
