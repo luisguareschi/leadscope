@@ -78,8 +78,8 @@ export function CompaniesTable({
           </EmptyTitle>
           <EmptyDescription>
             {showingArchived
-              ? "Creá la primera: quedan la empresa y su operador, que recibe la invitación."
-              : "Creá una, o mostrá las archivadas para restaurar una."}
+              ? "Crea la primera. Se crean la empresa y su primer operador, que recibe una invitación."
+              : "Crea una, o muestra las archivadas para restaurar alguna."}
           </EmptyDescription>
         </EmptyHeader>
         <Button size="sm" onClick={onCreate}>
@@ -97,8 +97,8 @@ export function CompaniesTable({
         onSuccess: () =>
           toast.success(
             restoring
-              ? `${company.name} volvió: sus operadores entran y el asistente responde.`
-              : `${company.name} quedó archivada: sus operadores no entran y el asistente no responde.`,
+              ? `Restauraste ${company.name}. Sus operadores pueden entrar y el asistente vuelve a responder.`
+              : `Archivaste ${company.name}. Sus operadores no pueden entrar y el asistente deja de responder.`,
           ),
         onError: (error) => toast.error(error.message),
       },

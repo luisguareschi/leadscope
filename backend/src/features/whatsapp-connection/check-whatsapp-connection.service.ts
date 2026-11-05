@@ -37,7 +37,7 @@ export async function checkWhatsappConnection(
           status: "error",
           label: "Phone number ID",
           detail:
-            "Falta. Copialo del número conectado en Kapso y guardalo en Asistente → WhatsApp.",
+            "Falta. Cópialo del número conectado en Kapso y guárdalo en el campo Phone number ID.",
         },
     kapsoApiKey
       ? {
@@ -50,7 +50,7 @@ export async function checkWhatsappConnection(
           id: "apiKey",
           status: "error",
           label: "Clave de API de Kapso",
-          detail: "Falta. Creala en Kapso (Integrations → API keys).",
+          detail: "Falta. Créala en Kapso, en Integrations > API keys.",
         },
     kapsoWebhookSecret
       ? {
@@ -64,7 +64,7 @@ export async function checkWhatsappConnection(
           status: "error",
           label: "Clave secreta del webhook",
           detail:
-            "Falta. Sin ella LeadScope rechaza todo lo que manda Kapso (401).",
+            "Falta. Sin ella, LeadScope rechaza todo lo que manda Kapso (401).",
         },
   ];
   const remote: ConnectionCheck[] =

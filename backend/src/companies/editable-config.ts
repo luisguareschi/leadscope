@@ -55,7 +55,7 @@ const collectItemSchema = z.strictObject({
     .max(40, "Máximo 40 caracteres.")
     .regex(
       /^[a-zA-Z][a-zA-Z0-9_]*$/,
-      "Usá letras, números y guiones bajos, empezando con una letra. Por ejemplo: presupuesto.",
+      "Usa letras, números y guiones bajos, y empieza con una letra. Por ejemplo, presupuesto.",
     ),
   name: required(60),
   description: required(300),
@@ -64,7 +64,7 @@ const collectItemSchema = z.strictObject({
 
 const collectSchema = z
   .array(collectItemSchema)
-  .min(1, "Agregá al menos un dato para recopilar.")
+  .min(1, "Agrega al menos un dato para recopilar.")
   .max(MAX_COLLECT_ITEMS, `Máximo ${MAX_COLLECT_ITEMS} datos.`)
   .superRefine((items, issue) => {
     const seen = new Set<string>();
@@ -89,14 +89,14 @@ export const editableConfigSchema = z.strictObject({
   language: z
     .string()
     .trim()
-    .refine(isLocale, "Usá un código de idioma, por ejemplo es-UY."),
+    .refine(isLocale, "Usa un código de idioma, por ejemplo es-UY."),
   tone: required(2_000),
   timezone: z
     .string()
     .trim()
     .refine(
       isTimeZone,
-      "Zona horaria desconocida. Por ejemplo: America/Montevideo.",
+      "Zona horaria desconocida. Usa una como America/Montevideo.",
     ),
   defaultCountry: z
     .string()
@@ -104,7 +104,7 @@ export const editableConfigSchema = z.strictObject({
     .toUpperCase()
     .refine(
       (value) => isSupportedCountry(value),
-      "Usá el código de dos letras del país, por ejemplo UY.",
+      "Usa el código de dos letras del país, por ejemplo UY.",
     ),
   businessHours: optional(300),
   collect: collectSchema,
@@ -123,7 +123,7 @@ export const editableConfigSchema = z.strictObject({
       .trim()
       .regex(
         /^claude-[a-z0-9.-]+$/,
-        "Usá el identificador de un modelo de Anthropic, por ejemplo claude-haiku-4-5.",
+        "Usa el identificador de un modelo de Anthropic, por ejemplo claude-haiku-4-5.",
       ),
     temperature: z.number().min(0, "El mínimo es 0.").max(1, "El máximo es 1."),
     historyLimit: integer(4, 200),
@@ -158,7 +158,7 @@ export const editableConfigSchema = z.strictObject({
       .max(100, "Máximo 100 caracteres.")
       .regex(
         /^([a-z][a-z0-9_]*)?$/,
-        "Usá el nombre interno de la propiedad en HubSpot: minúsculas, números y guiones bajos.",
+        "Usa el nombre interno de la propiedad en HubSpot, con minúsculas, números y guiones bajos.",
       ),
   }),
   whatsapp: z.strictObject({
@@ -170,14 +170,14 @@ export const editableConfigSchema = z.strictObject({
           .max(512, "Máximo 512 caracteres.")
           .regex(
             /^[a-z0-9_]+$/,
-            "Usá el nombre exacto de la plantilla aprobada en Meta: minúsculas, números y guiones bajos.",
+            "Usa el nombre exacto de la plantilla aprobada en Meta, con minúsculas, números y guiones bajos.",
           ),
         language: z
           .string()
           .trim()
           .regex(
             /^[a-z]{2,3}(_[A-Z]{2})?$/,
-            "Usá el código de idioma de la plantilla en Meta, por ejemplo es o es_AR.",
+            "Usa el código de idioma de la plantilla en Meta, por ejemplo es o es_AR.",
           ),
         bodyPreview: optional(1_024),
       })
@@ -202,7 +202,7 @@ export const whatsappPhoneNumberIdSchema = z
   .max(64, "Máximo 64 dígitos.")
   .regex(
     /^\d*$/,
-    "Son solo números: el Phone number ID que muestra Kapso en el número conectado, no el número de teléfono.",
+    "Son solo números. Es el Phone number ID que muestra Kapso en el número conectado, no el número de teléfono.",
   )
   .nullable()
   .transform((value) => value || null);
@@ -211,7 +211,7 @@ function spanishIssue(issue: z.core.$ZodRawIssue): string {
   switch (issue.code) {
     case "invalid_type":
       return issue.input === undefined || issue.input === null
-        ? "Completá este campo."
+        ? "Completa este campo."
         : "Valor inválido.";
     case "unrecognized_keys":
       return "Este campo no se puede guardar desde Configuración.";
@@ -256,8 +256,8 @@ export function invalidSettings(
   return new HttpError(
     status,
     status === 400
-      ? "Revisá los campos marcados."
-      : "Esa versión no pasa la validación actual. Revisá los campos marcados.",
+      ? "Revisa los campos marcados."
+      : "Esa versión no pasa la validación actual. Revisa los campos marcados.",
     status === 400 ? "invalid_config" : "invalid_version",
     fields,
   );

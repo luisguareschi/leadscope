@@ -15,7 +15,7 @@ export const STAGE_META: Record<
     label: "Por contactar",
     tone: "warning",
     description:
-      "El lead ya dio los datos necesarios, o pidió hablar con alguien ya (horario «Lo antes posible»), y espera a un asesor. Queda acá aunque vuelva a escribir, hasta que alguien le cambie la etapa.",
+      'El lead ya dio los datos necesarios, o pidió hablar con alguien ya (horario "Lo antes posible"), y espera a un asesor. Sigue aquí aunque vuelva a escribir, hasta que alguien le cambie la etapa.',
   },
   contacted: {
     label: "Contactado",
@@ -27,7 +27,7 @@ export const STAGE_META: Record<
     label: "Sin interés",
     tone: "muted",
     description:
-      "El lead dijo que no le interesa, o alguien del equipo lo marcó así. Queda en HubSpot sin asesor; si vuelve a escribir y da los datos, o pide hablar con alguien, pasa a Por contactar.",
+      "El lead dijo que no le interesa, o alguien del equipo lo marcó así. Queda en HubSpot sin asesor. Si vuelve a escribir y da los datos, o pide hablar con alguien, pasa a Por contactar.",
   },
 };
 
@@ -96,7 +96,7 @@ export function needsHumanReasonLabel(reason: string | null): string {
   if (reason === "lead_needs_human")
     return "El lead preguntó algo que tiene que responder una persona.";
   if (reason.startsWith("forbidden_topic"))
-    return `El lead preguntó por un tema prohibido: «${reason.slice("forbidden_topic: ".length)}». El asistente no respondió y envió el mensaje fijo.`;
+    return `El lead preguntó por un tema prohibido: "${reason.slice("forbidden_topic: ".length)}". El asistente no respondió y envió el mensaje fijo.`;
   if (reason.startsWith("blocked_reply"))
     return "La respuesta del asistente tocaba un tema prohibido y no se envió.";
   if (reason.startsWith("model_failure"))

@@ -153,8 +153,8 @@ function ItemRow({
               className="max-w-64"
             >
               {item.required
-                ? "Pasa a Por contactar recién cuando lo sabe, salvo que pida hablar con alguien ya."
-                : "Lo pregunta si surge; no frena el paso a Por contactar."}
+                ? "El lead pasa a Por contactar solo cuando el asistente lo sabe, salvo que pida hablar con alguien ya."
+                : "El asistente lo pregunta si surge. No impide el paso a Por contactar."}
             </HelpTip>
           </div>
           <div className="flex items-center gap-1">
@@ -209,7 +209,7 @@ export function CollectEditor() {
   return (
     <Panel
       title="Información a recopilar"
-      description="Lo que el asistente averigua del lead, con sus palabras y en el orden que surja. No repite lo que el lead ya dijo. Con todos los necesarios, el lead pasa a Por contactar y el asistente le pide un horario. Si el lead pide hablar con alguien ya («Quiere hablar ya»), pasa enseguida aunque falten. Si ninguno es necesario, pasa cuando da un horario para la llamada."
+      description="Lo que el asistente averigua del lead, con sus palabras y en el orden que surja. No repite lo que el lead ya dijo. Cuando tiene todos los necesarios, el lead pasa a Por contactar y el asistente le pide un horario. Si el lead pide hablar con alguien ya, pasa enseguida aunque falten datos. Si ninguno es necesario, pasa cuando da un horario para la llamada."
       actions={
         <span
           className={cn(
@@ -264,9 +264,9 @@ export function CollectEditor() {
           >
             {errors.collect ??
               (full
-                ? `Llegaste al máximo de ${MAX_COLLECT_ITEMS} datos. Quitá uno para agregar otro.`
+                ? `Llegaste al máximo de ${MAX_COLLECT_ITEMS} datos. Quita uno para agregar otro.`
                 : required === 0
-                  ? "Ninguno necesario: el lead pasa a Por contactar cuando da un horario para la llamada."
+                  ? "Ninguno es necesario. El lead pasa a Por contactar cuando da un horario para la llamada."
                   : `${required} necesario${required === 1 ? "" : "s"} para Por contactar · ${items.length - required} opcional${items.length - required === 1 ? "" : "es"}`)}
           </p>
           <Button

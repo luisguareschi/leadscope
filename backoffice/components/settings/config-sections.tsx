@@ -195,8 +195,8 @@ function GeneralSection() {
           label="Nombre del asistente"
           hint={
             assistant
-              ? `Se presenta como «${assistant}, asistente virtual de ${company}».`
-              : `Opcional. Vacío: se presenta como «el asistente virtual de ${company}», sin nombre propio.`
+              ? `Se presenta como "${assistant}, asistente virtual de ${company}".`
+              : `Opcional. Si está vacío, se presenta como "el asistente virtual de ${company}", sin nombre propio.`
           }
           placeholder="Almira"
           maxLength={60}
@@ -222,7 +222,7 @@ function GeneralSection() {
         <TextRow
           name="businessHours"
           label="Horario para llamadas"
-          hint="Cuándo llaman los asesores. Vacío: no promete un horario."
+          hint="Cuándo llaman los asesores. Si está vacío, el asistente no promete un horario."
           placeholder="Lunes a viernes de 9 a 18 h"
           maxLength={300}
         />
@@ -248,7 +248,7 @@ function ConversationSection() {
         <TextRow
           name="maxReplyChars"
           label="Largo máximo"
-          hint="De 80 a 4.096. Si se pasa, corta en la última oración completa."
+          hint="De 80 a 4.096. Si la respuesta es más larga, se corta en la última oración completa."
           inputMode="numeric"
           suffix="caracteres"
           narrow
@@ -267,7 +267,7 @@ function ForbiddenSection() {
   return (
     <Section
       title="Temas prohibidos"
-      description="Lo que el asistente nunca responde. Si un lead pregunta por uno, el asistente no contesta con sus palabras: envía el mensaje fijo «Hace falta un asesor», se detiene y deja el lead en HubSpot."
+      description='Lo que el asistente nunca responde. Si un lead pregunta por uno, el asistente no contesta con sus palabras. Envía el mensaje fijo "Hace falta un asesor", se detiene y deja el lead en HubSpot.'
     >
       <Panel>
         <TextRow
@@ -294,7 +294,7 @@ function MessagesSection() {
         <TextRow
           name="needsHuman"
           label="Hace falta un asesor"
-          hint="Un tema prohibido, una queja, una compra existente o algo que solo puede responder una persona. Después espera a una persona. Un lead que pide hablar con alguien ya no recibe este mensaje: pasa a Por contactar."
+          hint="Se envía ante un tema prohibido, una queja, una compra existente o algo que solo puede responder una persona. Después, el asistente espera a una persona. Un lead que pide hablar con alguien en ese momento no recibe este mensaje y pasa a Por contactar."
           multiline
           maxLength={1000}
         />
@@ -308,7 +308,7 @@ function MessagesSection() {
         <TextRow
           name="nonText"
           label="Audio, fotos o stickers"
-          hint="Cuando el lead manda algo que no es texto."
+          hint="Cuando el lead envía algo que no es texto."
           multiline
           maxLength={1000}
         />
@@ -363,7 +363,8 @@ function CrmSection() {
           </>
         ) : (
           <p className="px-5 py-4 text-sm text-muted-foreground">
-            Apagada: el lead queda registrado, pero no recibe mensaje.
+            Si está apagada, el lead queda registrado, pero no recibe ningún
+            mensaje.
           </p>
         )}
       </Panel>
@@ -371,7 +372,7 @@ function CrmSection() {
         <TextRow
           name="transcriptProperty"
           label="Propiedad del resumen"
-          hint="Nombre interno de una propiedad de texto largo del contacto. Vacío: solo crea o actualiza el contacto."
+          hint="Nombre interno de una propiedad de texto largo del contacto. Si está vacío, solo se crea o actualiza el contacto."
           mono
           maxLength={100}
         />
@@ -394,7 +395,7 @@ function ModelSection() {
           hint={
             choices.modelSource === "anthropic"
               ? "Los de la cuenta de Anthropic de la empresa. Por defecto, claude-haiku-4-5."
-              : "Con la clave de Anthropic cargada se listan los de su cuenta. Por defecto, claude-haiku-4-5."
+              : "Cuando la clave de Anthropic está configurada, se listan los de su cuenta. Por defecto, claude-haiku-4-5."
           }
           options={choices.models}
         />
@@ -424,7 +425,7 @@ function ModelSection() {
       </Panel>
       <Panel
         title="Conocimiento"
-        description="Tienen que entrar los archivos que ya están subidos."
+        description="Los límites deben admitir los archivos que ya están subidos."
       >
         <TextRow
           name="maxFileMegabytes"

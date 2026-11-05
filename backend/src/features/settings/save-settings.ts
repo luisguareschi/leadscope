@@ -86,10 +86,10 @@ export async function assertKnowledgeLimitsFit(
   const fields: Record<string, string> = {};
   if (limits.maxCharsTotal < used)
     fields["knowledge.maxCharsTotal"] =
-      `Los archivos de Conocimiento ya suman ${count(used)} caracteres. Borrá o achicá archivos antes de bajarlo.`;
+      `Los archivos de Conocimiento ya suman ${count(used)} caracteres. Borra o acorta archivos antes de bajarlo.`;
   if (limits.maxCharsPerFile < largest)
     fields["knowledge.maxCharsPerFile"] =
-      `Hay un archivo de ${count(largest)} caracteres. Reemplazalo por uno más corto antes de bajarlo.`;
+      `Hay un archivo de ${count(largest)} caracteres. Reemplázalo por uno más corto antes de bajarlo.`;
   if (Object.keys(fields).length > 0) throw invalidSettings(fields, status);
 }
 

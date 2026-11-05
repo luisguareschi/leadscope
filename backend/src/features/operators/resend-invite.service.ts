@@ -13,7 +13,7 @@ export async function resendInvite(
   const found = await findOperator(ctx, companyId, operatorId);
   if (found.archivedAt)
     throw conflict(
-      "El operador está archivado. Restauralo antes de reenviar la invitación.",
+      "El operador está archivado. Restáuralo antes de reenviar la invitación.",
       "operator_archived",
     );
   const invite = await inviteOperator(ctx, found, {

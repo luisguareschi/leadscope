@@ -55,7 +55,7 @@ export function StagePicker({
         const assignedNow = !thread.assignee && updated.assignee;
         toast.success(
           assignedNow
-            ? "Marcada como contactada. Quedó asignada a vos."
+            ? "Marcada como contactada. Quedó asignada a ti."
             : "Marcada como contactada.",
         );
       },

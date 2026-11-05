@@ -56,7 +56,7 @@ export function panelOriginFor(env: OriginEnv, req: Request): string {
   const fallback = defaultPanelOrigin(env);
   if (fallback) return fallback;
   throw badRequest(
-    "No se pudo saber la dirección del panel para el enlace del email. Configurá BACKOFFICE_ORIGIN en el servidor con la URL del panel (por ejemplo https://panel.ejemplo.com).",
+    "No se pudo saber la dirección del panel para el enlace del email. Configura BACKOFFICE_ORIGIN en el servidor con la URL del panel (por ejemplo https://panel.ejemplo.com).",
     "panel_origin_unknown",
   );
 }

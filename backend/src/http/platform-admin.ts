@@ -34,7 +34,7 @@ export function requirePlatformAdmin(ctx: AppContext): RequestHandler {
       res.status(403).json({
         error: {
           code: "forbidden",
-          message: "No tenés permiso para administrar empresas.",
+          message: "No tienes permiso para administrar empresas.",
         },
       });
       return;

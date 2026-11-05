@@ -70,14 +70,14 @@ const STAGE_LABEL: Record<LeadStage, string> = {
  */
 function statusOf(thread: SummaryThread): string {
   if (thread.needsHuman) return "Requiere atención de un asesor";
-  if (thread.state === "closed") return "Cerrado: sin interés";
+  if (thread.state === "closed") return "Cerrado, sin interés";
   switch (thread.stage) {
     case "to_contact":
       return "Derivado a asesor";
     case "contacted":
       return "Contactado por un asesor";
     case "not_interested":
-      return "Cerrado: sin interés";
+      return "Cerrado, sin interés";
     case "qualifying":
       return "En conversación con el asistente";
   }

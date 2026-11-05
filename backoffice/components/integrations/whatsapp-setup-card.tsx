@@ -44,19 +44,19 @@ const STATUS_EVENTS = [
 const CONDITIONS = [
   {
     title: "El número es de la empresa.",
-    text: "Conectá un número propio. No uses un número que da Kapso (Instant setup): es una licencia y Kapso lo puede recuperar.",
+    text: "Conecta un número propio. No uses un número que da Kapso (Instant setup), porque es una licencia y Kapso lo puede recuperar.",
   },
   {
     title: "La cuenta de WhatsApp queda en el portfolio de la empresa.",
-    text: "En la pantalla de Meta elegí el Meta Business portfolio de la empresa, no uno personal ni el de LeadScope.",
+    text: "En la pantalla de Meta, elige el Meta Business portfolio de la empresa, no uno personal ni el de LeadScope.",
   },
   {
-    title: "Meta se paga con tarjeta, directo.",
-    text: "Cargá la tarjeta de la empresa en el Billing Hub de Meta, en esa cuenta de WhatsApp, antes de conectar, y no actives «Use Kapso credits». Una cuenta que pagó con créditos de Kapso no puede pasar después a tarjeta, y su línea de crédito traba un cambio de proveedor.",
+    title: "Meta se paga directamente con tarjeta.",
+    text: 'Agrega la tarjeta de la empresa en el Billing Hub de Meta, en esa cuenta de WhatsApp, antes de conectar, y no actives "Use Kapso credits". Una cuenta que pagó con créditos de Kapso no puede pasar después a tarjeta, y su línea de crédito impide cambiar de proveedor.',
   },
   {
     title: "Retención de mensajes en 30 días.",
-    text: "Kapso guarda todos los mensajes sin límite en el plan gratis. En un plan pago, poné Project settings → Message retention en 30 días. LeadScope y HubSpot ya guardan la conversación.",
+    text: "Kapso guarda todos los mensajes sin límite en el plan gratis. En un plan de pago, configura Project settings → Message retention en 30 días. LeadScope y HubSpot ya guardan la conversación.",
   },
 ];
 
@@ -133,7 +133,7 @@ function PhoneNumberIdRow({ settings }: { settings: CompanySettings }) {
   return (
     <FieldRow
       label="Phone number ID"
-      hint="En Kapso, en el número conectado. Solo dígitos: no es el teléfono."
+      hint="Está en Kapso, en el número conectado. Son solo dígitos y no es el número de teléfono."
       htmlFor="whatsapp-phone-number-id"
       error={error ?? undefined}
     >
@@ -190,8 +190,8 @@ function CheckResults({ result }: { result: WhatsappConnectionCheck }) {
     >
       <p className="text-sm font-medium">
         {result.ready
-          ? "Listo: Kapso manda los mensajes a LeadScope y LeadScope puede responder."
-          : "Todavía no está listo. Corregí lo marcado en rojo y probá de nuevo."}
+          ? "Listo. Kapso envía los mensajes a LeadScope y LeadScope puede responder."
+          : "Todavía no está listo. Corrige lo marcado en rojo y prueba de nuevo."}
       </p>
       <ul className="flex flex-col gap-2">
         {result.checks.map((check) => (
@@ -295,7 +295,7 @@ export function WhatsappSetupCard({
 
       <FieldRow
         label="URL del webhook"
-        hint="En Kapso, en los webhooks del número: uno de tipo Kapso (v2) con esta URL."
+        hint="En Kapso, agrega en los webhooks del número uno de tipo Kapso (v2) con esta URL."
       >
         {webhookUrl ? (
           <div className="flex min-w-0 gap-2">
@@ -371,9 +371,9 @@ export function WhatsappSetupCard({
               </ul>
             </div>
             <ol className="flex flex-col gap-4">
-              <Step n={1} title="Creá el proyecto de la empresa en Kapso">
+              <Step n={1} title="Crea el proyecto de la empresa en Kapso">
                 <p>
-                  Entrá a{" "}
+                  Entra a{" "}
                   <a
                     href="https://app.kapso.ai"
                     target="_blank"
@@ -383,19 +383,19 @@ export function WhatsappSetupCard({
                     app.kapso.ai
                     <ExternalLinkIcon className="size-3" />
                   </a>{" "}
-                  y creá un proyecto solo para esta empresa. Para producción usá
-                  el plan Pro, que permite la retención de 30 días.
+                  y crea un proyecto solo para esta empresa. Para producción,
+                  usa el plan Pro, que permite la retención de 30 días.
                 </p>
               </Step>
-              <Step n={2} title="Conectá el número de WhatsApp">
+              <Step n={2} title="Conecta el número de WhatsApp">
                 <p>
                   <InlineCode>Connected numbers</InlineCode> →{" "}
-                  <InlineCode>Connect new number</InlineCode>. Elegí{" "}
+                  <InlineCode>Connect new number</InlineCode>. Elige{" "}
                   <InlineCode>WhatsApp Business App</InlineCode> si el equipo
                   sigue usando la app con ese número, o{" "}
                   <InlineCode>Bring your own SIM</InlineCode> si queda solo para
-                  el asistente. En Meta, entrá con el usuario que administra el
-                  portfolio de la empresa y elegí ese portfolio.
+                  el asistente. En Meta, entra con el usuario que administra el
+                  portfolio de la empresa y elige ese portfolio.
                 </p>
                 <p>
                   No elijas{" "}
@@ -405,40 +405,40 @@ export function WhatsappSetupCard({
                   .
                 </p>
               </Step>
-              <Step n={3} title="Copiá el Phone number ID">
+              <Step n={3} title="Copia el Phone number ID">
                 <p>
-                  Está en el número conectado (solo dígitos). Pegalo arriba, en
+                  Está en el número conectado (solo dígitos). Pégalo arriba, en
                   Phone number ID.
                 </p>
               </Step>
-              <Step n={4} title="Creá una clave de API">
+              <Step n={4} title="Crea una clave de API">
                 <p>
                   <InlineCode>Integrations</InlineCode> →{" "}
-                  <InlineCode>API keys</InlineCode> → nueva clave. Cargala
+                  <InlineCode>API keys</InlineCode> → nueva clave. Pégala
                   arriba, en Clave de API de Kapso.
                 </p>
               </Step>
-              <Step n={5} title="Agregá el webhook del número">
+              <Step n={5} title="Agrega el webhook del número">
                 <p>
                   De tipo Kapso (formato v2), con la URL y los eventos de
-                  arriba. Agrupar mensajes (buffering) es opcional: LeadScope ya
-                  espera unos segundos y responde una vez a varios mensajes
-                  seguidos.
+                  arriba. Agrupar mensajes (buffering) es opcional, porque
+                  LeadScope ya espera unos segundos y responde una sola vez a
+                  varios mensajes seguidos.
                 </p>
               </Step>
-              <Step n={6} title="Usá la misma clave secreta en los dos lados">
+              <Step n={6} title="Usa la misma clave secreta en los dos lados">
                 <p>
-                  Si Kapso te muestra la clave, pegala arriba. Si te pide una,
-                  tocá Configurar → Generar, copiala en Kapso y después guardala
-                  acá.
+                  Si Kapso te muestra la clave, pégala arriba. Si te pide una,
+                  toca Configurar → Generar, cópiala en Kapso y después guárdala
+                  aquí.
                 </p>
               </Step>
-              <Step n={7} title="Probá la conexión">
+              <Step n={7} title="Prueba la conexión">
                 <p>
-                  Probar conexión revisa los datos, que Kapso vea el número sano
-                  y que el webhook apunte a esta empresa con la misma clave.
-                  Después mandá un WhatsApp al número desde otro teléfono: tiene
-                  que aparecer en Conversaciones y recibir respuesta.
+                  Probar conexión revisa los datos, que Kapso vea el número en
+                  buen estado y que el webhook apunte a esta empresa con la
+                  misma clave. Después envía un WhatsApp al número desde otro
+                  teléfono. Debe aparecer en Conversaciones y recibir respuesta.
                 </p>
               </Step>
             </ol>

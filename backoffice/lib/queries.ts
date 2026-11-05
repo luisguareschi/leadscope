@@ -58,7 +58,7 @@ export function useApi() {
       const token = await getToken();
       if (!token) {
         await signOut();
-        throw new ApiError(401, "Tu sesión terminó. Volvé a entrar.");
+        throw new ApiError(401, "Tu sesión terminó. Vuelve a entrar.");
       }
       const companyId = supportCompanyIdFor(email);
       try {

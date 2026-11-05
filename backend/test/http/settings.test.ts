@@ -283,7 +283,7 @@ describe("company settings", () => {
       .send({ ...config, collect: [] })
       .expect(400);
     expect(none.body.error.fields).toEqual({
-      collect: "Agregá al menos un dato para recopilar.",
+      collect: "Agrega al menos un dato para recopilar.",
     });
 
     const bad = await request(app)
@@ -301,7 +301,7 @@ describe("company settings", () => {
       .expect(400);
     expect(bad.body.error.fields).toEqual({
       "collect.1.key":
-        "Usá letras, números y guiones bajos, empezando con una letra. Por ejemplo: presupuesto.",
+        "Usa letras, números y guiones bajos, y empieza con una letra. Por ejemplo, presupuesto.",
       "collect.1.name": "No puede quedar vacío.",
       "collect.2.required": "Valor inválido.",
       "collect.3.question":

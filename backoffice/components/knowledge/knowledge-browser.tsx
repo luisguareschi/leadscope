@@ -201,7 +201,7 @@ export function KnowledgeBrowser({
     setNameRequest({
       title: "Nueva carpeta",
       description: parentId
-        ? `Adentro de ${placeLabel(tree, parentId)}.`
+        ? `Dentro de ${placeLabel(tree, parentId)}.`
         : "En la raíz de Conocimiento.",
       label: "Nombre",
       initial: "",
@@ -231,7 +231,7 @@ export function KnowledgeBrowser({
     setNameRequest({
       title: "Renombrar archivo",
       description:
-        "La extensión se mantiene. Para subir una versión nueva usá Reemplazar.",
+        "La extensión se mantiene. Para subir una versión nueva, usa Reemplazar.",
       label: "Nombre",
       initial: base,
       extension,
@@ -395,8 +395,8 @@ export function KnowledgeBrowser({
               )}
             >
               {dragged
-                ? "Soltá acá para llevarlo a la raíz"
-                : "Soltá para subir a la raíz"}
+                ? "Suelta aquí para moverlo a la raíz"
+                : "Suelta para subir a la raíz"}
             </span>
           ) : (
             <Button
@@ -442,8 +442,8 @@ export function KnowledgeBrowser({
                       >
                         <span className="w-14" />
                         <span className="col-span-2 @3xl/content:col-span-4">
-                          Carpeta vacía. Arrastrá archivos acá o usá Subir
-                          archivos acá en su menú.
+                          Carpeta vacía. Arrastra archivos aquí o usa Subir
+                          archivos aquí en su menú.
                         </span>
                       </div>
                     </motion.li>
@@ -508,11 +508,11 @@ export function KnowledgeBrowser({
                           <span className="truncate text-xs text-muted-foreground tabular-nums">
                             {isTarget && !dragged ? (
                               <span className="font-medium text-primary">
-                                Soltá para subir acá
+                                Suelta para subir aquí
                               </span>
                             ) : isTarget ? (
                               <span className="font-medium text-primary">
-                                Soltá para mover acá
+                                Suelta para mover aquí
                               </span>
                             ) : (
                               <>
@@ -553,7 +553,7 @@ export function KnowledgeBrowser({
                                 onClick={() => queue.pick(target(folder.id))}
                               >
                                 <UploadIcon />
-                                Subir archivos acá
+                                Subir archivos aquí
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => askNewFolder(folder.id)}

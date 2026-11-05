@@ -13,7 +13,7 @@ const bodySchema = z.strictObject({
   body: z
     .string()
     .trim()
-    .min(1, "Escribí un mensaje.")
+    .min(1, "Escribe un mensaje.")
     .max(
       MAX_MANUAL_MESSAGE_CHARS,
       `WhatsApp acepta hasta ${MAX_MANUAL_MESSAGE_CHARS} caracteres por mensaje.`,

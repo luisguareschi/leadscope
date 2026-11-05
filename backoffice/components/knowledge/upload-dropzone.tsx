@@ -119,11 +119,11 @@ export function EmptyDropzone({ queue }: { queue: UploadQueue }) {
       </span>
       <span className="flex flex-col gap-1">
         <span className="text-sm font-medium">
-          Subí la ficha de proyectos y las preguntas frecuentes
+          Sube la ficha de proyectos y las preguntas frecuentes
         </span>
         <span className="text-[13px] text-muted-foreground">
-          Arrastrá los archivos acá o hacé clic para elegirlos. PDF, Word,
-          Excel, PowerPoint, CSV, texto o Markdown. Después podés ordenarlos en
+          Arrastra los archivos aquí o haz clic para elegirlos. PDF, Word,
+          Excel, PowerPoint, CSV, texto o Markdown. Después puedes ordenarlos en
           carpetas.
         </span>
       </span>

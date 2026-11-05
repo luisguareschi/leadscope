@@ -22,7 +22,7 @@ export async function deleteCompany(
   });
   if (confirmSlug !== company.slug)
     throw badRequest(
-      "Para eliminarla, escribí el identificador exacto de la empresa.",
+      "Para eliminarla, escribe el identificador exacto de la empresa.",
       "slug_mismatch",
     );
   await ctx.db.company.delete({ where: { id: company.id } });

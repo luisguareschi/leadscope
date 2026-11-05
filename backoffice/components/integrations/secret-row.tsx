@@ -97,7 +97,7 @@ export function SecretRow({
                 spellCheck={false}
                 value={draft}
                 placeholder={
-                  secret.set ? "Pegá el valor nuevo" : "Pegá el valor"
+                  secret.set ? "Pega el valor nuevo" : "Pega el valor"
                 }
                 onChange={(event) => {
                   setDraft(event.target.value);
@@ -128,7 +128,7 @@ export function SecretRow({
                     variant="outline"
                     onClick={() => {
                       navigator.clipboard.writeText(draft).then(
-                        () => toast.success("Clave copiada. Pegala en Kapso."),
+                        () => toast.success("Clave copiada. Pégala en Kapso."),
                         () => toast.error("No se pudo copiar."),
                       );
                     }}
@@ -151,8 +151,8 @@ export function SecretRow({
             </div>
             {generated ? (
               <p className="text-[13px] text-muted-foreground">
-                Copiala y pegala en Kapso antes de guardar: después no se vuelve
-                a mostrar.
+                Cópiala y pégala en Kapso antes de guardar, porque después no se
+                vuelve a mostrar.
               </p>
             ) : null}
           </form>

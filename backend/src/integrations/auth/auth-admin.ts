@@ -75,11 +75,11 @@ function spanishFailure(
 ): AuthAdminError {
   if (status === 429 || body?.error_code === "over_email_send_rate_limit")
     return new AuthAdminError(
-      `Supabase no envió ${what}: se alcanzó el límite de emails por hora. Probá de nuevo más tarde.`,
+      `Supabase no envió ${what} porque se alcanzó el límite de emails por hora. Prueba de nuevo más tarde.`,
     );
   if (status === 401 || status === 403)
     return new AuthAdminError(
-      `Supabase rechazó la clave de servicio, así que no se envió ${what}. Revisá SUPABASE_SERVICE_ROLE_KEY en el servidor.`,
+      `Supabase rechazó la clave de servicio, así que no se envió ${what}. Revisa SUPABASE_SERVICE_ROLE_KEY en el servidor.`,
     );
   const detail = detailOf(body);
   return new AuthAdminError(
@@ -114,7 +114,7 @@ export function createSupabaseAuthAdmin(options: {
       });
     } catch {
       throw new AuthAdminError(
-        "No se pudo conectar con Supabase. Probá de nuevo en un momento.",
+        "No se pudo conectar con Supabase. Prueba de nuevo en un momento.",
       );
     }
     const json: unknown = await response.json().catch(() => null);

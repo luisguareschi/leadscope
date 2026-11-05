@@ -1,5 +1,5 @@
 // Only the offline page is cached: panel data must always come fresh from the API.
-const CACHE = "leadscope-v2";
+const CACHE = "leadscope-v3";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {

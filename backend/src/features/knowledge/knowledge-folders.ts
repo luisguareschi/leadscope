@@ -29,10 +29,10 @@ export function cleanName(raw: string, max: number, what: string): string {
   // eslint-disable-next-line no-control-regex -- drop ASCII control characters from names
   const name = raw.replace(/[\u0000-\u001f]/g, "").trim();
   if (!name)
-    throw badRequest(`Escribí un nombre para ${what}.`, "invalid_name");
+    throw badRequest(`Escribe un nombre para ${what}.`, "invalid_name");
   if (/[\\/]/.test(name))
     throw badRequest(
-      "El nombre no puede tener / ni \\: se usan para separar carpetas.",
+      "El nombre no puede tener / ni \\, porque separan carpetas.",
       "invalid_name",
     );
   if (name.length > max)

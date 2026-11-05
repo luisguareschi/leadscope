@@ -73,7 +73,7 @@ export function errorsByField(
     if (fields[path]) errors[key as keyof ConfigDraft] = fields[path];
   }
   if (!errors.collect && Object.keys(itemErrors(fields)).length > 0)
-    errors.collect = "Revisá los datos marcados.";
+    errors.collect = "Revisa los datos marcados.";
   return errors;
 }
 

@@ -78,7 +78,7 @@ export const DEMO_THREADS: DemoThread[] = [
       knowsProjects: "No",
     },
     summary:
-      "- Busca un monoambiente para invertir, hasta USD 140.000.\n- No conoce los proyectos; se le contó Proyecto Demo Rambla (desde USD 129.000).\n- Falta coordinar el horario de la llamada.",
+      "- Busca un monoambiente para invertir, hasta USD 140.000.\n- No conoce los proyectos. Se le contó Proyecto Demo Rambla (desde USD 129.000).\n- Falta coordinar el horario de la llamada.",
     messages: [
       {
         from: "lead",
@@ -180,7 +180,7 @@ export const DEMO_THREADS: DemoThread[] = [
       "forbidden_topic: Rentabilidad futura, renta proyectada o retorno de la inversión (porcentajes, ROI, cap rate).",
     collected: { interest: "Para invertir" },
     summary:
-      "- Quiere invertir en un apartamento.\n- Preguntó qué rentabilidad da por año (tema prohibido); espera a un asesor.",
+      "- Quiere invertir en un apartamento.\n- Preguntó qué rentabilidad da por año (tema prohibido). Espera a un asesor.",
     crm: { synced: true },
     messages: [
       {

@@ -124,7 +124,7 @@ export function VersionsCard() {
   return (
     <Section
       title="Historial"
-      description="Cada vez que se guarda la configuración, las instrucciones o el número de WhatsApp queda una versión. Restaurar una la guarda como versión nueva; la actual queda en el historial."
+      description="Cada vez que se guarda la configuración, las instrucciones o el número de WhatsApp queda una versión. Al restaurar una, se guarda como versión nueva y la actual queda en el historial."
     >
       <div className="flex flex-wrap gap-1.5">
         {FILTERS.map((item) => (

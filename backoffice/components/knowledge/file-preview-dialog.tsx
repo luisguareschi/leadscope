@@ -28,7 +28,7 @@ export function FilePreviewDialog({
           <DialogDescription>
             Este es el texto que lee el asistente (
             {formatNumber(file?.charCount ?? 0)} caracteres). Si falta algo o se
-            ve desordenado, exportá el archivo de nuevo o pasalo a otro formato.
+            ve desordenado, exporta el archivo de nuevo o pásalo a otro formato.
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto rounded-xl bg-muted p-4">

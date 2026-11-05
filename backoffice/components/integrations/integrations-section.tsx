@@ -32,7 +32,7 @@ export function IntegrationsSection({ companyName }: { companyName?: string }) {
   return (
     <Section
       title="Integraciones"
-      description={`Las claves de ${companyName ?? "la empresa"}. Se guardan cifradas: acá solo ves si están cargadas y los últimos 4 caracteres.`}
+      description={`Las claves de ${companyName ?? "la empresa"}. Se guardan cifradas. Aquí solo ves si están configuradas y sus últimos 4 caracteres.`}
     >
       {query.isError ? (
         <Alert variant="destructive">
