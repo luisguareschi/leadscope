@@ -49,7 +49,8 @@ export function DeleteCompanyDialog({
           <AlertDialogDescription>
             Se borran la empresa, sus operadores y sus usuarios de Supabase, las
             conversaciones, los archivos de conocimiento, la configuración y sus
-            versiones. No se puede deshacer. Si solo querés apagarla, archivala.
+            versiones. No se puede deshacer. Si solo quieres desactivarla,
+            archívala.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form
@@ -75,7 +76,7 @@ export function DeleteCompanyDialog({
         >
           <Field>
             <FieldLabel htmlFor="delete-company-slug">
-              Escribí <span className="font-mono">{company?.slug}</span> para
+              Escribe <span className="font-mono">{company?.slug}</span> para
               confirmar
             </FieldLabel>
             <Input

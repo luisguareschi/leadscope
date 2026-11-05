@@ -246,7 +246,7 @@ describe("HubSpot", () => {
     await ctx.crm.drain();
     expect(
       ctx.integrations.fakes.crm.contacts.get("+59899000001")?.lead.summary,
-    ).toContain("Estado: Cerrado: sin interés\nEtapa: Sin interés");
+    ).toContain("Estado: Cerrado, sin interés\nEtapa: Sin interés");
     expect((await saved(thread.id)).crmPendingAction).toBeNull();
   });
 });

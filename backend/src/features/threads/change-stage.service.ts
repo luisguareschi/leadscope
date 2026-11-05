@@ -83,7 +83,7 @@ export async function changeThreadStage(
   });
   if (!changed)
     throw conflict(
-      "La etapa de esta conversación cambió recién. Revisala y volvé a elegir.",
+      "La etapa de esta conversación acaba de cambiar. Revísala y vuelve a elegir.",
       "stage_changed",
     );
   ctx.crm.schedule(threadId);

@@ -149,7 +149,7 @@ function AssistantGroup({ thread }: { thread: Thread }) {
           tone="warning"
           icon={<HandIcon />}
           text={needsHumanReasonLabel(thread.needsHumanReason)}
-          detail="Respondele desde la conversación (el asistente queda pausado) o desde tu WhatsApp y, cuando esté resuelto, devolvele la conversación al asistente."
+          detail="Respóndele desde la conversación (el asistente queda pausado) o desde tu WhatsApp. Cuando esté resuelto, devuélvele la conversación al asistente."
           action={
             <Button
               size="sm"
@@ -203,7 +203,7 @@ function HubSpotGroup({ thread }: { thread: Thread }) {
           detail={
             crm.retriesExhausted
               ? "Se agotaron los reintentos automáticos."
-              : "Se reintenta solo en unos minutos."
+              : "Se vuelve a intentar automáticamente en unos minutos."
           }
           action={
             <Button

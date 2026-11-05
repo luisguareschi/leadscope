@@ -46,7 +46,7 @@ export function InstructionsCard({
   return (
     <Section
       title="Instrucciones"
-      description="Lo que el asistente tiene que saber de la empresa y cómo querés que hable de ella. Precios y proyectos van en Conocimiento."
+      description="Lo que el asistente tiene que saber de la empresa y cómo quieres que hable de ella. Precios y proyectos van en Conocimiento."
     >
       <form
         onSubmit={onSubmit}
@@ -80,7 +80,7 @@ export function InstructionsCard({
             )}
           >
             {error ??
-              "Van después de las reglas de la plataforma: si se contradicen, ganan las reglas."}
+              "Van después de las reglas de la plataforma. Si se contradicen, ganan las reglas."}
           </p>
           <span
             className={cn(

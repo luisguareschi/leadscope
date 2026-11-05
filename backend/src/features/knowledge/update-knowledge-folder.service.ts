@@ -34,7 +34,7 @@ export async function updateKnowledgeFolder(
     assertFolder(folders, parentId);
     if (isSameOrInside(folders, folderId, parentId))
       throw badRequest(
-        "No podés mover una carpeta adentro de sí misma ni de una de sus subcarpetas.",
+        "No puedes mover una carpeta dentro de sí misma ni de una de sus subcarpetas.",
         "folder_cycle",
       );
     const name = requestedName ?? current.name;

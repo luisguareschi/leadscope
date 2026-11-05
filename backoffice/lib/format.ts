@@ -43,7 +43,7 @@ export function formatRelative(value: string | null, now = new Date()): string {
   if (!value) return "—";
   const date = new Date(value);
   const seconds = Math.round((date.getTime() - now.getTime()) / 1000);
-  if (Math.abs(seconds) < 60) return "recién";
+  if (Math.abs(seconds) < 60) return "ahora";
   const minutes = Math.round(seconds / 60);
   if (Math.abs(minutes) < 60) return relative.format(minutes, "minute");
   const hours = Math.round(minutes / 60);
@@ -54,14 +54,14 @@ export function formatRelative(value: string | null, now = new Date()): string {
   return shortDateFormat.format(date);
 }
 
-/** How long since `value`, short: "recién", "45 min", "3 h", "2 d". */
+/** How long since `value`, short: "ahora", "45 min", "3 h", "2 d". */
 export function formatWaiting(value: string | null, now = new Date()): string {
   if (!value) return "—";
   const minutes = Math.max(
     0,
     Math.floor((now.getTime() - new Date(value).getTime()) / 60_000),
   );
-  if (minutes < 1) return "recién";
+  if (minutes < 1) return "ahora";
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} h`;

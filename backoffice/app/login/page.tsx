@@ -38,7 +38,7 @@ export default function LoginPage() {
 
   async function onForgotPassword() {
     if (!email) {
-      setError("Escribí tu email y volvé a tocar el enlace.");
+      setError("Escribe tu email y vuelve a tocar el enlace.");
       return;
     }
     try {
@@ -53,7 +53,7 @@ export default function LoginPage() {
 
   return (
     <AuthCard
-      title="Entrá al panel"
+      title="Entra al panel"
       description="Conversaciones del asistente de WhatsApp."
     >
       <form onSubmit={onSubmit}>
@@ -61,7 +61,7 @@ export default function LoginPage() {
           {mode === "dev" ? (
             <Alert className="bg-secondary ring-0">
               <AlertDescription>
-                Modo desarrollo: entrá con un email, sin contraseña.
+                Modo desarrollo. Entra con un email, sin contraseña.
               </AlertDescription>
             </Alert>
           ) : null}

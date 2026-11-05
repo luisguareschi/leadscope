@@ -173,7 +173,7 @@ export async function extractKnowledgeText(
   if (!format) {
     throw new KnowledgeExtractionError(
       "unsupported_format",
-      "Formato no soportado. Subí PDF, Word, Excel, PowerPoint, CSV, texto o Markdown.",
+      "Formato no soportado. Sube PDF, Word, Excel, PowerPoint, CSV, texto o Markdown.",
     );
   }
   if (!matchesContainer(format, data)) {
@@ -188,7 +188,7 @@ export async function extractKnowledgeText(
   } catch {
     throw new KnowledgeExtractionError(
       "corrupt_file",
-      "No pudimos leer el archivo. Probá exportarlo de nuevo.",
+      "No pudimos leer el archivo. Expórtalo de nuevo y vuelve a subirlo.",
     );
   }
   const text = normalizeText(raw);
@@ -196,7 +196,7 @@ export async function extractKnowledgeText(
     throw new KnowledgeExtractionError(
       "empty_text",
       format === "pdf"
-        ? "El PDF no tiene texto seleccionable (parece escaneado). Subí una versión con texto."
+        ? "El PDF no tiene texto seleccionable y parece escaneado. Sube una versión con texto."
         : "El archivo no tiene texto.",
     );
   }

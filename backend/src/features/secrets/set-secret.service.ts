@@ -14,7 +14,7 @@ export async function setSecret(
   const trimmed = value.trim();
   if (!trimmed)
     throw badRequest(
-      "Indicá un valor. Un campo vacío no borra la clave.",
+      "Escribe un valor. Un campo vacío no borra la clave.",
       "empty_secret",
     );
   await updateCompanySecrets(ctx, companyId, (secrets) => {

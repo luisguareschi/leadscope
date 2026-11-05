@@ -56,7 +56,7 @@ export function assigneeWhere(
   if (assignee === "none") return { assignedToId: null };
   if (!operatorId)
     throw badRequest(
-      "Entraste como administrador: no tenés conversaciones asignadas en esta empresa.",
+      "Entraste como administrador y no tienes conversaciones asignadas en esta empresa.",
       "no_operator",
     );
   return { assignedToId: operatorId };

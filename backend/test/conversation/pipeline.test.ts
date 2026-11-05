@@ -303,7 +303,7 @@ describe("a bot turn", () => {
     // HubSpot shows the close, while the advisor still has the lead in the queue.
     expect(
       ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary,
-    ).toContain("Estado: Cerrado: sin interés\nEtapa: Por contactar");
+    ).toContain("Estado: Cerrado, sin interés\nEtapa: Por contactar");
   });
 
   it("does not let a turn overwrite Contactado set by a person while the model was answering", async () => {

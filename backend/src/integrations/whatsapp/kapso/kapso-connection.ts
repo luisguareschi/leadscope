@@ -37,11 +37,11 @@ type KapsoWebhook = {
 
 function requestFailure(response: KapsoResponse, what: string): string {
   if (response.status === 401)
-    return "Kapso rechazó la clave de API. Revisá que sea una clave del proyecto donde está conectado el número.";
+    return "Kapso rechazó la clave de API. Revisa que sea una clave del proyecto donde está conectado el número.";
   if (response.status === 404)
     return "Kapso no encuentra ese Phone number ID en el proyecto de esta clave.";
   if (response.status === 429)
-    return "Kapso limita estas pruebas por minuto. Probá de nuevo en un rato.";
+    return "Kapso limita estas pruebas por minuto. Prueba de nuevo en un rato.";
   return `Kapso respondió ${response.status} al pedir ${what}: ${kapsoErrorOf(response).message}`;
 }
 
@@ -111,14 +111,14 @@ async function checkNumber(
         id: "number",
         status: "error",
         label,
-        detail: `${prefix}No puede enviar ni recibir bien: ${failing.join(", ") || "ver el detalle en Kapso"}. Si Meta lo muestra desconectado, volvé a conectarlo en Kapso.`,
+        detail: `${prefix}No puede enviar ni recibir bien: ${failing.join(", ") || "ver el detalle en Kapso"}. Si Meta lo muestra desconectado, vuelve a conectarlo en Kapso.`,
       };
     default:
       return {
         id: "number",
         status: "warning",
         label,
-        detail: `Kapso no pudo completar la revisión${health.error ? `: ${health.error}` : ""}. Probá de nuevo en unos minutos.`,
+        detail: `Kapso no pudo completar la revisión${health.error ? `: ${health.error}` : ""}. Prueba de nuevo en unos minutos.`,
       };
   }
 }
@@ -174,7 +174,7 @@ async function checkWebhook(
       status: "error",
       label,
       detail: metaKind
-        ? "Hay un webhook hacia esta URL pero es de tipo Meta. Tiene que ser de tipo Kapso, con el evento whatsapp.message.received."
+        ? "Hay un webhook hacia esta URL, pero es de tipo Meta. Tiene que ser de tipo Kapso, con el evento whatsapp.message.received."
         : "Kapso no tiene un webhook de este número hacia la URL de esta empresa con el evento whatsapp.message.received.",
     };
   }
@@ -184,7 +184,7 @@ async function checkWebhook(
       status: "error",
       label,
       detail:
-        "El webhook está pausado en Kapso. Activalo en Kapso; si se pausó solo, es porque nuestras respuestas fallaban.",
+        "El webhook está pausado en Kapso. Actívalo en Kapso. Si se pausó solo, es porque nuestras respuestas fallaban.",
     };
   if (hook.payload_version && hook.payload_version !== "v2")
     return {
@@ -204,7 +204,7 @@ async function checkWebhook(
       status: "error",
       label,
       detail:
-        "La clave secreta del webhook en Kapso no coincide con la guardada acá. Copiala de nuevo.",
+        "La clave secreta del webhook en Kapso no coincide con la guardada aquí. Cópiala de nuevo.",
     };
   const missingStatuses = Object.keys(STATUS_EVENTS).filter(
     (event) => !hook.events?.includes(event),
@@ -214,7 +214,7 @@ async function checkWebhook(
       id: "webhook",
       status: "warning",
       label,
-      detail: `Recibe los mensajes. Le faltan los eventos de estado (${missingStatuses.join(", ")}): sin ellos el panel no muestra si se entregó o leyó cada respuesta.`,
+      detail: `Recibe los mensajes. Le faltan los eventos de estado (${missingStatuses.join(", ")}). Sin ellos, el panel no muestra si se entregó o leyó cada respuesta.`,
     };
   return {
     id: "webhook",

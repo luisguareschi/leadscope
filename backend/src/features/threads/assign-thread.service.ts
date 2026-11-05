@@ -21,7 +21,7 @@ export async function assignThread(
     if (operator.archivedAt)
       throw new HttpError(
         400,
-        "Ese operador está archivado: no se le pueden asignar conversaciones.",
+        "Ese operador está archivado. No se le pueden asignar conversaciones.",
         "assignee_archived",
       );
   }

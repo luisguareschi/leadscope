@@ -26,7 +26,7 @@ export default function SetPasswordPage() {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (password.length < 8) {
-      setError("Usá al menos 8 caracteres.");
+      setError("Usa al menos 8 caracteres.");
       return;
     }
     setPending(true);
@@ -58,7 +58,7 @@ export default function SetPasswordPage() {
     return (
       <AuthCard
         title="El enlace venció"
-        description="Pedí uno nuevo desde la pantalla de ingreso."
+        description="Pide uno nuevo desde la pantalla de ingreso."
       >
         <Button
           size="lg"
@@ -73,8 +73,8 @@ export default function SetPasswordPage() {
 
   return (
     <AuthCard
-      title="Elegí tu contraseña"
-      description="La vas a usar para entrar al panel."
+      title="Elige tu contraseña"
+      description="La usarás para entrar al panel."
     >
       <form onSubmit={onSubmit}>
         <FieldGroup>

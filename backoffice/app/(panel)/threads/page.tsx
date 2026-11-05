@@ -226,7 +226,7 @@ function ThreadsView() {
         </div>
         {stage === "to_contact" ? (
           <p className="px-4 pt-1 text-[13px] text-muted-foreground">
-            Primero los que más esperan. Siguen acá aunque vuelvan a escribir,
+            Primero los que más esperan. Siguen aquí aunque vuelvan a escribir,
             hasta que alguien los marque como contactados.
           </p>
         ) : null}

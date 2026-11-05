@@ -60,7 +60,7 @@ export function CreateCompanyDialog({
           reset();
           onOpenChange(false);
           toast.success(
-            `${result.company.name} quedó creada. El operador carga las claves en Configuración.`,
+            `Creaste ${result.company.name}. El operador carga las claves en Configuración.`,
           );
           const [operator] = result.company.operators;
           if (operator) toastInvite(operator.email, result.invite);
@@ -77,7 +77,7 @@ export function CreateCompanyDialog({
           <DialogTitle>Nueva empresa</DialogTitle>
           <DialogDescription>
             Se crean la empresa, su identificador y el primer operador, que
-            recibe la invitación por email. Las claves las carga esa persona en
+            recibe la invitación por email. Esa persona carga las claves en
             Configuración.
           </DialogDescription>
         </DialogHeader>
@@ -136,7 +136,8 @@ export function CreateCompanyDialog({
               onChange={(event) => setOperatorEmail(event.target.value)}
             />
             <FieldDescription>
-              Un email nuevo: le llega un enlace para elegir su contraseña.
+              Si el email es nuevo, le llega un enlace para elegir su
+              contraseña.
             </FieldDescription>
           </Field>
         </form>

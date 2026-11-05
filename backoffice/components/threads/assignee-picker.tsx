@@ -172,7 +172,7 @@ export function AssigneePicker({
         >
           {assignee
             ? mine
-              ? "Vos"
+              ? "Tú"
               : operatorName(assignee.email)
             : "Sin asignar"}
         </span>

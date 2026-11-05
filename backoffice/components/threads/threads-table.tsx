@@ -56,8 +56,8 @@ export function ThreadsTable({
           </EmptyTitle>
           <EmptyDescription>
             {filtered
-              ? "Probá con otra etapa u otro filtro, o buscá por otro nombre o teléfono."
-              : "Cuando un lead escriba al número de WhatsApp, la conversación aparece acá."}
+              ? "Prueba con otra etapa u otro filtro, o busca por otro nombre o teléfono."
+              : "Cuando un lead escriba al número de WhatsApp, la conversación aparecerá aquí."}
           </EmptyDescription>
         </EmptyHeader>
       </Empty>

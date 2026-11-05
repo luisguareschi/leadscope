@@ -71,8 +71,8 @@ function detailOf(operator: Operator): string | null {
   if (operator.inviteError) return operator.inviteError;
   if (operator.invitedAt)
     return `Último envío: ${formatDateTime(operator.invitedAt)}.`;
-  if (operator.hasLogin) return "Ya tenía usuario: entra con su contraseña.";
-  return "Todavía no recibió la invitación. Usá Reenviar invitación.";
+  if (operator.hasLogin) return "Ya tenía usuario y entra con su contraseña.";
+  return "Todavía no recibió la invitación. Usa Reenviar invitación.";
 }
 
 function removalToast(email: string, removal: AuthUserRemoval) {
@@ -82,12 +82,12 @@ function removalToast(email: string, removal: AuthUserRemoval) {
       return;
     case "kept_platform_admin":
       toast.success(
-        `Eliminaste a ${email}. Su usuario de Supabase queda porque administra la plataforma.`,
+        `Eliminaste a ${email}. Su usuario de Supabase se mantiene porque administra la plataforma.`,
       );
       return;
     case "kept_operator":
       toast.success(
-        `Eliminaste a ${email}. Su usuario de Supabase queda porque sigue siendo operador.`,
+        `Eliminaste a ${email}. Su usuario de Supabase se mantiene porque sigue siendo operador.`,
       );
       return;
     case "none":
@@ -95,9 +95,9 @@ function removalToast(email: string, removal: AuthUserRemoval) {
       return;
     case "failed":
       toast.warning(
-        `Eliminaste a ${email}, pero su usuario de Supabase quedó`,
+        `Eliminaste a ${email}, pero no se pudo borrar su usuario de Supabase.`,
         {
-          description: `${removal.message} Podés borrarlo a mano en Supabase.`,
+          description: `${removal.message} Puedes borrarlo a mano en Supabase.`,
         },
       );
   }
@@ -297,9 +297,9 @@ export function OperatorsPanel({
             <AlertDialogDescription>
               Deja de ser operador de {companyName}.{" "}
               {deleting?.platformAdmin
-                ? "Su usuario de Supabase queda, porque administra la plataforma."
+                ? "Su usuario de Supabase se mantiene porque administra la plataforma."
                 : "También se borra su usuario de Supabase."}{" "}
-              Para que pueda volver más adelante, mejor archivalo.
+              Si quieres que pueda volver más adelante, archívalo.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

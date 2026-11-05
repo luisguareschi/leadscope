@@ -100,7 +100,7 @@ function MovePicker({
         return {
           ...option,
           disabled: inside || here,
-          note: here ? "Está acá" : inside ? "Adentro de la carpeta" : null,
+          note: here ? "Está aquí" : inside ? "Dentro de la carpeta" : null,
         };
       });
   }, [tree, request, query]);
@@ -125,8 +125,8 @@ function MovePicker({
           Mover &quot;{request.name}&quot;
         </DialogTitle>
         <DialogDescription>
-          Ahora está en {placeLabel(tree, request.from)}. Elegí a dónde va
-          {request.kind === "folder" ? ", con todo lo que tiene adentro" : ""}.
+          Ahora está en {placeLabel(tree, request.from)}. Elige a dónde va
+          {request.kind === "folder" ? ", con todo lo que tiene dentro" : ""}.
         </DialogDescription>
       </DialogHeader>
       <div className="border-b p-3">
@@ -212,7 +212,7 @@ function MovePicker({
           onClick={() => void move()}
         >
           {saving ? <Spinner /> : null}
-          Mover acá
+          Mover aquí
         </Button>
       </DialogFooter>
     </>

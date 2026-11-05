@@ -47,7 +47,7 @@ export async function inviteOperator(
       message:
         error instanceof AuthAdminError
           ? error.message
-          : "No se pudo enviar la invitación por un error inesperado. Probá de nuevo.",
+          : "No se pudo enviar la invitación por un error inesperado. Prueba de nuevo.",
     };
   }
 

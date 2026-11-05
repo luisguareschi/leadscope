@@ -72,8 +72,9 @@ export function ThreadActions({ thread }: { thread: Thread }) {
             Pausar asistente
           </TooltipTrigger>
           <TooltipContent className="max-w-64">
-            Cuando un asesor toma la conversación desde su WhatsApp, así el
-            asistente no se mete. Escribirle al lead desde el panel ya lo pausa.
+            Úsalo cuando un asesor toma la conversación desde su WhatsApp, para
+            que el asistente no intervenga. Escribirle al lead desde el panel ya
+            lo pausa.
           </TooltipContent>
         </Tooltip>
       )}
@@ -111,7 +112,7 @@ export function ThreadActions({ thread }: { thread: Thread }) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar esta conversación?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se borran la conversación y todos sus mensajes de LeadScope. Usalo
+              Se borran la conversación y todos sus mensajes de LeadScope. Úsalo
               cuando el lead pide que borremos sus datos (Ley 18.331). El
               contacto en HubSpot no se modifica.
             </AlertDialogDescription>

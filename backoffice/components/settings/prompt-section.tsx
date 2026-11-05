@@ -22,19 +22,19 @@ import { Panel, Section } from "@/components/panel";
 const RULES = [
   {
     title: "Cómo se presenta",
-    text: "Con el nombre del asistente, como asistente virtual de la empresa, los dos de General. Habla en nombre de la empresa y nunca usa un nombre por el otro. Sin nombre del asistente, se presenta solo como el asistente virtual de la empresa y no inventa uno.",
+    text: "Usa el nombre del asistente y se presenta como asistente virtual de la empresa, con los dos nombres de General. Habla en nombre de la empresa y nunca confunde un nombre con el otro. Si no hay nombre del asistente, se presenta solo como el asistente virtual de la empresa y no inventa uno.",
   },
   {
     title: "Formato de salida",
-    text: "El modelo contesta con la herramienta submit_turn: la respuesta, lo que dijo el lead y la intención. El motor lee esos campos y decide el estado.",
+    text: "El modelo contesta con la herramienta submit_turn, que incluye la respuesta, lo que dijo el lead y la intención. El motor lee esos campos y decide el estado.",
   },
   {
     title: "Por contactar con los datos necesarios",
-    text: "El lead pasa a Por contactar recién cuando están guardados todos los datos necesarios de Información a recopilar (si no hay ninguno, cuando da un horario). Ahí pide un horario para la llamada.",
+    text: "El lead pasa a Por contactar solo cuando están guardados todos los datos necesarios de Información a recopilar (si no hay ninguno, cuando da un horario). En ese momento, el asistente pide un horario para la llamada.",
   },
   {
     title: "Quiere hablar ya",
-    text: "Si el lead pide hablar con una persona («llámenme», «quiero hablar con alguien»), pasa a Por contactar enseguida aunque falten datos, con horario «Lo antes posible», y el asistente deja de preguntar. Le dice que un asesor lo contacta lo antes posible; el número para llamar ya sale solo de tus Instrucciones.",
+    text: 'Si el lead pide hablar con una persona ("llámenme", "quiero hablar con alguien"), pasa a Por contactar enseguida aunque falten datos, con horario "Lo antes posible", y el asistente deja de preguntar. Le dice que un asesor lo contactará lo antes posible. Un número para llamar en ese momento solo puede salir de tus Instrucciones.',
   },
   {
     title: "HubSpot desde el primer mensaje",
@@ -42,15 +42,15 @@ const RULES = [
   },
   {
     title: "Cuando hace falta una persona",
-    text: "Envía el mensaje fijo «Hace falta un asesor», escribe en HubSpot y espera hasta que un operador marque la conversación como atendida.",
+    text: 'Envía el mensaje fijo "Hace falta un asesor", escribe en HubSpot y espera hasta que un operador marque la conversación como atendida.',
   },
   {
     title: "Temas prohibidos",
-    text: "Una respuesta que los menciona no se envía: el lead recibe el mensaje de respaldo.",
+    text: "Una respuesta que los menciona no se envía. El lead recibe el mensaje de respaldo.",
   },
   {
     title: "Conocimiento por carpetas",
-    text: "Cada archivo de Conocimiento llega con su ruta, por ejemplo «Proyectos / Tres Cruces / Precios.xlsx», agrupado por carpeta: así el asistente sabe de qué proyecto habla cada uno. Los límites de caracteres son los mismos.",
+    text: 'Cada archivo de Conocimiento llega con su ruta, por ejemplo "Proyectos / Tres Cruces / Precios.xlsx", agrupado por carpeta. Así el asistente sabe de qué proyecto habla cada uno. Los límites de caracteres son los mismos.',
   },
   {
     title: "Ventana de 24 horas",
@@ -178,7 +178,7 @@ export function PromptSection({ rules }: { rules: string }) {
         </ol>
         <p className="flex items-center gap-2 px-5 py-3 text-xs text-muted-foreground">
           <LockIcon className="size-3.5" />
-          El texto que recibe el modelo está en inglés; el asistente responde en
+          El texto que recibe el modelo está en inglés. El asistente responde en
           el idioma de la configuración.
         </p>
       </Panel>

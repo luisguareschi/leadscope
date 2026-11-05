@@ -47,7 +47,7 @@ export async function prepareKnowledgeFile(
   file: UploadedFile | undefined,
 ): Promise<PreparedKnowledgeFile> {
   if (!file)
-    throw new HttpError(400, "Elegí un archivo para subir.", "missing_file");
+    throw new HttpError(400, "Elige un archivo para subir.", "missing_file");
   const limits = company.config.knowledge;
   if (file.size > limits.maxFileBytes) {
     throw new HttpError(
@@ -73,7 +73,7 @@ export async function prepareKnowledgeFile(
   if (extracted.text.length > limits.maxCharsPerFile) {
     throw new HttpError(
       422,
-      `El archivo tiene ${formatNumber(extracted.text.length)} caracteres de texto y el máximo por archivo es ${formatNumber(limits.maxCharsPerFile)}. Dividilo o quitá lo que el asistente no necesita.`,
+      `El archivo tiene ${formatNumber(extracted.text.length)} caracteres de texto y el máximo por archivo es ${formatNumber(limits.maxCharsPerFile)}. Divídelo o quita lo que el asistente no necesita.`,
       "file_text_too_long",
     );
   }
@@ -108,7 +108,7 @@ export async function assertFitsCompanyTotal(
   if (used + charCount > limit) {
     throw new HttpError(
       422,
-      `Con este archivo el conocimiento llegaría a ${formatNumber(used + charCount)} caracteres y el máximo es ${formatNumber(limit)}. Borrá o achicá otros archivos primero.`,
+      `Con este archivo el conocimiento llegaría a ${formatNumber(used + charCount)} caracteres y el máximo es ${formatNumber(limit)}. Borra o acorta otros archivos primero.`,
       "company_text_limit",
     );
   }

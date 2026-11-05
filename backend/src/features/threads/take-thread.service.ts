@@ -11,7 +11,7 @@ export async function takeThread(
 ) {
   if (!operatorId)
     throw badRequest(
-      "Entraste como administrador y no sos operador de esta empresa: elegí un operador en Asignado.",
+      "Entraste como administrador y no eres operador de esta empresa. Elige un operador en Asignado.",
       "no_operator",
     );
   return assignThread(ctx, companyId, threadId, operatorId);

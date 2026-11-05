@@ -12,7 +12,7 @@ export function toastInvite(email: string, invite: InviteOutcome | null) {
       return;
     case "linked":
       toast.success(
-        `${email} ya tenía usuario: quedó vinculado y entra con su contraseña de siempre.`,
+        `${email} ya tenía usuario. Quedó vinculado y entra con su contraseña de siempre.`,
       );
       return;
     case "reset_sent":
@@ -22,7 +22,7 @@ export function toastInvite(email: string, invite: InviteOutcome | null) {
       return;
     case "failed":
       toast.error(`No se pudo invitar a ${email}`, {
-        description: `${invite.message} Podés reenviar la invitación desde la lista de operadores.`,
+        description: `${invite.message} Puedes reenviar la invitación desde la lista de operadores.`,
         duration: Infinity,
         closeButton: true,
       });

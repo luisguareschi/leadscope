@@ -82,8 +82,8 @@ const ASKED_PREFIX = "- Preguntó por ";
 /** Phrasing for the starter items; any other item is asked by its name. */
 const ASK_BY_KEY: Record<string, string> = {
   interest: "¿Qué estás buscando? ¿Es para vivir o para invertir?",
-  budget: "¿Con qué presupuesto aproximado contás?",
-  knowsProjects: "¿Ya conocés nuestros proyectos?",
+  budget: "¿Con qué presupuesto aproximado cuentas?",
+  knowsProjects: "¿Ya conoces nuestros proyectos?",
 };
 
 function itemText(item: CollectItem): string {
@@ -170,7 +170,7 @@ function valueFor(item: CollectItem, fragment: string): string {
 function askFor(item: CollectItem): string {
   return (
     ASK_BY_KEY[item.key] ??
-    `Para ayudarte mejor, ¿me contás ${item.name.charAt(0).toLowerCase()}${item.name.slice(1)}?`
+    `Para ayudarte mejor, ¿me cuentas ${item.name.charAt(0).toLowerCase()}${item.name.slice(1)}?`
   );
 }
 
@@ -200,10 +200,10 @@ function buildSummary(input: {
       .map((item) => `- ${item.name}: ${input.collected[item.key]}.`),
     ...asked,
     input.forbiddenTopic
-      ? "- Preguntó por un tema prohibido; espera la respuesta de un asesor."
+      ? "- Preguntó por un tema prohibido. Espera la respuesta de un asesor."
       : null,
     input.callNow || input.callTime === CALL_NOW_TIME
-      ? "- Quiere hablar con una persona ya: pidió que lo llamen lo antes posible."
+      ? "- Quiere hablar con una persona ya y pidió que lo llamen lo antes posible."
       : input.callTime
         ? `- Pidió que lo llamen ${input.callTime}.`
         : null,
@@ -273,14 +273,14 @@ export function createFakeLlm(): LlmClient {
         const phone = instructionsPhone(input.system);
         reply = [
           "¡Perfecto! Un asesor te va a contactar lo antes posible.",
-          phone ? `Si preferís, podés llamarnos ya al ${phone}.` : null,
+          phone ? `Si prefieres, puedes llamarnos ya al ${phone}.` : null,
         ]
           .filter(Boolean)
           .join(" ");
       } else if (NOT_INTERESTED.test(text)) {
         intent = "not_interested";
         reply =
-          "Perfecto, gracias por avisar. Si más adelante te interesa, escribinos por acá.";
+          "Perfecto, gracias por avisar. Si más adelante te interesa, escríbenos por aquí.";
       } else if (
         (stage === "handoff" || leadStage === "to_contact") &&
         fields.callTime === null &&

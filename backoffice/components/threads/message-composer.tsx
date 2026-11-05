@@ -177,8 +177,8 @@ export function MessageComposer({ thread }: { thread: Thread }) {
   const hint = !open
     ? null
     : thread.paused && !thread.needsHuman
-      ? "El asistente está pausado: no responde hasta que lo reanuden."
-      : `Al enviar, el asistente se pausa en esta conversación${takesAssignee ? " y queda asignada a vos" : ""}.`;
+      ? "El asistente está pausado y no responde hasta que alguien lo reanude."
+      : `Al enviar, el asistente se pausa en esta conversación${takesAssignee ? " y la conversación queda asignada a ti" : ""}.`;
 
   return (
     <div className="flex flex-col gap-2 bg-card px-4 py-3">
@@ -190,7 +190,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
           <TimerOffIcon className="mt-0.5 size-4 shrink-0" />
           <span>
             {thread.lastInboundAt
-              ? "Pasaron más de 24 horas desde el último mensaje del lead. WhatsApp solo deja escribirle con una plantilla aprobada, y desde el panel todavía no se envían plantillas. Cuando el lead vuelva a escribir, vas a poder responderle desde acá."
+              ? "Pasaron más de 24 horas desde el último mensaje del lead. WhatsApp solo deja escribirle con una plantilla aprobada, y desde el panel todavía no se envían plantillas. Cuando el lead vuelva a escribir, podrás responderle desde aquí."
               : "El lead todavía no escribió. WhatsApp solo deja escribirle con una plantilla aprobada hasta que escriba, y desde el panel todavía no se envían plantillas."}
           </span>
         </p>
@@ -246,7 +246,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
             aria-label="Mensaje para el lead"
             placeholder={
               open
-                ? "Escribile al lead por WhatsApp…"
+                ? "Escríbele al lead por WhatsApp…"
                 : "La ventana de 24 h está cerrada"
             }
             className="max-h-40 min-h-9 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 max-lg:max-h-28"
