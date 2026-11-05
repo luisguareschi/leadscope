@@ -1,4 +1,5 @@
 import { createApp } from "./app.js";
+import { backfillHubspotEnabled } from "./companies/load-company.js";
 import { loadEnv } from "./config/env.js";
 import { startSweeper } from "./conversation/sweeper.js";
 import { createContext } from "./create-context.js";
@@ -10,6 +11,14 @@ logger.level = env.LOG_LEVEL;
 initMonitoring(env.SENTRY_DSN, env.NODE_ENV);
 const ctx = createContext(env);
 const app = createApp(ctx);
+
+const decided = await backfillHubspotEnabled(
+  ctx.db,
+  ctx.encryptionKey,
+  ctx.logger,
+);
+if (decided > 0)
+  logger.info({ companies: decided }, "hubspot switch set from saved tokens");
 
 const server = app.listen(env.PORT, () => {
   logger.info(

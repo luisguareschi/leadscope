@@ -152,10 +152,10 @@ async function runTurn(
       data: {
         needsHuman: true,
         needsHumanReason: "channel_unavailable",
-        ...crmRequest("needs_human"),
+        ...(company.hubspot.enabled ? crmRequest("needs_human") : {}),
       },
     });
-    ctx.crm.schedule(threadId);
+    if (company.hubspot.enabled) ctx.crm.schedule(threadId);
     return "send_failed";
   }
   const lastWaId = pending.at(-1)?.waMessageId;
@@ -195,10 +195,11 @@ async function runTurn(
   const needsHumanReason = sendError
     ? `send_failed: ${sendError.slice(0, 200)}`
     : decision.needsHuman?.reason;
-  const crmAction: CrmActionKind | null =
-    decision.crm ??
-    (sendError ? "needs_human" : null) ??
-    (crmChanged(thread, decision) ? "update" : null);
+  const crmAction: CrmActionKind | null = !company.hubspot.enabled
+    ? null
+    : (decision.crm ??
+      (sendError ? "needs_human" : null) ??
+      (crmChanged(thread, decision) ? "update" : null));
   const sentAt = ctx.now();
   // The queue counts from the lead message that qualified them; anything later is "wrote again".
   const handedOff =

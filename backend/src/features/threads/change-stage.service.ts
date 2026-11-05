@@ -24,12 +24,13 @@ export async function changeThreadStage(
   const { companyId, operatorId, actorEmail, support } = access;
   const thread = await ctx.db.thread.findFirst({
     where: { id: threadId, companyId },
-    include: { company: { select: { config: true } } },
+    include: { company: { select: { config: true, hubspotEnabled: true } } },
   });
   if (!thread) throw notFound("Conversación no encontrada");
   if (thread.stage === stage) return findThreadDto(ctx.db, threadId);
 
   const { collect } = parseCompanyConfig(thread.company.config);
+  const hubspot = thread.company.hubspotEnabled === true;
   const now = ctx.now();
   const data: Prisma.ThreadUncheckedUpdateManyInput = {
     stage,
@@ -37,7 +38,7 @@ export async function changeThreadStage(
     stageChangedAt: now,
     stageChangedById: operatorId,
     stageChangedByEmail: actorEmail,
-    ...crmRequest(thread.crmPendingAction ?? "update"),
+    ...(hubspot ? crmRequest(thread.crmPendingAction ?? "update") : {}),
   };
   if (stage === "to_contact") data.handedOffAt = thread.handedOffAt ?? now;
   if (stage === "qualifying" || stage === "not_interested")
@@ -86,6 +87,6 @@ export async function changeThreadStage(
       "La etapa de esta conversación acaba de cambiar. Revísala y vuelve a elegir.",
       "stage_changed",
     );
-  ctx.crm.schedule(threadId);
+  if (hubspot) ctx.crm.schedule(threadId);
   return findThreadDto(ctx.db, threadId);
 }

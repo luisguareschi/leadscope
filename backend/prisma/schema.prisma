@@ -24,6 +24,14 @@ model Company {
   /// AES-256-GCM ciphertext of the company's API keys. See src/lib/crypto.ts.
   encryptedSecrets      String?
   whatsappPhoneNumberId String?                  @unique
+  /// Configuración → Integraciones → HubSpot. Off: no contact is created or updated and nothing
+  /// is queued. Null only for companies from before the switch, until the backend's start sets it
+  /// from whether they had a HubSpot token (`backfillHubspotEnabled`).
+  hubspotEnabled        Boolean?
+  /// From HubSpot's account info (`portalId`, `uiDomain`), saved when the token is saved or tested.
+  /// They build the "Abrir en HubSpot" link.
+  hubspotPortalId       String?
+  hubspotUiDomain       String?
   /// Set while archived: its operators cannot use the panel and the bot does not answer its number.
   archivedAt            DateTime?
   createdAt             DateTime                 @default(now())

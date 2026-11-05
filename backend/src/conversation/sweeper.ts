@@ -36,6 +36,7 @@ export async function sweepOnce(
     where: {
       crmPendingAction: { not: null },
       crmAttempts: { lt: MAX_CRM_ATTEMPTS },
+      company: { hubspotEnabled: true },
       AND: [
         {
           OR: [{ crmNextAttemptAt: null }, { crmNextAttemptAt: { lte: now } }],

@@ -149,9 +149,9 @@ function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
           <span className="relative z-10 flex max-w-full shrink-0 [&>button]:max-w-[calc(100%+0.5rem)]">
             <AssigneePicker thread={thread} size="compact" />
           </span>
-          {thread.crm.status === "none" ? null : (
+          {thread.crm && thread.crm.status !== "none" ? (
             <CrmIndicator crm={thread.crm} />
-          )}
+          ) : null}
         </div>
       </div>
     </li>
@@ -168,6 +168,8 @@ function DesktopTable({
   queue: boolean;
 }) {
   const router = useRouter();
+  // A company with HubSpot off gets no HubSpot status on its threads, so the column goes.
+  const hubspot = loading || threads.some((thread) => thread.crm !== null);
   return (
     <Table className="table-fixed">
       <TableHeader>
@@ -189,7 +191,11 @@ function DesktopTable({
             Último mensaje
           </TableHead>
           <TableHead className={`${HEAD} w-40`}>Asignado</TableHead>
-          <TableHead className={`${HEAD} w-20 text-center`}>HubSpot</TableHead>
+          {hubspot ? (
+            <TableHead className={`${HEAD} w-20 text-center`}>
+              HubSpot
+            </TableHead>
+          ) : null}
           <TableHead className={`${HEAD} w-28 pr-3 text-right`}>
             {queue ? "Esperando" : "Actividad"}
           </TableHead>
@@ -220,7 +226,7 @@ function DesktopTable({
                 <TableCell>
                   <Skeleton className="h-3.5 w-20" />
                 </TableCell>
-                <TableCell />
+                {hubspot ? <TableCell /> : null}
                 <TableCell className="pr-3">
                   <Skeleton className="ml-auto h-3 w-12" />
                 </TableCell>
@@ -269,12 +275,14 @@ function DesktopTable({
                 <TableCell onClick={(event) => event.stopPropagation()}>
                   <AssigneePicker thread={thread} size="compact" />
                 </TableCell>
-                <TableCell
-                  className="text-center"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <CrmIndicator crm={thread.crm} />
-                </TableCell>
+                {hubspot ? (
+                  <TableCell
+                    className="text-center"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {thread.crm ? <CrmIndicator crm={thread.crm} /> : null}
+                  </TableCell>
+                ) : null}
                 <TableCell className="pr-3 text-right text-xs text-muted-foreground tabular-nums">
                   {queue
                     ? formatWaiting(thread.handedOffAt)

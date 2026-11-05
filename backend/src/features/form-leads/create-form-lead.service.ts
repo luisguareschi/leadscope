@@ -113,10 +113,12 @@ export async function createFormLead(
     phone,
   });
   // Every lead goes to the CRM when it arrives, like a lead's first WhatsApp message.
-  const crm = await ctx.db.thread.updateMany({
-    where: { id: thread.id, crmSyncedAt: null, crmPendingAction: null },
-    data: crmRequest("update"),
-  });
+  const crm = company.hubspot.enabled
+    ? await ctx.db.thread.updateMany({
+        where: { id: thread.id, crmSyncedAt: null, crmPendingAction: null },
+        data: crmRequest("update"),
+      })
+    : { count: 0 };
   try {
     return await sendWelcome(ctx, company, thread);
   } finally {

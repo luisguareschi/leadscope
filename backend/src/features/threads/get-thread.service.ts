@@ -3,7 +3,11 @@ import type { AppContext } from "../../context.js";
 import { collectedRows } from "../../conversation/crm-summary.js";
 import { notFound } from "../../lib/http-error.js";
 import { messageSelect, toMessageDto } from "./message-dto.js";
-import { threadInclude, toThreadDto } from "./thread-dto.js";
+import {
+  threadCompanySelect,
+  threadInclude,
+  toThreadDto,
+} from "./thread-dto.js";
 
 const MAX_MESSAGES = 500;
 
@@ -16,7 +20,9 @@ export async function getThread(
     where: { id: threadId, companyId },
     include: {
       ...threadInclude,
-      company: { select: { name: true, config: true } },
+      company: {
+        select: { ...threadCompanySelect, name: true, config: true },
+      },
     },
   });
   if (!thread) throw notFound("Conversación no encontrada");
@@ -26,12 +32,12 @@ export async function getThread(
     take: MAX_MESSAGES,
     select: messageSelect,
   });
-  const { company, ...row } = thread;
+  const { company } = thread;
   return {
-    thread: toThreadDto(row),
+    thread: toThreadDto(thread),
     /** The company's items with what the lead said, then values under keys no item has anymore. */
     fields: collectedRows(
-      row.collected,
+      thread.collected,
       parseCompanyConfig(company.config, company.name),
     ),
     messages: messages.reverse().map(toMessageDto),

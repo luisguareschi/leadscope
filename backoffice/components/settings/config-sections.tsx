@@ -18,7 +18,7 @@ import { useConfigEditor } from "./config-editor";
 import { CollectEditor } from "./collect-editor";
 import { SearchableSelect, type SearchableOption } from "./searchable-select";
 import { Panel, FieldRow, Section } from "@/components/panel";
-import type { ConfigSectionId } from "./sections";
+import type { AssistantSectionId } from "./sections";
 
 type TextKey = {
   [K in keyof ConfigDraft]: ConfigDraft[K] extends string ? K : never;
@@ -267,7 +267,7 @@ function ForbiddenSection() {
   return (
     <Section
       title="Temas prohibidos"
-      description='Lo que el asistente nunca responde. Si un lead pregunta por uno, el asistente no contesta con sus palabras. Envía el mensaje fijo "Hace falta un asesor", se detiene y deja el lead en HubSpot.'
+      description='Lo que el asistente nunca responde. Si un lead pregunta por uno, el asistente no contesta con sus palabras. Envía el mensaje fijo "Hace falta un asesor" y se detiene hasta que una persona lo atienda.'
     >
       <Panel>
         <TextRow
@@ -317,88 +317,95 @@ function MessagesSection() {
   );
 }
 
-function CrmSection() {
+/** Formularios: the welcome a form lead gets. Fields of the config draft. */
+export function WelcomeTemplatePanel() {
   const { draft, set } = useConfigEditor();
   return (
-    <Section
-      title="Bienvenida y CRM"
-      description="Qué recibe un lead que llega por un formulario, y dónde queda la conversación en HubSpot."
-    >
-      <Panel
-        title="Bienvenida a leads de formulario"
-        description="Una plantilla aprobada en Meta, enviada una vez."
-        actions={
-          <Switch
-            id={fieldId("welcomeEnabled")}
-            aria-label="Enviar bienvenida a leads de formulario"
-            checked={draft.welcomeEnabled}
-            onCheckedChange={(checked) => set("welcomeEnabled", checked)}
-          />
-        }
-      >
-        {draft.welcomeEnabled ? (
-          <>
-            <TextRow
-              name="templateName"
-              label="Plantilla"
-              hint="El nombre exacto en Meta."
-              placeholder="bienvenida_formulario"
-              mono
-              maxLength={512}
-            />
-            <TextRow
-              name="templateLanguage"
-              label="Idioma de la plantilla"
-              hint="El código de Meta, como es o es_AR."
-              mono
-              narrow
-            />
-            <TextRow
-              name="templateBody"
-              label="Texto aprobado"
-              hint="Para que la conversación muestre lo que recibió el lead."
-              multiline
-              maxLength={1024}
-            />
-          </>
-        ) : (
-          <p className="px-5 py-4 text-sm text-muted-foreground">
-            Si está apagada, el lead queda registrado, pero no recibe ningún
-            mensaje.
-          </p>
-        )}
-      </Panel>
-      <Panel title="HubSpot">
-        <TextRow
-          name="transcriptProperty"
-          label="Propiedad del resumen"
-          hint="Nombre interno de una propiedad de texto largo del contacto. Si está vacío, solo se crea o actualiza el contacto."
-          mono
-          maxLength={100}
+    <Panel
+      title="Bienvenida a leads de formulario"
+      description="Una plantilla aprobada en Meta, enviada una vez desde el número de la empresa."
+      actions={
+        <Switch
+          id={fieldId("welcomeEnabled")}
+          aria-label="Enviar bienvenida a leads de formulario"
+          checked={draft.welcomeEnabled}
+          onCheckedChange={(checked) => set("welcomeEnabled", checked)}
         />
-      </Panel>
-    </Section>
+      }
+    >
+      {draft.welcomeEnabled ? (
+        <>
+          <TextRow
+            name="templateName"
+            label="Plantilla"
+            hint="El nombre exacto en Meta."
+            placeholder="bienvenida_formulario"
+            mono
+            maxLength={512}
+          />
+          <TextRow
+            name="templateLanguage"
+            label="Idioma de la plantilla"
+            hint="El código de Meta, como es o es_AR."
+            mono
+            narrow
+          />
+          <TextRow
+            name="templateBody"
+            label="Texto aprobado"
+            hint="Para que la conversación muestre lo que recibió el lead."
+            multiline
+            maxLength={1024}
+          />
+        </>
+      ) : (
+        <p className="px-5 py-4 text-sm text-muted-foreground">
+          Si está apagada, el lead queda registrado, pero no recibe ningún
+          mensaje.
+        </p>
+      )}
+    </Panel>
   );
 }
 
-function ModelSection() {
+/** HubSpot: the long-text property that receives the summary. Field of the config draft. */
+export function TranscriptPropertyRow() {
+  return (
+    <TextRow
+      name="transcriptProperty"
+      label="Propiedad del resumen"
+      hint="Nombre interno de una propiedad de contacto de texto de varias líneas. Si está vacío, solo se crea o actualiza el contacto."
+      placeholder="leadscope_resumen"
+      mono
+      maxLength={100}
+    />
+  );
+}
+
+/** Anthropic: which model answers. Field of the config draft. */
+export function ModelRow() {
   const choices = useChoices();
   return (
+    <SelectRow
+      name="model"
+      label="Modelo"
+      hint={
+        choices.modelSource === "anthropic"
+          ? "Los de la cuenta de Anthropic de la empresa. Por defecto, claude-haiku-4-5."
+          : "Cuando la clave de Anthropic está configurada, se listan los de su cuenta. Por defecto, claude-haiku-4-5."
+      }
+      options={choices.models}
+    />
+  );
+}
+
+function LimitsSection() {
+  return (
     <Section
-      title="Modelo y límites"
-      description="Cambiarlos afecta el costo y la calidad de las respuestas."
+      title="Respuestas y límites"
+      description="Cambiarlos afecta el costo y la calidad de las respuestas. El modelo se elige en Integraciones → Anthropic."
     >
-      <Panel title="Modelo">
-        <SelectRow
-          name="model"
-          label="Modelo de Anthropic"
-          hint={
-            choices.modelSource === "anthropic"
-              ? "Los de la cuenta de Anthropic de la empresa. Por defecto, claude-haiku-4-5."
-              : "Cuando la clave de Anthropic está configurada, se listan los de su cuenta. Por defecto, claude-haiku-4-5."
-          }
-          options={choices.models}
-        />
+      <Panel title="Respuestas">
         <TextRow
           name="temperature"
           label="Temperatura"
@@ -455,11 +462,10 @@ function ModelSection() {
   );
 }
 
-export const CONFIG_SECTIONS: Record<ConfigSectionId, () => ReactNode> = {
+export const CONFIG_SECTIONS: Record<AssistantSectionId, () => ReactNode> = {
   general: GeneralSection,
   conversation: ConversationSection,
   forbidden: ForbiddenSection,
   messages: MessagesSection,
-  crm: CrmSection,
-  model: ModelSection,
+  limits: LimitsSection,
 };

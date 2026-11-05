@@ -16,6 +16,10 @@ export type Integrations = {
   crmFor(company: LoadedCompany): Crm;
   /** Used for every Kapso call (sends and the connection check). Tests replace it. */
   kapsoFetch: typeof fetch;
+  /** Used for HubSpot writes and the HubSpot check. Tests replace it. */
+  hubspotFetch: typeof fetch;
+  /** Used by the Anthropic check (Models API). Tests replace it. */
+  anthropicFetch: typeof fetch;
   /** Shared in-process fakes, so scripts and tests can read what was "sent". */
   fakes: { llm: LlmClient; channel: FakeChannel; crm: FakeCrm };
 };
@@ -25,6 +29,8 @@ type Overrides = Partial<{
   channelFor: Integrations["channelFor"];
   crmFor: Integrations["crmFor"];
   kapsoFetch: typeof fetch;
+  hubspotFetch: typeof fetch;
+  anthropicFetch: typeof fetch;
 }>;
 
 export function createIntegrations(
@@ -39,6 +45,10 @@ export function createIntegrations(
   const anthropicClients = new Map<string, LlmClient>();
   const kapsoFetch: typeof fetch =
     overrides.kapsoFetch ?? ((input, init) => fetch(input, init));
+  const hubspotFetch: typeof fetch =
+    overrides.hubspotFetch ?? ((input, init) => fetch(input, init));
+  const anthropicFetch: typeof fetch =
+    overrides.anthropicFetch ?? ((input, init) => fetch(input, init));
 
   function fakeOrFail<T>(fake: T, what: string, company: LoadedCompany): T {
     if (env.ALLOW_FAKE_INTEGRATIONS) return fake;
@@ -50,6 +60,8 @@ export function createIntegrations(
   return {
     fakes,
     kapsoFetch,
+    hubspotFetch,
+    anthropicFetch,
     llmFor:
       overrides.llmFor ??
       ((company) => {
@@ -86,6 +98,7 @@ export function createIntegrations(
         return createHubSpotCrm({
           accessToken: hubspotAccessToken,
           transcriptProperty: company.config.crm.transcriptProperty,
+          fetchImpl: hubspotFetch,
         });
       }),
   };

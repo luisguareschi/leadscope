@@ -8,7 +8,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { IntegrationsSection } from "@/components/integrations/integrations-section";
+import { IntegrationSection } from "@/components/integrations/integrations-section";
 import { OperatorsPanel } from "@/components/operators/operators-panel";
 import type { ConfigDraft } from "@/components/settings/config-draft";
 import {
@@ -23,13 +23,14 @@ import {
 import { InstructionsCard } from "@/components/settings/instructions-card";
 import { PromptSection } from "@/components/settings/prompt-section";
 import {
-  CONFIG_SECTION_FIELDS,
+  ASSISTANT_SECTIONS,
   DEFAULT_SECTION,
+  isAssistantSection,
   isConfigSection,
   LEGACY_SECTIONS,
   SECTION_GROUPS,
   sectionOfField,
-  type ConfigSectionId,
+  type IntegrationSectionId,
   type SectionId,
 } from "@/components/settings/sections";
 import { Section } from "@/components/panel";
@@ -41,6 +42,13 @@ import { useAuth } from "@/lib/auth";
 import { useMe, useSettings } from "@/lib/queries";
 import { supportCompanyIdFor } from "@/lib/support";
 import type { CompanySettings } from "@/lib/types";
+
+const INTEGRATION_SECTIONS: IntegrationSectionId[] = [
+  "whatsapp",
+  "forms",
+  "hubspot",
+  "anthropic",
+];
 
 type Navigation = {
   groups: typeof SECTION_GROUPS;
@@ -122,19 +130,32 @@ function LoadedSettings({
         nav={nav}
         stateOf={(id) => (isConfigSection(id) ? editor.sectionState(id) : null)}
       >
-        <form onSubmit={onSubmit} hidden={!isConfigSection(active)}>
-          {(Object.keys(CONFIG_SECTION_FIELDS) as ConfigSectionId[]).map(
-            (id) => {
-              const Section = CONFIG_SECTIONS[id];
-              return (
-                <div key={id} hidden={active !== id}>
-                  <Section />
-                </div>
-              );
-            },
-          )}
+        <form onSubmit={onSubmit} hidden={!isAssistantSection(active)}>
+          {ASSISTANT_SECTIONS.map((id) => {
+            const Section = CONFIG_SECTIONS[id];
+            return (
+              <div key={id} hidden={active !== id}>
+                <Section />
+              </div>
+            );
+          })}
           <ConfigSaveBar />
         </form>
+
+        {INTEGRATION_SECTIONS.includes(active as IntegrationSectionId) ? (
+          <>
+            <IntegrationSection
+              id={active as IntegrationSectionId}
+              companyName={companyName}
+            />
+            {/* Their own forms (secrets, phone number id) cannot nest in the config form. */}
+            {isConfigSection(active) ? (
+              <form onSubmit={onSubmit}>
+                <ConfigSaveBar />
+              </form>
+            ) : null}
+          </>
+        ) : null}
 
         <div hidden={active !== "instructions"}>
           <InstructionsCard
@@ -146,9 +167,6 @@ function LoadedSettings({
 
         {active === "prompt" ? (
           <PromptSection rules={data.platformRules} />
-        ) : null}
-        {active === "integrations" ? (
-          <IntegrationsSection companyName={companyName} />
         ) : null}
         {active === "versions" ? <VersionsCard /> : null}
         {active === "operators" && supportCompanyId ? (

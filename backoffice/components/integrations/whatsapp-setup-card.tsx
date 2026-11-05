@@ -1,24 +1,22 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
-import {
-  CheckCircle2Icon,
-  ChevronRightIcon,
-  CircleMinusIcon,
-  CopyIcon,
-  ExternalLinkIcon,
-  PlugZapIcon,
-  TriangleAlertIcon,
-  XCircleIcon,
-} from "lucide-react";
+import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { cn } from "cn";
+import {
+  CheckResults,
+  CopyRow,
+  ExternalLink,
+  Guide,
+  RowSkeleton,
+  Step,
+  TestActions,
+  testStatus,
+} from "@/components/integrations/integration-parts";
 import { SecretRow } from "@/components/integrations/secret-row";
 import { fromDraft, toDraft } from "@/components/settings/config-draft";
-import { InlineCode, Panel, FieldRow, StatusDot } from "@/components/panel";
+import { InlineCode, Panel, FieldRow } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { API_URL, ApiError } from "@/lib/api";
 import {
@@ -26,12 +24,7 @@ import {
   useSettings,
   useWhatsappConnectionCheck,
 } from "@/lib/queries";
-import type {
-  CompanySettings,
-  ConnectionCheckStatus,
-  SecretStatus,
-  WhatsappConnectionCheck,
-} from "@/lib/types";
+import type { CompanySettings, SecretStatus } from "@/lib/types";
 
 const RECEIVED_EVENT = "whatsapp.message.received";
 const STATUS_EVENTS = [
@@ -59,44 +52,6 @@ const CONDITIONS = [
     text: "Kapso guarda todos los mensajes sin límite en el plan gratis. En un plan de pago, configura Project settings → Message retention en 30 días. LeadScope y HubSpot ya guardan la conversación.",
   },
 ];
-
-const STATUS_ICON: Record<ConnectionCheckStatus, ReactNode> = {
-  ok: <CheckCircle2Icon className="size-4 text-emerald-600" />,
-  warning: <TriangleAlertIcon className="size-4 text-primary" />,
-  error: <XCircleIcon className="size-4 text-destructive" />,
-  skipped: <CircleMinusIcon className="size-4 text-muted-foreground" />,
-};
-
-function copy(text: string, done: string) {
-  navigator.clipboard.writeText(text).then(
-    () => toast.success(done),
-    () => toast.error("No se pudo copiar."),
-  );
-}
-
-function Step({
-  n,
-  title,
-  children,
-}: {
-  n: number;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-3">
-      <span className="flex size-6 items-center justify-center rounded-full bg-primary/10 font-mono text-[11px] font-semibold text-primary">
-        {n}
-      </span>
-      <div className="flex flex-col gap-1 pt-0.5 text-[13px] leading-relaxed">
-        <span className="font-medium text-foreground">{title}</span>
-        <div className="flex flex-col gap-1.5 text-muted-foreground">
-          {children}
-        </div>
-      </div>
-    </li>
-  );
-}
 
 function PhoneNumberIdRow({ settings }: { settings: CompanySettings }) {
   const saved = settings.whatsappPhoneNumberId ?? "";
@@ -180,34 +135,6 @@ function PhoneNumberIdRow({ settings }: { settings: CompanySettings }) {
   );
 }
 
-function CheckResults({ result }: { result: WhatsappConnectionCheck }) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col gap-3 px-5 py-4",
-        result.ready ? "bg-emerald-500/5" : "bg-destructive/5",
-      )}
-    >
-      <p className="text-sm font-medium">
-        {result.ready
-          ? "Listo. Kapso envía los mensajes a LeadScope y LeadScope puede responder."
-          : "Todavía no está listo. Corrige lo marcado en rojo y prueba de nuevo."}
-      </p>
-      <ul className="flex flex-col gap-2">
-        {result.checks.map((check) => (
-          <li key={check.id} className="flex gap-2 text-[13px]">
-            <span className="mt-0.5 shrink-0">{STATUS_ICON[check.status]}</span>
-            <span>
-              <span className="font-medium">{check.label}.</span>{" "}
-              <span className="text-muted-foreground">{check.detail}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 /** Configuración → Integraciones → WhatsApp: what Kapso needs, the test, and the setup guide. */
 export function WhatsappSetupCard({
   secrets,
@@ -216,7 +143,6 @@ export function WhatsappSetupCard({
 }) {
   const settings = useSettings();
   const check = useWhatsappConnectionCheck();
-  const [guideOpen, setGuideOpen] = useState<boolean | null>(null);
   const data = settings.data;
   const webhookUrl = data ? `${API_URL}${data.kapsoWebhookPath}` : null;
   const secret = (name: SecretStatus["name"]) =>
@@ -229,21 +155,6 @@ export function WhatsappSetupCard({
           (value) => !value,
         ).length
       : null;
-  const showGuide = guideOpen ?? (missing !== null && missing > 0);
-
-  const status: { tone: "ok" | "warning" | "error" | "muted"; label: string } =
-    check.data
-      ? check.data.ready
-        ? { tone: "ok", label: "Conectado" }
-        : { tone: "error", label: "Con problemas" }
-      : missing === null
-        ? { tone: "muted", label: "Cargando" }
-        : missing > 0
-          ? {
-              tone: "warning",
-              label: missing === 1 ? "Falta 1 dato" : `Faltan ${missing} datos`,
-            }
-          : { tone: "muted", label: "Sin probar" };
 
   const runCheck = () =>
     check.mutate(undefined, {
@@ -255,24 +166,19 @@ export function WhatsappSetupCard({
       title="WhatsApp con Kapso"
       description="La API oficial de WhatsApp, a través del proyecto de Kapso de la empresa."
       actions={
-        <>
-          <span className="flex items-center gap-2 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">
-            <StatusDot tone={status.tone} />
-            {status.label}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={runCheck}
-            disabled={check.isPending}
-          >
-            {check.isPending ? <Spinner /> : <PlugZapIcon />}
-            Probar conexión
-          </Button>
-        </>
+        <TestActions
+          status={testStatus(check.data, missing)}
+          pending={check.isPending}
+          onTest={runCheck}
+        />
       }
     >
-      {check.data ? <CheckResults result={check.data} /> : null}
+      {check.data ? (
+        <CheckResults
+          result={check.data}
+          readyText="Listo. Kapso envía los mensajes a LeadScope y LeadScope puede responder."
+        />
+      ) : null}
 
       {data ? (
         <PhoneNumberIdRow
@@ -280,40 +186,21 @@ export function WhatsappSetupCard({
           settings={data}
         />
       ) : (
-        <div className="px-5 py-4">
-          <Skeleton className="h-9 w-full" />
-        </div>
+        <RowSkeleton />
       )}
 
       {apiKey ? (
         <SecretRow secret={apiKey} hint="En Kapso: Integrations → API keys." />
       ) : (
-        <div className="px-5 py-4">
-          <Skeleton className="h-9 w-full" />
-        </div>
+        <RowSkeleton />
       )}
 
-      <FieldRow
+      <CopyRow
         label="URL del webhook"
         hint="En Kapso, agrega en los webhooks del número uno de tipo Kapso (v2) con esta URL."
+        value={webhookUrl}
+        copyLabel="Copiar URL del webhook"
       >
-        {webhookUrl ? (
-          <div className="flex min-w-0 gap-2">
-            <code className="flex h-9 min-w-0 flex-1 items-center truncate rounded-md bg-input px-3 font-mono text-xs">
-              {webhookUrl}
-            </code>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Copiar URL del webhook"
-              onClick={() => copy(webhookUrl, "URL copiada.")}
-            >
-              <CopyIcon />
-            </Button>
-          </div>
-        ) : (
-          <Skeleton className="h-9 w-full" />
-        )}
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13px] text-muted-foreground">
           <dt>Obligatorio</dt>
           <dd className="flex flex-wrap gap-1">
@@ -326,7 +213,7 @@ export function WhatsappSetupCard({
             ))}
           </dd>
         </dl>
-      </FieldRow>
+      </CopyRow>
 
       {webhookSecret ? (
         <SecretRow
@@ -335,116 +222,89 @@ export function WhatsappSetupCard({
           hint="La misma que tiene el webhook en Kapso. Sin ella, LeadScope rechaza todos los avisos."
         />
       ) : (
-        <div className="px-5 py-4">
-          <Skeleton className="h-9 w-full" />
-        </div>
+        <RowSkeleton />
       )}
 
-      <div>
-        <button
-          type="button"
-          aria-expanded={showGuide}
-          onClick={() => setGuideOpen(!showGuide)}
-          className="flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-medium transition-colors hover:bg-muted/40"
-        >
-          <ChevronRightIcon
-            className={cn(
-              "size-4 text-muted-foreground transition-transform",
-              showGuide && "rotate-90",
-            )}
-          />
-          Guía de conexión paso a paso
-        </button>
-        {showGuide ? (
-          <div className="flex flex-col gap-6 border-t border-border/70 bg-muted/50 px-5 py-5">
-            <div className="flex flex-col gap-2 rounded-xl bg-primary/10 p-4 ring-1 ring-primary/25">
-              <p className="text-[13px] font-medium">Antes de empezar</p>
-              <ul className="flex flex-col gap-1.5 text-[13px] leading-relaxed text-muted-foreground">
-                {CONDITIONS.map((condition) => (
-                  <li key={condition.title}>
-                    <span className="font-medium text-foreground">
-                      {condition.title}
-                    </span>{" "}
-                    {condition.text}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <ol className="flex flex-col gap-4">
-              <Step n={1} title="Crea el proyecto de la empresa en Kapso">
-                <p>
-                  Entra a{" "}
-                  <a
-                    href="https://app.kapso.ai"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
-                  >
-                    app.kapso.ai
-                    <ExternalLinkIcon className="size-3" />
-                  </a>{" "}
-                  y crea un proyecto solo para esta empresa. Para producción,
-                  usa el plan Pro, que permite la retención de 30 días.
-                </p>
-              </Step>
-              <Step n={2} title="Conecta el número de WhatsApp">
-                <p>
-                  <InlineCode>Connected numbers</InlineCode> →{" "}
-                  <InlineCode>Connect new number</InlineCode>. Elige{" "}
-                  <InlineCode>WhatsApp Business App</InlineCode> si el equipo
-                  sigue usando la app con ese número, o{" "}
-                  <InlineCode>Bring your own SIM</InlineCode> si queda solo para
-                  el asistente. En Meta, entra con el usuario que administra el
-                  portfolio de la empresa y elige ese portfolio.
-                </p>
-                <p>
-                  No elijas{" "}
-                  <InlineCode>
-                    Use a display name with a virtual number instead
-                  </InlineCode>
-                  .
-                </p>
-              </Step>
-              <Step n={3} title="Copia el Phone number ID">
-                <p>
-                  Está en el número conectado (solo dígitos). Pégalo arriba, en
-                  Phone number ID.
-                </p>
-              </Step>
-              <Step n={4} title="Crea una clave de API">
-                <p>
-                  <InlineCode>Integrations</InlineCode> →{" "}
-                  <InlineCode>API keys</InlineCode> → nueva clave. Pégala
-                  arriba, en Clave de API de Kapso.
-                </p>
-              </Step>
-              <Step n={5} title="Agrega el webhook del número">
-                <p>
-                  De tipo Kapso (formato v2), con la URL y los eventos de
-                  arriba. Agrupar mensajes (buffering) es opcional, porque
-                  LeadScope ya espera unos segundos y responde una sola vez a
-                  varios mensajes seguidos.
-                </p>
-              </Step>
-              <Step n={6} title="Usa la misma clave secreta en los dos lados">
-                <p>
-                  Si Kapso te muestra la clave, pégala arriba. Si te pide una,
-                  toca Configurar → Generar, cópiala en Kapso y después guárdala
-                  aquí.
-                </p>
-              </Step>
-              <Step n={7} title="Prueba la conexión">
-                <p>
-                  Probar conexión revisa los datos, que Kapso vea el número en
-                  buen estado y que el webhook apunte a esta empresa con la
-                  misma clave. Después envía un WhatsApp al número desde otro
-                  teléfono. Debe aparecer en Conversaciones y recibir respuesta.
-                </p>
-              </Step>
-            </ol>
-          </div>
-        ) : null}
-      </div>
+      <Guide defaultOpen={missing !== null && missing > 0}>
+        <div className="flex flex-col gap-2 rounded-xl bg-primary/10 p-4 ring-1 ring-primary/25">
+          <p className="text-[13px] font-medium">Antes de empezar</p>
+          <ul className="flex flex-col gap-1.5 text-[13px] leading-relaxed text-muted-foreground">
+            {CONDITIONS.map((condition) => (
+              <li key={condition.title}>
+                <span className="font-medium text-foreground">
+                  {condition.title}
+                </span>{" "}
+                {condition.text}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <ol className="flex flex-col gap-4">
+          <Step n={1} title="Crea el proyecto de la empresa en Kapso">
+            <p>
+              Entra a{" "}
+              <ExternalLink href="https://app.kapso.ai">
+                app.kapso.ai
+              </ExternalLink>{" "}
+              y crea un proyecto solo para esta empresa. Para producción, usa el
+              plan Pro, que permite la retención de 30 días.
+            </p>
+          </Step>
+          <Step n={2} title="Conecta el número de WhatsApp">
+            <p>
+              <InlineCode>Connected numbers</InlineCode> →{" "}
+              <InlineCode>Connect new number</InlineCode>. Elige{" "}
+              <InlineCode>WhatsApp Business App</InlineCode> si el equipo sigue
+              usando la app con ese número, o{" "}
+              <InlineCode>Bring your own SIM</InlineCode> si queda solo para el
+              asistente. En Meta, entra con el usuario que administra el
+              portfolio de la empresa y elige ese portfolio.
+            </p>
+            <p>
+              No elijas{" "}
+              <InlineCode>
+                Use a display name with a virtual number instead
+              </InlineCode>
+              .
+            </p>
+          </Step>
+          <Step n={3} title="Copia el Phone number ID">
+            <p>
+              Está en el número conectado (solo dígitos). Pégalo arriba, en
+              Phone number ID.
+            </p>
+          </Step>
+          <Step n={4} title="Crea una clave de API">
+            <p>
+              <InlineCode>Integrations</InlineCode> →{" "}
+              <InlineCode>API keys</InlineCode> → nueva clave. Pégala arriba, en
+              Clave de API de Kapso.
+            </p>
+          </Step>
+          <Step n={5} title="Agrega el webhook del número">
+            <p>
+              De tipo Kapso (formato v2), con la URL y los eventos de arriba.
+              Agrupar mensajes (buffering) es opcional, porque LeadScope ya
+              espera unos segundos y responde una sola vez a varios mensajes
+              seguidos.
+            </p>
+          </Step>
+          <Step n={6} title="Usa la misma clave secreta en los dos lados">
+            <p>
+              Si Kapso te muestra la clave, pégala arriba. Si te pide una, toca
+              Configurar → Generar, cópiala en Kapso y después guárdala aquí.
+            </p>
+          </Step>
+          <Step n={7} title="Prueba la conexión">
+            <p>
+              Probar conexión revisa los datos, que Kapso vea el número en buen
+              estado y que el webhook apunte a esta empresa con la misma clave.
+              Después envía un WhatsApp al número desde otro teléfono. Debe
+              aparecer en Conversaciones y recibir respuesta.
+            </p>
+          </Step>
+        </ol>
+      </Guide>
     </Panel>
   );
 }

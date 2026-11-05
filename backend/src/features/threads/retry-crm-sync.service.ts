@@ -11,8 +11,14 @@ export async function retryCrmSync(
 ) {
   const thread = await ctx.db.thread.findFirst({
     where: { id: threadId, companyId },
+    include: { company: { select: { hubspotEnabled: true } } },
   });
   if (!thread) throw notFound("Conversación no encontrada");
+  if (thread.company.hubspotEnabled !== true)
+    throw badRequest(
+      "HubSpot está apagado para esta empresa. Actívalo en Configuración → HubSpot.",
+      "hubspot_disabled",
+    );
   if (!thread.crmPendingAction)
     throw badRequest("Esta conversación no tiene nada pendiente para el CRM.");
   await ctx.db.thread.update({

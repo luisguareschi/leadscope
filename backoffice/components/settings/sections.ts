@@ -1,27 +1,40 @@
 import {
+  BotIcon,
   Building2Icon,
-  CpuIcon,
+  ClipboardListIcon,
   FileTextIcon,
+  GaugeIcon,
   HistoryIcon,
+  MessageCircleIcon,
   MessageSquareQuoteIcon,
   MessagesSquareIcon,
-  PlugIcon,
   ScrollTextIcon,
-  SendIcon,
   ShieldBanIcon,
   UsersIcon,
+  WaypointsIcon,
   type LucideIcon,
 } from "lucide-react";
 import type { ConfigDraft } from "./config-draft";
 
-export type ConfigSectionId =
-  "general" | "conversation" | "forbidden" | "messages" | "crm" | "model";
+/** Sections of the Asistente group, all inside the one config form. */
+export type AssistantSectionId =
+  "general" | "conversation" | "forbidden" | "messages" | "limits";
+
+/** One per provider: what it needs, its guide, and its test. */
+export type IntegrationSectionId =
+  "whatsapp" | "forms" | "hubspot" | "anthropic";
+
+/** Sections that edit part of the config draft (and so show the save bar). */
+export type ConfigSectionId = Exclude<
+  AssistantSectionId | IntegrationSectionId,
+  "whatsapp"
+>;
 
 export type SectionId =
-  | ConfigSectionId
+  | AssistantSectionId
+  | IntegrationSectionId
   | "instructions"
   | "prompt"
-  | "integrations"
   | "versions"
   | "operators";
 
@@ -40,8 +53,7 @@ export const SECTION_GROUPS: Array<{ label: string; items: SectionItem[] }> = [
       { id: "conversation", label: "Conversación", icon: MessagesSquareIcon },
       { id: "forbidden", label: "Temas prohibidos", icon: ShieldBanIcon },
       { id: "messages", label: "Mensajes fijos", icon: MessageSquareQuoteIcon },
-      { id: "crm", label: "Bienvenida y CRM", icon: SendIcon },
-      { id: "model", label: "Modelo y límites", icon: CpuIcon },
+      { id: "limits", label: "Respuestas y límites", icon: GaugeIcon },
     ],
   },
   {
@@ -52,9 +64,17 @@ export const SECTION_GROUPS: Array<{ label: string; items: SectionItem[] }> = [
     ],
   },
   {
+    label: "Integraciones",
+    items: [
+      { id: "whatsapp", label: "WhatsApp (Kapso)", icon: MessageCircleIcon },
+      { id: "forms", label: "Formularios", icon: ClipboardListIcon },
+      { id: "hubspot", label: "HubSpot", icon: WaypointsIcon },
+      { id: "anthropic", label: "Anthropic", icon: BotIcon },
+    ],
+  },
+  {
     label: "Empresa",
     items: [
-      { id: "integrations", label: "Integraciones", icon: PlugIcon },
       { id: "versions", label: "Historial", icon: HistoryIcon },
       {
         id: "operators",
@@ -68,10 +88,21 @@ export const SECTION_GROUPS: Array<{ label: string; items: SectionItem[] }> = [
 
 export const DEFAULT_SECTION: SectionId = "general";
 
-/** Tab values from before the redesign, so old links still land somewhere sensible. */
+/** Tab values from before a redesign, so old links still land somewhere sensible. */
 export const LEGACY_SECTIONS: Record<string, SectionId> = {
   assistant: "general",
+  integrations: "whatsapp",
+  crm: "forms",
+  model: "limits",
 };
+
+export const ASSISTANT_SECTIONS: AssistantSectionId[] = [
+  "general",
+  "conversation",
+  "forbidden",
+  "messages",
+  "limits",
+];
 
 export const CONFIG_SECTION_FIELDS: Record<
   ConfigSectionId,
@@ -88,15 +119,7 @@ export const CONFIG_SECTION_FIELDS: Record<
   conversation: ["tone", "maxReplyChars", "collect"],
   forbidden: ["forbiddenDescribe"],
   messages: ["needsHuman", "fallback", "nonText"],
-  crm: [
-    "welcomeEnabled",
-    "templateName",
-    "templateLanguage",
-    "templateBody",
-    "transcriptProperty",
-  ],
-  model: [
-    "model",
+  limits: [
     "temperature",
     "historyLimit",
     "timeoutSeconds",
@@ -104,10 +127,17 @@ export const CONFIG_SECTION_FIELDS: Record<
     "maxCharsPerFile",
     "maxCharsTotal",
   ],
+  forms: ["welcomeEnabled", "templateName", "templateLanguage", "templateBody"],
+  hubspot: ["transcriptProperty"],
+  anthropic: ["model"],
 };
 
 export function isConfigSection(id: SectionId): id is ConfigSectionId {
   return id in CONFIG_SECTION_FIELDS;
+}
+
+export function isAssistantSection(id: SectionId): id is AssistantSectionId {
+  return (ASSISTANT_SECTIONS as SectionId[]).includes(id);
 }
 
 export function sectionOfField(key: keyof ConfigDraft): ConfigSectionId {

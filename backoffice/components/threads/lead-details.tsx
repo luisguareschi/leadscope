@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import {
   CheckIcon,
   CircleAlertIcon,
+  ExternalLinkIcon,
   HandIcon,
   RefreshCwIcon,
   SparklesIcon,
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime, formatPhone } from "@/lib/format";
 import { needsHumanReasonLabel } from "@/lib/thread-status";
-import type { LeadField, Thread } from "@/lib/types";
+import type { CrmStatus, LeadField, Thread } from "@/lib/types";
 import { FollowUpGroup } from "./follow-up-group";
 import { BotBadge } from "./status-badge";
 import { useThreadActionWithToast } from "./use-thread-action";
@@ -81,14 +82,14 @@ function Detail({
   );
 }
 
-const CRM_TONE: Record<Thread["crm"]["status"], Tone> = {
+const CRM_TONE: Record<CrmStatus, Tone> = {
   synced: "ok",
   pending: "pending",
   failed: "error",
   none: "muted",
 };
 
-const CRM_SHORT: Record<Thread["crm"]["status"], string> = {
+const CRM_SHORT: Record<CrmStatus, string> = {
   synced: "Guardado",
   pending: "Guardando",
   failed: "Falló",
@@ -182,9 +183,14 @@ function AssistantGroup({ thread }: { thread: Thread }) {
   return null;
 }
 
-function HubSpotGroup({ thread }: { thread: Thread }) {
+function HubSpotGroup({
+  thread,
+  crm,
+}: {
+  thread: Thread;
+  crm: NonNullable<Thread["crm"]>;
+}) {
   const { run, pending } = useThreadActionWithToast(thread.id);
-  const { crm } = thread;
 
   return (
     <Group
@@ -227,6 +233,18 @@ function HubSpotGroup({ thread }: { thread: Thread }) {
               : "Se guarda desde el primer mensaje y se actualiza cuando el asistente aprende algo nuevo del lead."}
         </p>
       )}
+      {crm.url ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full"
+          render={<a href={crm.url} target="_blank" rel="noreferrer" />}
+          nativeButton={false}
+        >
+          <ExternalLinkIcon />
+          Abrir en HubSpot
+        </Button>
+      ) : null}
     </Group>
   );
 }
@@ -278,7 +296,9 @@ export function LeadDetails({
   const required = asked.filter((field) => field.required);
   const requiredIn = required.filter((field) => field.value).length;
   // What needs action goes first; a HubSpot that is fine is reference, at the end.
-  const crmFailed = thread.crm.status === "failed";
+  // HubSpot off for the company: no status, no link.
+  const { crm } = thread;
+  const crmFailed = crm?.status === "failed";
 
   return (
     // Below lg the thread view's Lead tab already names this panel.
@@ -290,7 +310,7 @@ export function LeadDetails({
       <div className="min-h-0 flex-1 divide-y overflow-y-auto">
         <AssistantGroup thread={thread} />
         <FollowUpGroup thread={thread} />
-        {crmFailed ? <HubSpotGroup thread={thread} /> : null}
+        {crm && crmFailed ? <HubSpotGroup thread={thread} crm={crm} /> : null}
         <SummaryGroup summary={thread.summary} />
         <Group
           title="Datos del lead"
@@ -331,7 +351,7 @@ export function LeadDetails({
             value={formatDateTime(thread.createdAt)}
           />
         </Group>
-        {crmFailed ? null : <HubSpotGroup thread={thread} />}
+        {crm && !crmFailed ? <HubSpotGroup thread={thread} crm={crm} /> : null}
       </div>
     </Panel>
   );

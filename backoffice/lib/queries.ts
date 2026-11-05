@@ -41,6 +41,9 @@ import type {
   ThreadFilters,
   ThreadsPage,
   ThreadsSummary,
+  HubspotSettings,
+  IntegrationCheckResult,
+  IntegrationCheckTarget,
   WhatsappConnectionCheck,
 } from "./types";
 
@@ -398,6 +401,19 @@ export function useDeleteKnowledgeFolder() {
   });
 }
 
+/** The HubSpot token also changes the account behind the record link. */
+function refreshSecrets(
+  client: ReturnType<typeof useQueryClient>,
+  input: SecretName | { name: SecretName },
+) {
+  const name = typeof input === "string" ? input : input.name;
+  if (name === "hubspotAccessToken") {
+    void client.invalidateQueries({ queryKey: ["settings"] });
+    void client.invalidateQueries({ queryKey: ["threads"] });
+  }
+  return client.invalidateQueries({ queryKey: ["secrets"] });
+}
+
 export function useSecrets() {
   const api = useApi();
   return useQuery({
@@ -415,7 +431,7 @@ export function useSetSecret() {
         method: "PUT",
         body: JSON.stringify({ value }),
       }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["secrets"] }),
+    onSuccess: (_result, input) => refreshSecrets(client, input),
   });
 }
 
@@ -650,7 +666,7 @@ export function useClearSecret() {
       api<{ secret: SecretStatus }>(`/internal/secrets/${name}`, {
         method: "DELETE",
       }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["secrets"] }),
+    onSuccess: (_result, input) => refreshSecrets(client, input),
   });
 }
 
@@ -660,5 +676,41 @@ export function useWhatsappConnectionCheck() {
   return useMutation({
     mutationFn: () =>
       api<WhatsappConnectionCheck>("/internal/whatsapp/connection-check"),
+  });
+}
+
+/**
+ * Probar conexión for HubSpot, Anthropic, or Formularios. Read-only on the provider's side; the
+ * HubSpot one saves the account it finds, so settings and threads refresh for the record link.
+ */
+export function useIntegrationCheck(target: IntegrationCheckTarget) {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api<IntegrationCheckResult>(`/internal/integrations/${target}/check`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      if (target !== "hubspot") return;
+      void client.invalidateQueries({ queryKey: ["settings"] });
+      void client.invalidateQueries({ queryKey: ["threads"] });
+    },
+  });
+}
+
+export function useSetHubspotEnabled() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (enabled: boolean) =>
+      api<{ hubspot: HubspotSettings }>("/internal/integrations/hubspot", {
+        method: "PUT",
+        body: JSON.stringify({ enabled }),
+      }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["threads"] });
+      return client.invalidateQueries({ queryKey: ["settings"] });
+    },
   });
 }
