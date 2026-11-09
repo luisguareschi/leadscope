@@ -96,7 +96,8 @@ function lineBounds(
   start: number,
   end: number,
 ): [number, number] {
-  const from = value.lastIndexOf("\n", start - 1) + 1;
+  // lastIndexOf clamps a negative index to 0, so offset 0 would wrongly match a leading newline.
+  const from = start === 0 ? 0 : value.lastIndexOf("\n", start - 1) + 1;
   // A selection that ends on a newline has not entered the next line.
   const scan = end > start && value[end - 1] === "\n" ? end - 1 : end;
   const newline = value.indexOf("\n", scan);
