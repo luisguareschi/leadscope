@@ -215,7 +215,7 @@ export function CopyRow({
     <FieldRow label={label} hint={hint}>
       {value ? (
         <div className="flex min-w-0 gap-2">
-          <code className="flex h-9 min-w-0 flex-1 items-center truncate rounded-md bg-input px-3 font-mono text-xs">
+          <code className="flex h-9 min-w-0 flex-1 items-center truncate rounded-md border border-(--field-border) bg-(--field) px-3 font-mono text-xs">
             {value}
           </code>
           <Button
