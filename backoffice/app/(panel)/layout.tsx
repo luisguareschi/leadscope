@@ -27,6 +27,9 @@ export default function PanelLayout({
   const pathname = usePathname();
   const adminWithoutCompany =
     me.data?.platformAdmin === true && me.data.company == null;
+  // Empresas is the admin home. Métricas is the other page they can open from there.
+  const adminPlatformPage =
+    pathname.startsWith("/companies") || pathname.startsWith("/metrics");
   // The company this admin entered no longer exists, or was archived.
   const enteredCompanyGone =
     me.error instanceof ApiError &&
@@ -44,10 +47,10 @@ export default function PanelLayout({
   }, [status, router]);
 
   useEffect(() => {
-    if (adminWithoutCompany && !pathname.startsWith("/companies")) {
+    if (adminWithoutCompany && !adminPlatformPage) {
       router.replace("/companies");
     }
-  }, [adminWithoutCompany, pathname, router]);
+  }, [adminWithoutCompany, adminPlatformPage, router]);
 
   useEffect(() => {
     if (enteredCompanyGone) leaveCompany();
@@ -85,7 +88,7 @@ export default function PanelLayout({
     );
   }
 
-  if (adminWithoutCompany && !pathname.startsWith("/companies")) {
+  if (adminWithoutCompany && !adminPlatformPage) {
     return (
       <div className="flex min-h-svh items-center justify-center">
         <Spinner className="size-6 text-muted-foreground" />

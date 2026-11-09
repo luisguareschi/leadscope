@@ -366,3 +366,99 @@ export type WhatsappConnectionCheck = IntegrationCheckResult & {
 };
 
 export type IntegrationCheckTarget = "hubspot" | "anthropic" | "forms";
+
+export type ModelSpend = {
+  model: string;
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  usd: number | null;
+};
+
+/** One company's metrics for a calendar range. Rates are 0..1; null when there are no leads. */
+export type CompanyMetrics = {
+  company: { id: string; name: string; slug: string; timezone: string };
+  range: { from: string; to: string };
+  generatedAt: string;
+  leads: number;
+  leadsBySource: { whatsapp: number; form: number };
+  leadsPerDay: {
+    date: string;
+    qualifying: number;
+    to_contact: number;
+    contacted: number;
+    not_interested: number;
+  }[];
+  qualified: number;
+  qualificationRate: number | null;
+  notInterested: number;
+  notInterestedRate: number | null;
+  callNow: number;
+  outOfHours: number;
+  outOfHoursRate: number | null;
+  timeToContact: {
+    count: number;
+    medianMinutes: number | null;
+    p90Minutes: number | null;
+  };
+  timeToContactPerWeek: {
+    weekStart: string;
+    count: number;
+    medianMinutes: number | null;
+  }[];
+  queue: {
+    toContact: number;
+    unassigned: number;
+    unassignedOver24h: number;
+    oldestWaitingMinutes: number | null;
+  };
+  needsHuman: { total: number; byReason: Record<string, number> };
+  messages: {
+    inbound: number;
+    assistant: number;
+    advisor: number;
+    templates: number;
+    failed: number;
+  };
+  knowledge: {
+    files: number;
+    lastUploadAt: string | null;
+    daysSinceLastUpload: number | null;
+  };
+  hubspot: { enabled: boolean; pending: number; failing: number };
+  spend: {
+    anthropic: {
+      usd: number | null;
+      calls: number;
+      byModel: ModelSpend[];
+      unpricedModels: string[];
+    };
+    whatsapp: {
+      usd: number;
+      templates: number;
+      serviceMessages: number;
+      freeServiceMessages: number;
+    };
+    totalUsd: number;
+    perLeadUsd: number | null;
+  };
+};
+
+/** Platform-admin comparison. `status=all` includes archived companies. */
+export type CompaniesMetrics = {
+  range: { from: string; to: string };
+  rows: {
+    company: { id: string; name: string; slug: string; archived: boolean };
+    leads: number;
+    qualificationRate: number | null;
+    notInterestedRate: number | null;
+    outOfHoursRate: number | null;
+    medianMinutesToContact: number | null;
+    unassignedToContact: number;
+    needsHuman: number;
+    daysSinceLastUpload: number | null;
+    spendUsd: number;
+  }[];
+};

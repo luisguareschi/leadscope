@@ -517,6 +517,8 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 - `POST /internal/settings/versions/:id/restore`. Save that version again as a new one. 422 if it no longer passes validation.
 - `GET /internal/settings/options`. Choices for the Asistente selects: languages, IANA time zones with their UTC offset, countries with calling codes (from `libphonenumber-js`, the validator's own list), and Claude models (from Anthropic's Models API with the company's key, or a fixed list).
 - `GET /internal/settings/prompt`. The assistant's and the company's names (`names`), the cached system block the engine would send, the turn context for a first-time lead, the `submit_turn` tool, the model, and the knowledge totals with `documents` (each file's folder path and characters, in prompt order).
+- `GET /internal/metrics?from&to[&companyId]`. Métricas for one company (see [Métricas](#métricas)). An operator always gets their own company; a platform admin gets the support-access company, or must pass `companyId` outside one (400 without it). Dates are `YYYY-MM-DD` in the company timezone, default the last 30 days, at most 366.
+- `GET /internal/metrics/companies?from&to&status=active|all`. Platform admin only. One row per company with its main metrics, for the comparison table.
 - `GET /health`.
 
 Auth is a Supabase JWT on `/internal/*`. Current projects sign access tokens with ES256, and the backend verifies those with the project's JWKS (`SUPABASE_URL`). The legacy `SUPABASE_JWT_SECRET` is used only for HS256 tokens, so a configured secret does not reject an ES256 session. `Sesión inválida o vencida` means that verification failed (signature, expiry, issuer, or audience). It does not mean a missing operator row. An operator row is linked to its Supabase user on first login and scopes threads, knowledge, and secrets to that company. `AUTH_MODE=dev` accepts `dev:<email>` and is refused in production. CORS allows only the backoffice origin and the headers `Authorization`, `Content-Type`, and `X-Company-Id`.
@@ -566,11 +568,27 @@ Pages:
    The old `/integrations` URL redirects to `/settings?tab=whatsapp`. Old tabs still open something sensible: `?tab=assistant` General, `?tab=integrations` WhatsApp (Kapso), `?tab=crm` Formularios, and `?tab=model` Respuestas y límites.
 6. **Empresas.** Shown only when `GET /internal/me` says `platformAdmin`, including when `company` is null. It creates a company (name, slug, first operator email, in the Nueva empresa dialog) and lists the companies that exist, with Mostrar archivadas. This is the empty-database setup. No API keys. Each row's menu has Operadores, Archivar / Restaurar, and Eliminar (type the slug). Each active row has Entrar, which opens that company's panel as [support access](#support-access) with the "Viendo como administrador" bar. An operator who is not an admin has no nav item. Opening the URL shows that they have no access, and the API answers 403. A platform admin with no operator row and no entered company does not see Conversaciones, Conocimiento, or Configuración.
 
+7. **Métricas.** See [Métricas](#métricas).
+
 The panel sends only what an advisor writes in a thread's composer, from the company's number and inside the 24-hour window. Advisors can still answer from their own WhatsApp instead. No templates, bulk sends, or follow-ups from the panel.
 
 One shared backoffice serves all companies: one Vercel app, one URL. The operator's company comes from their login (`Operator.companyId`), and the backend filters every request by it. There is no per-company subdomain, branding, or company switcher for operators in v1. A platform admin can list companies and create one without belonging to a company, and enter any of them through support access. Later options on the same app are a subdomain per client and per-company branding.
 
 React Query with polling (every 10 seconds on lists, 5 on an open conversation) is enough at this volume. No realtime subscription in v1.
+
+### Métricas
+
+Read-only, from the existing tables, with no migration. The full definitions, API shape, and tests are in `docs/specs/metricas.md`. In short:
+
+- Every operator sees their own company. A platform admin picks a company outside support access, and always sees a comparison table of every company. Reads through support access are not audited, since they write nothing.
+- Leads in a range are a cohort by `Thread.createdAt` in the company timezone, counted with their current stage. `LeadStageChange` only has a person's picks, so there is no stage history to count from. "Calificados" is `handedOffAt` set, or stage Por contactar or Contactado.
+- Out of hours is a fixed rule (weekdays 09:00 to 18:00 in the company timezone), because `config.businessHours` is free text.
+- Time to contact is `contactedAt − handedOffAt` for threads contacted in the range (median, p90, weekly median).
+- Snapshot cards ignore the range: the Por contactar queue, threads with `needsHuman` by reason prefix (the reason is cleared once attended, so this is current, not historical), knowledge freshness, and HubSpot pending/failing writes when HubSpot is on.
+- Client spend is an estimate: `LlmUsage` tokens at Anthropic list prices (a constant to update by hand), and outbound WhatsApp messages at Meta's Uruguay prices (every template as marketing, replies after 1,000 free a month; failed sends excluded). Kapso is not computed.
+- Charts use shadcn's chart component (recharts), with the stage colors as `--chart-1`…`--chart-4`.
+
+Not built: Render and Supabase costs, margins, exports, or alerts.
 
 ### Visual style
 
