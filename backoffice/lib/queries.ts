@@ -45,6 +45,8 @@ import type {
   IntegrationCheckResult,
   IntegrationCheckTarget,
   WhatsappConnectionCheck,
+  CompaniesMetrics,
+  CompanyMetrics,
 } from "./types";
 
 /** Lists refresh every 10 s and an open conversation every 5 s; at this volume polling is enough. */
@@ -712,5 +714,51 @@ export function useSetHubspotEnabled() {
       void client.invalidateQueries({ queryKey: ["threads"] });
       return client.invalidateQueries({ queryKey: ["settings"] });
     },
+  });
+}
+
+function withQuery(
+  path: string,
+  params: Record<string, string | undefined>,
+): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) search.set(key, value);
+  }
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
+}
+
+/** Company metrics. Omit `from`/`to` to let the API default to the last 30 days. */
+export function useMetrics(
+  params: { from?: string; to?: string; companyId?: string },
+  enabled = true,
+) {
+  const api = useApi();
+  const { from, to, companyId } = params;
+  return useQuery({
+    queryKey: ["metrics", companyId ?? "own", from, to],
+    enabled,
+    queryFn: () =>
+      api<CompanyMetrics>(
+        withQuery("/internal/metrics", { from, to, companyId }),
+      ),
+  });
+}
+
+/** Every company, for a platform admin. `enabled` is false for a company operator. */
+export function useCompaniesMetrics(
+  params: { from?: string; to?: string; status: "active" | "all" },
+  enabled: boolean,
+) {
+  const api = useApi();
+  const { from, to, status } = params;
+  return useQuery({
+    queryKey: ["metrics", "companies", status, from, to],
+    enabled,
+    queryFn: () =>
+      api<CompaniesMetrics>(
+        withQuery("/internal/metrics/companies", { from, to, status }),
+      ),
   });
 }

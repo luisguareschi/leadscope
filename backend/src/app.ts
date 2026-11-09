@@ -7,6 +7,7 @@ import { integrationsRoutes } from "./features/integrations/integrations.routes.
 import { kapsoWebhookRoutes } from "./features/kapso-webhook/kapso-webhook.routes.js";
 import { knowledgeRoutes } from "./features/knowledge/knowledge.routes.js";
 import { meRoutes } from "./features/me/me.routes.js";
+import { metricsRoutes } from "./features/metrics/metrics.routes.js";
 import { secretsRoutes } from "./features/secrets/secrets.routes.js";
 import { settingsRoutes } from "./features/settings/settings.routes.js";
 import { threadsRoutes } from "./features/threads/threads.routes.js";
@@ -67,6 +68,7 @@ export function createApp(ctx: AppContext): Express {
   backoffice.use("/settings", company, settingsRoutes(ctx));
   backoffice.use("/whatsapp", company, whatsappConnectionRoutes(ctx));
   backoffice.use("/integrations", company, integrationsRoutes(ctx));
+  backoffice.use("/metrics", metricsRoutes(ctx));
   backoffice.use("/companies", requirePlatformAdmin(ctx), companiesRoutes(ctx));
   app.use("/internal", backoffice);
 

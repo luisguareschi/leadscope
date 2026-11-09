@@ -19,6 +19,7 @@ WhatsApp assistant for Altamira, a real-estate developer in Uruguay (not Altamir
 - In Nov 2026 Conocimiento gained folders (nested, renamed, moved by drag and drop or Mover a…), and the prompt heads each file with its folder path. That is built.
 - In Nov 2026 the panel copy moved from Uruguayan voseo to neutral Spanish with tú forms (tienes, sube, elige). New panel text follows that. What the bot says to leads is company config and keeps each company's own tone.
 - In Nov 2026 Luis asked for each integration to be set up in one place, with a test, and for HubSpot to be used only when the client has it. That is built: Configuración has an Integraciones group (WhatsApp (Kapso), Formularios, HubSpot, Anthropic), each with its own Probar conexión, and HubSpot has a per-company switch. Altamira stays on.
+- On 9 Nov 2026 Luis asked for a Métricas page: lead and advisor metrics per company and an estimate of what the client spends on Anthropic and WhatsApp. Every operator sees their own company; a platform admin also sees every company side by side. It is free for clients (not quoted) and is in progress on the `worktree-metricas` branch. Spec: `docs/specs/metricas.md`. Render and Supabase costs are not tracked yet.
 
 **Product goal.** Altamira is the first client. The system is a multi-company product so it can be sold to other developers later: one shared deployment, every row scoped by company, and company-specific behavior in config. Version 1 still ships only Altamira's scope, with no resale features yet (signup, billing, a customer admin for their own company). Software ownership must be settled in Altamira's signed contract before resale.
 
@@ -108,7 +109,7 @@ A turn that was running when a person changed the stage keeps its reply, collect
 
 ### 5. Small panel
 
-The panel has a thread list, a way to pause the assistant when a person takes over, and a composer to write to the lead from the thread view. The sidebar has Conversaciones, Conocimiento, and Configuración, plus Empresas for a platform admin.
+The panel has a thread list, a way to pause the assistant when a person takes over, and a composer to write to the lead from the thread view. The sidebar has Conversaciones, Métricas, Conocimiento, and Configuración, plus Empresas for a platform admin (who also gets Métricas outside a company).
 
 **Conversaciones.**
 
@@ -119,6 +120,14 @@ The panel has a thread list, a way to pause the assistant when a person takes ov
 **Thread view.** The same split (Etapa, Asistente, Asignado) with both pickers and the last stage change. A composer under the conversation writes to the lead (see Handoff). Every bubble renders WhatsApp's markup, and outbound bubbles say "Asistente" or `Enviado por <name>`. With HubSpot on, the Lead panel shows its status and Abrir en HubSpot; with it off, neither the thread nor the list shows HubSpot.
 
 **On a phone.** Below the `lg` breakpoint, Conversaciones is a list of stacked rows with the same pickers, and the thread view has Conversación / Lead tabs with Pausar in the ⋯ menu. From `lg` up the desktop layout is unchanged. Luis asked for this on 23 Oct 2026.
+
+**Métricas.** Read-only, built from existing tables (no new data). Any operator sees their own company; a platform admin picks a company and also gets a comparison table of every company.
+
+- A date range (7, 30, 90 days, this month, last month) in the company's timezone. Leads are counted on the day they first wrote, with their current stage, because the bot's own stage moves are not logged.
+- Tiles: new leads (WhatsApp / form), qualified %, Sin interés %, out-of-hours % (fixed rule: weekdays 9 to 18 in the company timezone, since business hours are free text), median and p90 time from Por contactar to Contactado, and leads who asked to talk now.
+- Charts: leads per day stacked by stage, and the weekly median time to contact.
+- "Ahora mismo", which ignores the range: the Por contactar queue (unassigned, over 24 h, oldest wait), threads where the bot stopped by reason, days since the last knowledge upload, and HubSpot pending/failing writes (only with HubSpot on).
+- Messages by kind, and an estimate of the client's own spend: Anthropic at list price per model (`backend/src/features/metrics/pricing.ts`) and WhatsApp at USD 0.085 per template and USD 0.0113 per reply after 1,000 free a month. Kapso is a note only. The client pays all three.
 
 **Conocimiento.** Upload, list, replace, rename, move, and delete files in a folder tree. It keeps the same list look. On a phone the rows keep the name, details, and ⋯ menu. There is no sheet sync. Reglas y prompt shows the files in prompt order with their folder paths.
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   BookOpenTextIcon,
   Building2Icon,
+  ChartColumnIcon,
   MessagesSquareIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
@@ -49,6 +50,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             badgeLabel: "leads por contactar sin asesor",
           },
           {
+            title: "Métricas",
+            url: "/metrics",
+            icon: <ChartColumnIcon />,
+          },
+          {
             title: "Conocimiento",
             url: "/knowledge",
             icon: <BookOpenTextIcon />,
@@ -63,6 +69,15 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     // Inside a company, the support bar is the way back to Empresas.
     ...(me.data?.platformAdmin && !supportAccess
       ? [
+          ...(!hasCompany
+            ? [
+                {
+                  title: "Métricas",
+                  url: "/metrics",
+                  icon: <ChartColumnIcon />,
+                },
+              ]
+            : []),
           {
             title: "Empresas",
             url: "/companies",

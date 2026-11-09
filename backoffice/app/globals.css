@@ -83,11 +83,12 @@
   --status-warning: var(--primary);
   --status-info: #0070b8;
   --canvas-glow: rgb(73 79 223 / 0.06);
+  /* Stage series, same order as STAGE_ORDER: Calificando, Por contactar, Contactado, Sin interés. */
   --chart-1: #8b96ff;
-  --chart-2: #6b7fff;
-  --chart-3: #494fdf;
-  --chart-4: #3a40c4;
-  --chart-5: #2b3099;
+  --chart-2: var(--primary);
+  --chart-3: var(--status-ok);
+  --chart-4: var(--muted-foreground);
+  --chart-5: var(--status-info);
   --radius: 0.875rem;
   --sidebar: #f2f3f7;
   --sidebar-foreground: #191c1f;
@@ -124,11 +125,12 @@
   --status-warning: var(--primary);
   --status-info: #5cb8f5;
   --canvas-glow: rgb(28 52 140 / 0.2);
-  --chart-1: #8b96ff;
-  --chart-2: #6b7fff;
-  --chart-3: #494fdf;
-  --chart-4: #3a40c4;
-  --chart-5: #2b3099;
+  /* Stage series, same order as STAGE_ORDER. Calificando stays lighter than the solid primary. */
+  --chart-1: #c5cbff;
+  --chart-2: var(--primary);
+  --chart-3: var(--status-ok);
+  --chart-4: var(--muted-foreground);
+  --chart-5: var(--status-info);
   --sidebar: #03040b;
   --sidebar-foreground: #f5f6fa;
   --sidebar-primary: #8c9bff;

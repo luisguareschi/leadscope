@@ -39,6 +39,18 @@ export const STAGE_ORDER: LeadStage[] = [
   "not_interested",
 ];
 
+/**
+ * Chart series for each stage, in `STAGE_ORDER`. The tokens in `app/globals.css`
+ * follow the picker dots: a lighter primary (Calificando), the solid primary
+ * (Por contactar), status-ok (Contactado), and muted (Sin interés).
+ */
+export const STAGE_CHART_COLOR: Record<LeadStage, string> = {
+  qualifying: "var(--chart-1)",
+  to_contact: "var(--chart-2)",
+  contacted: "var(--chart-3)",
+  not_interested: "var(--chart-4)",
+};
+
 export const BOT_META: Record<
   BotActivity,
   { label: string; tone: Tone; description: string }
