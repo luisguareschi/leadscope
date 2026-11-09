@@ -76,6 +76,13 @@
   --destructive: #e23b4a;
   --border: #e5e7ee;
   --input: #eff1f5;
+  /*
+   * Text fields follow the surface they sit on. On the grey canvas they are white with an
+   * outline, since the grey fill vanishes against it; inside white surfaces (cards, dialogs,
+   * menus) they keep the grey fill with no outline. See the scoped rule below.
+   */
+  --field: var(--card);
+  --field-border: #d3d7e0;
   --ring: #494fdf;
   --bubble: #494fdf;
   --bubble-foreground: #ffffff;
@@ -118,6 +125,8 @@
   --destructive: #ff5c69;
   --border: rgb(255 255 255 / 0.07);
   --input: #202334;
+  --field: var(--input);
+  --field-border: transparent;
   --ring: #6b7fff;
   --bubble: #4f5ae8;
   --bubble-foreground: #ffffff;
@@ -144,6 +153,21 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  /* Light mode: fields on a white surface keep the grey fill (see --field). */
+  html:not(.dark)
+    :is(
+      [data-slot="card"],
+      [data-slot="dialog-content"],
+      [data-slot="alert-dialog-content"],
+      [data-slot="sheet-content"],
+      [data-slot="combobox-content"],
+      [data-slot="dropdown-menu-content"],
+      .bg-card,
+      .bg-popover
+    ) {
+    --field: var(--input);
+    --field-border: transparent;
   }
   html {
     @apply font-sans;
