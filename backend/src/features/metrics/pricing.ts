@@ -48,10 +48,12 @@ export type TokenCounts = {
   cacheWriteTokens: number;
 };
 
+/** `LlmUsage.model` is the response's model, which can be a dated snapshot (`claude-haiku-4-5-20251001`). */
 function priceFor(model: string): TokenPrice | null {
-  if (!(model in ANTHROPIC_TOKEN_PRICES_USD_PER_MILLION)) return null;
+  const id = model.replace(/-\d{8}$/, "");
+  if (!(id in ANTHROPIC_TOKEN_PRICES_USD_PER_MILLION)) return null;
   return ANTHROPIC_TOKEN_PRICES_USD_PER_MILLION[
-    model as keyof typeof ANTHROPIC_TOKEN_PRICES_USD_PER_MILLION
+    id as keyof typeof ANTHROPIC_TOKEN_PRICES_USD_PER_MILLION
   ];
 }
 
