@@ -92,7 +92,7 @@ Kapso is a Business Solution Provider for the official WhatsApp Cloud API (docs:
 - **Values in LeadScope.** The phone number id (Meta's id, which Kapso shows; a unique column on the company), `kapsoApiKey` (the project API key), and `kapsoWebhookSecret` (the webhook's `secret_key`). The panel shows the webhook URL for the company and runs a connection check.
 - **Inbound.** A Kapso webhook of kind `kapso`, payload v2, at `/webhooks/kapso/<slug>`, with the events `whatsapp.message.received` plus the four status events. Batched (buffered) deliveries are read too. History-sync backfills, outbound echoes, and messages another app handles are not answered. A message with only a business-scoped user id (no phone number) is logged and skipped, because threads are keyed by phone.
 - **Outbound.** `POST https://api.kapso.ai/meta/whatsapp/v24.0/{phone_number_id}/messages` with `X-API-Key`, and Meta's body for text, the welcome template, and mark-as-read with the typing indicator. Kapso's own refusals (`insufficient_credits`, `thread_not_owner`, the 24-hour window) come back as channel errors, as Meta's did.
-- **Cost.** Kapso Free (2,000 messages/month, 1 number) for testing, and Pro (USD 25/month, 100,000 messages, 3 numbers) for production. Meta's fees are separate and paid by the client.
+- **Cost.** Kapso Free (2,000 messages/month, 1 number) for testing, and Pro (USD 25/month, 100,000 messages, 3 numbers) for production. Meta's fees are separate. The client pays both Kapso and Meta.
 
 ## Multi-company
 

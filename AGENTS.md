@@ -178,7 +178,7 @@ Quote these only if asked.
 - Timeline is about 6 weeks, with no week-by-week breakdown in the proposal, aiming to test from mid-November 2026. If kickoff slips, launch moves to early February 2027, so as not to go live into the year-end holidays.
 - Altamira pays Anthropic usage on their own account, Meta/WhatsApp fees, and the HubSpot license. José estimated the WhatsApp platform cost at USD 120 to 250 a month, separate from this quote.
 - Meta pricing from 1 Oct 2026 in Uruguay (Meta's "Rest of Latin America"): a marketing template costs about USD 0.085 per send. A service reply inside the 24-hour window costs about USD 0.0113, after 1,000 free service messages per number per month. Utility templates cost the same USD 0.0113. There is also a 72-hour pricing window. That pricing window is separate from the product rule: free-form replies only within 24 hours of the lead's last message, and v1 does not follow up after that.
-- Kapso is billed separately. Free (2,000 messages a month, 1 number) is for testing. Pro at USD 25 a month (100,000 messages, 3 numbers) is for production. Who pays Kapso is not settled.
+- Kapso is billed separately. Free (2,000 messages a month, 1 number) is for testing. Pro at USD 25 a month (100,000 messages, 3 numbers) is for production. Altamira pays Kapso (settled 9 Nov 2026), like Anthropic and Meta.
 - The proposal is dated 2 Oct 2026 and was valid for 1 week.
 
 ## Out of scope (v1)
