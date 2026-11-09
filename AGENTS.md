@@ -20,6 +20,7 @@ WhatsApp assistant for Altamira, a real-estate developer in Uruguay (not Altamir
 - In Nov 2026 the panel copy moved from Uruguayan voseo to neutral Spanish with tú forms (tienes, sube, elige). New panel text follows that. What the bot says to leads is company config and keeps each company's own tone.
 - In Nov 2026 Luis asked for each integration to be set up in one place, with a test, and for HubSpot to be used only when the client has it. That is built: Configuración has an Integraciones group (WhatsApp (Kapso), Formularios, HubSpot, Anthropic), each with its own Probar conexión, and HubSpot has a per-company switch. Altamira stays on.
 - On 9 Nov 2026 Luis asked for a Métricas page: lead and advisor metrics per company and an estimate of what the client spends on Anthropic and WhatsApp. Every operator sees their own company; a platform admin also sees every company side by side. It is free for clients (not quoted). That is built (spec: `docs/specs/metricas.md`). Render and Supabase costs are not tracked yet.
+- The same day he asked for Instrucciones to be edited as raw Markdown or seen with the Markdown applied. That is built: Editar / Vista previa toggle, a small format toolbar, and the choice remembered per browser.
 
 **Product goal.** Altamira is the first client. The system is a multi-company product so it can be sold to other developers later: one shared deployment, every row scoped by company, and company-specific behavior in config. Version 1 still ships only Altamira's scope, with no resale features yet (signup, billing, a customer admin for their own company). Software ownership must be settled in Altamira's signed contract before resale.
 
@@ -145,7 +146,7 @@ The panel has a thread list, a way to pause the assistant when a person takes ov
   - Forbidden topics are plain language, with no regex patterns.
   - Idioma, Zona horaria (IANA), País de los teléfonos (country and calling code), and the model (in Integraciones → Anthropic) are searchable selects. The model list comes from Anthropic's API when the company has its key, and from a fixed list otherwise. A saved value outside the list stays valid.
 - The WhatsApp phone number id is a unique column on the company that routes inbound webhooks. It is empty until the company has a number.
-- The company instructions are free text.
+- The company instructions are free text, written in Markdown. Instrucciones has Editar (raw Markdown, toolbar for bold, italic, H1 to H3 headings, and lists, with Ctrl/Cmd+B and Ctrl/Cmd+I) and Vista previa (the unsaved draft rendered, no raw HTML). The prompt receives the raw text unchanged.
 - The platform rules the engine depends on stay in code and are shown read-only, next to the full prompt the model would receive. They cover the submit_turn output format, the required-items handoff, the needsHuman and forbidden-topic flags, and the 24-hour window.
 - Each save of the config, the instructions, the company's name, or the phone number id keeps a version with who and when. Any version can be restored.
 
