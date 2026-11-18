@@ -24,6 +24,11 @@ export type TestChat = {
   lastTurn: Pick<TestTurnResponse, "model" | "usage"> | null;
   /** The composer's text, including a message whose send failed, so it can be retried. */
   draft: string;
+  /**
+   * The message whose reply is on the way. A reload loses that reply, so on load it goes back to
+   * the composer to send again by hand (it may already have reached the model).
+   */
+  pendingText: string | null;
 };
 
 export const EMPTY_TEST_CHAT: TestChat = {
@@ -33,6 +38,7 @@ export const EMPTY_TEST_CHAT: TestChat = {
   stopped: false,
   lastTurn: null,
   draft: "",
+  pendingText: null,
 };
 
 /** Mirrors the backend's cap on the history's characters. */
@@ -64,11 +70,12 @@ function validLead(value: unknown): TestLead | null {
 }
 
 /**
- * Whose chat it is: the signed-in email and the company's slug. On a shared browser, the next
- * person who signs in to the same company does not see it.
+ * Whose chat it is: the signed-in email and the company's id. On a shared browser, the next
+ * person who signs in to the same company does not see it, and a company created later with a
+ * deleted one's slug does not inherit its chat.
  */
-export const testChatOwner = (email: string, company: string) =>
-  `${email.trim().toLowerCase()}:${company}`;
+export const testChatOwner = (email: string, companyId: string) =>
+  `${email.trim().toLowerCase()}:${companyId}`;
 
 const keyFor = (owner: string) => `leadscope.assistant-test.${owner}`;
 
@@ -94,7 +101,11 @@ export function loadTestChat(owner: string): TestChat {
       lead: validLead(parsed.lead),
       leadName: typeof parsed.leadName === "string" ? parsed.leadName : "",
       stopped: parsed.stopped === true,
-      draft: typeof parsed.draft === "string" ? parsed.draft : "",
+      // A reply that was on its way when the page closed never arrives.
+      draft:
+        (typeof parsed.draft === "string" ? parsed.draft : "") ||
+        (typeof parsed.pendingText === "string" ? parsed.pendingText : ""),
+      pendingText: null,
     };
   } catch {
     return EMPTY_TEST_CHAT;
@@ -103,7 +114,12 @@ export function loadTestChat(owner: string): TestChat {
 
 export function saveTestChat(owner: string, chat: TestChat): void {
   try {
-    if (chat.messages.length === 0 && !chat.leadName && !chat.draft)
+    if (
+      chat.messages.length === 0 &&
+      !chat.leadName &&
+      !chat.draft &&
+      !chat.pendingText
+    )
       window.localStorage.removeItem(keyFor(owner));
     else window.localStorage.setItem(keyFor(owner), JSON.stringify(chat));
   } catch {

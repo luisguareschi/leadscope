@@ -55,6 +55,7 @@ function turnFor(lead: string): CompleteInput {
     messages: buildChatTurns(
       [{ direction: "inbound", type: "text", body: lead }],
       40,
+      "whatsapp",
     ),
     scenario: {
       thread,

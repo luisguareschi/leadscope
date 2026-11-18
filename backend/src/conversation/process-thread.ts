@@ -141,7 +141,11 @@ async function askModel(
       threadId: thread.id,
       system,
       documents,
-      messages: buildChatTurns(recent.reverse(), config.llm.historyLimit),
+      messages: buildChatTurns(
+        recent.reverse(),
+        config.llm.historyLimit,
+        thread.source,
+      ),
     });
   } catch (error) {
     return modelFailure(ctx, error, {

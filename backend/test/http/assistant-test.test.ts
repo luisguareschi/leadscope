@@ -343,6 +343,11 @@ describe("the panel's test chat (Probar asistente)", () => {
       ],
     }).expect(200);
     expect(ctx.llm.calls[0]!.messages).toEqual([
+      {
+        role: "user",
+        content: "[Earlier messages of this conversation are not shown.]",
+      },
+      { role: "assistant", content: "¿Con qué presupuesto contás?" },
       { role: "user", content: "Unos 150 mil" },
     ]);
   });
@@ -432,7 +437,13 @@ describe("the panel's test chat (Probar asistente)", () => {
         { role: "lead", body: "150 mil" },
       ],
     }).expect(200);
+    // The question the lead is answering stays in the window.
     expect(ctx.llm.calls[0]!.messages).toEqual([
+      {
+        role: "user",
+        content: "[Earlier messages of this conversation are not shown.]",
+      },
+      { role: "assistant", content: "¿Qué buscás?" },
       { role: "user", content: "Un 2 dormitorios" },
       { role: "assistant", content: "¿Con qué presupuesto?" },
       { role: "user", content: "150 mil" },

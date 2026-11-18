@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -56,15 +57,17 @@ const newId = () =>
 export function AssistantTestProvider({ children }: { children: ReactNode }) {
   const me = useMe();
   const { email } = useAuth();
-  const slug = me.data?.company?.slug ?? null;
-  const company = email && slug ? testChatOwner(email, slug) : null;
+  const companyId = me.data?.company?.id ?? null;
+  const company = email && companyId ? testChatOwner(email, companyId) : null;
   const turn = useAssistantTestTurn();
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [chat, setChat] = useState<TestChat>(EMPTY_TEST_CHAT);
   const [sending, setSending] = useState<TestChatMessage | null>(null);
   const [error, setError] = useState<TestError | null>(null);
   const current = useRef(company);
-  useEffect(() => {
+  // During commit, before a reply that settles next can read it: the new company's chat is
+  // already on screen by the time a passive effect would run.
+  useLayoutEffect(() => {
     current.current = company;
   }, [company]);
 
@@ -84,7 +87,7 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
     async (body: string, historyLimit: number) => {
       if (!company) return false;
       setError(null);
-      setChat((prev) => ({ ...prev, draft: "" }));
+      setChat((prev) => ({ ...prev, draft: "", pendingText: body }));
       const lead: TestChatMessage = {
         id: newId(),
         role: "lead",
@@ -114,6 +117,7 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
           stopped: response.stoppedReason !== null,
           lastTurn: { model: response.model, usage: response.usage },
           draft: "",
+          pendingText: null,
         };
         // The person may have entered another company meanwhile: the reply belongs to this one.
         if (current.current === company) setChat(next);
@@ -123,9 +127,13 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
         // Not sent: the message goes back to its own chat's composer to retry, even if the person
         // entered another company meanwhile.
         if (current.current !== company) {
-          saveTestChat(company, { ...chat, draft: body });
+          saveTestChat(company, { ...chat, draft: body, pendingText: null });
         } else {
-          setChat((prev) => ({ ...prev, draft: prev.draft || body }));
+          setChat((prev) => ({
+            ...prev,
+            draft: prev.draft || body,
+            pendingText: null,
+          }));
           setError(
             cause instanceof ApiError
               ? { message: cause.message, code: cause.code }
