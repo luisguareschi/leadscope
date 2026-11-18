@@ -41,10 +41,15 @@ function contentOf(message: HistoryMessage): string | null {
  * Consecutive messages from the same side are joined, and the list always starts with the lead.
  * The company's side is the assistant role, whether the assistant or an advisor wrote it; an
  * advisor's messages carry `ADVISOR_LABEL`.
+ *
+ * When the first turn left is the company's side, a note opens the list: a form lead got the
+ * welcome before writing, so it says so; a WhatsApp lead always writes first, so earlier messages
+ * are missing (cut by `limit`, or a blank lead message that has no turn).
  */
 export function buildChatTurns(
   messages: HistoryMessage[],
   limit: number,
+  source: "whatsapp" | "form",
 ): ChatTurn[] {
   const turns: ChatTurn[] = [];
   for (const message of messages.slice(-limit)) {
@@ -58,7 +63,10 @@ export function buildChatTurns(
   if (turns[0]?.role === "assistant") {
     turns.unshift({
       role: "user",
-      content: "[The lead filled in a contact form.]",
+      content:
+        source === "form"
+          ? "[The lead filled in a contact form.]"
+          : "[Earlier messages of this conversation are not shown.]",
     });
   }
   return turns;

@@ -141,7 +141,8 @@ export type KnowledgeList = {
 export type Me = {
   operator: { email: string } | null;
   /** The company the panel works in: the operator's own, or the one a platform admin entered. */
-  company: { name: string; slug: string } | null;
+  /** `id` never changes and is never reused; a deleted company's slug can be. */
+  company: { id: string; name: string; slug: string } | null;
   platformAdmin: boolean;
   /** A platform admin entered this company from Empresas. */
   supportAccess: boolean;
@@ -461,4 +462,44 @@ export type CompaniesMetrics = {
     daysSinceLastUpload: number | null;
     spendUsd: number;
   }[];
+};
+
+/** Probar asistente: one message of the test chat. */
+export type TestChatRole = "lead" | "assistant";
+
+/** The simulated lead the test chat carries from turn to turn, as the engine would store it. */
+export type TestLead = {
+  state: "greeting" | "qualify" | "answer" | "handoff" | "closed";
+  stage: LeadStage;
+  collected: Record<string, string>;
+  callTime: string | null;
+  summary: string | null;
+};
+
+export type TestTurnRequest = {
+  messages: Array<{ role: TestChatRole; body: string }>;
+  lead?: TestLead;
+  leadName?: string | null;
+};
+
+export type TestTurnResponse = {
+  /** What the lead would receive on WhatsApp. */
+  reply: string;
+  /** What the model wrote when the lead gets a fixed line instead. */
+  modelReply: string | null;
+  lead: TestLead;
+  model: {
+    intent: "continue" | "qualified" | "not_interested";
+    callNow: boolean;
+    needsHuman: boolean;
+    forbiddenTopic: string | null;
+  } | null;
+  /** Why the real assistant would stop here and wait for a person. */
+  stoppedReason: string | null;
+  usage: {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    latencyMs: number;
+  } | null;
 };

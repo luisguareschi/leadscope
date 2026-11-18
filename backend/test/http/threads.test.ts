@@ -58,7 +58,7 @@ describe("backoffice auth", () => {
       .expect(200);
     expect(response.body).toEqual({
       operator: { email: "operador@test.com" },
-      company: { name: "altamira", slug: "altamira" },
+      company: { id: expect.any(String), name: "altamira", slug: "altamira" },
       platformAdmin: false,
       supportAccess: false,
     });

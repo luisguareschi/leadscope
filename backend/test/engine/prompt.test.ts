@@ -487,6 +487,7 @@ describe("buildChatTurns", () => {
         { direction: "inbound", type: "image", body: "¿cuánto sale este?" },
       ],
       40,
+      "form",
     );
     expect(turns).toEqual([
       { role: "user", content: "[The lead filled in a contact form.]" },
@@ -505,7 +506,25 @@ describe("buildChatTurns", () => {
       type: "text",
       body: `m${index}`,
     }));
-    const turns = buildChatTurns(messages, 4);
+    const turns = buildChatTurns(messages, 4, "whatsapp");
     expect(turns.map((turn) => turn.content)).toEqual(["m6", "m7", "m8", "m9"]);
+  });
+
+  it("says earlier messages are cut, not that a form came in, when a WhatsApp history starts with a reply", () => {
+    const messages = Array.from({ length: 5 }, (_, index) => ({
+      direction: index % 2 === 0 ? ("inbound" as const) : ("outbound" as const),
+      type: "text",
+      body: `m${index}`,
+    }));
+    expect(buildChatTurns(messages, 4, "whatsapp")).toEqual([
+      {
+        role: "user",
+        content: "[Earlier messages of this conversation are not shown.]",
+      },
+      { role: "assistant", content: "m1" },
+      { role: "user", content: "m2" },
+      { role: "assistant", content: "m3" },
+      { role: "user", content: "m4" },
+    ]);
   });
 });

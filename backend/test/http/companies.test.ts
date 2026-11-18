@@ -132,7 +132,11 @@ describe("platform admin companies", () => {
       .set(adminAuth)
       .expect(200);
     expect(me.body.platformAdmin).toBe(true);
-    expect(me.body.company).toEqual({ name: "altamira", slug: "altamira" });
+    expect(me.body.company).toEqual({
+      id: expect.any(String),
+      name: "altamira",
+      slug: "altamira",
+    });
 
     await request(app)
       .get(`/internal/threads/${otherThreadId}`)
@@ -262,7 +266,7 @@ describe("empty database", () => {
       .expect(200);
     expect(operatorMe.body).toEqual({
       operator: { email: "operador@altamira.uy" },
-      company: { name: "Altamira", slug: "altamira" },
+      company: { id: expect.any(String), name: "Altamira", slug: "altamira" },
       platformAdmin: false,
       supportAccess: false,
     });

@@ -20,7 +20,7 @@ import { FollowUpGroup } from "./follow-up-group";
 import { BotBadge } from "./status-badge";
 import { useThreadActionWithToast } from "./use-thread-action";
 
-function Group({
+export function Group({
   title,
   aside,
   children,
@@ -40,7 +40,7 @@ function Group({
   );
 }
 
-function Detail({
+export function Detail({
   label,
   value,
   answered,

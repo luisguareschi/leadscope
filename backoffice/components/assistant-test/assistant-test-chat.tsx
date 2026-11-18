@@ -1,0 +1,287 @@
+"use client";
+
+import {
+  useEffect,
+  useRef,
+  useSyncExternalStore,
+  type KeyboardEvent,
+} from "react";
+import {
+  CircleAlertIcon,
+  OctagonPauseIcon,
+  SendHorizontalIcon,
+  SparklesIcon,
+} from "lucide-react";
+import Link from "next/link";
+import { cn } from "cn";
+import { ChatTranscript } from "@/components/threads/chat-transcript";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
+import type { TestChatMessage } from "@/lib/assistant-test-storage";
+import { needsHumanReasonLabel } from "@/lib/thread-status";
+import type { ChatMessage } from "@/lib/types";
+
+/** WhatsApp's limit for one text message. Mirrors the backend. */
+const MAX_CHARS = 4096;
+
+const TOUCH_QUERY = "(hover: none) and (pointer: coarse)";
+
+function subscribeTouch(onChange: () => void) {
+  const query = window.matchMedia(TOUCH_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function toChatMessage(message: TestChatMessage): ChatMessage {
+  return {
+    id: message.id,
+    direction: message.role === "lead" ? "inbound" : "outbound",
+    type: "text",
+    body: message.body,
+    status: null,
+    error: null,
+    sentAt: message.sentAt,
+    sentBy: null,
+  };
+}
+
+function ModelReplyNote({ text }: { text: string }) {
+  return (
+    <details className="mt-1 max-w-[85%] self-end text-right text-xs text-muted-foreground sm:max-w-[70%]">
+      <summary className="cursor-pointer select-none">
+        El modelo quería responder otra cosa
+      </summary>
+      <p className="mt-1 rounded-xl bg-card px-3 py-2 text-left whitespace-pre-wrap ring-1 ring-border/60 dark:bg-secondary dark:ring-0">
+        {text}
+      </p>
+    </details>
+  );
+}
+
+function TypingBubble() {
+  return (
+    <div
+      role="status"
+      className="mt-4 inline-flex items-center gap-2 self-end rounded-[20px] rounded-tr-md bg-bubble px-4 py-2.5 text-sm text-bubble-foreground"
+    >
+      <Spinner className="size-3.5" aria-hidden aria-label={undefined} />
+      Escribiendo…
+    </div>
+  );
+}
+
+/** The test conversation and its composer. The person playing the lead writes here. */
+export function AssistantTestChat({
+  messages,
+  pending,
+  stopped,
+  error,
+  leadName,
+  onLeadNameChange,
+  draft,
+  onDraftChange,
+  onSend,
+  onContinue,
+  onReset,
+  className,
+}: {
+  messages: TestChatMessage[];
+  pending: boolean;
+  stopped: boolean;
+  error: { message: string; code?: string } | null;
+  leadName: string;
+  onLeadNameChange: (name: string) => void;
+  /** The composer's text, held by the panel so it survives other pages and failed sends. */
+  draft: string;
+  onDraftChange: (draft: string) => void;
+  onSend: (body: string) => Promise<boolean>;
+  onContinue: () => void;
+  onReset: () => void;
+  className?: string;
+}) {
+  const input = useRef<HTMLTextAreaElement>(null);
+  // A phone keyboard has no Shift+Enter: there Enter is a new line and the button sends.
+  const touch = useSyncExternalStore(
+    subscribeTouch,
+    () => window.matchMedia(TOUCH_QUERY).matches,
+    () => false,
+  );
+  const text = draft.trim();
+  const tooLong = text.length > MAX_CHARS;
+  const disabled = pending || stopped;
+  const canSend = !disabled && text.length > 0 && !tooLong;
+  const byId = new Map(messages.map((message) => [message.id, message]));
+  const scroller = useRef<HTMLDivElement>(null);
+
+  // The stop buttons and an error take room from the transcript: keep its end in view.
+  useEffect(() => {
+    const box = scroller.current;
+    if (box) box.scrollTop = box.scrollHeight;
+  }, [stopped, error]);
+
+  const submit = () => {
+    if (!canSend) return;
+    void onSend(text).then(() =>
+      requestAnimationFrame(() => {
+        // The composer lost focus while disabled; take it back only if nothing else has it now.
+        const active = document.activeElement;
+        if (!active || active === document.body || active === input.current)
+          input.current?.focus();
+      }),
+    );
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.nativeEvent.isComposing) return;
+    if (event.key === "Enter" && !event.shiftKey && !touch) {
+      event.preventDefault();
+      submit();
+    }
+  };
+
+  const notes = (message: ChatMessage) => {
+    const test = byId.get(message.id);
+    if (!test || test.role !== "assistant") return null;
+    return (
+      <>
+        {test.modelReply ? <ModelReplyNote text={test.modelReply} /> : null}
+        {test.stoppedReason ? (
+          <div className="mt-2 flex max-w-[85%] items-start gap-2 self-end rounded-xl bg-primary/10 px-3.5 py-2.5 text-[13px] leading-relaxed sm:max-w-[70%]">
+            <OctagonPauseIcon className="mt-0.5 size-4 shrink-0 text-primary" />
+            <span>
+              Aquí el asistente se detendría y esperaría a una persona.{" "}
+              <span className="text-muted-foreground">
+                {needsHumanReasonLabel(test.stoppedReason)}
+              </span>
+            </span>
+          </div>
+        ) : null}
+      </>
+    );
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-border/60 dark:ring-0",
+        className,
+      )}
+    >
+      <div
+        ref={scroller}
+        data-chat-scroll
+        className="min-h-0 flex-1 overflow-y-auto bg-muted/70 dark:bg-black/25"
+      >
+        {messages.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center gap-4 px-6 py-10 text-center">
+            <SparklesIcon className="size-6 text-muted-foreground" />
+            <p className="max-w-xs text-sm text-muted-foreground">
+              Escribe un mensaje como si fueras un lead que llega por WhatsApp.
+            </p>
+            <div className="flex w-full max-w-xs flex-col gap-1.5 text-left">
+              <Label htmlFor="assistant-test-lead-name">
+                Nombre del lead (opcional)
+              </Label>
+              <Input
+                id="assistant-test-lead-name"
+                value={leadName}
+                maxLength={80}
+                placeholder="Como aparecería en WhatsApp"
+                onChange={(event) => onLeadNameChange(event.target.value)}
+              />
+            </div>
+          </div>
+        ) : (
+          <ChatTranscript
+            messages={messages.map(toChatMessage)}
+            after={notes}
+            showDelivery={false}
+          >
+            {pending ? <TypingBubble /> : null}
+          </ChatTranscript>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2 border-t border-border/70 px-4 py-3">
+        {error ? (
+          <Alert variant="destructive">
+            <CircleAlertIcon />
+            <AlertDescription>
+              {error.message}
+              {error.code === "anthropic_missing" ? (
+                <>
+                  {" "}
+                  <Link
+                    href="/settings?tab=anthropic"
+                    className="font-medium underline underline-offset-2"
+                  >
+                    Ir a Anthropic
+                  </Link>
+                </>
+              ) : null}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {stopped ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" onClick={onContinue}>
+              Continuar como si una persona lo hubiera atendido
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={onReset}>
+              Nueva conversación
+            </Button>
+          </div>
+        ) : null}
+        <div
+          className={cn(
+            "flex items-end gap-2 rounded-2xl border border-transparent bg-input p-1.5 pl-0 transition-[color,box-shadow,border-color] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/20",
+            disabled && "opacity-60",
+          )}
+        >
+          <Textarea
+            ref={input}
+            value={draft}
+            onChange={(event) => onDraftChange(event.target.value)}
+            onKeyDown={onKeyDown}
+            disabled={stopped || pending}
+            rows={1}
+            enterKeyHint={touch ? "enter" : "send"}
+            aria-label="Mensaje del lead"
+            placeholder={
+              stopped
+                ? "El asistente está detenido"
+                : "Escribe como si fueras el lead…"
+            }
+            className="max-h-40 min-h-9 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 max-lg:max-h-28"
+          />
+          <Button
+            type="button"
+            size="icon-sm"
+            className="max-lg:size-9"
+            aria-label="Enviar"
+            disabled={!canSend}
+            onClick={submit}
+          >
+            {pending ? (
+              <Spinner aria-label="Enviando" />
+            ) : (
+              <SendHorizontalIcon />
+            )}
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>{touch ? null : "Enter envía · Shift+Enter, nueva línea"}</span>
+          {tooLong ? (
+            <span className="text-destructive tabular-nums">
+              {text.length} / {MAX_CHARS} caracteres
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}

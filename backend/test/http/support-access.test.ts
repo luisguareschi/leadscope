@@ -81,7 +81,7 @@ describe("support access", () => {
       .expect(200);
     expect(me.body).toEqual({
       operator: null,
-      company: { name: "otra", slug: "otra" },
+      company: { id: expect.any(String), name: "otra", slug: "otra" },
       platformAdmin: true,
       supportAccess: true,
     });
@@ -206,7 +206,7 @@ describe("support access", () => {
       .expect(200);
     expect(me.body).toEqual({
       operator: { email: "operador@altamira.uy" },
-      company: { name: "altamira", slug: "altamira" },
+      company: { id: expect.any(String), name: "altamira", slug: "altamira" },
       platformAdmin: false,
       supportAccess: false,
     });
