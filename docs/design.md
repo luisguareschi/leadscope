@@ -580,7 +580,7 @@ React Query with polling (every 10 seconds on lists, 5 on an open conversation) 
 
 ### Probar asistente
 
-Probar asistente, its own sidebar page (`/probar`, after Conocimiento), lets a person chat with the company's assistant as a lead, with no WhatsApp number, to try the prompt, instructions, knowledge, and settings. Every operator has it, and a platform admin through support access. Luis asked for it on 17 Nov 2026, and on 18 Nov asked to move it out of Configuración into the sidebar. The spec is `docs/specs/probar-asistente.md`.
+Probar asistente, its own sidebar page (`/probar`, after Conocimiento), lets a person chat with the company's assistant as a lead, with no WhatsApp number, to try the prompt, instructions, knowledge, and settings. Every operator has it, and a platform admin through support access. Luis asked for it on 17 Nov 2026, and on 18 Nov asked to move it out of Configuración into the sidebar.
 
 - It uses the saved settings and files, never an unsaved draft.
 - The chat state lives in a provider around the whole panel (and in `localStorage`, per company), so a reply on its way still lands after the person opens another page, and a reload keeps the chat.
