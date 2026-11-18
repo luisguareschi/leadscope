@@ -1,22 +1,26 @@
 import { loadCompany, type LoadedCompany } from "../companies/load-company.js";
 import type { AppContext } from "../context.js";
-import { buildChatTurns } from "../engine/history.js";
-import { buildTurnContext } from "../engine/prompt.js";
+import { buildChatTurns, type ChatTurn } from "../engine/history.js";
+import {
+  buildTurnContext,
+  type KnowledgeDocument,
+  type PromptThread,
+} from "../engine/prompt.js";
 import { collectedOf, decideTurn } from "../engine/turn.js";
 import type {
   Collected,
   CrmActionKind,
   TurnDecision,
   TurnInput,
-  TurnRules,
 } from "../engine/types.js";
 import type { Thread } from "../generated/prisma/client.js";
 import type { Channel } from "../integrations/whatsapp/channel.js";
-import type { LlmUsageRecord } from "../llm/types.js";
+import type { LlmClient, LlmUsageRecord } from "../llm/types.js";
 import { crmRequest } from "./crm-sync.js";
 import { messagePreview } from "./inbound.js";
 import { isWithinReplyWindow } from "./reply-window.js";
 import { loadSystemPrompt } from "./system-prompt.js";
+import { rulesFor } from "./turn-rules.js";
 import { withThreadLease } from "./thread-lease.js";
 
 export type TurnOutcome =
@@ -48,21 +52,81 @@ function crmChanged(thread: Thread, decision: TurnDecision): boolean {
   );
 }
 
-function rulesFor(company: LoadedCompany): TurnRules {
+function modelFailure(
+  ctx: AppContext,
+  error: unknown,
+  log: { threadId: string | null; companyId: string },
+): ModelCall {
+  const reason = error instanceof Error ? error.message : String(error);
+  ctx.logger.error({ err: error, ...log }, "model call failed");
   return {
-    maxReplyChars: company.config.maxReplyChars,
-    collect: company.config.collect,
-    messages: company.config.messages,
+    input: { kind: "model_failure", reason: reason.slice(0, 200) },
+    usage: null,
   };
+}
+
+export type ModelCall = { input: TurnInput; usage: LlmUsageRecord | null };
+
+/**
+ * One model call for a lead's turn: the turn context from the lead's state, then `complete()`. An
+ * error from the model becomes a `model_failure` turn. WhatsApp and the panel's test chat
+ * (Probar asistente) both go through it, so they cannot drift apart.
+ */
+export async function callModel(
+  ctx: AppContext,
+  llm: LlmClient,
+  company: LoadedCompany,
+  turn: {
+    thread: PromptThread;
+    /** Null for the panel's test chat, which has no stored thread. */
+    threadId: string | null;
+    system: string;
+    documents: KnowledgeDocument[];
+    messages: ChatTurn[];
+  },
+): Promise<ModelCall> {
+  const { config } = company;
+  try {
+    const result = await llm.complete({
+      model: config.llm.model,
+      temperature: config.llm.temperature,
+      timeoutMs: config.llm.timeoutMs,
+      system: turn.system,
+      turnContext: buildTurnContext(
+        turn.thread,
+        config,
+        company.name,
+        ctx.now(),
+      ),
+      messages: turn.messages,
+      scenario: {
+        thread: turn.thread,
+        config,
+        companyName: company.name,
+        documents: turn.documents,
+      },
+    });
+    return {
+      input: { kind: "model", output: result.output },
+      usage: result.usage,
+    };
+  } catch (error) {
+    return modelFailure(ctx, error, {
+      threadId: turn.threadId,
+      companyId: company.id,
+    });
+  }
 }
 
 async function askModel(
   ctx: AppContext,
   company: LoadedCompany,
   thread: Thread,
-): Promise<{ input: TurnInput; usage: LlmUsageRecord | null }> {
+): Promise<ModelCall> {
   const { config } = company;
   try {
+    // Inside the try: on WhatsApp a missing key is a model failure, so the bot stops and says so.
+    const llm = ctx.integrations.llmFor(company);
     const [{ system, documents }, recent] = await Promise.all([
       loadSystemPrompt(ctx, company),
       ctx.db.message.findMany({
@@ -72,29 +136,18 @@ async function askModel(
         select: { direction: true, type: true, body: true, sentByEmail: true },
       }),
     ]);
-    const result = await ctx.integrations.llmFor(company).complete({
-      model: config.llm.model,
-      temperature: config.llm.temperature,
-      timeoutMs: config.llm.timeoutMs,
+    return await callModel(ctx, llm, company, {
+      thread,
+      threadId: thread.id,
       system,
-      turnContext: buildTurnContext(thread, config, company.name, ctx.now()),
+      documents,
       messages: buildChatTurns(recent.reverse(), config.llm.historyLimit),
-      scenario: { thread, config, companyName: company.name, documents },
     });
-    return {
-      input: { kind: "model", output: result.output },
-      usage: result.usage,
-    };
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    ctx.logger.error(
-      { err: error, threadId: thread.id, companyId: company.id },
-      "model call failed",
-    );
-    return {
-      input: { kind: "model_failure", reason: reason.slice(0, 200) },
-      usage: null,
-    };
+    return modelFailure(ctx, error, {
+      threadId: thread.id,
+      companyId: company.id,
+    });
   }
 }
 

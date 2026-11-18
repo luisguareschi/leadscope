@@ -37,7 +37,7 @@ The menu on each row has Operadores (add and invite, resend the invitation, arch
 
 Entrar on a row opens that company's panel as the admin (support access), with no operator row there. A bar at the top says "Viendo como administrador: Altamira", and Volver a Empresas leaves. The panel sends `X-Company-Id` on every request. The API honors it only for emails on `PLATFORM_ADMIN_EMAILS`, and every write made that way is recorded in the `AdminAuditEntry` table.
 
-Sign in as the operator email you just typed. The sidebar is Conversaciones, Conocimiento, and Configuración. Empresas is not there, and `/companies` says there is no access.
+Sign in as the operator email you just typed. The sidebar is Conversaciones, Métricas, Conocimiento, Probar asistente, and Configuración. Empresas is not there, and `/companies` says there is no access.
 
 **Configuración.** General edits the company's name and the assistant's name. Nombre de la empresa is the company's name everywhere, Empresas included. Nombre del asistente (for example Almira) is optional, and the assistant introduces itself as "Almira, asistente virtual de Altamira". The other Asistente sections edit the company config (tone, the information to collect, forbidden topics, fixed messages, business hours, and Respuestas y límites) and the company instructions. The welcome template, the HubSpot property, and the model are in Integraciones, in the same draft and save bar.
 
@@ -53,6 +53,8 @@ Integraciones is a group of Configuración with one section per provider. Each h
 - **Anthropic.** The API key and the model. The test asks Anthropic's Models API for the saved model with the key, without generating anything.
 
 Secrets show whether each one is set and the last 4 characters. They never show the full value. Leaving a field empty does not clear it. A platform admin inside the company through Entrar also sees an Operadores tab.
+
+**Probar asistente.** A chat where you play a lead against the saved settings, instructions, and files, with no WhatsApp number. A side panel shows the stage, the collected data, the call time, the summary, and what the model flagged on each turn. Nothing is stored and nothing goes to WhatsApp or HubSpot; each message does use the company's Anthropic key (locally, the fake model answers when there is none). Nueva conversación starts over.
 
 **Conocimiento.** It holds the files the assistant answers from (PDF, Word, Excel, PowerPoint, CSV, text, Markdown, HTML, JSON). The text is extracted on upload. Files go in folders, nested as deep as you like, for example Proyectos / Tres Cruces. Nueva carpeta is in the list's header, and Nueva subcarpeta is in a folder's ⋯ menu. Each row's menu has Renombrar, Mover a…, and Eliminar. A renamed file keeps its extension.
 

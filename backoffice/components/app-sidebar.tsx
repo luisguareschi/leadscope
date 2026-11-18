@@ -5,6 +5,7 @@ import {
   BookOpenTextIcon,
   Building2Icon,
   ChartColumnIcon,
+  FlaskConicalIcon,
   MessagesSquareIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
@@ -58,6 +59,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             title: "Conocimiento",
             url: "/knowledge",
             icon: <BookOpenTextIcon />,
+          },
+          {
+            title: "Probar asistente",
+            url: "/probar",
+            icon: <FlaskConicalIcon />,
           },
           {
             title: "Configuración",

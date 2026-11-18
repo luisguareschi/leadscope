@@ -47,6 +47,8 @@ import type {
   WhatsappConnectionCheck,
   CompaniesMetrics,
   CompanyMetrics,
+  TestTurnRequest,
+  TestTurnResponse,
 } from "./types";
 
 /** Lists refresh every 10 s and an open conversation every 5 s; at this volume polling is enough. */
@@ -197,6 +199,18 @@ export function useChangeStage(id: string) {
         body: JSON.stringify({ stage }),
       }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["threads"] }),
+  });
+}
+
+/** Probar asistente: one turn of the test chat. Stores nothing the panel reads, so nothing to refresh. */
+export function useAssistantTestTurn() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: (body: TestTurnRequest) =>
+      api<TestTurnResponse>("/internal/assistant-test/turn", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
   });
 }
 

@@ -482,7 +482,7 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
   - the CRM contact id and outbox (`crmPendingAction`, `crmRequestVersion`, the CRM lease `crmLeaseUntil`, attempts, next attempt, last error, synced at).
 - **Message.** Thread id, direction, WhatsApp type, body (or caption), WhatsApp message id (unique), delivery status from Meta's receipts, `error` (why WhatsApp refused it at send time), `handledAt` (inbound: when a turn took it), who wrote it in the panel (`sentByEmail`, `sentById` set null when that operator is deleted, `sentBySupport`; all empty for the assistant, templates, and the lead), sent at.
 - **LeadStageChange.** A stage a person picked: thread, from and to, operator id (null through support access or once deleted), email, support access, time. The bot's own moves are not logged here.
-- **LlmUsage.** Thread id, model, input/output and cache read/write tokens, latency. Used to see cost per company.
+- **LlmUsage.** Thread id (null for a Probar asistente turn), model, input/output and cache read/write tokens, latency. Used to see cost per company.
 - **AdminAuditEntry.** A write a platform admin made inside a company through support access, or to a company from Empresas. It holds the admin email, company id (null once the company is deleted) and slug, method and path, response status, and time.
 
 ## Backend routes
@@ -517,6 +517,7 @@ Every table below except `Company` has `companyId`. The schema is `backend/prism
 - `POST /internal/settings/versions/:id/restore`. Save that version again as a new one. 422 if it no longer passes validation.
 - `GET /internal/settings/options`. Choices for the Asistente selects: languages, IANA time zones with their UTC offset, countries with calling codes (from `libphonenumber-js`, the validator's own list), and Claude models (from Anthropic's Models API with the company's key, or a fixed list).
 - `GET /internal/settings/prompt`. The assistant's and the company's names (`names`), the cached system block the engine would send, the turn context for a first-time lead, the `submit_turn` tool, the model, and the knowledge totals with `documents` (each file's folder path and characters, in prompt order).
+- `POST /internal/assistant-test/turn`. One turn of Probar asistente (see [Probar asistente](#probar-asistente)). Body `{ messages: [{ role: "lead" | "assistant", body }], lead?, leadName? }`: up to 200 messages and 60,000 characters, the last one from the lead. Returns `reply`, `modelReply`, the new `lead` (`state`, `stage`, `collected`, `callTime`, `summary`), `model` (intent and flags), `stoppedReason`, and `usage`. 409 `anthropic_missing` when the company has no Anthropic key. Stores only `LlmUsage`.
 - `GET /internal/metrics?from&to[&companyId]`. Métricas for one company (see [Métricas](#métricas)). An operator always gets their own company; a platform admin gets the support-access company, or must pass `companyId` outside one (400 without it). Dates are `YYYY-MM-DD` in the company timezone, default the last 30 days, at most 366.
 - `GET /internal/metrics/companies?from&to&status=active|all`. Platform admin only. One row per company with its main metrics, for the comparison table.
 - `GET /health`.
@@ -569,12 +570,25 @@ Pages:
 6. **Empresas.** Shown only when `GET /internal/me` says `platformAdmin`, including when `company` is null. It creates a company (name, slug, first operator email, in the Nueva empresa dialog) and lists the companies that exist, with Mostrar archivadas. This is the empty-database setup. No API keys. Each row's menu has Operadores, Archivar / Restaurar, and Eliminar (type the slug). Each active row has Entrar, which opens that company's panel as [support access](#support-access) with the "Viendo como administrador" bar. An operator who is not an admin has no nav item. Opening the URL shows that they have no access, and the API answers 403. A platform admin with no operator row and no entered company does not see Conversaciones, Conocimiento, or Configuración.
 
 7. **Métricas.** See [Métricas](#métricas).
+8. **Probar asistente.** See [Probar asistente](#probar-asistente). Only inside a company, like Conocimiento.
 
 The panel sends only what an advisor writes in a thread's composer, from the company's number and inside the 24-hour window. Advisors can still answer from their own WhatsApp instead. No templates, bulk sends, or follow-ups from the panel.
 
 One shared backoffice serves all companies: one Vercel app, one URL. The operator's company comes from their login (`Operator.companyId`), and the backend filters every request by it. There is no per-company subdomain, branding, or company switcher for operators in v1. A platform admin can list companies and create one without belonging to a company, and enter any of them through support access. Later options on the same app are a subdomain per client and per-company branding.
 
 React Query with polling (every 10 seconds on lists, 5 on an open conversation) is enough at this volume. No realtime subscription in v1.
+
+### Probar asistente
+
+Probar asistente, its own sidebar page (`/probar`, after Conocimiento), lets a person chat with the company's assistant as a lead, with no WhatsApp number, to try the prompt, instructions, knowledge, and settings. Every operator has it, and a platform admin through support access. Luis asked for it on 17 Nov 2026, and on 18 Nov asked to move it out of Configuración into the sidebar. The spec is `docs/specs/probar-asistente.md`.
+
+- It uses the saved settings and files, never an unsaved draft.
+- The chat state lives in a provider around the whole panel (and in `localStorage`, per company), so a reply on its way still lands after the person opens another page, and a reload keeps the chat.
+- The browser keeps the test conversation and the simulated lead state (in `localStorage`, per company) and posts both with each message to `POST /internal/assistant-test/turn`. The backend builds the same system prompt (`loadSystemPrompt`) and turn context as WhatsApp, calls the model through the same `callModel` as `processThread`, and runs `decideTurn`, so stages, collected items, `callNow`, forbidden topics, and the fixed lines behave as they would with a real lead. It sends the last `historyLimit` messages.
+- Nothing is stored as a thread or message, nothing goes to Kapso or HubSpot, and nothing shows in Conversaciones or the badge. Only `LlmUsage` is written (thread id null), since the company pays for those tokens; Métricas counts them in the Anthropic estimate.
+- A turn where the real bot would stop (`needsHuman`) shows the fixed line, the reason, and what the model wanted to say, and disables the composer until Continuar (as if a person had attended it) or Nueva conversación.
+- Estado del lead shows the stage, the conversation step, the collected items, the call time, the summary, and the last turn's intent, flags, tokens, and latency. Below `lg` it is a Conversación / Lead tab pair.
+- Not simulated: a form lead, attachments, the reply debounce, the 24-hour window, a person changing the stage mid-test, or unsaved settings.
 
 ### Métricas
 

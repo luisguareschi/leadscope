@@ -11,6 +11,7 @@ import { cn } from "cn";
 function titleFor(pathname: string, platformAdmin: boolean): string {
   if (pathname.startsWith("/metrics")) return "Métricas";
   if (pathname.startsWith("/knowledge")) return "Conocimiento";
+  if (pathname.startsWith("/probar")) return "Probar asistente";
   if (pathname.startsWith("/settings")) return "Configuración";
   if (pathname.startsWith("/companies"))
     return platformAdmin ? "Empresas" : "Sin acceso";

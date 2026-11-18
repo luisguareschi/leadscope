@@ -146,9 +146,19 @@ function Author({ sentBy }: { sentBy: ChatMessage["sentBy"] }) {
   );
 }
 
-export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
+export function ChatTranscript({
+  messages,
+  after,
+  children,
+}: {
+  messages: ChatMessage[];
+  /** Shown under a message's bubble (the test chat's notes). */
+  after?: (message: ChatMessage) => React.ReactNode;
+  /** Shown after the last message (the test chat's "Escribiendo…"). */
+  children?: React.ReactNode;
+}) {
   const bottom = useRef<HTMLDivElement>(null);
-  const count = messages.length;
+  const count = messages.length + (children ? 1 : 0);
 
   // Scroll only the transcript's own box: scrollIntoView would also move the page.
   useEffect(() => {
@@ -174,9 +184,11 @@ export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
               </div>
             ) : null}
             <Bubble message={message} continued={continued} />
+            {after?.(message)}
           </Fragment>
         );
       })}
+      {children}
       <div ref={bottom} />
     </div>
   );
