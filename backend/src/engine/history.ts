@@ -42,8 +42,9 @@ function contentOf(message: HistoryMessage): string | null {
  * The company's side is the assistant role, whether the assistant or an advisor wrote it; an
  * advisor's messages carry `ADVISOR_LABEL`.
  *
- * When the company's side comes first, a note opens the list: a form lead got the welcome before
- * writing, while a WhatsApp lead always wrote first, so there the history was cut by `limit`.
+ * When the first turn left is the company's side, a note opens the list: a form lead got the
+ * welcome before writing, so it says so; a WhatsApp lead always writes first, so earlier messages
+ * are missing (cut by `limit`, or a blank lead message that has no turn).
  */
 export function buildChatTurns(
   messages: HistoryMessage[],
