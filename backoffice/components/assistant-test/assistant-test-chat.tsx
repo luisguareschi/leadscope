@@ -3,7 +3,6 @@
 import {
   useEffect,
   useRef,
-  useState,
   useSyncExternalStore,
   type KeyboardEvent,
 } from "react";
@@ -69,7 +68,7 @@ function TypingBubble() {
       role="status"
       className="mt-4 inline-flex items-center gap-2 self-end rounded-[20px] rounded-tr-md bg-bubble px-4 py-2.5 text-sm text-bubble-foreground"
     >
-      <Spinner className="size-3.5" />
+      <Spinner className="size-3.5" aria-hidden aria-label={undefined} />
       Escribiendo…
     </div>
   );
@@ -83,6 +82,8 @@ export function AssistantTestChat({
   error,
   leadName,
   onLeadNameChange,
+  draft,
+  onDraftChange,
   onSend,
   onContinue,
   onReset,
@@ -94,13 +95,14 @@ export function AssistantTestChat({
   error: { message: string; code?: string } | null;
   leadName: string;
   onLeadNameChange: (name: string) => void;
-  /** Resolves false when the turn failed, so the composer gets the message back. */
+  /** The composer's text, held by the panel so it survives other pages and failed sends. */
+  draft: string;
+  onDraftChange: (draft: string) => void;
   onSend: (body: string) => Promise<boolean>;
   onContinue: () => void;
   onReset: () => void;
   className?: string;
 }) {
-  const [draft, setDraft] = useState("");
   const input = useRef<HTMLTextAreaElement>(null);
   // A phone keyboard has no Shift+Enter: there Enter is a new line and the button sends.
   const touch = useSyncExternalStore(
@@ -123,12 +125,9 @@ export function AssistantTestChat({
 
   const submit = () => {
     if (!canSend) return;
-    setDraft("");
-    void onSend(text).then((sent) => {
-      // Not sent: the message goes back to the composer to retry.
-      if (!sent) setDraft((current) => current || text);
-      requestAnimationFrame(() => input.current?.focus());
-    });
+    void onSend(text).then(() =>
+      requestAnimationFrame(() => input.current?.focus()),
+    );
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -192,7 +191,11 @@ export function AssistantTestChat({
             </div>
           </div>
         ) : (
-          <ChatTranscript messages={messages.map(toChatMessage)} after={notes}>
+          <ChatTranscript
+            messages={messages.map(toChatMessage)}
+            after={notes}
+            showDelivery={false}
+          >
             {pending ? <TypingBubble /> : null}
           </ChatTranscript>
         )}
@@ -237,9 +240,9 @@ export function AssistantTestChat({
           <Textarea
             ref={input}
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => onDraftChange(event.target.value)}
             onKeyDown={onKeyDown}
-            disabled={stopped}
+            disabled={stopped || pending}
             rows={1}
             enterKeyHint={touch ? "enter" : "send"}
             aria-label="Mensaje del lead"
@@ -258,7 +261,11 @@ export function AssistantTestChat({
             disabled={!canSend}
             onClick={submit}
           >
-            {pending ? <Spinner /> : <SendHorizontalIcon />}
+            {pending ? (
+              <Spinner aria-label="Enviando" />
+            ) : (
+              <SendHorizontalIcon />
+            )}
           </Button>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">

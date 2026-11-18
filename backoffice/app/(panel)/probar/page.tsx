@@ -92,6 +92,8 @@ export default function AssistantTestPage() {
               error={test.error}
               leadName={chat.leadName}
               onLeadNameChange={test.setLeadName}
+              draft={test.draft}
+              onDraftChange={test.setDraft}
               onSend={(body) => test.send(body, config.llm.historyLimit)}
               onContinue={test.resume}
               onReset={test.reset}

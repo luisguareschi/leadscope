@@ -3,7 +3,6 @@ import type { AppContext } from "../../context.js";
 import { callModel } from "../../conversation/process-thread.js";
 import { loadSystemPrompt } from "../../conversation/system-prompt.js";
 import { rulesFor } from "../../conversation/turn-rules.js";
-import { capReply } from "../../engine/guardrails.js";
 import { buildChatTurns } from "../../engine/history.js";
 import type { PromptThread } from "../../engine/prompt.js";
 import { decideTurn } from "../../engine/turn.js";
@@ -99,13 +98,18 @@ export async function runTestTurn(
 
   const { system, documents } = await loadSystemPrompt(ctx, company);
   const { config } = company;
+  // A WhatsApp conversation starts with the lead. History trimmed to start with a reply would make
+  // `buildChatTurns` say the lead filled in a form, so it starts at the first lead message instead.
+  const firstLead = request.messages.findIndex(
+    (message) => message.role === "lead",
+  );
   const { input, usage } = await callModel(ctx, llm, company, {
     thread,
     threadId: null,
     system,
     documents,
     messages: buildChatTurns(
-      request.messages.map((message) => ({
+      request.messages.slice(firstLead).map((message) => ({
         direction: message.role === "lead" ? "inbound" : "outbound",
         type: "text",
         body: message.body,
@@ -116,16 +120,22 @@ export async function runTestTurn(
   });
   const decision = decideTurn(thread, input, rulesFor(company));
   if (usage) {
-    await ctx.db.llmUsage.create({
-      data: { companyId: company.id, threadId: null, ...usage },
-    });
+    // The model already answered: a failed usage write must not cost the reply, or a retry.
+    await ctx.db.llmUsage
+      .create({ data: { companyId: company.id, threadId: null, ...usage } })
+      .catch((error: unknown) =>
+        ctx.logger.error(
+          { err: error, companyId: company.id },
+          "test turn usage not recorded",
+        ),
+      );
   }
 
   const output = input.kind === "model" ? input.output : null;
+  // The lead gets a fixed line whenever the turn stops the assistant, even if the model's own
+  // text happened to match it.
   const modelReply =
-    output && decision.reply !== capReply(output.reply, config.maxReplyChars)
-      ? output.reply.trim() || null
-      : null;
+    output && decision.needsHuman ? output.reply.trim() || null : null;
   return {
     reply: decision.reply,
     modelReply,

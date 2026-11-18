@@ -333,4 +333,85 @@ describe("the panel's test chat (Probar asistente)", () => {
     expect(response.body.stoppedReason).toBe("empty_reply");
     expect(response.body.modelReply).toBeNull();
   });
+
+  it("never tells the model a WhatsApp lead came from a form when history starts with a reply", async () => {
+    ctx.llm.push({ reply: "¡Dale!" });
+    await turn({
+      messages: [
+        { role: "assistant", body: "¿Con qué presupuesto contás?" },
+        { role: "lead", body: "Unos 150 mil" },
+      ],
+    }).expect(200);
+    expect(ctx.llm.calls[0]!.messages).toEqual([
+      { role: "user", content: "Unos 150 mil" },
+    ]);
+  });
+
+  it("still returns the reply when the usage cannot be recorded", async () => {
+    ctx.llm.push({ reply: "Hola, ¿qué buscás?" });
+    const create = ctx.db.llmUsage.create.bind(ctx.db.llmUsage);
+    ctx.db.llmUsage.create = (() =>
+      Promise.reject(new Error("db down"))) as unknown as typeof create;
+    try {
+      const response = await turn({
+        messages: [{ role: "lead", body: "Hola" }],
+      }).expect(200);
+      expect(response.body.reply).toBe("Hola, ¿qué buscás?");
+    } finally {
+      ctx.db.llmUsage.create = create;
+    }
+  });
+
+  it("shows what the model wrote whenever the turn stops, even if it matches the fixed line", async () => {
+    ctx.llm.push({
+      reply: "Un asesor te va a responder eso.",
+      needsHuman: true,
+    });
+    const response = await turn({
+      messages: [{ role: "lead", body: "Quiero hacer un reclamo" }],
+    }).expect(200);
+    expect(response.body).toMatchObject({
+      reply: "Un asesor te va a responder eso.",
+      modelReply: "Un asesor te va a responder eso.",
+      stoppedReason: "lead_needs_human",
+    });
+  });
+
+  it("accepts back a call time longer than one WhatsApp message", async () => {
+    const long = "a".repeat(5_000);
+    ctx.llm.push({ reply: "Anotado.", callTime: long }, { reply: "¡Dale!" });
+    const first = await turn({
+      messages: [{ role: "lead", body: "Llamame cuando sea" }],
+    }).expect(200);
+    expect(first.body.lead.callTime).toHaveLength(5_000);
+    await turn({
+      messages: [
+        { role: "lead", body: "Llamame cuando sea" },
+        { role: "assistant", body: "Anotado." },
+        { role: "lead", body: "Gracias" },
+      ],
+      lead: first.body.lead,
+    }).expect(200);
+  });
+
+  it("answers a body over the limit or not JSON with a client error", async () => {
+    const big = await request(app)
+      .post("/internal/assistant-test/turn")
+      .set(asAna)
+      .set("Content-Type", "application/json")
+      .send(
+        JSON.stringify({
+          messages: [{ role: "lead", body: "é".repeat(80_000) }],
+        }),
+      )
+      .expect(413);
+    expect(big.body.error.code).toBe("body_too_large");
+    const broken = await request(app)
+      .post("/internal/assistant-test/turn")
+      .set(asAna)
+      .set("Content-Type", "application/json")
+      .send("{not json")
+      .expect(400);
+    expect(broken.body.error.code).toBe("invalid_json");
+  });
 });

@@ -9,17 +9,21 @@ import { runTestTurn } from "./run-test-turn.service.js";
 /** WhatsApp's limit for one text message. */
 const MAX_MESSAGE_CHARS = 4096;
 const MAX_MESSAGES = 200;
-/** Keeps a request under the panel API's 100 KB body limit. The browser trims to fit, by bytes. */
+/**
+ * Characters across the history. The panel API also caps the JSON body at 100 KB, which accents
+ * and emoji can reach first; the browser trims the whole request to fit that too.
+ */
 export const MAX_HISTORY_CHARS = 60_000;
 
 const leadSchema = z.strictObject({
   state: z.enum(["greeting", "qualify", "answer", "handoff", "closed"]),
   stage: z.enum(["qualifying", "to_contact", "contacted", "not_interested"]),
-  // The engine stores the model's values as they come, so these only guard the request size.
+  // The engine stores the model's values as they come, so any value it returned must come back.
+  // The body limit is what bounds them.
   collected: z
-    .record(z.string().max(64), z.string().max(MAX_MESSAGE_CHARS))
+    .record(z.string().max(64), z.string().max(MAX_HISTORY_CHARS))
     .refine((value) => Object.keys(value).length <= 10, "Hasta 10 datos."),
-  callTime: z.string().max(MAX_MESSAGE_CHARS).nullable(),
+  callTime: z.string().max(MAX_HISTORY_CHARS).nullable(),
   summary: z.string().max(MAX_SUMMARY_CHARS).nullable(),
 });
 

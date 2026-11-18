@@ -62,12 +62,13 @@ export function useApi() {
   const client = useQueryClient();
   return useCallback(
     async <T>(path: string, init?: RequestInit): Promise<T> => {
+      // Read when the request starts: leaving a company while the token loads must not move it.
+      const companyId = supportCompanyIdFor(email);
       const token = await getToken();
       if (!token) {
         await signOut();
         throw new ApiError(401, "Tu sesión terminó. Vuelve a entrar.");
       }
-      const companyId = supportCompanyIdFor(email);
       try {
         return await apiFetch<T>(path, token, {
           ...init,
@@ -202,15 +203,20 @@ export function useChangeStage(id: string) {
   });
 }
 
-/** Probar asistente: one turn of the test chat. Stores nothing the panel reads, so nothing to refresh. */
+/** Probar asistente: one turn of the test chat. Its Anthropic usage counts in Métricas. */
 export function useAssistantTestTurn() {
   const api = useApi();
+  const client = useQueryClient();
   return useMutation({
     mutationFn: (body: TestTurnRequest) =>
       api<TestTurnResponse>("/internal/assistant-test/turn", {
         method: "POST",
         body: JSON.stringify(body),
       }),
+    onSuccess: (response) => {
+      if (response.usage)
+        void client.invalidateQueries({ queryKey: ["metrics"] });
+    },
   });
 }
 

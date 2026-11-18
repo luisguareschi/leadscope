@@ -4,6 +4,28 @@ import type { AppContext } from "../context.js";
 import { HttpError } from "../lib/http-error.js";
 import { reportError } from "../lib/monitoring.js";
 
+function bodyParserError(
+  error: unknown,
+): { status: number; code: string; message: string } | null {
+  const type =
+    error && typeof error === "object" && "type" in error
+      ? (error as { type: unknown }).type
+      : null;
+  if (type === "entity.too.large")
+    return {
+      status: 413,
+      code: "body_too_large",
+      message: "La solicitud es demasiado grande.",
+    };
+  if (type === "entity.parse.failed")
+    return {
+      status: 400,
+      code: "invalid_json",
+      message: "La solicitud no es JSON válido.",
+    };
+  return null;
+}
+
 export function errorHandler(ctx: AppContext): ErrorRequestHandler {
   return (error, req, res, _next) => {
     if (error instanceof HttpError) {
@@ -14,6 +36,13 @@ export function errorHandler(ctx: AppContext): ErrorRequestHandler {
           ...(error.fields ? { fields: error.fields } : {}),
         },
       });
+      return;
+    }
+    // express.json: a body over the limit, or one that is not valid JSON.
+    const parserError = bodyParserError(error);
+    if (parserError) {
+      const { status, ...body } = parserError;
+      res.status(status).json({ error: body });
       return;
     }
     if (error instanceof multer.MulterError) {

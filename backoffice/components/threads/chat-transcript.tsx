@@ -54,10 +54,12 @@ function DeliveryStatus({ status }: { status: string | null }) {
 function Bubble({
   message,
   continued,
+  showDelivery,
 }: {
   message: ChatMessage;
   /** Same side as the message before it: tighter spacing, no tail. */
   continued: boolean;
+  showDelivery: boolean;
 }) {
   const outbound = message.direction === "outbound";
   const meta = message.type === "text" ? null : TYPE_META[message.type];
@@ -110,7 +112,9 @@ function Bubble({
       <div className="flex flex-wrap items-center justify-end gap-x-1 px-1 text-[11px] text-muted-foreground tabular-nums">
         {outbound ? <Author sentBy={message.sentBy} /> : null}
         {formatTime(message.sentAt)}
-        {outbound ? <DeliveryStatus status={message.status} /> : null}
+        {outbound && showDelivery ? (
+          <DeliveryStatus status={message.status} />
+        ) : null}
       </div>
       {message.status === "failed" && message.error ? (
         <p className="max-w-full px-1 text-right text-[11px] wrap-break-word text-destructive">
@@ -150,21 +154,26 @@ export function ChatTranscript({
   messages,
   after,
   children,
+  showDelivery = true,
 }: {
   messages: ChatMessage[];
+  /** WhatsApp's sent/delivered/read ticks. The test chat sends nothing, so it has none. */
+  showDelivery?: boolean;
   /** Shown under a message's bubble (the test chat's notes). */
   after?: (message: ChatMessage) => React.ReactNode;
   /** Shown after the last message (the test chat's "Escribiendo…"). */
   children?: React.ReactNode;
 }) {
   const bottom = useRef<HTMLDivElement>(null);
-  const count = messages.length + (children ? 1 : 0);
+  const count = messages.length;
+  // A reply can replace "Escribiendo…" in the same render that adds it, leaving the count as is.
+  const trailing = Boolean(children);
 
   // Scroll only the transcript's own box: scrollIntoView would also move the page.
   useEffect(() => {
     const scroller = bottom.current?.closest("[data-chat-scroll]");
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
-  }, [count]);
+  }, [count, trailing]);
 
   const days = messages.map((message) => formatDayLabel(message.sentAt));
   return (
@@ -183,7 +192,11 @@ export function ChatTranscript({
                 </span>
               </div>
             ) : null}
-            <Bubble message={message} continued={continued} />
+            <Bubble
+              message={message}
+              continued={continued}
+              showDelivery={showDelivery}
+            />
             {after?.(message)}
           </Fragment>
         );

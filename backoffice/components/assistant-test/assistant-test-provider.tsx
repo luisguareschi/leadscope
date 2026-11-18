@@ -10,11 +10,13 @@ import {
   type ReactNode,
 } from "react";
 import { ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import {
   EMPTY_TEST_CHAT,
-  historyForRequest,
+  buildTurnRequest,
   loadTestChat,
   saveTestChat,
+  testChatOwner,
   type TestChat,
   type TestChatMessage,
 } from "@/lib/assistant-test-storage";
@@ -28,6 +30,9 @@ type AssistantTest = {
   sending: TestChatMessage | null;
   pending: boolean;
   error: TestError | null;
+  /** The composer's text, kept here so it survives other pages and comes back after a failure. */
+  draft: string;
+  setDraft: (draft: string) => void;
   /** Resolves false when the turn failed, so the composer can give the message back. */
   send: (body: string, historyLimit: number) => Promise<boolean>;
   setLeadName: (name: string) => void;
@@ -45,16 +50,20 @@ const newId = () =>
 
 /**
  * Holds Probar asistente's chat for the whole panel, so a reply that is on its way still lands
- * after the person opens another page. The chat is per company and kept in this browser.
+ * after the person opens another page. The chat is per signed-in person and company, kept in
+ * this browser.
  */
 export function AssistantTestProvider({ children }: { children: ReactNode }) {
   const me = useMe();
-  const company = me.data?.company?.slug ?? null;
+  const { email } = useAuth();
+  const slug = me.data?.company?.slug ?? null;
+  const company = email && slug ? testChatOwner(email, slug) : null;
   const turn = useAssistantTestTurn();
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [chat, setChat] = useState<TestChat>(EMPTY_TEST_CHAT);
   const [sending, setSending] = useState<TestChatMessage | null>(null);
   const [error, setError] = useState<TestError | null>(null);
+  const [draft, setDraft] = useState("");
   const current = useRef(company);
   useEffect(() => {
     current.current = company;
@@ -66,6 +75,7 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
     setChat(company ? loadTestChat(company) : EMPTY_TEST_CHAT);
     setSending(null);
     setError(null);
+    setDraft("");
   }
 
   useEffect(() => {
@@ -76,6 +86,7 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
     async (body: string, historyLimit: number) => {
       if (!company) return false;
       setError(null);
+      setDraft("");
       const lead: TestChatMessage = {
         id: newId(),
         role: "lead",
@@ -85,11 +96,9 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
       const messages = [...chat.messages, lead];
       setSending(lead);
       try {
-        const response = await turn.mutateAsync({
-          messages: historyForRequest(messages, historyLimit),
-          ...(chat.lead ? { lead: chat.lead } : {}),
-          leadName: chat.leadName.trim() || null,
-        });
+        const response = await turn.mutateAsync(
+          buildTurnRequest(messages, historyLimit, chat.lead, chat.leadName),
+        );
         const next: TestChat = {
           ...chat,
           messages: [
@@ -113,6 +122,8 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
         return true;
       } catch (cause) {
         if (current.current === company) {
+          // Not sent: the message goes back to the composer to retry.
+          setDraft((now) => now || body);
           setError(
             cause instanceof ApiError
               ? { message: cause.message, code: cause.code }
@@ -137,11 +148,14 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
     sending,
     pending: turn.isPending,
     error,
+    draft,
+    setDraft,
     send,
     setLeadName: (leadName) => setChat((prev) => ({ ...prev, leadName })),
     resume: () => setChat((prev) => ({ ...prev, stopped: false })),
     reset: () => {
       setError(null);
+      setDraft("");
       setChat((prev) => ({ ...EMPTY_TEST_CHAT, leadName: prev.leadName }));
     },
   };

@@ -54,7 +54,7 @@ Integraciones is a group of Configuración with one section per provider. Each h
 
 Secrets show whether each one is set and the last 4 characters. They never show the full value. Leaving a field empty does not clear it. A platform admin inside the company through Entrar also sees an Operadores tab.
 
-**Probar asistente.** A chat where you play a lead against the saved settings, instructions, and files, with no WhatsApp number. A side panel shows the stage, the collected data, the call time, the summary, and what the model flagged on each turn. Nothing is stored and nothing goes to WhatsApp or HubSpot; each message does use the company's Anthropic key (locally, the fake model answers when there is none). Nueva conversación starts over.
+**Probar asistente.** A chat where you play a lead against the saved settings, instructions, and files, with no WhatsApp number. A side panel shows the stage, the collected data, the call time, the summary, and what the model flagged on each turn. No thread or message is stored on the server and nothing goes to WhatsApp or HubSpot; the chat stays in your browser, and each message does use the company's Anthropic key (locally, the fake model answers when there is none). Nueva conversación starts over.
 
 **Conocimiento.** It holds the files the assistant answers from (PDF, Word, Excel, PowerPoint, CSV, text, Markdown, HTML, JSON). The text is extracted on upload. Files go in folders, nested as deep as you like, for example Proyectos / Tres Cruces. Nueva carpeta is in the list's header, and Nueva subcarpeta is in a folder's ⋯ menu. Each row's menu has Renombrar, Mover a…, and Eliminar. A renamed file keeps its extension.
 

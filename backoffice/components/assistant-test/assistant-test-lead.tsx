@@ -39,7 +39,8 @@ export function AssistantTestLead({
   const stage = lead?.stage ?? "qualifying";
   const required = config.collect.filter((item) => item.required);
   const optional = config.collect.filter((item) => !item.required);
-  const valueOf = (key: string) => lead?.collected[key] ?? null;
+  const valueOf = (key: string) =>
+    lead && Object.hasOwn(lead.collected, key) ? lead.collected[key]! : null;
 
   return (
     <Panel
