@@ -126,7 +126,12 @@ export function AssistantTestChat({
   const submit = () => {
     if (!canSend) return;
     void onSend(text).then(() =>
-      requestAnimationFrame(() => input.current?.focus()),
+      requestAnimationFrame(() => {
+        // The composer lost focus while disabled; take it back only if nothing else has it now.
+        const active = document.activeElement;
+        if (!active || active === document.body || active === input.current)
+          input.current?.focus();
+      }),
     );
   };
 

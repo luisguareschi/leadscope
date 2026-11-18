@@ -414,4 +414,28 @@ describe("the panel's test chat (Probar asistente)", () => {
       .expect(400);
     expect(broken.body.error.code).toBe("invalid_json");
   });
+
+  it("keeps the form note out when the history limit cuts a WhatsApp conversation at a reply", async () => {
+    await db.company.update({
+      where: { id: companyId },
+      data: {
+        config: parseCompanyConfig({ ...baseConfig, llm: { historyLimit: 4 } }),
+      },
+    });
+    ctx.llm.push({ reply: "¡Genial!" });
+    await turn({
+      messages: [
+        { role: "lead", body: "Hola" },
+        { role: "assistant", body: "¿Qué buscás?" },
+        { role: "lead", body: "Un 2 dormitorios" },
+        { role: "assistant", body: "¿Con qué presupuesto?" },
+        { role: "lead", body: "150 mil" },
+      ],
+    }).expect(200);
+    expect(ctx.llm.calls[0]!.messages).toEqual([
+      { role: "user", content: "Un 2 dormitorios" },
+      { role: "assistant", content: "¿Con qué presupuesto?" },
+      { role: "user", content: "150 mil" },
+    ]);
+  });
 });

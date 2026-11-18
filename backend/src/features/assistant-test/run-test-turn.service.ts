@@ -98,18 +98,18 @@ export async function runTestTurn(
 
   const { system, documents } = await loadSystemPrompt(ctx, company);
   const { config } = company;
-  // A WhatsApp conversation starts with the lead. History trimmed to start with a reply would make
-  // `buildChatTurns` say the lead filled in a form, so it starts at the first lead message instead.
-  const firstLead = request.messages.findIndex(
-    (message) => message.role === "lead",
-  );
+  // A WhatsApp conversation starts with the lead. History cut (here by `historyLimit`, or by the
+  // browser) to start with a reply would make `buildChatTurns` say the lead filled in a form, so
+  // the window starts at its first lead message instead.
+  const recent = request.messages.slice(-config.llm.historyLimit);
+  const firstLead = recent.findIndex((message) => message.role === "lead");
   const { input, usage } = await callModel(ctx, llm, company, {
     thread,
     threadId: null,
     system,
     documents,
     messages: buildChatTurns(
-      request.messages.slice(firstLead).map((message) => ({
+      recent.slice(firstLead).map((message) => ({
         direction: message.role === "lead" ? "inbound" : "outbound",
         type: "text",
         body: message.body,

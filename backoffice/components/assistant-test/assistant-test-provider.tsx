@@ -63,7 +63,6 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
   const [chat, setChat] = useState<TestChat>(EMPTY_TEST_CHAT);
   const [sending, setSending] = useState<TestChatMessage | null>(null);
   const [error, setError] = useState<TestError | null>(null);
-  const [draft, setDraft] = useState("");
   const current = useRef(company);
   useEffect(() => {
     current.current = company;
@@ -75,7 +74,6 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
     setChat(company ? loadTestChat(company) : EMPTY_TEST_CHAT);
     setSending(null);
     setError(null);
-    setDraft("");
   }
 
   useEffect(() => {
@@ -86,7 +84,7 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
     async (body: string, historyLimit: number) => {
       if (!company) return false;
       setError(null);
-      setDraft("");
+      setChat((prev) => ({ ...prev, draft: "" }));
       const lead: TestChatMessage = {
         id: newId(),
         role: "lead",
@@ -115,15 +113,19 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
           lead: response.lead,
           stopped: response.stoppedReason !== null,
           lastTurn: { model: response.model, usage: response.usage },
+          draft: "",
         };
         // The person may have entered another company meanwhile: the reply belongs to this one.
         if (current.current === company) setChat(next);
         else saveTestChat(company, next);
         return true;
       } catch (cause) {
-        if (current.current === company) {
-          // Not sent: the message goes back to the composer to retry.
-          setDraft((now) => now || body);
+        // Not sent: the message goes back to its own chat's composer to retry, even if the person
+        // entered another company meanwhile.
+        if (current.current !== company) {
+          saveTestChat(company, { ...chat, draft: body });
+        } else {
+          setChat((prev) => ({ ...prev, draft: prev.draft || body }));
           setError(
             cause instanceof ApiError
               ? { message: cause.message, code: cause.code }
@@ -148,14 +150,13 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
     sending,
     pending: turn.isPending,
     error,
-    draft,
-    setDraft,
+    draft: chat.draft,
+    setDraft: (draft) => setChat((prev) => ({ ...prev, draft })),
     send,
     setLeadName: (leadName) => setChat((prev) => ({ ...prev, leadName })),
     resume: () => setChat((prev) => ({ ...prev, stopped: false })),
     reset: () => {
       setError(null);
-      setDraft("");
       setChat((prev) => ({ ...EMPTY_TEST_CHAT, leadName: prev.leadName }));
     },
   };

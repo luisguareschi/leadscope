@@ -22,6 +22,8 @@ export type TestChat = {
   /** The last reply would have stopped the assistant, and nobody chose to continue yet. */
   stopped: boolean;
   lastTurn: Pick<TestTurnResponse, "model" | "usage"> | null;
+  /** The composer's text, including a message whose send failed, so it can be retried. */
+  draft: string;
 };
 
 export const EMPTY_TEST_CHAT: TestChat = {
@@ -30,6 +32,7 @@ export const EMPTY_TEST_CHAT: TestChat = {
   leadName: "",
   stopped: false,
   lastTurn: null,
+  draft: "",
 };
 
 /** Mirrors the backend's cap on the history's characters. */
@@ -91,6 +94,7 @@ export function loadTestChat(owner: string): TestChat {
       lead: validLead(parsed.lead),
       leadName: typeof parsed.leadName === "string" ? parsed.leadName : "",
       stopped: parsed.stopped === true,
+      draft: typeof parsed.draft === "string" ? parsed.draft : "",
     };
   } catch {
     return EMPTY_TEST_CHAT;
@@ -99,7 +103,7 @@ export function loadTestChat(owner: string): TestChat {
 
 export function saveTestChat(owner: string, chat: TestChat): void {
   try {
-    if (chat.messages.length === 0 && !chat.leadName)
+    if (chat.messages.length === 0 && !chat.leadName && !chat.draft)
       window.localStorage.removeItem(keyFor(owner));
     else window.localStorage.setItem(keyFor(owner), JSON.stringify(chat));
   } catch {
