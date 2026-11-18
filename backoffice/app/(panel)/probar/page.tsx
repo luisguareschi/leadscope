@@ -39,16 +39,10 @@ export default function AssistantTestPage() {
   return (
     // Fills the panel's scroll area: each column scrolls inside itself, like a conversation.
     <div className="@container/content flex min-h-0 flex-1 flex-col gap-4 px-4 lg:px-6">
-      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <p className="flex max-w-3xl items-start gap-2 text-[13px] leading-relaxed text-muted-foreground">
-          <InfoIcon className="mt-0.5 size-4 shrink-0" />
-          <span>
-            Escribe como si fueras un lead que llega por WhatsApp. El asistente
-            usa la configuración, las instrucciones y los archivos guardados. No
-            se envía nada por WhatsApp ni a HubSpot, y la conversación no
-            aparece en Conversaciones. Cada mensaje usa la clave de Anthropic de
-            la empresa, como una conversación real.
-          </span>
+      <header className="flex min-h-8 flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <p className="flex items-center gap-2 text-[13px] text-muted-foreground">
+          <InfoIcon className="size-4 shrink-0" />
+          Escribe como si fueras un lead que llega por WhatsApp.
         </p>
         {chat.messages.length > 0 ? (
           <Button

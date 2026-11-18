@@ -9,16 +9,15 @@ import {
 import {
   CircleAlertIcon,
   OctagonPauseIcon,
+  MessagesSquareIcon,
   SendHorizontalIcon,
-  SparklesIcon,
+  UserRoundIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "cn";
 import { ChatTranscript } from "@/components/threads/chat-transcript";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import type { TestChatMessage } from "@/lib/assistant-test-storage";
@@ -51,11 +50,11 @@ function toChatMessage(message: TestChatMessage): ChatMessage {
 
 function ModelReplyNote({ text }: { text: string }) {
   return (
-    <details className="mt-1 max-w-[85%] self-end text-right text-xs text-muted-foreground sm:max-w-[70%]">
+    <details className="mt-1 max-w-[85%] self-start px-1 text-xs text-muted-foreground sm:max-w-[70%]">
       <summary className="cursor-pointer select-none">
         El modelo quería responder otra cosa
       </summary>
-      <p className="mt-1 rounded-xl bg-card px-3 py-2 text-left whitespace-pre-wrap ring-1 ring-border/60 dark:bg-secondary dark:ring-0">
+      <p className="mt-1 rounded-xl bg-card px-3 py-2 whitespace-pre-wrap ring-1 ring-border/60 dark:bg-secondary dark:ring-0">
         {text}
       </p>
     </details>
@@ -66,10 +65,63 @@ function TypingBubble() {
   return (
     <div
       role="status"
-      className="mt-4 inline-flex items-center gap-2 self-end rounded-[20px] rounded-tr-md bg-bubble px-4 py-2.5 text-sm text-bubble-foreground"
+      className="mt-4 inline-flex items-center gap-2 self-start rounded-[20px] rounded-tl-md bg-card px-4 py-2.5 text-sm text-muted-foreground ring-1 ring-border/60 dark:bg-secondary dark:ring-0"
     >
       <Spinner className="size-3.5" aria-hidden aria-label={undefined} />
       Escribiendo…
+    </div>
+  );
+}
+
+/** Before the first message: what the test is, and the lead's WhatsApp name. */
+function EmptyState({
+  leadName,
+  onLeadNameChange,
+}: {
+  leadName: string;
+  onLeadNameChange: (name: string) => void;
+}) {
+  const initial = leadName.trim().charAt(0).toUpperCase();
+  return (
+    <div className="flex min-h-full flex-col items-center justify-center px-6 py-10">
+      <div className="flex w-full max-w-sm flex-col items-center text-center">
+        <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <MessagesSquareIcon className="size-6" />
+        </div>
+        <h2 className="mt-4 font-heading text-base font-semibold">
+          Empieza la conversación
+        </h2>
+        <p className="mt-1 text-sm text-balance text-muted-foreground">
+          El asistente responde con la configuración y los archivos guardados.
+          No se envía nada por WhatsApp ni a HubSpot.
+        </p>
+
+        <label
+          htmlFor="assistant-test-lead-name"
+          className="mt-6 flex w-full cursor-text items-center gap-3 rounded-2xl bg-card p-3 text-left ring-1 ring-border/60 transition-shadow focus-within:ring-2 focus-within:ring-ring/40 dark:ring-0"
+        >
+          <span
+            aria-hidden
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground"
+          >
+            {initial || <UserRoundIcon className="size-5" />}
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-xs text-muted-foreground">
+              Nombre en WhatsApp · opcional
+            </span>
+            <input
+              id="assistant-test-lead-name"
+              value={leadName}
+              maxLength={80}
+              autoComplete="off"
+              placeholder="Lead de prueba"
+              onChange={(event) => onLeadNameChange(event.target.value)}
+              className="w-full min-w-0 bg-transparent text-sm font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground/70"
+            />
+          </span>
+        </label>
+      </div>
     </div>
   );
 }
@@ -150,7 +202,7 @@ export function AssistantTestChat({
       <>
         {test.modelReply ? <ModelReplyNote text={test.modelReply} /> : null}
         {test.stoppedReason ? (
-          <div className="mt-2 flex max-w-[85%] items-start gap-2 self-end rounded-xl bg-primary/10 px-3.5 py-2.5 text-[13px] leading-relaxed sm:max-w-[70%]">
+          <div className="mt-2 flex max-w-[85%] items-start gap-2 self-start rounded-xl bg-primary/10 px-3.5 py-2.5 text-[13px] leading-relaxed sm:max-w-[70%]">
             <OctagonPauseIcon className="mt-0.5 size-4 shrink-0 text-primary" />
             <span>
               Aquí el asistente se detendría y esperaría a una persona.{" "}
@@ -177,29 +229,13 @@ export function AssistantTestChat({
         className="min-h-0 flex-1 overflow-y-auto bg-muted/70 dark:bg-black/25"
       >
         {messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-4 px-6 py-10 text-center">
-            <SparklesIcon className="size-6 text-muted-foreground" />
-            <p className="max-w-xs text-sm text-muted-foreground">
-              Escribe un mensaje como si fueras un lead que llega por WhatsApp.
-            </p>
-            <div className="flex w-full max-w-xs flex-col gap-1.5 text-left">
-              <Label htmlFor="assistant-test-lead-name">
-                Nombre del lead (opcional)
-              </Label>
-              <Input
-                id="assistant-test-lead-name"
-                value={leadName}
-                maxLength={80}
-                placeholder="Como aparecería en WhatsApp"
-                onChange={(event) => onLeadNameChange(event.target.value)}
-              />
-            </div>
-          </div>
+          <EmptyState leadName={leadName} onLeadNameChange={onLeadNameChange} />
         ) : (
           <ChatTranscript
             messages={messages.map(toChatMessage)}
             after={notes}
             showDelivery={false}
+            rightSide="inbound"
           >
             {pending ? <TypingBubble /> : null}
           </ChatTranscript>

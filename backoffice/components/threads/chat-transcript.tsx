@@ -55,29 +55,33 @@ function Bubble({
   message,
   continued,
   showDelivery,
+  rightSide,
 }: {
   message: ChatMessage;
   /** Same side as the message before it: tighter spacing, no tail. */
   continued: boolean;
   showDelivery: boolean;
+  rightSide: ChatMessage["direction"];
 }) {
   const outbound = message.direction === "outbound";
+  // The right side is "ours": the accent bubble. The panel's own messages, or the lead's in the test chat.
+  const right = message.direction === rightSide;
   const meta = message.type === "text" ? null : TYPE_META[message.type];
   return (
     <div
       className={cn(
         "flex max-w-[85%] flex-col gap-1 sm:max-w-[70%]",
-        outbound ? "items-end self-end" : "items-start self-start",
+        right ? "items-end self-end" : "items-start self-start",
         continued ? "mt-2" : "mt-4",
       )}
     >
       <div
         className={cn(
           "rounded-[20px] px-4 py-2.5 text-sm leading-relaxed",
-          outbound
+          right
             ? "bg-bubble text-bubble-foreground"
             : "bg-card ring-1 ring-border/60 dark:bg-secondary dark:ring-0",
-          !continued && (outbound ? "rounded-tr-md" : "rounded-tl-md"),
+          !continued && (right ? "rounded-tr-md" : "rounded-tl-md"),
           message.status === "failed" &&
             "ring-2 ring-destructive/60 dark:ring-2",
         )}
@@ -86,7 +90,7 @@ function Bubble({
           <div
             className={cn(
               "mb-1 flex items-center gap-1.5 text-xs font-medium [&_svg]:size-3.5",
-              outbound ? "opacity-80" : "text-muted-foreground",
+              right ? "opacity-80" : "text-muted-foreground",
             )}
           >
             {meta.icon}
@@ -102,7 +106,7 @@ function Bubble({
           <p
             className={cn(
               "italic",
-              outbound ? "opacity-80" : "text-muted-foreground",
+              right ? "opacity-80" : "text-muted-foreground",
             )}
           >
             (sin texto)
@@ -155,8 +159,14 @@ export function ChatTranscript({
   after,
   children,
   showDelivery = true,
+  rightSide = "outbound",
 }: {
   messages: ChatMessage[];
+  /**
+   * Which direction sits on the right. The panel writes as the company, so outbound by default;
+   * in the test chat the person plays the lead, so their (inbound) messages go right.
+   */
+  rightSide?: ChatMessage["direction"];
   /** WhatsApp's sent/delivered/read ticks. The test chat sends nothing, so it has none. */
   showDelivery?: boolean;
   /** Shown under a message's bubble (the test chat's notes). */
@@ -196,6 +206,7 @@ export function ChatTranscript({
               message={message}
               continued={continued}
               showDelivery={showDelivery}
+              rightSide={rightSide}
             />
             {after?.(message)}
           </Fragment>
