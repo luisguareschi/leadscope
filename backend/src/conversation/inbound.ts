@@ -38,7 +38,12 @@ async function recordOnce(
 ): Promise<RecordResult> {
   const company = await ctx.db.company.findUnique({
     where: { whatsappPhoneNumberId: message.phoneNumberId },
-    select: { id: true, archivedAt: true, hubspotEnabled: true },
+    select: {
+      id: true,
+      archivedAt: true,
+      hubspotEnabled: true,
+      assistantPaused: true,
+    },
   });
   if (!company) return { status: "unknown_company" };
   // Archived: the number is ignored, as if it belonged to no company. Nothing is stored.
@@ -87,8 +92,10 @@ async function recordOnce(
         data: crmRequest("update"),
       });
     }
-    // While a person handles the thread, the bot treats new messages as already seen.
-    const botSilent = thread.paused || thread.needsHuman;
+    // While the company assistant is paused or a person handles the thread, the bot treats new
+    // messages as already seen so resuming does not trigger a burst of late replies.
+    const botSilent =
+      company.assistantPaused || thread.paused || thread.needsHuman;
     await tx.message.create({
       data: {
         companyId: company.id,

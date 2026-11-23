@@ -10,6 +10,12 @@ export type HubspotSettings = {
   uiDomain: string | null;
 };
 
+export type AssistantStatus = {
+  paused: boolean;
+  pausedAt: Date | null;
+  pausedByEmail: string | null;
+};
+
 export type LoadedCompany = {
   id: string;
   slug: string;
@@ -19,6 +25,7 @@ export type LoadedCompany = {
   instructions: string;
   secrets: CompanySecrets;
   hubspot: HubspotSettings;
+  assistantPaused: boolean;
 };
 
 export async function loadCompanyById(
@@ -42,6 +49,19 @@ export function hubspotSettingsOf(
   };
 }
 
+export function assistantStatusOf(
+  row: Pick<
+    Company,
+    "assistantPaused" | "assistantPausedAt" | "assistantPausedByEmail"
+  >,
+): AssistantStatus {
+  return {
+    paused: row.assistantPaused,
+    pausedAt: row.assistantPausedAt,
+    pausedByEmail: row.assistantPausedByEmail,
+  };
+}
+
 export function loadCompany(
   row: Company,
   encryptionKey: Buffer,
@@ -55,6 +75,7 @@ export function loadCompany(
     instructions: row.instructions,
     secrets: decryptSecrets(row.encryptedSecrets, encryptionKey),
     hubspot: hubspotSettingsOf(row),
+    assistantPaused: row.assistantPaused,
   };
 }
 

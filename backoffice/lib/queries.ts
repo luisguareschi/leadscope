@@ -12,6 +12,7 @@ import { useAuth } from "./auth";
 import { COMPANY_ID_HEADER, supportCompanyIdFor } from "./support";
 import type {
   Assignee,
+  AssistantStatus,
   AuthUserRemoval,
   ChatMessage,
   KnowledgeFile,
@@ -54,6 +55,7 @@ import type {
 /** Lists refresh every 10 s and an open conversation every 5 s; at this volume polling is enough. */
 export const LIST_POLL_MS = 10_000;
 export const THREAD_POLL_MS = 5_000;
+export const ME_POLL_MS = 30_000;
 
 const BLOCKED_CODES = new Set(["operator_archived", "company_archived"]);
 
@@ -101,7 +103,8 @@ export function useMe() {
     queryKey: ["me", email],
     enabled: status === "signed_in" && Boolean(email),
     queryFn: () => api<Me>("/internal/me"),
-    staleTime: 5 * 60_000,
+    staleTime: 15_000,
+    refetchInterval: ME_POLL_MS,
     retry: (count, error) =>
       !(
         error instanceof ApiError &&
@@ -733,6 +736,52 @@ export function useSetHubspotEnabled() {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["threads"] });
       return client.invalidateQueries({ queryKey: ["settings"] });
+    },
+  });
+}
+
+export function useSetAssistantPaused() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (paused: boolean) =>
+      api<{ assistant: AssistantStatus }>(
+        "/internal/settings/assistant-paused",
+        {
+          method: "PUT",
+          body: JSON.stringify({ paused }),
+        },
+      ),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["me"] });
+      void client.invalidateQueries({ queryKey: ["companies"] });
+      return client.invalidateQueries({ queryKey: ["settings"] });
+    },
+  });
+}
+
+export function useSetCompanyAssistantPaused() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      companyId,
+      paused,
+    }: {
+      companyId: string;
+      paused: boolean;
+    }) =>
+      api<{ company: CompanySummary }>(
+        `/internal/companies/${companyId}/assistant-paused`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ paused }),
+        },
+      ),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["me"] });
+      void client.invalidateQueries({ queryKey: ["settings"] });
+      return client.invalidateQueries({ queryKey: ["companies"] });
     },
   });
 }

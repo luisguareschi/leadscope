@@ -30,10 +30,16 @@ model Company {
   hubspotEnabled        Boolean?
   /// From HubSpot's account info (`portalId`, `uiDomain`), saved when the token is saved or tested.
   /// They build the "Abrir en HubSpot" link.
-  hubspotPortalId       String?
-  hubspotUiDomain       String?
+  hubspotPortalId        String?
+  hubspotUiDomain        String?
+  /// While true, the assistant does not answer WhatsApp leads or send form welcomes. Inbound
+  /// messages are still stored, HubSpot still syncs, advisors can still reply manually, and Probar
+  /// asistente keeps working.
+  assistantPaused        Boolean                  @default(false)
+  assistantPausedAt      DateTime?
+  assistantPausedByEmail String?
   /// Set while archived: its operators cannot use the panel and the bot does not answer its number.
-  archivedAt            DateTime?
+  archivedAt             DateTime?
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   operators             Operator[]

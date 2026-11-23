@@ -20,6 +20,7 @@ export async function sweepOnce(
       direction: "inbound",
       handledAt: null,
       createdAt: { lt: settledBefore },
+      company: { assistantPaused: false, archivedAt: null },
     },
     select: { threadId: true },
     distinct: ["threadId"],
