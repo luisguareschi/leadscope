@@ -14,6 +14,7 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@/components/ui/input-group";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { formatNumber } from "@/lib/format";
@@ -193,35 +194,47 @@ function AssistantStatusPanel() {
   return (
     <>
       <Panel
-        title="Estado del asistente"
-        description="Detén las respuestas automáticas en toda la empresa durante un error o mientras editas el prompt."
+        className={cn(
+          paused && "ring-destructive/30 dark:ring-1 dark:ring-destructive/25",
+        )}
       >
-        <FieldRow
-          label="Responder automáticamente"
-          htmlFor="assistant-active"
-          hint={
-            paused
-              ? `El asistente está pausado: no responde por WhatsApp ni envía bienvenidas de formularios. Los mensajes se siguen guardando, puedes responder manualmente y usar Probar asistente.${detail ? ` ${detail}` : ""}`
-              : "El asistente responde automáticamente los mensajes de WhatsApp y envía la plantilla de bienvenida a los leads de formularios. Este cambio se aplica de inmediato."
-          }
-        >
-          <div className="flex min-h-9 flex-wrap items-center gap-3">
-            <Switch
-              id="assistant-active"
-              checked={paused === false}
-              disabled={paused === undefined || isPending}
-              onCheckedChange={(checked) => {
-                if (checked) toggle(false);
-                else setConfirming(true);
-              }}
-            />
-            {paused !== undefined ? (
-              <StatusPill tone={paused ? "error" : "ok"}>
-                {paused ? "Pausado" : "Respondiendo"}
-              </StatusPill>
-            ) : null}
+        <div className="flex items-start justify-between gap-6 px-5 py-4 sm:items-center">
+          <div className="flex min-w-0 max-w-xl flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Label
+                htmlFor="assistant-active"
+                className="font-heading text-[15px] leading-snug font-semibold tracking-tight"
+              >
+                Responder automáticamente
+              </Label>
+              {paused !== undefined ? (
+                <StatusPill tone={paused ? "error" : "ok"}>
+                  {paused ? "Pausado" : "Respondiendo"}
+                </StatusPill>
+              ) : null}
+            </div>
+            <p className="text-[13px] leading-relaxed text-pretty text-muted-foreground">
+              {paused
+                ? "No responde mensajes de WhatsApp ni envía bienvenidas de formularios. Los mensajes se siguen guardando, puedes responder manualmente y usar Probar asistente."
+                : "Responde automáticamente los mensajes de WhatsApp y envía la plantilla de bienvenida a los leads de formularios. Se aplica de inmediato."}
+            </p>
           </div>
-        </FieldRow>
+          <Switch
+            id="assistant-active"
+            checked={paused === false}
+            disabled={paused === undefined || isPending}
+            onCheckedChange={(checked) => {
+              if (checked) toggle(false);
+              else setConfirming(true);
+            }}
+            className="mt-0.5 shrink-0 sm:mt-0"
+          />
+        </div>
+        {detail ? (
+          <div className="bg-destructive/[0.04] px-5 py-2.5 text-xs text-muted-foreground">
+            {detail}
+          </div>
+        ) : null}
       </Panel>
       <PauseAssistantDialog
         open={confirming}
