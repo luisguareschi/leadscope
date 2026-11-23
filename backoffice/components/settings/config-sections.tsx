@@ -1,7 +1,12 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { cn } from "cn";
+import {
+  PauseAssistantDialog,
+  pausedByDetail,
+  useToggleAssistantPaused,
+} from "@/components/assistant-pause-dialog";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -12,12 +17,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { formatNumber } from "@/lib/format";
-import { useSettingsOptions } from "@/lib/queries";
+import { useMe, useSettings, useSettingsOptions } from "@/lib/queries";
 import type { ConfigDraft } from "./config-draft";
 import { useConfigEditor } from "./config-editor";
 import { CollectEditor } from "./collect-editor";
 import { SearchableSelect, type SearchableOption } from "./searchable-select";
-import { Panel, FieldRow, Section } from "@/components/panel";
+import { Panel, FieldRow, Section, StatusPill } from "@/components/panel";
 import type { AssistantSectionId } from "./sections";
 
 type TextKey = {
@@ -172,6 +177,62 @@ function useChoices() {
   }, [options.data]);
 }
 
+function AssistantStatusPanel() {
+  const settings = useSettings();
+  const me = useMe();
+  const [confirming, setConfirming] = useState(false);
+  const { toggle, isPending } = useToggleAssistantPaused();
+  const assistant = settings.data?.assistant;
+  const paused =
+    assistant?.paused ?? me.data?.company?.assistantPaused ?? undefined;
+  const pausedAt = assistant?.pausedAt ?? me.data?.company?.assistantPausedAt;
+  const pausedByEmail =
+    assistant?.pausedByEmail ?? me.data?.company?.assistantPausedByEmail;
+  const detail = paused ? pausedByDetail(pausedAt, pausedByEmail) : null;
+
+  return (
+    <>
+      <Panel
+        title="Estado del asistente"
+        description="Detén las respuestas automáticas en toda la empresa durante un error o mientras editas el prompt."
+      >
+        <FieldRow
+          label="Responder automáticamente"
+          htmlFor="assistant-active"
+          hint={
+            paused
+              ? `El asistente está pausado: no responde por WhatsApp ni envía bienvenidas de formularios. Los mensajes se siguen guardando, puedes responder manualmente y usar Probar asistente.${detail ? ` ${detail}` : ""}`
+              : "El asistente responde automáticamente los mensajes de WhatsApp y envía la plantilla de bienvenida a los leads de formularios. Este cambio se aplica de inmediato."
+          }
+        >
+          <div className="flex min-h-9 flex-wrap items-center gap-3">
+            <Switch
+              id="assistant-active"
+              checked={paused === false}
+              disabled={paused === undefined || isPending}
+              onCheckedChange={(checked) => {
+                if (checked) toggle(false);
+                else setConfirming(true);
+              }}
+            />
+            {paused !== undefined ? (
+              <StatusPill tone={paused ? "error" : "ok"}>
+                {paused ? "Pausado" : "Respondiendo"}
+              </StatusPill>
+            ) : null}
+          </div>
+        </FieldRow>
+      </Panel>
+      <PauseAssistantDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        pending={isPending}
+        onConfirm={() => toggle(true, () => setConfirming(false))}
+      />
+    </>
+  );
+}
+
 function GeneralSection() {
   const choices = useChoices();
   const { draft } = useConfigEditor();
@@ -182,6 +243,7 @@ function GeneralSection() {
       title="General"
       description="Cómo se presenta el asistente y desde dónde atiende."
     >
+      <AssistantStatusPanel />
       <Panel>
         <TextRow
           name="companyName"

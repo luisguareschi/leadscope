@@ -30,6 +30,7 @@ export type TurnOutcome =
   | "silenced"
   | "window_closed"
   | "company_archived"
+  | "company_paused"
   | "busy";
 
 function sameCollected(a: Collected, b: Collected): boolean {
@@ -181,6 +182,10 @@ async function runTurn(
     await markHandled();
     return "company_archived";
   }
+  if (thread.company.assistantPaused) {
+    await markHandled();
+    return "company_paused";
+  }
   if (thread.paused || thread.needsHuman) {
     await markHandled();
     return "silenced";
@@ -224,12 +229,21 @@ async function runTurn(
     : { input: { kind: "non_text" } as TurnInput, usage: null };
   const decision: TurnDecision = decideTurn(thread, input, rulesFor(company));
 
-  // A person who paused the thread or wrote to the lead while the model was answering wins.
+  // A person who paused the thread, paused the company assistant, or wrote to the lead while
+  // the model was answering wins.
   const latest = await ctx.db.thread.findUnique({
     where: { id: threadId },
-    select: { paused: true },
+    select: { paused: true, company: { select: { assistantPaused: true } } },
   });
-  if (!latest || latest.paused) {
+  if (!latest) {
+    await markHandled();
+    return "silenced";
+  }
+  if (latest.company.assistantPaused) {
+    await markHandled();
+    return "company_paused";
+  }
+  if (latest.paused) {
     await markHandled();
     return "silenced";
   }

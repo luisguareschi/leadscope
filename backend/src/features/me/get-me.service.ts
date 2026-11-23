@@ -21,7 +21,14 @@ export async function getMe(
   const company = access
     ? await ctx.db.company.findUniqueOrThrow({
         where: { id: access.companyId },
-        select: { id: true, name: true, slug: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          assistantPaused: true,
+          assistantPausedAt: true,
+          assistantPausedByEmail: true,
+        },
       })
     : null;
   return {

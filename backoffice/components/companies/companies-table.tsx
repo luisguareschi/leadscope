@@ -8,10 +8,13 @@ import {
   Building2Icon,
   EllipsisVerticalIcon,
   LogInIcon,
+  PauseIcon,
+  PlayIcon,
   Trash2Icon,
   UsersIcon,
 } from "lucide-react";
 import { cn } from "cn";
+import { PauseAssistantDialog } from "@/components/assistant-pause-dialog";
 import { DeleteCompanyDialog } from "@/components/companies/delete-company-dialog";
 import { OperatorsPanel } from "@/components/operators/operators-panel";
 import { StatusPill } from "@/components/panel";
@@ -39,7 +42,7 @@ import {
 } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { formatDate, initials } from "@/lib/format";
-import { useCompanyAction } from "@/lib/queries";
+import { useCompanyAction, useSetCompanyAssistantPaused } from "@/lib/queries";
 import { enterCompany } from "@/lib/support";
 import type { CompanySummary } from "@/lib/types";
 
@@ -63,7 +66,9 @@ export function CompaniesTable({
 }) {
   const { email } = useAuth();
   const action = useCompanyAction();
+  const setAssistantPaused = useSetCompanyAssistantPaused();
   const [managing, setManaging] = useState<CompanySummary | null>(null);
+  const [pausing, setPausing] = useState<CompanySummary | null>(null);
   const [deleting, setDeleting] = useState<CompanySummary | null>(null);
 
   if (companies.length === 0) {
@@ -105,6 +110,23 @@ export function CompaniesTable({
     );
   };
 
+  const applyAssistantPaused = (company: CompanySummary, paused: boolean) => {
+    setAssistantPaused.mutate(
+      { companyId: company.id, paused },
+      {
+        onSuccess: () => {
+          toast.success(
+            paused
+              ? `Pausaste el asistente de ${company.name}. Los mensajes se siguen guardando.`
+              : `Reanudaste el asistente de ${company.name}. Volverá a responder desde el próximo mensaje.`,
+          );
+          setPausing(null);
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
+
   return (
     <>
       <ul className="divide-y">
@@ -128,7 +150,7 @@ export function CompaniesTable({
                 {initials(company.name)}
               </span>
               <div className="flex min-w-0 flex-col gap-0.5">
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <span
                     className={cn(
                       "truncate text-sm font-medium",
@@ -139,6 +161,8 @@ export function CompaniesTable({
                   </span>
                   {archived ? (
                     <StatusPill tone="muted">Archivada</StatusPill>
+                  ) : company.assistantPaused ? (
+                    <StatusPill tone="error">Asistente pausado</StatusPill>
                   ) : null}
                 </div>
                 <span className="truncate font-mono text-xs text-muted-foreground">
@@ -206,6 +230,23 @@ export function CompaniesTable({
                       <UsersIcon />
                       Operadores
                     </DropdownMenuItem>
+                    {!archived ? (
+                      <DropdownMenuItem
+                        disabled={setAssistantPaused.isPending}
+                        onClick={() => {
+                          if (company.assistantPaused) {
+                            applyAssistantPaused(company, false);
+                          } else {
+                            setPausing(company);
+                          }
+                        }}
+                      >
+                        {company.assistantPaused ? <PlayIcon /> : <PauseIcon />}
+                        {company.assistantPaused
+                          ? "Reanudar asistente"
+                          : "Pausar asistente"}
+                      </DropdownMenuItem>
+                    ) : null}
                     <DropdownMenuItem onClick={() => toggleArchive(company)}>
                       {archived ? <ArchiveRestoreIcon /> : <ArchiveIcon />}
                       {archived ? "Restaurar" : "Archivar"}
@@ -248,6 +289,16 @@ export function CompaniesTable({
           </div>
         </SheetContent>
       </Sheet>
+
+      <PauseAssistantDialog
+        open={pausing !== null}
+        onOpenChange={(open) => !open && setPausing(null)}
+        companyName={pausing?.name}
+        pending={setAssistantPaused.isPending}
+        onConfirm={() => {
+          if (pausing) applyAssistantPaused(pausing, true);
+        }}
+      />
 
       <DeleteCompanyDialog
         company={deleting}

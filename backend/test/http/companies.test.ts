@@ -136,6 +136,9 @@ describe("platform admin companies", () => {
       id: expect.any(String),
       name: "altamira",
       slug: "altamira",
+      assistantPaused: false,
+      assistantPausedAt: null,
+      assistantPausedByEmail: null,
     });
 
     await request(app)
@@ -266,7 +269,14 @@ describe("empty database", () => {
       .expect(200);
     expect(operatorMe.body).toEqual({
       operator: { email: "operador@altamira.uy" },
-      company: { id: expect.any(String), name: "Altamira", slug: "altamira" },
+      company: {
+        id: expect.any(String),
+        name: "Altamira",
+        slug: "altamira",
+        assistantPaused: false,
+        assistantPausedAt: null,
+        assistantPausedByEmail: null,
+      },
       platformAdmin: false,
       supportAccess: false,
     });

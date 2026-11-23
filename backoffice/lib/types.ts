@@ -138,11 +138,24 @@ export type KnowledgeList = {
   acceptedExtensions: string[];
 };
 
+export type AssistantStatus = {
+  paused: boolean;
+  pausedAt: string | null;
+  pausedByEmail: string | null;
+};
+
 export type Me = {
   operator: { email: string } | null;
   /** The company the panel works in: the operator's own, or the one a platform admin entered. */
   /** `id` never changes and is never reused; a deleted company's slug can be. */
-  company: { id: string; name: string; slug: string } | null;
+  company: {
+    id: string;
+    name: string;
+    slug: string;
+    assistantPaused: boolean;
+    assistantPausedAt: string | null;
+    assistantPausedByEmail: string | null;
+  } | null;
   platformAdmin: boolean;
   /** A platform admin entered this company from Empresas. */
   supportAccess: boolean;
@@ -155,6 +168,9 @@ export type CompanySummary = {
   createdAt: string;
   /** Set while archived: its operators cannot sign in and the bot ignores its number. */
   archivedAt: string | null;
+  assistantPaused: boolean;
+  assistantPausedAt: string | null;
+  assistantPausedByEmail: string | null;
   operators: { id: string; email: string; archived: boolean }[];
 };
 
@@ -292,6 +308,7 @@ export type CompanySettings = {
   /** Append to the API's public URL to get the URL the form workflow posts to. */
   formLeadPath: string;
   hubspot: HubspotSettings;
+  assistant: AssistantStatus;
   /** Read-only: written in code and filled in with the config. */
   platformRules: string;
   currentVersions: {

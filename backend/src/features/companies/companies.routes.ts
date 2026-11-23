@@ -7,6 +7,7 @@ import { createCompanyController } from "./create-company.controller.js";
 import { deleteCompanyController } from "./delete-company.controller.js";
 import { listCompaniesController } from "./list-companies.controller.js";
 import { restoreCompanyController } from "./restore-company.controller.js";
+import { setCompanyAssistantPausedController } from "./set-company-assistant-paused.controller.js";
 
 export function companiesRoutes(ctx: AppContext): Router {
   const router = Router();
@@ -15,6 +16,10 @@ export function companiesRoutes(ctx: AppContext): Router {
   router.use("/:companyId", auditCompanyWrites(ctx));
   router.post("/:companyId/archive", archiveCompanyController(ctx));
   router.post("/:companyId/restore", restoreCompanyController(ctx));
+  router.put(
+    "/:companyId/assistant-paused",
+    setCompanyAssistantPausedController(ctx),
+  );
   router.delete("/:companyId", deleteCompanyController(ctx));
   router.use("/:companyId/operators", operatorsRoutes(ctx));
   return router;

@@ -49,7 +49,8 @@ const formLeadSchema = z
 
 export type FormLeadResult = {
   threadId: string;
-  welcome: "sent" | "already_in_conversation" | "no_template";
+  welcome:
+    "sent" | "already_in_conversation" | "no_template" | "assistant_paused";
 };
 
 async function upsertFormThread(
@@ -135,6 +136,12 @@ async function sendWelcome(
     ctx,
     thread.id,
     async (): Promise<FormLeadResult> => {
+      const current = await ctx.db.company.findUnique({
+        where: { id: company.id },
+        select: { assistantPaused: true },
+      });
+      if (current?.assistantPaused)
+        return { threadId: thread.id, welcome: "assistant_paused" };
       const messageCount = await ctx.db.message.count({
         where: { threadId: thread.id },
       });

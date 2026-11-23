@@ -1,9 +1,21 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import {
+  pausedByDetail,
+  useToggleAssistantPaused,
+} from "@/components/assistant-pause-dialog";
 import { HelpTip } from "@/components/help-tip";
 import { NavUser } from "@/components/nav-user";
+import { StatusDot } from "@/components/panel";
+import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useMe } from "@/lib/queries";
 import { useIsIOSPWA } from "@/hooks/use-is-ios-pwa";
 import { cn } from "cn";
@@ -18,12 +30,47 @@ function titleFor(pathname: string, platformAdmin: boolean): string {
   return "Conversaciones";
 }
 
+function AssistantPausedButton({
+  pausedAt,
+  pausedByEmail,
+}: {
+  pausedAt: string | null;
+  pausedByEmail: string | null;
+}) {
+  const { toggle, isPending } = useToggleAssistantPaused();
+  const detail = pausedByDetail(pausedAt, pausedByEmail);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={isPending}
+            onClick={() => toggle(false)}
+            aria-label="Asistente pausado. Reanudar asistente"
+          />
+        }
+      >
+        {isPending ? <Spinner /> : <StatusDot tone="error" />}
+        <span className="hidden sm:inline">Asistente pausado</span>
+        <span className="sm:hidden">Pausado</span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-72">
+        {`El asistente está pausado para toda la empresa.${detail ? ` ${detail}` : ""} Haz clic para reanudarlo.`}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
   const me = useMe();
   const isIOSPWA = useIsIOSPWA();
   const { isMobile } = useSidebar();
-  const hasCompany = Boolean(me.data?.company);
+  const company = me.data?.company;
+  const hasCompany = Boolean(company);
   const supportAccess = me.data?.supportAccess === true;
   const title = titleFor(pathname, me.data?.platformAdmin === true);
 
@@ -52,7 +99,13 @@ export function SiteHeader() {
             ) : null}
           </div>
         </div>
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-2">
+          {company?.assistantPaused ? (
+            <AssistantPausedButton
+              pausedAt={company.assistantPausedAt}
+              pausedByEmail={company.assistantPausedByEmail}
+            />
+          ) : null}
           <NavUser
             email={me.data?.operator?.email ?? ""}
             label={hasCompany && !supportAccess ? "Operador" : "Administración"}

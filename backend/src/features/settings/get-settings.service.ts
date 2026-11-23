@@ -1,6 +1,9 @@
 import { parseCompanyConfig } from "../../companies/company-config.js";
 import { MAX_INSTRUCTIONS_CHARS } from "../../companies/editable-config.js";
-import { hubspotSettingsOf } from "../../companies/load-company.js";
+import {
+  assistantStatusOf,
+  hubspotSettingsOf,
+} from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
 import { buildPlatformRules } from "../../engine/prompt.js";
 import { SettingsKind } from "../../generated/prisma/enums.js";
@@ -20,6 +23,9 @@ export async function getSettings(ctx: AppContext, companyId: string) {
       hubspotEnabled: true,
       hubspotPortalId: true,
       hubspotUiDomain: true,
+      assistantPaused: true,
+      assistantPausedAt: true,
+      assistantPausedByEmail: true,
     },
   });
   const latest = (kind: SettingsKind) =>
@@ -51,6 +57,7 @@ export async function getSettings(ctx: AppContext, companyId: string) {
     /** Append to the backend's public URL to get the URL the form workflow posts to. */
     formLeadPath: formLeadPath(company.slug),
     hubspot: hubspotSettingsOf(company),
+    assistant: assistantStatusOf(company),
     platformRules: buildPlatformRules(config, company.name),
     currentVersions: {
       config: configVersion?.id ?? null,

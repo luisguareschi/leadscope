@@ -5,6 +5,7 @@ import { getSettingsController } from "./get-settings.controller.js";
 import { getSettingsOptionsController } from "./get-settings-options.controller.js";
 import { listSettingsVersionsController } from "./list-settings-versions.controller.js";
 import { restoreSettingsVersionController } from "./restore-settings-version.controller.js";
+import { setAssistantPausedController } from "./set-assistant-paused.controller.js";
 import { updateConfigController } from "./update-config.controller.js";
 import { updateInstructionsController } from "./update-instructions.controller.js";
 
@@ -13,6 +14,7 @@ export function settingsRoutes(ctx: AppContext): Router {
   router.get("/", getSettingsController(ctx));
   router.put("/config", updateConfigController(ctx));
   router.put("/instructions", updateInstructionsController(ctx));
+  router.put("/assistant-paused", setAssistantPausedController(ctx));
   router.get("/versions", listSettingsVersionsController(ctx));
   router.post("/versions/:id/restore", restoreSettingsVersionController(ctx));
   router.get("/prompt", getPromptPreviewController(ctx));

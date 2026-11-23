@@ -4,6 +4,9 @@ export const companySelect = {
   slug: true,
   createdAt: true,
   archivedAt: true,
+  assistantPaused: true,
+  assistantPausedAt: true,
+  assistantPausedByEmail: true,
   operators: {
     select: { id: true, email: true, archivedAt: true },
     orderBy: { createdAt: "asc" as const },
@@ -22,6 +25,9 @@ export type CompanyRow = {
   slug: string;
   createdAt: Date;
   archivedAt: Date | null;
+  assistantPaused: boolean;
+  assistantPausedAt: Date | null;
+  assistantPausedByEmail: string | null;
   operators: CompanyOperatorRow[];
 };
 
@@ -33,6 +39,9 @@ export function toCompanyDto(company: CompanyRow) {
     slug: company.slug,
     createdAt: company.createdAt,
     archivedAt: company.archivedAt,
+    assistantPaused: company.assistantPaused,
+    assistantPausedAt: company.assistantPausedAt,
+    assistantPausedByEmail: company.assistantPausedByEmail,
     operators: company.operators.map((operator) => ({
       id: operator.id,
       email: operator.email,
