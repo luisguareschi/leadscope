@@ -94,8 +94,8 @@ export function SiteHeader() {
             {pathname.startsWith("/metrics") ? (
               <HelpTip label="Cómo se cuentan las métricas">
                 Cada lead se cuenta el día de su primer mensaje, con su etapa
-                actual. "Ahora mismo" muestra el estado actual sin filtro de
-                fechas.
+                actual. &quot;Ahora mismo&quot; muestra el estado actual sin
+                filtro de fechas.
               </HelpTip>
             ) : null}
           </div>

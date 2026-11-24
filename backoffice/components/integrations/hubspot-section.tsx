@@ -155,7 +155,7 @@ export function HubspotSection({ companyName }: { companyName?: string }) {
                 En Configuración → <InlineCode>Propiedades</InlineCode>, crea en
                 Contacto una propiedad de tipo{" "}
                 <InlineCode>Texto de varias líneas</InlineCode> (por ejemplo,
-                "Resumen LeadScope") y copia su nombre interno (como{" "}
+                &quot;Resumen LeadScope&quot;) y copia su nombre interno (como{" "}
                 <InlineCode>leadscope_resumen</InlineCode>) en el campo de
                 arriba.
               </p>
