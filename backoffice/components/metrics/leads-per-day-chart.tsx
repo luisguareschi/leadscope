@@ -19,6 +19,8 @@ import { usePrefersReducedMotion } from "./use-reduced-motion";
 
 type Day = CompanyMetrics["leadsPerDay"][number];
 
+export const WEEKLY_THRESHOLD_DAYS = 45;
+
 const chartConfig = {
   qualifying: {
     label: STAGE_META.qualifying.label,
@@ -38,6 +40,39 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+function isoMonday(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  if (!year || !month || !day) return dateStr;
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  const weekday = utc.getUTCDay();
+  const sinceMonday = weekday === 0 ? 6 : weekday - 1;
+  utc.setUTCDate(utc.getUTCDate() - sinceMonday);
+  return utc.toISOString().slice(0, 10);
+}
+
+function aggregateByWeek(days: Day[]): Day[] {
+  const weeks = new Map<string, Day>();
+  for (const day of days) {
+    const monday = isoMonday(day.date);
+    const bucket = weeks.get(monday);
+    if (bucket) {
+      bucket.qualifying += day.qualifying;
+      bucket.to_contact += day.to_contact;
+      bucket.contacted += day.contacted;
+      bucket.not_interested += day.not_interested;
+    } else {
+      weeks.set(monday, {
+        date: monday,
+        qualifying: day.qualifying,
+        to_contact: day.to_contact,
+        contacted: day.contacted,
+        not_interested: day.not_interested,
+      });
+    }
+  }
+  return [...weeks.values()];
+}
+
 function dayTotal(day: Day): number {
   return day.qualifying + day.to_contact + day.contacted + day.not_interested;
 }
@@ -45,16 +80,22 @@ function dayTotal(day: Day): number {
 function LeadsTooltip({
   active,
   payload,
+  weekly,
 }: {
   active?: boolean;
   payload?: ReadonlyArray<{ payload?: Day }>;
+  weekly: boolean;
 }) {
   const day = payload?.[0]?.payload;
   if (!active || !day) return null;
   const total = dayTotal(day);
   return (
     <div className="grid min-w-40 gap-1.5 rounded-lg border border-border/50 bg-popover px-2.5 py-2 text-xs text-popover-foreground shadow-xl">
-      <p className="font-medium">{formatDay(day.date, true)}</p>
+      <p className="font-medium">
+        {weekly
+          ? `Semana del ${formatDay(day.date)}`
+          : formatDay(day.date, true)}
+      </p>
       {STAGE_ORDER.map((stage) => (
         <div key={stage} className="flex items-center justify-between gap-4">
           <span className="flex items-center gap-1.5 text-muted-foreground">
@@ -86,6 +127,8 @@ export function LeadsPerDayChart({
   empty: boolean;
 }) {
   const reduced = usePrefersReducedMotion();
+  const weekly = data.length > WEEKLY_THRESHOLD_DAYS;
+  const series = weekly ? aggregateByWeek(data) : data;
 
   if (empty) {
     return (
@@ -101,7 +144,7 @@ export function LeadsPerDayChart({
       className="aspect-auto h-72 w-full"
       initialDimension={{ width: 640, height: 288 }}
     >
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <BarChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey="date"
@@ -117,7 +160,7 @@ export function LeadsPerDayChart({
           width={32}
           allowDecimals={false}
         />
-        <ChartTooltip content={<LeadsTooltip />} />
+        <ChartTooltip content={<LeadsTooltip weekly={weekly} />} />
         <ChartLegend content={<ChartLegendContent className="flex-wrap" />} />
         {STAGE_ORDER.map((stage) => (
           <Bar

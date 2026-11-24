@@ -31,6 +31,8 @@ export type CompaniesMetricsQuery = z.infer<typeof companiesMetricsQuerySchema>;
 export type MetricsRange = {
   from: string;
   to: string;
+  /** Inclusive calendar day count from `from` through `to`. */
+  days: number;
   /** Inclusive UTC instant of 00:00 on `from` in the range's timezone. */
   start: Date;
   /** Exclusive UTC instant of 00:00 on the day after `to`. */
@@ -94,6 +96,7 @@ export function resolveMetricsRange(
   return {
     from,
     to,
+    days: span,
     start: zonedDayStart(from, timeZone),
     end: zonedDayStart(addCalendarDays(to, 1), timeZone),
   };

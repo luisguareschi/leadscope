@@ -102,21 +102,19 @@ export function CompaniesComparison({
               </EmptyHeader>
             </Empty>
           ) : query.data ? (
-            <Table className="min-w-[64rem]">
+            <Table className="min-w-[66rem]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Empresa</TableHead>
                   <TableHead className="text-right">Leads nuevos</TableHead>
                   <TableHead className="text-right">Calificados</TableHead>
-                  <TableHead className="text-right">Sin interés</TableHead>
-                  <TableHead className="text-right">Fuera de horario</TableHead>
+                  <TableHead className="text-right">Contactados</TableHead>
                   <TableHead className="text-right">
                     Tiempo hasta contactar
                   </TableHead>
                   <TableHead className="text-right">Sin asesor</TableHead>
-                  <TableHead className="text-right">
-                    Asistente detenido
-                  </TableHead>
+                  <TableHead className="text-right">Detenido</TableHead>
+                  <TableHead className="text-right">Errores</TableHead>
                   <TableHead className="text-right">Última subida</TableHead>
                   <TableHead className="text-right">Gasto</TableHead>
                 </TableRow>
@@ -147,7 +145,7 @@ export function CompaniesComparison({
                     }
                   >
                     <TableCell>
-                      <span className="flex min-w-0 items-center gap-2">
+                      <span className="flex min-w-0 flex-wrap items-center gap-2">
                         <span
                           className={cn(
                             "truncate font-medium",
@@ -156,6 +154,9 @@ export function CompaniesComparison({
                         >
                           {row.company.name}
                         </span>
+                        {row.company.assistantPaused ? (
+                          <StatusPill tone="error">Pausado</StatusPill>
+                        ) : null}
                         {row.company.archived ? (
                           <StatusPill tone="muted">Archivada</StatusPill>
                         ) : null}
@@ -171,10 +172,7 @@ export function CompaniesComparison({
                       {formatPercent(row.qualificationRate)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatPercent(row.notInterestedRate)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatPercent(row.outOfHoursRate)}
+                      {formatPercent(row.contactedRate)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatDuration(row.medianMinutesToContact)}
@@ -185,11 +183,24 @@ export function CompaniesComparison({
                     <TableCell className="text-right tabular-nums">
                       {formatCount(row.needsHuman)}
                     </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-right tabular-nums",
+                        row.issuesCount > 0 && "font-medium text-destructive",
+                      )}
+                    >
+                      {formatCount(row.issuesCount)}
+                    </TableCell>
                     <TableCell className="text-right">
                       {formatDaysAgo(row.daysSinceLastUpload)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatUsd(row.spendUsd)}
+                      <span className="block">{formatUsd(row.spendUsd)}</span>
+                      {row.anthropicUsd !== null && row.anthropicUsd > 0 ? (
+                        <span className="block text-xs text-muted-foreground">
+                          Anthropic: {formatUsd(row.anthropicUsd)}
+                        </span>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 ))}

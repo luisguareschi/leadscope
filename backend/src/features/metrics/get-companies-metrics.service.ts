@@ -14,16 +14,23 @@ import {
 export type CompaniesMetrics = {
   range: { from: string; to: string };
   rows: {
-    company: { id: string; name: string; slug: string; archived: boolean };
+    company: {
+      id: string;
+      name: string;
+      slug: string;
+      archived: boolean;
+      assistantPaused: boolean;
+    };
     leads: number;
     qualificationRate: number | null;
-    notInterestedRate: number | null;
-    outOfHoursRate: number | null;
+    contactedRate: number | null;
     medianMinutesToContact: number | null;
     unassignedToContact: number;
     needsHuman: number;
+    issuesCount: number;
     daysSinceLastUpload: number | null;
     spendUsd: number;
+    anthropicUsd: number | null;
   }[];
 };
 
@@ -58,16 +65,20 @@ function toRow(company: MetricsCompany, metrics: CompanyMetrics) {
       name: company.name,
       slug: company.slug,
       archived: company.archivedAt !== null,
+      assistantPaused: company.assistantPaused,
     },
     leads: metrics.leads,
-    qualificationRate: metrics.qualificationRate,
-    notInterestedRate: metrics.notInterestedRate,
-    outOfHoursRate: metrics.outOfHoursRate,
+    qualificationRate: metrics.funnel.qualificationRate,
+    contactedRate: metrics.funnel.contactedRate,
     medianMinutesToContact: metrics.timeToContact.medianMinutes,
     unassignedToContact: metrics.queue.unassigned,
     needsHuman: metrics.needsHuman.total,
+    issuesCount:
+      (metrics.hubspot.enabled ? metrics.hubspot.failing : 0) +
+      metrics.assistant.failedOutboundMessages,
     daysSinceLastUpload: metrics.knowledge.daysSinceLastUpload,
     spendUsd: metrics.spend.totalUsd,
+    anthropicUsd: metrics.spend.anthropic.usd,
   };
 }
 

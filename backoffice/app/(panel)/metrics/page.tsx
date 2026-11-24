@@ -2,14 +2,19 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { AdvisorsTable } from "@/components/metrics/advisors-table";
+import { AssistantHealthCard } from "@/components/metrics/assistant-health-card";
 import { CompaniesComparison } from "@/components/metrics/companies-comparison";
+import { ConversionFunnel } from "@/components/metrics/conversion-funnel";
 import { KpiTiles } from "@/components/metrics/kpi-tiles";
-import { LeadsPerDayChart } from "@/components/metrics/leads-per-day-chart";
-import { MessagesRow } from "@/components/metrics/messages-row";
+import {
+  LeadsPerDayChart,
+  WEEKLY_THRESHOLD_DAYS,
+} from "@/components/metrics/leads-per-day-chart";
+import { OperationalAlerts } from "@/components/metrics/operational-alerts";
 import { RangePicker } from "@/components/metrics/range-picker";
 import { SnapshotCards } from "@/components/metrics/snapshot-cards";
 import { SpendCard } from "@/components/metrics/spend-card";
-import { TimeToContactChart } from "@/components/metrics/time-to-contact-chart";
 import { Panel, Section } from "@/components/panel";
 import { SearchableSelect } from "@/components/settings/searchable-select";
 import type { SearchableOption } from "@/components/settings/searchable-select";
@@ -33,17 +38,21 @@ import type { CompanyMetrics } from "@/lib/types";
 function DetailSkeleton() {
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {Array.from({ length: 6 }, (_, index) => (
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+        {Array.from({ length: 5 }, (_, index) => (
           <Skeleton key={index} className="h-24 rounded-xl" />
         ))}
       </div>
-      <Skeleton className="h-80 rounded-xl" />
-      <Skeleton className="h-80 rounded-xl" />
+      <div className="grid gap-4 xl:grid-cols-5">
+        <Skeleton className="h-80 rounded-xl xl:col-span-2" />
+        <Skeleton className="h-80 rounded-xl xl:col-span-3" />
+      </div>
       <div className="grid gap-3 md:grid-cols-2">
         <Skeleton className="h-40 rounded-xl" />
         <Skeleton className="h-40 rounded-xl" />
       </div>
+      <Skeleton className="h-44 rounded-xl" />
+      <Skeleton className="h-44 rounded-xl" />
     </div>
   );
 }
@@ -77,47 +86,41 @@ function replaceParams(
 }
 
 function CompanyDetail({ metrics }: { metrics: CompanyMetrics }) {
+  const isWeekly = metrics.leadsPerDay.length > WEEKLY_THRESHOLD_DAYS;
+
   return (
     <>
+      <OperationalAlerts metrics={metrics} />
       <KpiTiles metrics={metrics} />
-      <Panel
-        title="Leads por día"
-        description="Según la etapa actual de cada lead."
-      >
-        <div className="px-2 pt-2 pb-4">
-          <LeadsPerDayChart
-            data={metrics.leadsPerDay}
-            empty={metrics.leads === 0}
-          />
+      <div className="grid gap-4 xl:grid-cols-5">
+        <div className="xl:col-span-2">
+          <ConversionFunnel funnel={metrics.funnel} forms={metrics.forms} />
         </div>
-      </Panel>
-      <Panel
-        title="Tiempo hasta contactar por semana"
-        description="Mediana desde Por contactar hasta Contactado."
-      >
-        <div className="px-2 pt-2 pb-4">
-          <TimeToContactChart
-            data={metrics.timeToContactPerWeek}
-            emptyLabel={
-              metrics.leads === 0
-                ? "Sin leads en este período."
-                : "Aún no hay leads contactados en este período."
-            }
-          />
+        <div className="xl:col-span-3">
+          <Panel
+            title={isWeekly ? "Leads por semana" : "Leads por día"}
+            description="Según la etapa actual de cada lead."
+          >
+            <div className="px-2 pt-2 pb-4">
+              <LeadsPerDayChart
+                data={metrics.leadsPerDay}
+                empty={metrics.leads === 0}
+              />
+            </div>
+          </Panel>
         </div>
-      </Panel>
+      </div>
       <Section
         title="Ahora mismo"
         description="Estado actual, sin filtro de fechas"
       >
-        <SnapshotCards
-          queue={metrics.queue}
-          needsHuman={metrics.needsHuman}
-          knowledge={metrics.knowledge}
-          hubspot={metrics.hubspot}
-        />
+        <SnapshotCards queue={metrics.queue} needsHuman={metrics.needsHuman} />
       </Section>
-      <MessagesRow messages={metrics.messages} />
+      <AssistantHealthCard
+        leads={metrics.leads}
+        assistant={metrics.assistant}
+      />
+      <AdvisorsTable advisors={metrics.advisors} />
       <SpendCard spend={metrics.spend} />
     </>
   );

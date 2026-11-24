@@ -69,12 +69,6 @@ export function formatDuration(minutes: number | null): string {
   return hours === 0 ? `${days} d` : `${days} d ${hours} h`;
 }
 
-/** Y-axis ticks for a duration stored in minutes and drawn in hours. */
-export function formatHoursAxis(hours: number): string {
-  const text = hours.toLocaleString("es", { maximumFractionDigits: 1 });
-  return `${text} h`;
-}
-
 /** `date` is `YYYY-MM-DD`. Formatted as a calendar day, not an instant. */
 export function formatDay(date: string, withYear = false): string {
   const [year, month, day] = date.split("-").map(Number);
