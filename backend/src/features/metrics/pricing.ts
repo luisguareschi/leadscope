@@ -81,6 +81,15 @@ export type AnthropicSpend = {
   unpricedModels: string[];
 };
 
+export type DetailedAnthropicSpend = AnthropicSpend & {
+  /** Spend from real lead conversations (`LlmUsage.threadId != null`). */
+  realUsd: number | null;
+  /** Spend from Probar asistente (`LlmUsage.threadId == null`). */
+  testUsd: number | null;
+  realCalls: number;
+  testCalls: number;
+};
+
 export function anthropicSpend(rows: ModelUsage[]): AnthropicSpend {
   const byModel = rows
     .map((row) => ({ ...row, usd: anthropicUsd(row.model, row) }))
@@ -101,6 +110,36 @@ export function anthropicSpend(rows: ModelUsage[]): AnthropicSpend {
   };
 }
 
+/** Combine real-lead and test-chat usage while preserving each bucket's own total and call count. */
+export function mergeAnthropicSpend(
+  realRows: ModelUsage[],
+  testRows: ModelUsage[],
+): DetailedAnthropicSpend {
+  const real = anthropicSpend(realRows);
+  const test = anthropicSpend(testRows);
+  const merged = new Map<string, ModelUsage>();
+  for (const row of [...realRows, ...testRows]) {
+    const existing = merged.get(row.model);
+    if (existing) {
+      existing.calls += row.calls;
+      existing.inputTokens += row.inputTokens;
+      existing.outputTokens += row.outputTokens;
+      existing.cacheReadTokens += row.cacheReadTokens;
+      existing.cacheWriteTokens += row.cacheWriteTokens;
+    } else {
+      merged.set(row.model, { ...row });
+    }
+  }
+  const combined = anthropicSpend([...merged.values()]);
+  return {
+    ...combined,
+    realUsd: real.usd,
+    testUsd: test.usd,
+    realCalls: real.calls,
+    testCalls: test.calls,
+  };
+}
+
 /** Meta, Uruguay (Rest of Latin America), from 1 Oct 2026. Estimate only. */
 export const WHATSAPP_TEMPLATE_USD = 0.085;
 export const WHATSAPP_SERVICE_USD = 0.0113;
@@ -111,17 +150,27 @@ export type WhatsappSpend = {
   templates: number;
   serviceMessages: number;
   freeServiceMessages: number;
+  billableServiceMessages: number;
+};
+
+export type WhatsappSpendOptions = {
+  /** Calendar month (`YYYY-MM`) of `range.from`, when the range starts mid-month. */
+  firstMonth?: string;
+  /** Non-failed service messages already sent earlier in `firstMonth` before `range.start`. */
+  priorServiceInFirstMonth?: number;
 };
 
 /**
  * `templates` is non-failed template sends (every template is priced as marketing).
  * `serviceSentAt` is non-failed free-form outbound. The 1,000 free service
- * messages apply once per calendar month in `timeZone`.
+ * messages apply once per calendar month in `timeZone`; `priorServiceInFirstMonth`
+ * accounts for quota already consumed before a mid-month `range.from`.
  */
 export function whatsappSpend(
   templates: number,
   serviceSentAt: Date[],
   timeZone: string,
+  options?: WhatsappSpendOptions,
 ): WhatsappSpend {
   const byMonth = new Map<string, number>();
   for (const sentAt of serviceSentAt) {
@@ -129,17 +178,25 @@ export function whatsappSpend(
     byMonth.set(month, (byMonth.get(month) ?? 0) + 1);
   }
   let freeServiceMessages = 0;
-  let billable = 0;
-  for (const count of byMonth.values()) {
-    const free = Math.min(WHATSAPP_FREE_SERVICE_PER_MONTH, count);
+  let billableServiceMessages = 0;
+  for (const [month, count] of byMonth.entries()) {
+    const prior =
+      options?.firstMonth === month
+        ? Math.max(0, options.priorServiceInFirstMonth ?? 0)
+        : 0;
+    const remainingFree = Math.max(0, WHATSAPP_FREE_SERVICE_PER_MONTH - prior);
+    const free = Math.min(remainingFree, count);
     freeServiceMessages += free;
-    billable += count - free;
+    billableServiceMessages += count - free;
   }
   return {
-    usd: templates * WHATSAPP_TEMPLATE_USD + billable * WHATSAPP_SERVICE_USD,
+    usd:
+      templates * WHATSAPP_TEMPLATE_USD +
+      billableServiceMessages * WHATSAPP_SERVICE_USD,
     templates,
     serviceMessages: serviceSentAt.length,
     freeServiceMessages,
+    billableServiceMessages,
   };
 }
 

@@ -1,7 +1,6 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../../src/app.js";
-import { CALL_NOW_TIME } from "../../src/engine/turn.js";
 import {
   WHATSAPP_SERVICE_USD,
   WHATSAPP_TEMPLATE_USD,
@@ -90,6 +89,7 @@ describe("access", () => {
       name: "Altamira",
       slug: "altamira",
       timezone: "America/Montevideo",
+      assistantPaused: false,
     });
     expect(response.body.leads).toBe(1);
     expect(response.body.generatedAt).toBe(NOW.toISOString());
@@ -182,6 +182,7 @@ describe("access", () => {
     expect(response.body.range).toEqual({
       from: "2026-10-11",
       to: "2026-11-09",
+      days: 30,
     });
     expect(response.body.leadsPerDay).toHaveLength(30);
     expect(response.body.leadsPerDay[0].date).toBe("2026-10-11");
@@ -189,48 +190,142 @@ describe("access", () => {
   });
 });
 
-describe("cohort", () => {
-  it("counts leads by the day they arrived and their current stage", async () => {
+describe("cohort, funnel, forms, and assistant quality", () => {
+  it("computes the full funnel, form reply rate, autonomy, multimedia, and field completion", async () => {
     const at = (day: string, hour = "15") =>
       new Date(`${day}T${hour}:00:00.000Z`);
-    await makeThread(companyId, {
+    const t1 = await makeThread(companyId, {
       createdAt: at("2026-11-01"),
       stage: "qualifying",
       source: "whatsapp",
+      collected: { interest: "2 dormitorios", budget: "  " },
     });
-    await makeThread(companyId, {
+    const t2 = await makeThread(companyId, {
       createdAt: at("2026-11-01", "16"),
       stage: "to_contact",
       source: "form",
       handedOffAt: null,
-      callTime: CALL_NOW_TIME,
+      collected: { interest: "1 dormitorio", budget: "150k" },
     });
     await makeThread(companyId, {
       createdAt: at("2026-11-02"),
       stage: "qualifying",
+      source: "form",
       handedOffAt: at("2026-11-02", "18"),
+      paused: true,
+      collected: { interest: "Inversión" },
     });
     await makeThread(companyId, {
       createdAt: at("2026-11-02", "16"),
       stage: "not_interested",
+      needsHuman: true,
     });
-    await makeThread(companyId, {
+    const t5 = await makeThread(companyId, {
       createdAt: at("2026-11-03"),
       stage: "contacted",
+      collected: {
+        interest: "3 dormitorios",
+        budget: "300k",
+        knowsProjects: "Sí",
+      },
     });
     await makeThread(companyId, { createdAt: at("2026-10-31") });
     await makeThread(otherCompanyId, { createdAt: at("2026-11-01") });
+
+    // Form lead t2 replied (with audio + image); form lead t3 never replied.
+    // Advisor wrote manually in t5 (so t5 is not counted as autonomous).
+    await db.message.createMany({
+      data: [
+        {
+          companyId,
+          threadId: t2.id,
+          direction: "inbound",
+          type: "audio",
+          body: "",
+          sentAt: at("2026-11-01", "17"),
+        },
+        {
+          companyId,
+          threadId: t2.id,
+          direction: "inbound",
+          type: "image",
+          body: "",
+          sentAt: at("2026-11-01", "18"),
+        },
+        {
+          companyId,
+          threadId: t5.id,
+          direction: "outbound",
+          type: "text",
+          body: "Te llamo ahora",
+          sentByEmail: "ana@altamira.uy",
+          sentAt: at("2026-11-03", "16"),
+        },
+        {
+          companyId,
+          threadId: t1.id,
+          direction: "outbound",
+          type: "text",
+          body: "fallo",
+          status: "failed",
+          sentAt: at("2026-11-02", "12"),
+        },
+      ],
+    });
 
     const body = (await metrics("from=2026-11-01&to=2026-11-04").expect(200))
       .body;
 
     expect(body.leads).toBe(5);
-    expect(body.qualified).toBe(3);
-    expect(body.qualificationRate).toBe(3 / 5);
-    expect(body.notInterested).toBe(1);
-    expect(body.notInterestedRate).toBe(1 / 5);
-    expect(body.callNow).toBe(1);
-    expect(body.leadsBySource).toEqual({ whatsapp: 4, form: 1 });
+    expect(body.leadsBySource).toEqual({ whatsapp: 3, form: 2 });
+    expect(body.funnel).toEqual({
+      leads: 5,
+      qualified: 3,
+      qualificationRate: 3 / 5,
+      contacted: 1,
+      contactedRate: 1 / 3,
+      qualifying: 2,
+      toContact: 1,
+      notInterested: 1,
+      notInterestedRate: 1 / 5,
+    });
+    expect(body.forms).toEqual({
+      leads: 2,
+      replied: 1,
+      replyRate: 0.5,
+    });
+    // Autonomous: t1 and t2 (t3 is paused, t4 needsHuman, t5 had advisor reply).
+    expect(body.assistant).toEqual({
+      autonomousLeads: 2,
+      autonomyRate: 2 / 5,
+      nonTextLeads: 1,
+      nonTextRate: 1 / 5,
+      nonTextMessages: 2,
+      failedOutboundMessages: 1,
+      fieldCompletion: [
+        {
+          key: "interest",
+          name: "Interés",
+          required: true,
+          collected: 4,
+          rate: 4 / 5,
+        },
+        {
+          key: "budget",
+          name: "Presupuesto",
+          required: true,
+          collected: 2,
+          rate: 2 / 5,
+        },
+        {
+          key: "knowsProjects",
+          name: "Conoce los proyectos",
+          required: true,
+          collected: 1,
+          rate: 1 / 5,
+        },
+      ],
+    });
     expect(body.leadsPerDay).toEqual([
       {
         date: "2026-11-01",
@@ -316,17 +411,46 @@ describe("cohort", () => {
   });
 });
 
-describe("time to contact", () => {
-  it("uses nearest-rank median and p90, and drops inverted or out-of-range rows", async () => {
+describe("time to contact and advisors", () => {
+  it("uses nearest-rank median and p90, computes per-advisor performance, and drops inverted rows", async () => {
+    const luisId = (
+      await db.operator.create({
+        data: { email: "luis@altamira.uy", companyId },
+      })
+    ).id;
+    await db.operator.create({
+      data: { email: "archived@altamira.uy", companyId, archivedAt: NOW },
+    });
+
     const handoff = new Date("2026-11-05T12:00:00.000Z");
-    for (const minutes of [10, 20, 30, 40, 100]) {
+    const anaWaits = [10, 20, 30];
+    for (const minutes of anaWaits) {
       await makeThread(companyId, {
         createdAt: new Date("2026-10-01T12:00:00.000Z"),
         stage: "contacted",
+        contactedById: anaId,
         handedOffAt: handoff,
         contactedAt: new Date(handoff.getTime() + minutes * 60_000),
       });
     }
+    for (const minutes of [40, 100]) {
+      await makeThread(companyId, {
+        createdAt: new Date("2026-10-01T12:00:00.000Z"),
+        stage: "contacted",
+        contactedById: luisId,
+        handedOffAt: handoff,
+        contactedAt: new Date(handoff.getTime() + minutes * 60_000),
+      });
+    }
+    // Contacted without handoff: still counts in advisor's contactedInRange, excluded from median.
+    await makeThread(companyId, {
+      createdAt: new Date("2026-10-01T12:00:00.000Z"),
+      stage: "contacted",
+      contactedById: luisId,
+      handedOffAt: null,
+      contactedAt: new Date("2026-11-05T15:00:00.000Z"),
+    });
+    // Inverted and out-of-range rows.
     await makeThread(companyId, {
       createdAt: new Date("2026-10-01T12:00:00.000Z"),
       stage: "contacted",
@@ -339,11 +463,16 @@ describe("time to contact", () => {
       handedOffAt: new Date("2026-10-01T12:00:00.000Z"),
       contactedAt: new Date("2026-10-02T12:00:00.000Z"),
     });
+    // Open assigned threads for snapshot.
     await makeThread(companyId, {
-      createdAt: new Date("2026-10-01T12:00:00.000Z"),
-      stage: "contacted",
-      handedOffAt: null,
-      contactedAt: new Date("2026-11-05T15:00:00.000Z"),
+      stage: "to_contact",
+      assignedToId: anaId,
+      handedOffAt: new Date(NOW.getTime() - 30 * 3_600_000),
+    });
+    await makeThread(companyId, {
+      stage: "to_contact",
+      assignedToId: anaId,
+      handedOffAt: new Date(NOW.getTime() - 2 * 3_600_000),
     });
 
     const body = (await metrics("from=2026-11-01&to=2026-11-08").expect(200))
@@ -353,9 +482,23 @@ describe("time to contact", () => {
       medianMinutes: 30,
       p90Minutes: 100,
     });
-    expect(body.timeToContactPerWeek).toEqual([
-      { weekStart: "2026-10-26", count: 0, medianMinutes: null },
-      { weekStart: "2026-11-02", count: 5, medianMinutes: 30 },
+    expect(body.advisors).toEqual([
+      {
+        operatorId: anaId,
+        email: "ana@altamira.uy",
+        assigned: 2,
+        pendingOver24h: 1,
+        contactedInRange: 3,
+        medianMinutesToContact: 20,
+      },
+      {
+        operatorId: luisId,
+        email: "luis@altamira.uy",
+        assigned: 0,
+        pendingOver24h: 0,
+        contactedInRange: 3,
+        medianMinutesToContact: 40,
+      },
     ]);
   });
 });
@@ -404,7 +547,7 @@ describe("snapshots", () => {
     });
   });
 
-  it("groups a stopped assistant by the reason prefix", async () => {
+  it("groups a stopped assistant by reason and counts manually paused threads", async () => {
     const reasons = [
       "forbidden_topic: rentabilidad",
       "model_failure: timeout",
@@ -419,12 +562,20 @@ describe("snapshots", () => {
       await makeThread(companyId, {
         createdAt: new Date("2026-01-01T12:00:00.000Z"),
         needsHuman: true,
+        paused: true,
         needsHumanReason,
       });
     }
     await makeThread(companyId, {
       createdAt: new Date("2026-01-01T12:00:00.000Z"),
       needsHuman: false,
+      paused: true,
+      needsHumanReason: null,
+    });
+    await makeThread(companyId, {
+      createdAt: new Date("2026-01-01T12:00:00.000Z"),
+      needsHuman: false,
+      paused: false,
       needsHumanReason: "forbidden_topic: ignored",
     });
 
@@ -432,6 +583,7 @@ describe("snapshots", () => {
       .body;
     expect(body.needsHuman).toEqual({
       total: 8,
+      pausedManually: 1,
       byReason: {
         forbidden_topic: 1,
         model_failure: 1,
@@ -500,15 +652,16 @@ describe("spend", () => {
     expect(body.spend.whatsapp).toMatchObject({
       templates: 1,
       serviceMessages: 1,
+      currentMonthTotalMessages: 2,
     });
   });
 
-  it("counts messages by kind and applies the WhatsApp free tier per month", async () => {
+  it("applies the WhatsApp free tier across a partial month and tracks current-month volume", async () => {
     const thread = await makeThread(companyId, {
       createdAt: new Date("2026-01-01T12:00:00.000Z"),
     });
-    const november = new Date("2026-11-05T15:00:00.000Z");
-    const october = new Date("2026-10-15T15:00:00.000Z");
+    const earlyNov = new Date("2026-11-02T15:00:00.000Z");
+    const midNov = new Date("2026-11-06T15:00:00.000Z");
     const base = {
       companyId,
       threadId: thread.id,
@@ -518,89 +671,84 @@ describe("spend", () => {
     };
     await db.message.createMany({
       data: [
-        ...Array.from({ length: 1002 }, () => ({
+        // 998 service messages before the range starts on Nov 5.
+        ...Array.from({ length: 998 }, () => ({
           ...base,
           status: "sent",
-          sentAt: november,
+          sentAt: earlyNov,
         })),
-        { ...base, status: "sent", sentAt: october },
-        { ...base, status: "failed", sentAt: november },
-        { ...base, status: "failed", sentAt: november },
-        {
+        // 5 service messages inside the range: 2 free, 3 billable.
+        ...Array.from({ length: 5 }, () => ({
           ...base,
           status: "sent",
-          sentByEmail: "ana@altamira.uy",
-          sentAt: november,
-        },
-        {
-          ...base,
-          status: "failed",
-          sentByEmail: "ana@altamira.uy",
-          sentAt: november,
-        },
+          sentAt: midNov,
+        })),
+        // Failed message does not count toward billing or current-month Kapso volume.
+        { ...base, status: "failed", sentAt: midNov },
+        // 1 inbound message in Nov counts toward current-month Kapso volume.
         {
           companyId,
           threadId: thread.id,
           direction: "inbound" as const,
           type: "text",
           body: "hola",
-          sentAt: november,
+          sentAt: midNov,
         },
-        {
-          companyId,
-          threadId: thread.id,
-          direction: "inbound" as const,
-          type: "text",
-          body: "precio",
-          sentAt: november,
-        },
-        ...Array.from({ length: 3 }, () => ({
+        // 2 templates in range.
+        ...Array.from({ length: 2 }, () => ({
           ...base,
           type: "template",
           status: "sent",
-          sentAt: november,
+          sentAt: midNov,
         })),
-        { ...base, type: "template", status: "failed", sentAt: november },
       ],
     });
 
-    const body = (await metrics("from=2026-10-01&to=2026-11-30").expect(200))
+    const body = (await metrics("from=2026-11-05&to=2026-11-09").expect(200))
       .body;
-    expect(body.leads).toBe(0);
-    expect(body.messages).toEqual({
-      inbound: 2,
-      assistant: 1005,
-      advisor: 2,
-      templates: 4,
-      failed: 4,
-    });
-    const whatsappUsd = 3 * WHATSAPP_TEMPLATE_USD + 3 * WHATSAPP_SERVICE_USD;
+    const whatsappUsd = 2 * WHATSAPP_TEMPLATE_USD + 3 * WHATSAPP_SERVICE_USD;
     expect(body.spend.whatsapp).toEqual({
       usd: whatsappUsd,
-      templates: 3,
-      serviceMessages: 1004,
-      freeServiceMessages: 1001,
+      templates: 2,
+      serviceMessages: 5,
+      freeServiceMessages: 2,
+      billableServiceMessages: 3,
+      currentMonthTotalMessages: 998 + 5 + 1 + 2,
     });
     expect(body.spend.totalUsd).toBe(Math.round(whatsappUsd * 100) / 100);
-    expect(body.spend.perLeadUsd).toBeNull();
-    expect(body.spend.anthropic).toMatchObject({
-      usd: 0,
-      calls: 0,
-      byModel: [],
-      unpricedModels: [],
-    });
+    // 5 elapsed days (Nov 5..9): projected to 30 days.
+    expect(body.spend.projectedMonthlyUsd).toBe(
+      Math.round((whatsappUsd / 5) * 30 * 100) / 100,
+    );
   });
 
-  it("prices a known model and lists an unknown one", async () => {
-    const inRange = new Date("2026-11-05T15:00:00.000Z");
+  it("splits real Anthropic usage from Probar asistente, excludes tests from perLeadUsd, and suppresses <3-day projections", async () => {
+    const inRange = new Date("2026-11-08T15:00:00.000Z");
+    const thread = await makeThread(companyId, { createdAt: inRange });
+    // Real conversation turn ($1 input + $10 output = $11).
     await db.llmUsage.create({
       data: {
         companyId,
+        threadId: thread.id,
         model: "claude-haiku-4-5",
         inputTokens: 1_000_000,
         outputTokens: 2_000_000,
-        cacheReadTokens: 3_000_000,
-        cacheWriteTokens: 4_000_000,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        latencyMs: 20,
+        createdAt: inRange,
+      },
+    });
+    // Probar asistente turn (threadId: null, $5 output).
+    await db.llmUsage.create({
+      data: {
+        companyId,
+        threadId: null,
+        model: "claude-haiku-4-5",
+        inputTokens: 0,
+        outputTokens: 1_000_000,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
         latencyMs: 20,
         createdAt: inRange,
       },
@@ -608,6 +756,7 @@ describe("spend", () => {
     await db.llmUsage.create({
       data: {
         companyId,
+        threadId: null,
         model: "claude-mystery",
         inputTokens: 500,
         outputTokens: 500,
@@ -615,50 +764,26 @@ describe("spend", () => {
         cacheWriteTokens: 0,
         latencyMs: 20,
         createdAt: inRange,
-      },
-    });
-    await db.llmUsage.create({
-      data: {
-        companyId,
-        model: "claude-haiku-4-5",
-        inputTokens: 9_000_000,
-        outputTokens: 0,
-        cacheReadTokens: 0,
-        cacheWriteTokens: 0,
-        latencyMs: 20,
-        createdAt: new Date("2026-01-01T00:00:00.000Z"),
       },
     });
 
-    const usd =
-      (1_000_000 * 1 + 2_000_000 * 5 + 3_000_000 * 0.1 + 4_000_000 * 1.25) /
-      1_000_000;
-    const body = (await metrics("from=2026-11-01&to=2026-11-30").expect(200))
-      .body;
-    expect(body.spend.anthropic.usd).toBe(usd);
-    expect(body.spend.anthropic.calls).toBe(2);
-    expect(body.spend.anthropic.unpricedModels).toEqual(["claude-mystery"]);
-    expect(body.spend.anthropic.byModel).toEqual([
-      {
-        model: "claude-haiku-4-5",
-        calls: 1,
-        inputTokens: 1_000_000,
-        outputTokens: 2_000_000,
-        cacheReadTokens: 3_000_000,
-        cacheWriteTokens: 4_000_000,
-        usd,
-      },
-      {
-        model: "claude-mystery",
-        calls: 1,
-        inputTokens: 500,
-        outputTokens: 500,
-        cacheReadTokens: 0,
-        cacheWriteTokens: 0,
-        usd: null,
-      },
+    // 2-day range: projectedMonthlyUsd must be null (< 3 elapsed days).
+    const shortRange = (
+      await metrics("from=2026-11-08&to=2026-11-09").expect(200)
+    ).body;
+    expect(shortRange.spend.anthropic.realUsd).toBe(11);
+    expect(shortRange.spend.anthropic.testUsd).toBe(5);
+    expect(shortRange.spend.anthropic.usd).toBe(16);
+    expect(shortRange.spend.anthropic.realCalls).toBe(1);
+    expect(shortRange.spend.anthropic.testCalls).toBe(2);
+    expect(shortRange.spend.anthropic.calls).toBe(3);
+    expect(shortRange.spend.anthropic.unpricedModels).toEqual([
+      "claude-mystery",
     ]);
-    expect(body.spend.totalUsd).toBe(Math.round(usd * 100) / 100);
+    expect(shortRange.spend.totalUsd).toBe(16);
+    expect(shortRange.spend.perLeadUsd).toBe(11);
+    expect(shortRange.spend.anthropicPerLeadUsd).toBe(11);
+    expect(shortRange.spend.projectedMonthlyUsd).toBeNull();
   });
 
   it("hides HubSpot counts while the integration is off", async () => {
@@ -688,7 +813,7 @@ describe("spend", () => {
 });
 
 describe("companies comparison", () => {
-  it("lists active companies by leads, and archived ones only with status=all", async () => {
+  it("lists active companies by leads with contactedRate, issuesCount, assistantPaused, and anthropicUsd", async () => {
     const onTuesday = new Date("2026-11-03T13:00:00.000Z");
     const alpha = await createCompany(db, { slug: "alpha", name: "Alpha" });
     const beta = await createCompany(db, { slug: "beta", name: "Beta" });
@@ -696,6 +821,10 @@ describe("companies comparison", () => {
     const archived = await createCompany(db, {
       slug: "archivada",
       name: "Archivada",
+    });
+    await db.company.update({
+      where: { id: gamma.id },
+      data: { assistantPaused: true, hubspotEnabled: true },
     });
     await db.company.update({
       where: { id: archived.id },
@@ -706,18 +835,50 @@ describe("companies comparison", () => {
       await makeThread(alpha.id, { createdAt: onTuesday, stage: "qualifying" });
       await makeThread(beta.id, { createdAt: onTuesday, stage: "qualifying" });
     }
-    for (let i = 0; i < 3; i += 1) {
+    for (let i = 0; i < 2; i += 1) {
       await makeThread(gamma.id, { createdAt: onTuesday, stage: "qualifying" });
     }
-    await makeThread(gamma.id, {
+    const gammaOpen = await makeThread(gamma.id, {
       createdAt: onTuesday,
       stage: "to_contact",
       assignedToId: null,
       handedOffAt: onTuesday,
+      crmPendingAction: "update",
+      crmLastError: "502",
+    });
+    await makeThread(gamma.id, {
+      createdAt: onTuesday,
+      stage: "contacted",
+      handedOffAt: onTuesday,
+      contactedAt: onTuesday,
     });
     await makeThread(gamma.id, {
       createdAt: onTuesday,
       stage: "not_interested",
+    });
+    await db.message.create({
+      data: {
+        companyId: gamma.id,
+        threadId: gammaOpen.id,
+        direction: "outbound",
+        type: "text",
+        body: "fallo",
+        status: "failed",
+        sentAt: onTuesday,
+      },
+    });
+    await db.llmUsage.create({
+      data: {
+        companyId: gamma.id,
+        threadId: gammaOpen.id,
+        model: "claude-haiku-4-5",
+        inputTokens: 1_000_000,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        latencyMs: 10,
+        createdAt: onTuesday,
+      },
     });
     for (let i = 0; i < 9; i += 1) {
       await makeThread(archived.id, {
@@ -738,16 +899,22 @@ describe("companies comparison", () => {
       active.rows.map((row: { company: { name: string } }) => row.company.name),
     ).toEqual(["Gamma", "Alpha", "Beta", "Altamira", "Otra"]);
     expect(active.rows[0]).toMatchObject({
-      company: { name: "Gamma", slug: "gamma", archived: false },
+      company: {
+        name: "Gamma",
+        slug: "gamma",
+        archived: false,
+        assistantPaused: true,
+      },
       leads: 5,
-      qualificationRate: 0.2,
-      notInterestedRate: 0.2,
-      outOfHoursRate: 0,
-      medianMinutesToContact: null,
+      qualificationRate: 2 / 5,
+      contactedRate: 1 / 2,
+      medianMinutesToContact: 0,
       unassignedToContact: 1,
       needsHuman: 0,
+      issuesCount: 2,
       daysSinceLastUpload: null,
-      spendUsd: 0,
+      spendUsd: 1,
+      anthropicUsd: 1,
     });
     expect(active.rows[1]).toMatchObject({ leads: 2, qualificationRate: 0 });
     expect(active.rows[2]).toMatchObject({
@@ -790,7 +957,11 @@ describe("validation", () => {
     expect(tooLong.body.error.code).toBe("bad_request");
 
     const exact = await metrics("from=2026-01-01&to=2027-01-01").expect(200);
-    expect(exact.body.range).toEqual({ from: "2026-01-01", to: "2027-01-01" });
+    expect(exact.body.range).toEqual({
+      from: "2026-01-01",
+      to: "2027-01-01",
+      days: 366,
+    });
     expect(exact.body.leadsPerDay).toHaveLength(366);
 
     const companies = await request(app)
