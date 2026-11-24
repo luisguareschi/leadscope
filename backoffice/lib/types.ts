@@ -395,10 +395,33 @@ export type ModelSpend = {
   usd: number | null;
 };
 
-/** One company's metrics for a calendar range. Rates are 0..1; null when there are no leads. */
+export type AdvisorMetrics = {
+  operatorId: string;
+  email: string;
+  assigned: number;
+  pendingOver24h: number;
+  contactedInRange: number;
+  medianMinutesToContact: number | null;
+};
+
+export type FieldCompletionMetric = {
+  key: string;
+  name: string;
+  required: boolean;
+  collected: number;
+  rate: number | null;
+};
+
+/** One company's metrics for a calendar range. Rates are 0..1; null when denominator is zero. */
 export type CompanyMetrics = {
-  company: { id: string; name: string; slug: string; timezone: string };
-  range: { from: string; to: string };
+  company: {
+    id: string;
+    name: string;
+    slug: string;
+    timezone: string;
+    assistantPaused: boolean;
+  };
+  range: { from: string; to: string; days: number };
   generatedAt: string;
   leads: number;
   leadsBySource: { whatsapp: number; form: number };
@@ -409,11 +432,22 @@ export type CompanyMetrics = {
     contacted: number;
     not_interested: number;
   }[];
-  qualified: number;
-  qualificationRate: number | null;
-  notInterested: number;
-  notInterestedRate: number | null;
-  callNow: number;
+  funnel: {
+    leads: number;
+    qualified: number;
+    qualificationRate: number | null;
+    contacted: number;
+    contactedRate: number | null;
+    qualifying: number;
+    toContact: number;
+    notInterested: number;
+    notInterestedRate: number | null;
+  };
+  forms: {
+    leads: number;
+    replied: number;
+    replyRate: number | null;
+  };
   outOfHours: number;
   outOfHoursRate: number | null;
   timeToContact: {
@@ -421,24 +455,26 @@ export type CompanyMetrics = {
     medianMinutes: number | null;
     p90Minutes: number | null;
   };
-  timeToContactPerWeek: {
-    weekStart: string;
-    count: number;
-    medianMinutes: number | null;
-  }[];
+  advisors: AdvisorMetrics[];
+  assistant: {
+    autonomousLeads: number;
+    autonomyRate: number | null;
+    nonTextLeads: number;
+    nonTextRate: number | null;
+    nonTextMessages: number;
+    failedOutboundMessages: number;
+    fieldCompletion: FieldCompletionMetric[];
+  };
   queue: {
     toContact: number;
     unassigned: number;
     unassignedOver24h: number;
     oldestWaitingMinutes: number | null;
   };
-  needsHuman: { total: number; byReason: Record<string, number> };
-  messages: {
-    inbound: number;
-    assistant: number;
-    advisor: number;
-    templates: number;
-    failed: number;
+  needsHuman: {
+    total: number;
+    pausedManually: number;
+    byReason: Record<string, number>;
   };
   knowledge: {
     files: number;
@@ -449,7 +485,11 @@ export type CompanyMetrics = {
   spend: {
     anthropic: {
       usd: number | null;
+      realUsd: number | null;
+      testUsd: number | null;
       calls: number;
+      realCalls: number;
+      testCalls: number;
       byModel: ModelSpend[];
       unpricedModels: string[];
     };
@@ -458,9 +498,13 @@ export type CompanyMetrics = {
       templates: number;
       serviceMessages: number;
       freeServiceMessages: number;
+      billableServiceMessages: number;
+      currentMonthTotalMessages: number;
     };
     totalUsd: number;
+    projectedMonthlyUsd: number | null;
     perLeadUsd: number | null;
+    anthropicPerLeadUsd: number | null;
   };
 };
 
@@ -468,16 +512,23 @@ export type CompanyMetrics = {
 export type CompaniesMetrics = {
   range: { from: string; to: string };
   rows: {
-    company: { id: string; name: string; slug: string; archived: boolean };
+    company: {
+      id: string;
+      name: string;
+      slug: string;
+      archived: boolean;
+      assistantPaused: boolean;
+    };
     leads: number;
     qualificationRate: number | null;
-    notInterestedRate: number | null;
-    outOfHoursRate: number | null;
+    contactedRate: number | null;
     medianMinutesToContact: number | null;
     unassignedToContact: number;
     needsHuman: number;
+    issuesCount: number;
     daysSinceLastUpload: number | null;
     spendUsd: number;
+    anthropicUsd: number | null;
   }[];
 };
 

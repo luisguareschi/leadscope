@@ -9,6 +9,7 @@ import {
 import type { CompanyMetrics } from "@/lib/types";
 
 export function KpiTiles({ metrics }: { metrics: CompanyMetrics }) {
+  const { funnel, timeToContact } = metrics;
   const tiles = [
     {
       label: "Leads nuevos",
@@ -17,33 +18,37 @@ export function KpiTiles({ metrics }: { metrics: CompanyMetrics }) {
     },
     {
       label: "Calificados",
-      value: formatPercent(metrics.qualificationRate),
-      caption: leadsLabel(metrics.qualified),
+      value: formatPercent(funnel.qualificationRate),
+      caption:
+        metrics.leads > 0
+          ? `${formatCount(funnel.qualified)} de ${formatCount(metrics.leads)} leads`
+          : "Sin leads en este período",
     },
     {
-      label: "Sin interés",
-      value: formatPercent(metrics.notInterestedRate),
-      caption: leadsLabel(metrics.notInterested),
+      label: "Contactados",
+      value: formatPercent(funnel.contactedRate),
+      caption:
+        funnel.qualified > 0
+          ? `${formatCount(funnel.contacted)} de ${formatCount(funnel.qualified)} calificados`
+          : "Sin calificados aún",
+    },
+    {
+      label: "Tiempo hasta contactar",
+      value: formatDuration(timeToContact.medianMinutes),
+      caption:
+        timeToContact.p90Minutes != null
+          ? `90% en menos de ${formatDuration(timeToContact.p90Minutes)}`
+          : "Sin leads contactados",
     },
     {
       label: "Fuera de horario",
       value: formatPercent(metrics.outOfHoursRate),
-      caption: "Fuera de 9 a 18 h o fines de semana",
-    },
-    {
-      label: "Tiempo hasta contactar",
-      value: formatDuration(metrics.timeToContact.medianMinutes),
-      caption: `p90: ${formatDuration(metrics.timeToContact.p90Minutes)}`,
-    },
-    {
-      label: "Contacto inmediato",
-      value: formatCount(metrics.callNow),
-      caption: "Pidieron hablar de inmediato",
+      caption: `${leadsLabel(metrics.outOfHours)} fuera de 9 a 18 h o fin de semana`,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
       {tiles.map((tile) => (
         <div
           key={tile.label}

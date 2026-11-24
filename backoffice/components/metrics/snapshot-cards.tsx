@@ -4,11 +4,7 @@ import Link from "next/link";
 import { cn } from "cn";
 import { Panel } from "@/components/panel";
 import { Button } from "@/components/ui/button";
-import {
-  formatCount,
-  formatDaysAgo,
-  formatDuration,
-} from "@/lib/metrics-format";
+import { formatCount, formatDuration } from "@/lib/metrics-format";
 import type { CompanyMetrics } from "@/lib/types";
 
 const REASON_LABELS: Record<string, string> = {
@@ -69,17 +65,11 @@ function reasonRows(byReason: Record<string, number>): Array<{
 export function SnapshotCards({
   queue,
   needsHuman,
-  knowledge,
-  hubspot,
 }: {
   queue: CompanyMetrics["queue"];
   needsHuman: CompanyMetrics["needsHuman"];
-  knowledge: CompanyMetrics["knowledge"];
-  hubspot: CompanyMetrics["hubspot"];
 }) {
   const reasons = reasonRows(needsHuman.byReason);
-  const knowledgeStale =
-    knowledge.daysSinceLastUpload != null && knowledge.daysSinceLastUpload > 30;
 
   return (
     <div className="grid gap-3 md:grid-cols-2">
@@ -111,17 +101,37 @@ export function SnapshotCards({
         </dl>
       </Panel>
 
-      <Panel title="Asistente detenido">
-        <div className="flex flex-col gap-3 px-5 py-4">
-          <p className="font-heading text-xl font-semibold tracking-tight tabular-nums">
-            {formatCount(needsHuman.total)}
-          </p>
+      <Panel
+        title="Asistente detenido"
+        actions={
+          <Button
+            variant="link"
+            size="sm"
+            className="px-0"
+            render={<Link href="/threads?bot=needs_human" />}
+          >
+            Ver conversaciones
+          </Button>
+        }
+      >
+        <div className="flex flex-col gap-4 px-5 py-4">
+          <dl className="grid grid-cols-2 gap-4">
+            <Stat
+              label="Requieren asesor"
+              value={formatCount(needsHuman.total)}
+              tone={needsHuman.total > 0 ? "warning" : undefined}
+            />
+            <Stat
+              label="Pausados manualmente"
+              value={formatCount(needsHuman.pausedManually)}
+            />
+          </dl>
           {reasons.length === 0 ? (
             <p className="text-[13px] text-muted-foreground">
-              Sin conversaciones detenidas.
+              Sin conversaciones detenidas por el asistente.
             </p>
           ) : (
-            <ul className="flex flex-col gap-1.5">
+            <ul className="flex flex-col gap-1.5 border-t border-border/70 pt-3">
               {reasons.map((reason) => (
                 <li
                   key={reason.key}
@@ -137,65 +147,6 @@ export function SnapshotCards({
           )}
         </div>
       </Panel>
-
-      <Panel
-        title="Conocimiento"
-        actions={
-          <Button
-            variant="link"
-            size="sm"
-            className="px-0"
-            render={<Link href="/knowledge" />}
-          >
-            Ver conocimiento
-          </Button>
-        }
-      >
-        <div className="flex flex-col gap-1.5 px-5 py-4">
-          {knowledge.files === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Aún no hay archivos.
-            </p>
-          ) : (
-            <>
-              <p
-                className={cn(
-                  "text-sm",
-                  knowledgeStale && "font-medium text-primary",
-                )}
-              >
-                Última subida {formatDaysAgo(knowledge.daysSinceLastUpload)}.
-              </p>
-              {knowledgeStale ? (
-                <p className="text-[13px] font-medium text-primary">
-                  Revisa que los documentos estén actualizados.
-                </p>
-              ) : null}
-              <p className="text-[13px] text-muted-foreground">
-                {knowledge.files === 1
-                  ? "1 archivo"
-                  : `${formatCount(knowledge.files)} archivos`}
-              </p>
-            </>
-          )}
-        </div>
-      </Panel>
-
-      {hubspot.enabled ? (
-        <Panel title="HubSpot">
-          <dl className="grid grid-cols-2 gap-4 px-5 py-4">
-            <Stat
-              label="Escrituras pendientes"
-              value={formatCount(hubspot.pending)}
-            />
-            <Stat
-              label="Con error"
-              value={formatCount(hubspot.failing)}
-              tone={hubspot.failing > 0 ? "error" : undefined}
-            />
-          </dl>
-        </Panel>
-      ) : null}
     </div>
   );
 }
