@@ -479,6 +479,40 @@ describe("a lead who wants to talk to a person now (callNow)", () => {
     ).toMatchObject({ stage: "qualifying", reply: "NEEDS_HUMAN" });
   });
 
+  it("preserves a preferred channel or time extracted on the callNow turn, and defaults to Lo antes posible when omitted", () => {
+    const byMessage = decideTurn(
+      thread({ state: "qualify" }),
+      model({
+        callNow: true,
+        callTime: "Por WhatsApp",
+        reply: "Un asesor te va a escribir por WhatsApp a la brevedad.",
+      }),
+      rules,
+    );
+    expect(byMessage).toMatchObject({
+      state: "answer",
+      stage: "to_contact",
+      fields: { callTime: "Por WhatsApp" },
+      crm: "handoff",
+    });
+
+    const urgentLater = decideTurn(
+      thread({ state: "handoff", callTime: "Mañana a las 10" }),
+      model({
+        callNow: true,
+        callTime: null,
+        reply: "Un asesor te contacta lo antes posible.",
+      }),
+      rules,
+    );
+    expect(urgentLater).toMatchObject({
+      state: "answer",
+      stage: "to_contact",
+      fields: { callTime: CALL_NOW_TIME },
+      crm: "handoff",
+    });
+  });
+
   it("leaves the normal path unchanged without the flag", () => {
     const decision = decideTurn(
       thread(),
@@ -497,23 +531,97 @@ describe("a lead who wants to talk to a person now (callNow)", () => {
 describe("a company with no required items", () => {
   const allOptional: TurnRules = {
     ...rules,
-    collect: [{ key: "zone", required: false }],
+    collect: [
+      { key: "interest", required: false },
+      { key: "budget", required: false },
+      { key: "knowsProjects", required: false },
+    ],
   };
 
-  it("moves the lead to Por contactar once it gives a call time, not on its first message", () => {
+  it("stays in qualify on a greeting or exploratory Q&A without pushing to handoff", () => {
     const first = decideTurn(
       thread({ state: "greeting" }),
-      model({ reply: "Hola" }),
+      model({ reply: "Hola, ¿qué buscás?" }),
       allOptional,
     );
-    expect(first).toMatchObject({ state: "handoff", stage: "qualifying" });
+    expect(first).toMatchObject({
+      state: "qualify",
+      stage: "qualifying",
+      crm: null,
+    });
 
+    const second = decideTurn(
+      thread({ state: "qualify", collected: { interest: "2 dormitorios" } }),
+      model({ reply: "Tenemos proyectos en Tres Cruces y Libertad." }),
+      allOptional,
+    );
+    expect(second).toMatchObject({
+      state: "qualify",
+      stage: "qualifying",
+      crm: null,
+    });
+  });
+
+  it("moves the lead to Por contactar once it gives a call time or preferred channel", () => {
     const withTime = decideTurn(
-      thread({ state: "handoff" }),
+      thread({ state: "qualify" }),
       model({ callTime: "Mañana a las 10" }),
       allOptional,
     );
-    expect(withTime).toMatchObject({ stage: "to_contact", crm: "handoff" });
+    expect(withTime).toMatchObject({
+      state: "handoff",
+      stage: "to_contact",
+      fields: { callTime: "Mañana a las 10" },
+      crm: "handoff",
+    });
+
+    const byMessage = decideTurn(
+      thread({ state: "qualify" }),
+      model({
+        intent: "qualified",
+        callTime: "Por mensaje / WhatsApp",
+        reply: "Un asesor te va a escribir por WhatsApp a la brevedad.",
+      }),
+      allOptional,
+    );
+    expect(byMessage).toMatchObject({
+      state: "handoff",
+      stage: "to_contact",
+      fields: { callTime: "Por mensaje / WhatsApp" },
+      crm: "handoff",
+    });
+  });
+
+  it("moves the lead to Por contactar on intent=qualified even when callTime is null", () => {
+    const decision = decideTurn(
+      thread({
+        state: "qualify",
+        collected: { interest: "2 dormitorios, Tres Cruces" },
+      }),
+      model({
+        intent: "qualified",
+        callTime: null,
+        reply:
+          "Entendido. Un asesor te va a escribir por WhatsApp con los planos.",
+      }),
+      allOptional,
+    );
+    expect(decision).toMatchObject({
+      state: "answer",
+      stage: "to_contact",
+      fields: { callTime: null },
+      crm: "handoff",
+    });
+  });
+
+  it("puts a manually reopened all-optional thread back into qualify when callTime is null", () => {
+    expect(
+      stateForManualStage(
+        thread({ state: "answer", callTime: null }),
+        "qualifying",
+        allOptional.collect,
+      ),
+    ).toBe("qualify");
   });
 });
 

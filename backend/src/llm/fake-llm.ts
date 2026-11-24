@@ -25,7 +25,7 @@ const MONEY =
 const KNOWS = /\b(conozco|conoce|conocia|conocemos|vi los|proyectos)\b/;
 /** The fake's stand-in for "the lead wants a person now". */
 const CALL_NOW =
-  /\b(llamenme|llamame|me llaman ya|me pueden llamar (ya|ahora)|quiero hablar con (alguien|una persona|un asesor|un humano)|hablar con una persona|prefiero que me llamen)\b/;
+  /\b(llamenme|llamame|me llaman ya|me pueden llamar (ya|ahora)|quiero hablar con (alguien|una persona|un asesor|un humano)|hablar con una persona|prefiero que me llamen|que me escriba un asesor)\b/;
 const PHONE_IN_TEXT = /\+?\d[\d\s-]{6,}\d/;
 
 /** A phone number the company's instructions give for leads who want to call now, if any. */

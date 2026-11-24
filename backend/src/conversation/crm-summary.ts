@@ -144,7 +144,7 @@ export function buildCrmSummary(input: {
     `Teléfono: ${thread.phone}`,
     `Nombre en WhatsApp: ${thread.name ?? "—"}`,
     thread.email ? `Email: ${thread.email}` : null,
-    `Horario para llamar: ${thread.callTime ?? "—"}`,
+    `Contacto preferido: ${thread.callTime ?? "—"}`,
     thread.needsHuman && thread.needsHumanReason
       ? `Motivo: ${thread.needsHumanReason}`
       : null,

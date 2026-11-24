@@ -11,6 +11,7 @@ import {
   FakeChannel,
 } from "../../src/integrations/whatsapp/channel.js";
 import {
+  baseConfig,
   createCompany,
   createTestContext,
   inbound,
@@ -235,7 +236,7 @@ describe("a bot turn", () => {
       "";
     expect(summary).toContain("Estado: Derivado a asesor");
     expect(summary).toContain("Etapa: Por contactar");
-    expect(summary).toContain("Horario para llamar: Mañana a las 10");
+    expect(summary).toContain("Contacto preferido: Mañana a las 10");
     // One property: the summary and the collected fields on top, then the transcript.
     const lines = summary.split("\n");
     const at = (line: string) => lines.indexOf(line);
@@ -295,7 +296,7 @@ describe("a bot turn", () => {
     expect(saved.stage).toBe("to_contact");
     expect(saved.handedOffAt).toEqual(qualifyAt);
     expect(ctx.llm.calls.at(2)?.turnContext).toContain(
-      "already with an advisor, who will call Mañana a las 10",
+      "already with an advisor (preferred contact: Mañana a las 10)",
     );
     expect(saved.messages.at(-3)?.body).toBe(
       "La entrega es en diciembre de 2027.",
@@ -745,7 +746,7 @@ describe("a lead who wants to talk to a person now", () => {
       ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary ??
       "";
     expect(summary).toContain("Estado: Derivado a asesor");
-    expect(summary).toContain("Horario para llamar: Lo antes posible");
+    expect(summary).toContain("Contacto preferido: Lo antes posible");
 
     await receive("¿Y dónde queda?");
     await processThread(ctx, threadId);
@@ -870,12 +871,69 @@ describe("after a person changes the stage", () => {
     ctx.llm.push({ reply: "Sí. ¿Cuándo te puede llamar un asesor?" });
     await processThread(ctx, threadId);
     expect(ctx.llm.calls.at(-1)?.turnContext).toContain(
-      "ask when an advisor can call them",
+      "ask when or how an advisor can contact them",
     );
     expect(await thread()).toMatchObject({
       stage: "to_contact",
       contactedAt: null,
       stageChangedByEmail: "vicky@altamira.uy",
     });
+  });
+
+  it("all-optional company: moves to Por contactar when a lead prefers WhatsApp messages instead of a call", async () => {
+    await resetDb();
+    pnid = (
+      await createCompany(testDb(), {
+        config: {
+          ...baseConfig,
+          collect: baseConfig.collect.map((item) => ({
+            ...item,
+            required: false,
+          })),
+        },
+      })
+    ).whatsappPhoneNumberId!;
+    ctx = createTestContext();
+
+    const { threadId } = await receive(
+      "Hola, busco 2 dormitorios en Tres Cruces",
+    );
+    ctx.llm.push({
+      reply: "¡Hola! Tenemos unidades de 2 dormitorios en Tres Cruces.",
+      collected: { interest: "2 dormitorios, Tres Cruces" },
+      intent: "continue",
+    });
+    await processThread(ctx, threadId);
+    expect(await thread()).toMatchObject({
+      stage: "qualifying",
+      state: "qualify",
+      handedOffAt: null,
+    });
+
+    const preferredAt = new Date("2026-11-24T16:58:01Z");
+    await receive("Gracias. Prefiero por mensaje", { sentAt: preferredAt });
+    ctx.llm.push({
+      reply:
+        "Entendido. Un asesor te va a contactar por WhatsApp a la brevedad.",
+      callTime: "Por mensaje / WhatsApp",
+      intent: "qualified",
+      summary:
+        "- Interés en 2 dormitorios en Tres Cruces.\n- Prefiere contacto por WhatsApp.",
+    });
+    await processThread(ctx, threadId);
+    await ctx.crm.drain();
+
+    const saved = await thread();
+    expect(saved).toMatchObject({
+      stage: "to_contact",
+      callTime: "Por mensaje / WhatsApp",
+    });
+    expect(saved.handedOffAt).toEqual(preferredAt);
+    const summary =
+      ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary ??
+      "";
+    expect(summary).toContain("Estado: Derivado a asesor");
+    expect(summary).toContain("Etapa: Por contactar");
+    expect(summary).toContain("Contacto preferido: Por mensaje / WhatsApp");
   });
 });

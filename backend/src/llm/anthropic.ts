@@ -88,9 +88,15 @@ export function submitTurnTool(
         },
         callTime: {
           type: ["string", "null"],
-          description: "When the lead says an advisor can call them.",
+          description:
+            'When or how the lead prefers an advisor to contact them (e.g. "mañana después de las 18", "Por mensaje / WhatsApp"). null when not stated.',
         },
-        intent: { type: "string", enum: [...INTENTS] },
+        intent: {
+          type: "string",
+          enum: [...INTENTS],
+          description:
+            '"not_interested" if not interested or asks to stop; "qualified" when the lead is ready for an advisor to contact them (including whenever reply confirms an advisor will call or message them); otherwise "continue".',
+        },
         needsHuman: {
           type: "boolean",
           description:
@@ -99,7 +105,7 @@ export function submitTurnTool(
         callNow: {
           type: "boolean",
           description:
-            'True when the lead wants to talk to a person now or asks to be called ("llámenme", "quiero hablar con alguien").',
+            'True when the lead explicitly asks to talk to a person now or asks to be called or messaged by an advisor right away ("llámenme", "quiero hablar con alguien", "que me escriba un asesor").',
         },
         forbiddenTopic: {
           type: ["string", "null"],
