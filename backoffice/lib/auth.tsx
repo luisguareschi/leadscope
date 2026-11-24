@@ -46,8 +46,8 @@ function supabaseClient(): SupabaseClient {
 }
 
 const SUPABASE_ERRORS: Record<string, string> = {
-  "Invalid login credentials": "Email o contraseña incorrectos.",
-  "Email not confirmed": "Confirma tu email antes de entrar.",
+  "Invalid login credentials": "Correo o contraseña incorrectos.",
+  "Email not confirmed": "Confirma tu correo antes de iniciar sesión.",
 };
 
 const DEV_TOKEN_EVENT = "leadscope:dev-token";

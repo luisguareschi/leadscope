@@ -26,7 +26,7 @@ export default function SetPasswordPage() {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (password.length < 8) {
-      setError("Usa al menos 8 caracteres.");
+      setError("Debe tener al menos 8 caracteres.");
       return;
     }
     setPending(true);
@@ -57,15 +57,15 @@ export default function SetPasswordPage() {
   if (status === "signed_out") {
     return (
       <AuthCard
-        title="El enlace venció"
-        description="Pide uno nuevo desde la pantalla de ingreso."
+        title="El enlace expiró"
+        description="Solicita uno nuevo desde el inicio de sesión."
       >
         <Button
           size="lg"
           className="h-12 w-full"
           onClick={() => router.replace("/login")}
         >
-          Ir al ingreso
+          Ir al inicio de sesión
         </Button>
       </AuthCard>
     );
@@ -73,13 +73,13 @@ export default function SetPasswordPage() {
 
   return (
     <AuthCard
-      title="Elige tu contraseña"
-      description="La usarás para entrar al panel."
+      title="Crea tu contraseña"
+      description="La usarás para iniciar sesión en LeadScope."
     >
       <form onSubmit={onSubmit}>
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="password">Contraseña nueva</FieldLabel>
+            <FieldLabel htmlFor="password">Nueva contraseña</FieldLabel>
             <Input
               id="password"
               type="password"
@@ -88,7 +88,7 @@ export default function SetPasswordPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <FieldDescription>Al menos 8 caracteres.</FieldDescription>
+            <FieldDescription>Mínimo 8 caracteres.</FieldDescription>
           </Field>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <Button
@@ -98,7 +98,7 @@ export default function SetPasswordPage() {
             disabled={pending}
           >
             {pending ? <Spinner /> : null}
-            Guardar y entrar
+            Guardar y continuar
           </Button>
         </FieldGroup>
       </form>

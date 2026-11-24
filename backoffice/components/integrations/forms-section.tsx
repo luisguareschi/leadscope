@@ -29,11 +29,11 @@ export function FormsSection() {
   return (
     <Section
       title="Formularios"
-      description="Leads que dejan su teléfono en un formulario. LeadScope les envía una bienvenida por WhatsApp y sigue la conversación como con cualquier lead."
+      description="Envía un mensaje de bienvenida por WhatsApp a los leads que completan un formulario."
     >
       <Panel
-        title="Aviso del formulario"
-        description="El flujo del CRM avisa a LeadScope cada vez que entra un lead."
+        title="Webhook de formularios"
+        description="Recibe leads nuevos desde tu CRM o formulario."
         actions={
           <TestActions
             status={testStatus(check.data, missing)}
@@ -49,15 +49,15 @@ export function FormsSection() {
         {check.data ? (
           <CheckResults
             result={check.data}
-            readyText="Listo. LeadScope acepta los leads del formulario y la bienvenida está aprobada. No se envió ningún mensaje."
+            readyText="Conexión verificada. La plantilla de bienvenida está aprobada."
           />
         ) : null}
 
         <CopyRow
-          label="URL del aviso"
-          hint="El flujo hace un POST aquí con el teléfono del lead."
+          label="URL del webhook"
+          hint="Endpoint POST que recibe el teléfono del lead."
           value={hookUrl}
-          copyLabel="Copiar URL del aviso"
+          copyLabel="Copiar URL del webhook"
         />
 
         {secret ? (
@@ -66,9 +66,8 @@ export function FormsSection() {
             generate
             hint={
               <>
-                El flujo lo envía en el encabezado{" "}
-                <InlineCode>X-LeadScope-Secret</InlineCode>. Sin él, LeadScope
-                rechaza el aviso.
+                Encabezado <InlineCode>X-LeadScope-Secret</InlineCode> requerido
+                en cada solicitud.
               </>
             }
           />
@@ -78,44 +77,41 @@ export function FormsSection() {
 
         <Guide defaultOpen={secret !== undefined && !secret.set}>
           <ol className="flex flex-col gap-4">
-            <Step n={1} title="Crea el secreto">
+            <Step n={1} title="Genera el secreto">
               <p>
-                En Secreto del formulario, toca Configurar → Generar, cópialo y
-                guárdalo. Lo vas a pegar en el flujo.
+                En Secreto del formulario, haz clic en Configurar → Generar,
+                cópialo y guárdalo.
               </p>
             </Step>
             <Step n={2} title="Crea el flujo en HubSpot">
               <p>
-                <InlineCode>Automatización</InlineCode> →{" "}
-                <InlineCode>Flujos de trabajo</InlineCode> → uno basado en
-                contactos, que se active cuando el contacto envía el formulario.
+                Ve a <InlineCode>Automatización</InlineCode> →{" "}
+                <InlineCode>Flujos de trabajo</InlineCode> y crea uno basado en
+                contactos que se active al enviar el formulario.
               </p>
             </Step>
-            <Step n={3} title="Agrega la acción Enviar un webhook">
+            <Step n={3} title="Configura la acción Enviar un webhook">
               <p>
-                Método <InlineCode>POST</InlineCode>, con la URL del aviso de
-                arriba. En autenticación, agrega el encabezado{" "}
-                <InlineCode>X-LeadScope-Secret</InlineCode> con el secreto.
-                Incluye las propiedades <InlineCode>phone</InlineCode> (o{" "}
+                Usa método <InlineCode>POST</InlineCode> con la URL de arriba y
+                el encabezado <InlineCode>X-LeadScope-Secret</InlineCode>.
+                Incluye <InlineCode>phone</InlineCode> (o{" "}
                 <InlineCode>mobilephone</InlineCode>),{" "}
                 <InlineCode>email</InlineCode>,{" "}
                 <InlineCode>firstname</InlineCode> y{" "}
                 <InlineCode>lastname</InlineCode>.
               </p>
             </Step>
-            <Step n={4} title="Elige la bienvenida">
+            <Step n={4} title="Configura la plantilla de bienvenida">
               <p>
-                Abajo, el nombre y el idioma exactos de una plantilla aprobada
-                en Meta para el número de la empresa. Se envía una sola vez, y
-                solo si el lead todavía no tiene conversación.
+                Ingresa abajo el nombre e idioma exactos de una plantilla
+                aprobada en Meta. Se envía una sola vez si el lead aún no tiene
+                conversación.
               </p>
             </Step>
-            <Step n={5} title="Prueba">
+            <Step n={5} title="Prueba la conexión">
               <p>
-                Probar conexión revisa el secreto y busca la plantilla en la
-                cuenta de WhatsApp del número, a través de Kapso. No envía
-                ningún mensaje. Prueba la plantilla guardada, así que guarda
-                antes los cambios.
+                Guarda los cambios y haz clic en Probar conexión para validar el
+                secreto y la plantilla en Meta (no envía mensajes).
               </p>
             </Step>
           </ol>

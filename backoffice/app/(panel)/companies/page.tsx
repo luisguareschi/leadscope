@@ -43,9 +43,10 @@ export default function CompaniesPage() {
             <EmptyMedia variant="icon">
               <ShieldIcon />
             </EmptyMedia>
-            <EmptyTitle>No tienes acceso a esta página</EmptyTitle>
+            <EmptyTitle>Sin acceso</EmptyTitle>
             <EmptyDescription>
-              Solo quien administra la plataforma puede ver y crear empresas.
+              Solo los administradores de la plataforma pueden gestionar
+              empresas.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -56,8 +57,8 @@ export default function CompaniesPage() {
   return (
     <div className="@container/content flex flex-col gap-4 px-4 lg:px-6">
       <Section
-        title="Empresas de la plataforma"
-        description="Cada empresa tiene su panel, sus operadores y sus claves. Entrar abre su panel como administrador, y todo lo que cambies queda registrado."
+        title="Empresas"
+        description="Administra empresas, operadores y acceso de soporte."
         actions={
           <>
             <div className="flex items-center gap-2 px-2">

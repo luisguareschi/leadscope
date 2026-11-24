@@ -78,7 +78,7 @@ function ItemRow({
               id={id("name")}
               value={item.name}
               maxLength={60}
-              placeholder="Por ejemplo, Presupuesto"
+              placeholder="Ej.: Presupuesto"
               aria-invalid={error("name") ? true : undefined}
               onChange={(event) => {
                 const name = event.target.value;
@@ -117,7 +117,7 @@ function ItemRow({
             value={item.description}
             maxLength={300}
             className="min-h-9"
-            placeholder="Por ejemplo: con qué presupuesto aproximado cuenta (monto y moneda, o un rango)."
+            placeholder="Ej.: presupuesto aproximado (monto y moneda, o rango)."
             aria-invalid={error("description") ? true : undefined}
             onChange={(event) =>
               onChange({ ...item, description: event.target.value })
@@ -153,8 +153,8 @@ function ItemRow({
               className="max-w-64"
             >
               {item.required
-                ? "El lead pasa a Por contactar solo cuando el asistente lo sabe, salvo que pida hablar con alguien ya."
-                : "El asistente lo pregunta si surge. No impide el paso a Por contactar."}
+                ? "Obligatorio para pasar el lead a Por contactar."
+                : "Opcional. No impide el paso a Por contactar."}
             </HelpTip>
           </div>
           <div className="flex items-center gap-1">
@@ -209,7 +209,7 @@ export function CollectEditor() {
   return (
     <Panel
       title="Información a recopilar"
-      description="Lo que el asistente averigua del lead, con sus palabras y en el orden que surja. No repite lo que el lead ya dijo. Cuando tiene todos los necesarios, el lead pasa a Por contactar y el asistente le pide un horario. Si el lead pide hablar con alguien ya, pasa enseguida aunque falten datos. Si ninguno es necesario, pasa cuando da un horario para la llamada."
+      description="Datos que el asistente recopila antes de pasar el lead a Por contactar. Si el lead pide hablar con una persona, pasa de inmediato."
       actions={
         <span
           className={cn(
@@ -264,9 +264,9 @@ export function CollectEditor() {
           >
             {errors.collect ??
               (full
-                ? `Llegaste al máximo de ${MAX_COLLECT_ITEMS} datos. Quita uno para agregar otro.`
+                ? `Alcanzaste el límite de ${MAX_COLLECT_ITEMS} datos.`
                 : required === 0
-                  ? "Ninguno es necesario. El lead pasa a Por contactar cuando da un horario para la llamada."
+                  ? "Ningún dato es obligatorio. El lead pasa a Por contactar al dar un horario."
                   : `${required} necesario${required === 1 ? "" : "s"} para Por contactar · ${items.length - required} opcional${items.length - required === 1 ? "" : "es"}`)}
           </p>
           <Button

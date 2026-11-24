@@ -35,7 +35,7 @@ export function UsageCard({
   return (
     <Panel>
       <div className="grid grid-cols-1 divide-y @2xl/content:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] @2xl/content:divide-x @2xl/content:divide-y-0">
-        <Cell label="Texto que lee el asistente en cada respuesta">
+        <Cell label="Espacio utilizado">
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-sm tabular-nums">
               <span className="font-heading text-2xl font-medium tracking-tight">

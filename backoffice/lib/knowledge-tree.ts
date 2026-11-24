@@ -116,7 +116,7 @@ export function buildKnowledgeTree(
   };
 }
 
-/** "Proyectos / Tres Cruces", or "Conocimiento" for the root. */
+/** "Catálogo / Productos", or "Conocimiento" for the root. */
 export function placeLabel(tree: KnowledgeTree, folderId: string | null) {
   const path = tree.path(folderId);
   return path.length ? path.join(" / ") : "Conocimiento";

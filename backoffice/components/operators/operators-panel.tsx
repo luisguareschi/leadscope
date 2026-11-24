@@ -67,37 +67,37 @@ function StatusBadge({ operator }: { operator: Operator }) {
 
 function detailOf(operator: Operator): string | null {
   if (operator.archivedAt)
-    return `No puede entrar al panel desde ${formatDateTime(operator.archivedAt)}.`;
+    return `Sin acceso desde ${formatDateTime(operator.archivedAt)}.`;
   if (operator.inviteError) return operator.inviteError;
   if (operator.invitedAt)
     return `Último envío: ${formatDateTime(operator.invitedAt)}.`;
-  if (operator.hasLogin) return "Ya tenía usuario y entra con su contraseña.";
-  return "Todavía no recibió la invitación. Usa Reenviar invitación.";
+  if (operator.hasLogin) return "Cuenta vinculada.";
+  return "Invitación pendiente. Usa Reenviar invitación.";
 }
 
 function removalToast(email: string, removal: AuthUserRemoval) {
   switch (removal.status) {
     case "removed":
-      toast.success(`Eliminaste a ${email} y su usuario de Supabase.`);
+      toast.success(`Operador ${email} eliminado.`);
       return;
     case "kept_platform_admin":
       toast.success(
-        `Eliminaste a ${email}. Su usuario de Supabase se mantiene porque administra la plataforma.`,
+        `Operador ${email} eliminado. Su cuenta se mantiene por ser administrador de la plataforma.`,
       );
       return;
     case "kept_operator":
       toast.success(
-        `Eliminaste a ${email}. Su usuario de Supabase se mantiene porque sigue siendo operador.`,
+        `Operador ${email} eliminado. Su cuenta se mantiene porque sigue activo en otra empresa.`,
       );
       return;
     case "none":
-      toast.success(`Eliminaste a ${email}.`);
+      toast.success(`Operador ${email} eliminado.`);
       return;
     case "failed":
       toast.warning(
-        `Eliminaste a ${email}, pero no se pudo borrar su usuario de Supabase.`,
+        `Operador ${email} eliminado, pero no se pudo borrar su cuenta en Supabase.`,
         {
-          description: `${removal.message} Puedes borrarlo a mano en Supabase.`,
+          description: `${removal.message} Puedes eliminarla manualmente en Supabase.`,
         },
       );
   }
@@ -155,8 +155,8 @@ export function OperatorsPanel({
             </Button>
           </div>
           <FieldDescription>
-            Le llega un email de Supabase con un enlace para elegir su
-            contraseña. Si ya tenía usuario, se vincula y entra con la suya.
+            Recibirá un correo para crear su contraseña. Si ya tiene cuenta, se
+            vinculará automáticamente.
           </FieldDescription>
         </Field>
       </form>
@@ -179,7 +179,7 @@ export function OperatorsPanel({
             </EmptyMedia>
             <EmptyTitle>Sin operadores</EmptyTitle>
             <EmptyDescription>
-              Nadie entra al panel de {companyName} hasta que agregues uno.
+              Agrega un operador para dar acceso al panel de {companyName}.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -256,8 +256,8 @@ export function OperatorsPanel({
                             onSuccess: () =>
                               toast.success(
                                 operator.archivedAt
-                                  ? `${operator.email} puede volver a entrar.`
-                                  : `${operator.email} ya no puede entrar al panel.`,
+                                  ? `Acceso restaurado para ${operator.email}.`
+                                  : `Acceso revocado para ${operator.email}.`,
                               ),
                             onError: (error) => toast.error(error.message),
                           },
@@ -295,11 +295,11 @@ export function OperatorsPanel({
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar a {deleting?.email}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Deja de ser operador de {companyName}.{" "}
+              Perderá acceso a {companyName}.{" "}
               {deleting?.platformAdmin
-                ? "Su usuario de Supabase se mantiene porque administra la plataforma."
-                : "También se borra su usuario de Supabase."}{" "}
-              Si quieres que pueda volver más adelante, archívalo.
+                ? "Su cuenta se mantiene porque administra la plataforma."
+                : "También se eliminará su cuenta de acceso."}{" "}
+              Si prefieres conservar su historial, archívalo.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

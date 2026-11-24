@@ -9,7 +9,7 @@ import { BotBadge } from "./status-badge";
 
 function waitingLabel(since: string | null): string {
   const waiting = formatWaiting(since);
-  return waiting === "ahora" ? "recién llegado" : `lleva ${waiting} esperando`;
+  return waiting === "ahora" ? "hace un momento" : `esperando ${waiting}`;
 }
 
 function Row({

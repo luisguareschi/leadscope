@@ -21,7 +21,7 @@ type StoredSettings = {
   whatsappPhoneNumberId: string | null;
 };
 
-const count = (value: number) => new Intl.NumberFormat("es-UY").format(value);
+const count = (value: number) => new Intl.NumberFormat("es").format(value);
 
 export function phoneNumberIdTaken(): HttpError {
   return new HttpError(

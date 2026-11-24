@@ -150,7 +150,7 @@ export function requireSession(ctx: AppContext): RequestHandler {
       if (!isRejectedSupabaseSession(error)) throw error;
       ctx.logger.warn({ err: error }, "supabase session rejected");
       res.status(401).json({
-        error: { code: "unauthorized", message: "Sesión inválida o vencida" },
+        error: { code: "unauthorized", message: "Sesión inválida o expirada" },
       });
       return;
     }

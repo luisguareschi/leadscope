@@ -150,7 +150,7 @@ function AssistantGroup({ thread }: { thread: Thread }) {
           tone="warning"
           icon={<HandIcon />}
           text={needsHumanReasonLabel(thread.needsHumanReason)}
-          detail="Respóndele desde la conversación (el asistente queda pausado) o desde tu WhatsApp. Cuando esté resuelto, devuélvele la conversación al asistente."
+          detail="Responde desde aquí o desde tu WhatsApp. Al terminar, marca la conversación como atendida."
           action={
             <Button
               size="sm"
@@ -172,9 +172,8 @@ function AssistantGroup({ thread }: { thread: Thread }) {
     return (
       <Group title="Asistente" aside={<BotBadge activity="paused" />}>
         <p className="text-[13px] leading-relaxed text-muted-foreground">
-          Un asesor pausó el asistente en esta conversación, o le escribió al
-          lead desde el panel. Los mensajes nuevos se guardan, pero el asistente
-          no responde hasta que lo reanuden.
+          El asistente está pausado. Los mensajes nuevos se guardan sin
+          respuesta automática.
         </p>
       </Group>
     );
@@ -209,7 +208,7 @@ function HubSpotGroup({
           detail={
             crm.retriesExhausted
               ? "Se agotaron los reintentos automáticos."
-              : "Se vuelve a intentar automáticamente en unos minutos."
+              : "Se reintentará automáticamente en unos minutos."
           }
           action={
             <Button
@@ -230,7 +229,7 @@ function HubSpotGroup({
             ? `Contacto y conversación guardados el ${formatDateTime(crm.syncedAt)}.`
             : crm.status === "pending"
               ? "Guardando el contacto y la conversación…"
-              : "Se guarda desde el primer mensaje y se actualiza cuando el asistente aprende algo nuevo del lead."}
+              : "Se sincroniza automáticamente al recibir mensajes y actualizar datos del lead."}
         </p>
       )}
       {crm.url ? (
@@ -275,7 +274,7 @@ function SummaryGroup({ summary }: { summary: string | null }) {
         </ul>
       ) : (
         <p className="text-[13px] leading-relaxed text-muted-foreground">
-          Se arma con la primera respuesta del asistente.
+          Se genera con la primera respuesta del asistente.
         </p>
       )}
     </Group>
@@ -341,7 +340,9 @@ export function LeadDetails({
         </Group>
         <Group title="Contacto">
           <Detail label="Teléfono" value={formatPhone(thread.phone)} />
-          {thread.email ? <Detail label="Email" value={thread.email} /> : null}
+          {thread.email ? (
+            <Detail label="Correo electrónico" value={thread.email} />
+          ) : null}
           <Detail
             label="Origen"
             value={thread.source === "form" ? "Formulario" : "WhatsApp"}

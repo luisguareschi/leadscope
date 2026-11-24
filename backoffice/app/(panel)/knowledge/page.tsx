@@ -24,7 +24,7 @@ export default function KnowledgePage() {
     <div className="@container/content flex flex-col gap-4 px-4 lg:px-6">
       <Section
         title="Archivos del asistente"
-        description="El asistente toma de estos archivos los precios desde, las tipologías, las fechas de entrega y la orientación. Ordénalos en carpetas (por ejemplo, una por proyecto) y el asistente sabrá en qué carpeta está cada archivo. Para actualizar un archivo, sube la versión nueva con el mismo nombre en la misma carpeta y reemplazará a la anterior."
+        description="Documentos que usa el asistente para responder. Organízalos en carpetas; subir un archivo con el mismo nombre en la misma carpeta reemplaza la versión anterior."
         actions={
           <Button onClick={() => queue.pick()} disabled={!query.data}>
             <UploadIcon />
@@ -62,10 +62,8 @@ export default function KnowledgePage() {
         ) : null}
         {files.length > 0 || (query.data?.folders.length ?? 0) > 0 ? (
           <p className="-mt-2 text-xs text-muted-foreground">
-            Haz clic en un archivo para ver el texto que lee el asistente.
-            Arrastra archivos y carpetas para ordenarlos, o suelta archivos de
-            tu computadora sobre una carpeta para subirlos a ella. En el
-            celular, usa Mover a… en el menú de cada fila.
+            Haz clic en un archivo para ver el texto extraído. Arrastra archivos
+            o carpetas para moverlos.
           </p>
         ) : null}
       </Section>

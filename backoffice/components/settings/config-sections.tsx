@@ -215,8 +215,8 @@ function AssistantStatusPanel() {
             </div>
             <p className="text-[13px] leading-relaxed text-pretty text-muted-foreground">
               {paused
-                ? "No responde mensajes de WhatsApp ni envía bienvenidas de formularios. Los mensajes se siguen guardando, puedes responder manualmente y usar Probar asistente."
-                : "Responde automáticamente los mensajes de WhatsApp y envía la plantilla de bienvenida a los leads de formularios. Se aplica de inmediato."}
+                ? "No responde mensajes de WhatsApp ni envía bienvenidas de formularios. Los mensajes se siguen guardando y puedes responder manualmente."
+                : "Responde mensajes de WhatsApp y envía bienvenidas de formularios automáticamente."}
             </p>
           </div>
           <Switch
@@ -254,15 +254,15 @@ function GeneralSection() {
   return (
     <Section
       title="General"
-      description="Cómo se presenta el asistente y desde dónde atiende."
+      description="Identidad, idioma y horarios del asistente."
     >
       <AssistantStatusPanel />
       <Panel>
         <TextRow
           name="companyName"
           label="Nombre de la empresa"
-          hint="Para quién trabaja el asistente. También es el nombre en Empresas y en el panel."
-          placeholder="Altamira"
+          hint="Nombre visible en el panel y con el que se presenta el asistente."
+          placeholder="Mi Empresa"
           maxLength={80}
         />
         <TextRow
@@ -271,33 +271,33 @@ function GeneralSection() {
           hint={
             assistant
               ? `Se presenta como "${assistant}, asistente virtual de ${company}".`
-              : `Opcional. Si está vacío, se presenta como "el asistente virtual de ${company}", sin nombre propio.`
+              : `Opcional. Si está vacío, se presenta como asistente virtual de ${company}.`
           }
-          placeholder="Almira"
+          placeholder="Sofía"
           maxLength={60}
         />
         <SelectRow
           name="language"
           label="Idioma"
-          hint="De las respuestas y las fechas."
+          hint="Idioma de las respuestas y fechas."
           options={choices.languages}
         />
         <SelectRow
           name="timezone"
           label="Zona horaria"
-          hint="Para la hora que ve el asistente y el horario de llamadas."
+          hint="Zona horaria para el asistente y las llamadas."
           options={choices.timezones}
         />
         <SelectRow
           name="defaultCountry"
           label="País de los teléfonos"
-          hint="Para leer números sin código de país, como 099 123 456."
+          hint="Para interpretar números sin código de país."
           options={choices.countries}
         />
         <TextRow
           name="businessHours"
           label="Horario para llamadas"
-          hint="Cuándo llaman los asesores. Si está vacío, el asistente no promete un horario."
+          hint="Horario de atención de los asesores (opcional)."
           placeholder="Lunes a viernes de 9 a 18 h"
           maxLength={300}
         />
@@ -310,20 +310,20 @@ function ConversationSection() {
   return (
     <Section
       title="Conversación"
-      description="Cómo escribe y qué averigua del lead antes de derivarlo."
+      description="Estilo de respuesta y datos que recopila el asistente."
     >
       <Panel title="Estilo">
         <TextRow
           name="tone"
           label="Tono"
-          hint="En tus palabras: registro, voseo, emojis, lo que tiene que evitar."
+          hint="Formalidad, uso de emojis y qué evitar."
           multiline
           maxLength={2000}
         />
         <TextRow
           name="maxReplyChars"
           label="Largo máximo"
-          hint="De 80 a 4.096. Si la respuesta es más larga, se corta en la última oración completa."
+          hint="Entre 80 y 4.096 caracteres."
           inputMode="numeric"
           suffix="caracteres"
           narrow
@@ -342,16 +342,16 @@ function ForbiddenSection() {
   return (
     <Section
       title="Temas prohibidos"
-      description='Lo que el asistente nunca responde. Si un lead pregunta por uno, el asistente no contesta con sus palabras. Envía el mensaje fijo "Hace falta un asesor" y se detiene hasta que una persona lo atienda.'
+      description="Temas sobre los que el asistente no responderá. Si un lead pregunta por alguno, envía el mensaje fijo y se detiene."
     >
       <Panel>
         <TextRow
           name="forbiddenDescribe"
           label="Temas"
-          hint={`Uno por línea, en palabras simples, como se lo explicarías a una persona. El asistente marca cuál tocó el lead${
-            topics.length ? ` (${topics.length} cargados)` : ""
+          hint={`Uno por línea, en lenguaje simple${
+            topics.length ? ` (${topics.length})` : ""
           }.`}
-          placeholder="Rentabilidad futura, renta proyectada o retorno de la inversión."
+          placeholder="Ej.: descuentos no autorizados, garantías o asesoría legal."
           multiline
         />
       </Panel>
@@ -363,27 +363,27 @@ function MessagesSection() {
   return (
     <Section
       title="Mensajes fijos"
-      description="Se envían tal cual, sin pasar por el modelo."
+      description="Respuestas exactas que se envían sin pasar por el modelo."
     >
       <Panel>
         <TextRow
           name="needsHuman"
           label="Hace falta un asesor"
-          hint="Se envía ante un tema prohibido, una queja, una compra existente o algo que solo puede responder una persona. Después, el asistente espera a una persona. Un lead que pide hablar con alguien en ese momento no recibe este mensaje y pasa a Por contactar."
+          hint="Se envía ante temas prohibidos, quejas o consultas que requieren a una persona."
           multiline
           maxLength={1000}
         />
         <TextRow
           name="fallback"
           label="Respaldo"
-          hint="Si el modelo falla, tarda demasiado o devuelve una respuesta vacía."
+          hint="Se envía si el modelo falla o no responde a tiempo."
           multiline
           maxLength={1000}
         />
         <TextRow
           name="nonText"
           label="Audio, fotos o stickers"
-          hint="Cuando el lead envía algo que no es texto."
+          hint="Se envía cuando el lead manda un mensaje que no es texto."
           multiline
           maxLength={1000}
         />
@@ -398,7 +398,7 @@ export function WelcomeTemplatePanel() {
   return (
     <Panel
       title="Bienvenida a leads de formulario"
-      description="Una plantilla aprobada en Meta, enviada una vez desde el número de la empresa."
+      description="Plantilla aprobada en Meta que se envía una vez a leads de formulario."
       actions={
         <Switch
           id={fieldId("welcomeEnabled")}
@@ -413,7 +413,7 @@ export function WelcomeTemplatePanel() {
           <TextRow
             name="templateName"
             label="Plantilla"
-            hint="El nombre exacto en Meta."
+            hint="Nombre exacto de la plantilla en Meta."
             placeholder="bienvenida_formulario"
             mono
             maxLength={512}
@@ -421,22 +421,22 @@ export function WelcomeTemplatePanel() {
           <TextRow
             name="templateLanguage"
             label="Idioma de la plantilla"
-            hint="El código de Meta, como es o es_AR."
+            hint="Código de idioma en Meta, por ejemplo es o es_LA."
             mono
             narrow
           />
           <TextRow
             name="templateBody"
             label="Texto aprobado"
-            hint="Para que la conversación muestre lo que recibió el lead."
+            hint="Vista previa que verá el equipo en la conversación."
             multiline
             maxLength={1024}
           />
         </>
       ) : (
         <p className="px-5 py-4 text-sm text-muted-foreground">
-          Si está apagada, el lead queda registrado, pero no recibe ningún
-          mensaje.
+          Desactivada. El lead queda registrado, pero no recibe mensaje
+          automático.
         </p>
       )}
     </Panel>
@@ -449,7 +449,7 @@ export function TranscriptPropertyRow() {
     <TextRow
       name="transcriptProperty"
       label="Propiedad del resumen"
-      hint="Nombre interno de una propiedad de contacto de texto de varias líneas. Si está vacío, solo se crea o actualiza el contacto."
+      hint="Nombre interno de la propiedad de texto multilínea en HubSpot. Si está vacío, solo se sincroniza el contacto."
       placeholder="leadscope_resumen"
       mono
       maxLength={100}
@@ -466,8 +466,8 @@ export function ModelRow() {
       label="Modelo"
       hint={
         choices.modelSource === "anthropic"
-          ? "Los de la cuenta de Anthropic de la empresa. Por defecto, claude-haiku-4-5."
-          : "Cuando la clave de Anthropic está configurada, se listan los de su cuenta. Por defecto, claude-haiku-4-5."
+          ? "Modelos disponibles en tu cuenta de Anthropic. Por defecto: claude-haiku-4-5."
+          : "Configura tu clave de Anthropic para listar los modelos de tu cuenta. Por defecto: claude-haiku-4-5."
       }
       options={choices.models}
     />
@@ -478,7 +478,7 @@ function LimitsSection() {
   return (
     <Section
       title="Respuestas y límites"
-      description="Cambiarlos afecta el costo y la calidad de las respuestas. El modelo se elige en Integraciones → Anthropic."
+      description="Parámetros del modelo y límites de archivos. El modelo se selecciona en Integraciones → Anthropic."
     >
       <Panel title="Respuestas">
         <TextRow
@@ -491,7 +491,7 @@ function LimitsSection() {
         <TextRow
           name="historyLimit"
           label="Historial"
-          hint="Mensajes anteriores que lee, de 4 a 200."
+          hint="Mensajes recientes de contexto (4 a 200)."
           inputMode="numeric"
           suffix="mensajes"
           narrow
@@ -507,7 +507,7 @@ function LimitsSection() {
       </Panel>
       <Panel
         title="Conocimiento"
-        description="Los límites deben admitir los archivos que ya están subidos."
+        description="Los límites deben ser mayores o iguales al contenido actual."
       >
         <TextRow
           name="maxFileMegabytes"

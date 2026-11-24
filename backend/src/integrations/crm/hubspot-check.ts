@@ -204,7 +204,7 @@ export async function checkHubspot(
         status: "warning",
         label: "Permisos",
         detail:
-          "HubSpot no devolvió los permisos de este token (solo lo hace con tokens de apps privadas). Revisa a mano que tenga crm.objects.contacts.read y crm.objects.contacts.write.",
+          "HubSpot no devolvió los permisos de este token (solo lo hace con tokens de apps privadas). Verifica manualmente que tenga crm.objects.contacts.read y crm.objects.contacts.write.",
       });
     } else {
       const missing = HUBSPOT_REQUIRED_SCOPES.filter(
@@ -285,9 +285,9 @@ async function checkProperty(
       id: "property",
       status: "error",
       label,
-      detail: `La propiedad ${name} no es de texto (es de tipo ${String(type)}). Tiene que ser Texto de varias líneas.`,
+      detail: `La propiedad ${name} no es de texto (es de tipo ${String(type)}). Debe ser Texto de varias líneas.`,
     };
-  const title = typeof shown === "string" && shown ? `«${shown}» ` : "";
+  const title = typeof shown === "string" && shown ? `"${shown}" ` : "";
   return fieldType === "textarea"
     ? {
         id: "property",

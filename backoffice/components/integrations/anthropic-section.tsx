@@ -25,11 +25,11 @@ export function AnthropicSection({ companyName }: { companyName?: string }) {
   return (
     <Section
       title="Anthropic"
-      description={`El modelo que responde a los leads. ${companyName ?? "La empresa"} paga el uso en su propia cuenta de Anthropic.`}
+      description={`Modelo de IA del asistente. ${companyName ?? "La empresa"} paga el consumo en su cuenta de Anthropic.`}
     >
       <Panel
         title="Anthropic"
-        description="La clave de API y el modelo que usa el asistente."
+        description="Clave de API y modelo activo."
         actions={
           <TestActions
             status={testStatus(check.data, missing)}
@@ -45,12 +45,15 @@ export function AnthropicSection({ companyName }: { companyName?: string }) {
         {check.data ? (
           <CheckResults
             result={check.data}
-            readyText="Listo. El asistente puede responder con este modelo."
+            readyText="Conexión verificada. El modelo está listo para responder."
           />
         ) : null}
 
         {key ? (
-          <SecretRow secret={key} hint="La usa el asistente para responder." />
+          <SecretRow
+            secret={key}
+            hint="Clave usada por el asistente para generar respuestas."
+          />
         ) : (
           <RowSkeleton />
         )}
@@ -59,29 +62,29 @@ export function AnthropicSection({ companyName }: { companyName?: string }) {
 
         <Guide defaultOpen={key !== undefined && !key.set}>
           <ol className="flex flex-col gap-4">
-            <Step n={1} title="Crea la clave en la cuenta de la empresa">
+            <Step n={1} title="Crea una clave en Anthropic">
               <p>
-                Entra a{" "}
+                Ingresa a{" "}
                 <ExternalLink href="https://console.anthropic.com/settings/keys">
                   console.anthropic.com
                 </ExternalLink>{" "}
                 → <InlineCode>API keys</InlineCode> →{" "}
-                <InlineCode>Create key</InlineCode>. Usa la organización de la
-                empresa, que es la que paga el uso.
+                <InlineCode>Create key</InlineCode> en la organización de la
+                empresa.
               </p>
             </Step>
-            <Step n={2} title="Pégala aquí">
+            <Step n={2} title="Guarda la clave">
               <p>
-                En Clave de Anthropic, toca Configurar y pégala. Con la clave,
-                la lista de modelos muestra los de esa cuenta.
+                Haz clic en Configurar en Clave de Anthropic y pégala. Al
+                guardarla, la lista de modelos mostrará los disponibles en esa
+                cuenta.
               </p>
             </Step>
-            <Step n={3} title="Elige el modelo y prueba">
+            <Step n={3} title="Selecciona el modelo y prueba">
               <p>
-                Por defecto, <InlineCode>claude-haiku-4-5</InlineCode>. Guarda y
-                toca Probar conexión: revisa la clave y que el modelo guardado
-                exista para ella, sin generar ninguna respuesta ni gastar
-                tokens.
+                Por defecto se usa <InlineCode>claude-haiku-4-5</InlineCode>.
+                Guarda los cambios y haz clic en Probar conexión (no consume
+                tokens).
               </p>
             </Step>
           </ol>

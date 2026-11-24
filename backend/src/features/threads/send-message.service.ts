@@ -33,7 +33,7 @@ export async function sendManualMessage(
   const now = ctx.now();
   if (!isWithinReplyWindow(thread.lastInboundAt, now))
     throw conflict(
-      "Pasaron más de 24 horas desde el último mensaje del lead. WhatsApp no deja escribirle un mensaje libre hasta que vuelva a escribir.",
+      "Han pasado más de 24 horas desde el último mensaje del lead. WhatsApp no permite enviar mensajes libres hasta que vuelva a escribir.",
       "reply_window_closed",
     );
 

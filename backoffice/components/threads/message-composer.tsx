@@ -146,7 +146,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
           );
         } else if (wasActive) {
           toast.success(
-            "Mensaje enviado. El asistente quedó pausado en esta conversación.",
+            "Mensaje enviado. Asistente pausado en esta conversación.",
           );
         }
       },
@@ -177,8 +177,8 @@ export function MessageComposer({ thread }: { thread: Thread }) {
   const hint = !open
     ? null
     : thread.paused && !thread.needsHuman
-      ? "El asistente está pausado y no responde hasta que alguien lo reanude."
-      : `Al enviar, el asistente se pausa en esta conversación${takesAssignee ? " y la conversación queda asignada a ti" : ""}.`;
+      ? "Asistente pausado en esta conversación."
+      : `Al enviar, el asistente se pausa${takesAssignee ? " y se te asigna la conversación" : ""}.`;
 
   return (
     <div className="flex flex-col gap-2 bg-card px-4 py-3">
@@ -190,8 +190,8 @@ export function MessageComposer({ thread }: { thread: Thread }) {
           <TimerOffIcon className="mt-0.5 size-4 shrink-0" />
           <span>
             {thread.lastInboundAt
-              ? "Pasaron más de 24 horas desde el último mensaje del lead. WhatsApp solo deja escribirle con una plantilla aprobada, y desde el panel todavía no se envían plantillas. Cuando el lead vuelva a escribir, podrás responderle desde aquí."
-              : "El lead todavía no escribió. WhatsApp solo deja escribirle con una plantilla aprobada hasta que escriba, y desde el panel todavía no se envían plantillas."}
+              ? "Han pasado más de 24 horas desde el último mensaje del lead. Podrás responder cuando vuelva a escribir."
+              : "El lead aún no ha respondido. Podrás escribirle desde aquí cuando envíe un mensaje."}
           </span>
         </p>
       ) : null}
@@ -230,7 +230,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
           ))}
           {touch ? null : (
             <span className="ml-auto px-1.5 text-[11px] text-muted-foreground max-sm:hidden">
-              Enter envía · Shift+Enter, nueva línea
+              Enter para enviar · Shift+Enter nueva línea
             </span>
           )}
         </div>
@@ -245,9 +245,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
             enterKeyHint={touch ? "enter" : "send"}
             aria-label="Mensaje para el lead"
             placeholder={
-              open
-                ? "Escríbele al lead por WhatsApp…"
-                : "La ventana de 24 h está cerrada"
+              open ? "Escribe un mensaje…" : "Ventana de 24 h cerrada"
             }
             className="max-h-40 min-h-9 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 max-lg:max-h-28"
           />
@@ -272,7 +270,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
               left < 60 * 60_000 && "text-primary",
               tooLong && "text-destructive",
             )}
-            title="WhatsApp deja escribir mensajes libres hasta 24 horas después del último mensaje del lead."
+            title="WhatsApp permite enviar mensajes libres durante 24 horas desde el último mensaje del lead."
           >
             {tooLong ? (
               `${text.length} / ${MAX_CHARS} caracteres`

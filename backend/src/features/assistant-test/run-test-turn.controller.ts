@@ -42,7 +42,7 @@ const bodySchema = z
     leadName: z.string().max(80).nullable().optional(),
   })
   .refine((body) => body.messages.at(-1)?.role === "lead", {
-    message: "El último mensaje tiene que ser del lead.",
+    message: "El último mensaje debe ser del lead.",
     path: ["messages"],
   })
   .refine((body) => body.messages.at(-1)?.body.trim(), {

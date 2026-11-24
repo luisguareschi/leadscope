@@ -15,7 +15,7 @@ function WhatsappSection({ companyName }: { companyName?: string }) {
   return (
     <Section
       title="WhatsApp (Kapso)"
-      description={`El número de ${companyName ?? "la empresa"} donde responde el asistente.`}
+      description={`Número de WhatsApp de ${companyName ?? "la empresa"} conectado al asistente.`}
     >
       <WhatsappSetupCard secrets={query.data?.secrets} />
     </Section>

@@ -6,23 +6,17 @@ export function toastInvite(email: string, invite: InviteOutcome | null) {
   if (!invite) return;
   switch (invite.status) {
     case "sent":
-      toast.success(
-        `Invitación enviada a ${email}. El enlace lo lleva a elegir su contraseña.`,
-      );
+      toast.success(`Invitación enviada a ${email}.`);
       return;
     case "linked":
-      toast.success(
-        `${email} ya tenía usuario. Quedó vinculado y entra con su contraseña de siempre.`,
-      );
+      toast.success(`${email} quedó vinculado con su cuenta existente.`);
       return;
     case "reset_sent":
-      toast.success(
-        `${email} ya tenía contraseña. Le enviamos un enlace para elegir una nueva.`,
-      );
+      toast.success(`Enlace para restablecer contraseña enviado a ${email}.`);
       return;
     case "failed":
       toast.error(`No se pudo invitar a ${email}`, {
-        description: `${invite.message} Puedes reenviar la invitación desde la lista de operadores.`,
+        description: `${invite.message} Puedes reenviar la invitación desde la lista.`,
         duration: Infinity,
         closeButton: true,
       });

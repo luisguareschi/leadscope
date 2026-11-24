@@ -54,8 +54,7 @@ export function CompaniesComparison({
             Comparación entre empresas
           </h2>
           <p className="text-sm text-muted-foreground">
-            Los días de esta tabla se cuentan en un mismo huso horario para
-            todas las empresas.
+            Todas las empresas se comparan bajo la misma zona horaria.
           </p>
         </div>
         <div className="flex items-center gap-2 px-2">
@@ -97,8 +96,8 @@ export function CompaniesComparison({
                 </EmptyTitle>
                 <EmptyDescription>
                   {showArchived
-                    ? "Cuando exista una empresa, sus números aparecen aquí."
-                    : "Muestra las archivadas para ver alguna, o crea una empresa."}
+                    ? "Las métricas aparecerán aquí cuando exista al menos una empresa."
+                    : "Muestra las archivadas o crea una nueva empresa."}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>

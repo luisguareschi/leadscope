@@ -37,7 +37,7 @@ export async function checkFormsConnection(ctx: AppContext, companyId: string) {
       status: "warning",
       label: "Plantilla de bienvenida",
       detail:
-        "La bienvenida está apagada. El lead queda registrado, pero no recibe ningún mensaje.",
+        "La bienvenida está desactivada. El lead queda registrado, pero no recibe mensaje automático.",
     });
   } else if (!kapsoApiKey || !company.whatsappPhoneNumberId) {
     checks.push({

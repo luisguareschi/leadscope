@@ -27,7 +27,7 @@ export const updateInstructionsBodySchema = z.strictObject({
     .trim()
     .max(
       MAX_INSTRUCTIONS_CHARS,
-      `Máximo ${new Intl.NumberFormat("es-UY").format(MAX_INSTRUCTIONS_CHARS)} caracteres.`,
+      `Máximo ${new Intl.NumberFormat("es").format(MAX_INSTRUCTIONS_CHARS)} caracteres.`,
     ),
 });
 

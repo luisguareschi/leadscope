@@ -30,7 +30,9 @@ export default function LoginPage() {
     try {
       await signIn(email, password);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo entrar.");
+      setError(
+        cause instanceof Error ? cause.message : "No se pudo iniciar sesión.",
+      );
     } finally {
       setPending(false);
     }
@@ -38,35 +40,35 @@ export default function LoginPage() {
 
   async function onForgotPassword() {
     if (!email) {
-      setError("Escribe tu email y vuelve a tocar el enlace.");
+      setError("Ingresa tu correo electrónico primero.");
       return;
     }
     try {
       await requestPasswordReset(email);
-      toast.success("Te enviamos un email para elegir una contraseña nueva.");
+      toast.success("Te enviamos un correo para restablecer tu contraseña.");
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "No se pudo enviar el email.",
+        cause instanceof Error ? cause.message : "No se pudo enviar el correo.",
       );
     }
   }
 
   return (
     <AuthCard
-      title="Entra al panel"
-      description="Conversaciones del asistente de WhatsApp."
+      title="Iniciar sesión"
+      description="Accede al panel de LeadScope."
     >
       <form onSubmit={onSubmit}>
         <FieldGroup>
           {mode === "dev" ? (
             <Alert className="bg-secondary ring-0">
               <AlertDescription>
-                Modo desarrollo. Entra con un email, sin contraseña.
+                Modo desarrollo. Ingresa un correo sin contraseña.
               </AlertDescription>
             </Alert>
           ) : null}
           <Field>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
             <Input
               id="email"
               type="email"
@@ -85,7 +87,7 @@ export default function LoginPage() {
                   onClick={onForgotPassword}
                   className="ml-auto text-sm font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  ¿La olvidaste?
+                  ¿Olvidaste tu contraseña?
                 </button>
               </div>
               <Input
@@ -106,7 +108,7 @@ export default function LoginPage() {
             disabled={pending}
           >
             {pending ? <Spinner /> : null}
-            Entrar
+            Iniciar sesión
           </Button>
         </FieldGroup>
       </form>

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const THEMES = [
-  { value: "system", label: "Según el sistema", icon: <MonitorIcon /> },
+  { value: "system", label: "Sistema", icon: <MonitorIcon /> },
   { value: "light", label: "Claro", icon: <SunIcon /> },
   { value: "dark", label: "Oscuro", icon: <MoonIcon /> },
 ] as const;

@@ -105,8 +105,8 @@ export function useConfigEditorState(
           (result) => {
             toast.success(
               result.changed
-                ? "Configuración guardada. El asistente la usa desde la próxima respuesta."
-                : "No había cambios para guardar.",
+                ? "Configuración guardada."
+                : "No hay cambios para guardar.",
             );
             return null;
           },

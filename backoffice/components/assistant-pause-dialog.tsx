@@ -34,8 +34,8 @@ export function useToggleAssistantPaused() {
       onSuccess: () => {
         toast.success(
           paused
-            ? "Asistente pausado para toda la empresa. Los mensajes se siguen guardando."
-            : "Asistente reanudado. Volverá a responder a partir del próximo mensaje de cada lead.",
+            ? "Asistente pausado para toda la empresa."
+            : "Asistente reanudado.",
         );
         onDone?.();
       },
@@ -68,10 +68,9 @@ export function PauseAssistantDialog({
               : "¿Pausar el asistente para toda la empresa?"}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Dejará de responder mensajes de WhatsApp y de enviar plantillas de
-            bienvenida de formularios hasta que lo reanudes. Los mensajes nuevos
-            se seguirán guardando, podrás responder manualmente y seguir usando
-            Probar asistente.
+            El asistente dejará de responder mensajes de WhatsApp y de enviar
+            bienvenidas de formularios. Los mensajes se seguirán guardando y
+            podrás responder manualmente.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

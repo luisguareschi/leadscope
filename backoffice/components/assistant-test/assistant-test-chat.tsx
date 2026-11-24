@@ -52,7 +52,7 @@ function ModelReplyNote({ text }: { text: string }) {
   return (
     <details className="mt-1 max-w-[85%] self-start px-1 text-xs text-muted-foreground sm:max-w-[70%]">
       <summary className="cursor-pointer select-none">
-        El modelo quería responder otra cosa
+        Ver respuesta original del modelo
       </summary>
       <p className="mt-1 rounded-xl bg-card px-3 py-2 whitespace-pre-wrap ring-1 ring-border/60 dark:bg-secondary dark:ring-0">
         {text}
@@ -89,11 +89,11 @@ function EmptyState({
           <MessagesSquareIcon className="size-6" />
         </div>
         <h2 className="mt-4 font-heading text-base font-semibold">
-          Empieza la conversación
+          Inicia una conversación
         </h2>
         <p className="mt-1 text-sm text-balance text-muted-foreground">
-          El asistente responde con la configuración y los archivos guardados.
-          No se envía nada por WhatsApp ni a HubSpot.
+          Usa la configuración y los archivos guardados. No envía mensajes ni
+          sincroniza con HubSpot.
         </p>
 
         <label
@@ -205,7 +205,7 @@ export function AssistantTestChat({
           <div className="mt-2 flex max-w-[85%] items-start gap-2 self-start rounded-xl bg-primary/10 px-3.5 py-2.5 text-[13px] leading-relaxed sm:max-w-[70%]">
             <OctagonPauseIcon className="mt-0.5 size-4 shrink-0 text-primary" />
             <span>
-              Aquí el asistente se detendría y esperaría a una persona.{" "}
+              En producción, el asistente se detendría aquí.{" "}
               <span className="text-muted-foreground">
                 {needsHumanReasonLabel(test.stoppedReason)}
               </span>
@@ -265,7 +265,7 @@ export function AssistantTestChat({
         {stopped ? (
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" size="sm" onClick={onContinue}>
-              Continuar como si una persona lo hubiera atendido
+              Continuar conversación
             </Button>
             <Button type="button" size="sm" variant="outline" onClick={onReset}>
               Nueva conversación
@@ -288,9 +288,7 @@ export function AssistantTestChat({
             enterKeyHint={touch ? "enter" : "send"}
             aria-label="Mensaje del lead"
             placeholder={
-              stopped
-                ? "El asistente está detenido"
-                : "Escribe como si fueras el lead…"
+              stopped ? "Asistente detenido" : "Escribe un mensaje de prueba…"
             }
             className="max-h-40 min-h-9 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 max-lg:max-h-28"
           />
@@ -310,7 +308,9 @@ export function AssistantTestChat({
           </Button>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span>{touch ? null : "Enter envía · Shift+Enter, nueva línea"}</span>
+          <span>
+            {touch ? null : "Enter para enviar · Shift+Enter nueva línea"}
+          </span>
           {tooLong ? (
             <span className="text-destructive tabular-nums">
               {text.length} / {MAX_CHARS} caracteres

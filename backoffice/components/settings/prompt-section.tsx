@@ -21,40 +21,40 @@ import { Panel, Section } from "@/components/panel";
 
 const RULES = [
   {
-    title: "Cómo se presenta",
-    text: "Usa el nombre del asistente y se presenta como asistente virtual de la empresa, con los dos nombres de General. Habla en nombre de la empresa y nunca confunde un nombre con el otro. Si no hay nombre del asistente, se presenta solo como el asistente virtual de la empresa y no inventa uno.",
+    title: "Identidad",
+    text: "Se presenta con el nombre del asistente y el nombre de la empresa configurados en General. Si no hay nombre propio, se presenta como asistente virtual de la empresa.",
   },
   {
     title: "Formato de salida",
-    text: "El modelo contesta con la herramienta submit_turn, que incluye la respuesta, lo que dijo el lead y la intención. El motor lee esos campos y decide el estado.",
+    text: "Responde mediante submit_turn con el mensaje, los datos extraídos y la intención. El motor controla el estado de la conversación.",
   },
   {
-    title: "Por contactar con los datos necesarios",
-    text: "El lead pasa a Por contactar solo cuando están guardados todos los datos necesarios de Información a recopilar (si no hay ninguno, cuando da un horario). En ese momento, el asistente pide un horario para la llamada.",
+    title: "Paso a Por contactar",
+    text: "El lead pasa a Por contactar cuando se completan los datos obligatorios (o al indicar horario si no hay ninguno).",
   },
   {
-    title: "Quiere hablar ya",
-    text: 'Si el lead pide hablar con una persona ("llámenme", "quiero hablar con alguien"), pasa a Por contactar enseguida aunque falten datos, con horario "Lo antes posible", y el asistente deja de preguntar. Le dice que un asesor lo contactará lo antes posible. Un número para llamar en ese momento solo puede salir de tus Instrucciones.',
+    title: "Contacto inmediato",
+    text: 'Si el lead pide hablar con una persona, pasa de inmediato a Por contactar con horario "Lo antes posible" y el asistente deja de hacer preguntas.',
   },
   {
-    title: "HubSpot desde el primer mensaje",
-    text: "El contacto se crea con el primer mensaje (nombre de WhatsApp y teléfono) y se actualiza después de cada respuesta que cambia los datos, el resumen o la etapa.",
+    title: "Sincronización con HubSpot",
+    text: "Si HubSpot está activo, el contacto se crea con el primer mensaje y se actualiza cuando cambian los datos, el resumen o la etapa.",
   },
   {
-    title: "Cuando hace falta una persona",
-    text: 'Envía el mensaje fijo "Hace falta un asesor", escribe en HubSpot y espera hasta que un operador marque la conversación como atendida.',
+    title: "Intervención humana",
+    text: 'Envía el mensaje fijo "Hace falta un asesor", actualiza HubSpot y detiene el asistente hasta que un operador marque la conversación como atendida.',
   },
   {
     title: "Temas prohibidos",
-    text: "Una respuesta que los menciona no se envía. El lead recibe el mensaje de respaldo.",
+    text: "Cualquier respuesta que mencione un tema prohibido se bloquea y se sustituye por el mensaje fijo.",
   },
   {
     title: "Conocimiento por carpetas",
-    text: 'Cada archivo de Conocimiento llega con su ruta, por ejemplo "Proyectos / Tres Cruces / Precios.xlsx", agrupado por carpeta. Así el asistente sabe de qué proyecto habla cada uno. Los límites de caracteres son los mismos.',
+    text: 'Cada archivo incluye su ruta (por ejemplo, "Catálogo / Precios.xlsx") agrupado por carpeta para dar contexto al asistente.',
   },
   {
     title: "Ventana de 24 horas",
-    text: "Solo responde dentro de las 24 horas del último mensaje del lead y nunca escribe primero.",
+    text: "Solo responde dentro de las 24 horas desde el último mensaje del lead y nunca inicia conversaciones.",
   },
 ];
 
@@ -85,18 +85,17 @@ function KnowledgeOrder({
   if (documents.length === 0)
     return (
       <p className="p-5 text-sm text-muted-foreground">
-        Todavía no hay archivos en Conocimiento.
+        Aún no hay archivos en Conocimiento.
       </p>
     );
   return (
     <div className="flex flex-col gap-3 p-5">
       <p className="text-[13px] text-muted-foreground">
-        En este orden van en el bloque fijo, agrupados por carpeta. Cada uno
-        empieza con su ruta (
+        Orden de los archivos en el prompt. Cada uno incluye su ruta (
         <code className="font-mono text-xs">
           &lt;document path=&quot;…&quot;&gt;
         </code>
-        ), que le dice al asistente de qué trata.
+        ).
       </p>
       <ol className="divide-y divide-border/70 rounded-xl bg-muted/60">
         {documents.map((doc, index) => {
@@ -151,7 +150,7 @@ export function PromptSection({ rules }: { rules: string }) {
   return (
     <Section
       title="Reglas y prompt"
-      description="Lo que el motor necesita para funcionar. Lo define LeadScope en el código, se completa con tu configuración y no se edita desde el panel."
+      description="Reglas base de LeadScope que completan el prompt. Son de solo lectura."
     >
       <Panel
         title="Reglas de la plataforma"
@@ -185,7 +184,7 @@ export function PromptSection({ rules }: { rules: string }) {
 
       <Panel
         title="Prompt completo"
-        description="Lo que recibe el modelo en la próxima respuesta, con lo que ya está guardado."
+        description="Prompt que recibe el modelo con la configuración guardada."
         actions={
           <Button
             variant="outline"
@@ -201,7 +200,7 @@ export function PromptSection({ rules }: { rules: string }) {
         {query.isError ? (
           <div className="p-5">
             <Alert variant="destructive">
-              <AlertTitle>No se pudo armar el prompt</AlertTitle>
+              <AlertTitle>No se pudo cargar el prompt</AlertTitle>
               <AlertDescription>{query.error.message}</AlertDescription>
             </Alert>
           </div>
@@ -238,9 +237,7 @@ export function PromptSection({ rules }: { rules: string }) {
           <SheetHeader className="border-b pr-12">
             <SheetTitle>Prompt completo</SheetTitle>
             <SheetDescription>
-              En orden: el bloque fijo (se reutiliza entre respuestas), el
-              contexto del turno y la herramienta de salida. Después van los
-              últimos mensajes de la conversación.
+              Bloque fijo reutilizable, contexto del turno y esquema de salida.
             </SheetDescription>
           </SheetHeader>
           <Tabs
@@ -282,7 +279,7 @@ export function PromptSection({ rules }: { rules: string }) {
                 ) : (
                   <pre className="p-5 font-mono text-xs leading-relaxed whitespace-pre-wrap">
                     {texts[key] ||
-                      (key === "rules" ? "" : "Armando el prompt…")}
+                      (key === "rules" ? "" : "Cargando el prompt…")}
                   </pre>
                 )}
               </TabsContent>

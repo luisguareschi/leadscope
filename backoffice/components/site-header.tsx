@@ -58,7 +58,7 @@ function AssistantPausedButton({
         <span className="sm:hidden">Pausado</span>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="max-w-72">
-        {`El asistente está pausado para toda la empresa.${detail ? ` ${detail}` : ""} Haz clic para reanudarlo.`}
+        {`Asistente pausado para toda la empresa.${detail ? ` ${detail}` : ""} Haz clic para reanudar.`}
       </TooltipContent>
     </Tooltip>
   );
@@ -93,8 +93,9 @@ export function SiteHeader() {
             </h1>
             {pathname.startsWith("/metrics") ? (
               <HelpTip label="Cómo se cuentan las métricas">
-                Cada lead cuenta en el día en que escribió por primera vez, con
-                su etapa actual. «Ahora mismo» no depende del período.
+                Cada lead se cuenta el día de su primer mensaje, con su etapa
+                actual. &quot;Ahora mismo&quot; muestra el estado actual sin
+                filtro de fechas.
               </HelpTip>
             ) : null}
           </div>

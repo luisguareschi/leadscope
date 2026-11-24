@@ -16,7 +16,7 @@ export async function retryCrmSync(
   if (!thread) throw notFound("Conversación no encontrada");
   if (thread.company.hubspotEnabled !== true)
     throw badRequest(
-      "HubSpot está apagado para esta empresa. Actívalo en Configuración → HubSpot.",
+      "HubSpot está desactivado para esta empresa. Actívalo en Configuración → HubSpot.",
       "hubspot_disabled",
     );
   if (!thread.crmPendingAction)

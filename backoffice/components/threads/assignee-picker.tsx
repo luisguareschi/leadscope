@@ -109,7 +109,7 @@ export function AssigneePicker({
     if (option.kind === "me") {
       take.mutate("take", {
         ...done,
-        onSuccess: () => toast.success("Te asignaste esta conversación."),
+        onSuccess: () => toast.success("Conversación asignada a ti."),
       });
       return;
     }
@@ -119,7 +119,7 @@ export function AssigneePicker({
         toast.success(
           updated.assignee
             ? `Asignada a ${operatorName(updated.assignee.email)}.`
-            : "La conversación quedó sin asignar.",
+            : "Conversación sin asignar.",
         ),
     });
   };

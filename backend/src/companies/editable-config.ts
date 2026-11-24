@@ -11,7 +11,7 @@ import {
 export const MAX_KNOWLEDGE_CHARS = 400_000;
 export const MAX_INSTRUCTIONS_CHARS = 20_000;
 
-const count = (value: number) => new Intl.NumberFormat("es-UY").format(value);
+const count = (value: number) => new Intl.NumberFormat("es").format(value);
 
 const required = (max: number) =>
   z
@@ -27,7 +27,7 @@ const optional = (max: number) =>
 const integer = (min: number, max: number) =>
   z
     .number()
-    .int("Tiene que ser un número entero.")
+    .int("Debe ser un número entero.")
     .min(min, `El mínimo es ${count(min)}.`)
     .max(max, `El máximo es ${count(max)}.`);
 
@@ -89,14 +89,17 @@ export const editableConfigSchema = z.strictObject({
   language: z
     .string()
     .trim()
-    .refine(isLocale, "Usa un código de idioma, por ejemplo es-UY."),
+    .refine(
+      isLocale,
+      "Usa un código de idioma válido, por ejemplo es o es-419.",
+    ),
   tone: required(2_000),
   timezone: z
     .string()
     .trim()
     .refine(
       isTimeZone,
-      "Zona horaria desconocida. Usa una como America/Montevideo.",
+      "Zona horaria no válida. Ejemplo: America/Caracas o America/Bogota.",
     ),
   defaultCountry: z
     .string()
@@ -104,7 +107,7 @@ export const editableConfigSchema = z.strictObject({
     .toUpperCase()
     .refine(
       (value) => isSupportedCountry(value),
-      "Usa el código de dos letras del país, por ejemplo UY.",
+      "Usa el código de dos letras del país, por ejemplo VE o US.",
     ),
   businessHours: optional(300),
   collect: collectSchema,
@@ -129,7 +132,7 @@ export const editableConfigSchema = z.strictObject({
     historyLimit: integer(4, 200),
     timeoutMs: z
       .number()
-      .int("Tiene que ser un número entero.")
+      .int("Debe ser un número entero.")
       .min(1_000, "El mínimo es 1 segundo.")
       .max(60_000, "El máximo es 60 segundos."),
   }),
@@ -137,8 +140,8 @@ export const editableConfigSchema = z.strictObject({
     .strictObject({
       maxFileBytes: z
         .number()
-        .int("Tiene que ser un número entero.")
-        .min(1, "Tiene que ser mayor que 0.")
+        .int("Debe ser un número entero.")
+        .min(1, "Debe ser mayor que 0.")
         .max(
           MAX_UPLOAD_BYTES,
           `El máximo es ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB.`,
@@ -177,7 +180,7 @@ export const editableConfigSchema = z.strictObject({
           .trim()
           .regex(
             /^[a-z]{2,3}(_[A-Z]{2})?$/,
-            "Usa el código de idioma de la plantilla en Meta, por ejemplo es o es_AR.",
+            "Usa el código de idioma de la plantilla en Meta, por ejemplo es o es_LA.",
           ),
         bodyPreview: optional(1_024),
       })
@@ -241,7 +244,7 @@ export function fieldErrors(
       const name = (inList ? path.slice(0, -1) : path).join(".") || "input";
       const quoted =
         inList && typeof issue.input === "string"
-          ? `«${issue.input.slice(0, 60)}»: `
+          ? `"${issue.input.slice(0, 60)}": `
           : "";
       fields[name] ??= `${quoted}${issue.message}`;
     }

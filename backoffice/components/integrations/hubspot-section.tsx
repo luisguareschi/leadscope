@@ -31,8 +31,8 @@ function EnabledRow({ enabled }: { enabled: boolean | undefined }) {
       htmlFor="hubspot-enabled"
       hint={
         enabled
-          ? "Cada lead se crea como contacto desde su primer mensaje, y el contacto se actualiza cuando el asistente aprende algo nuevo."
-          : "No se crea ni se actualiza nada en HubSpot, y las conversaciones no muestran su estado. Al activarlo, cada lead se crea con su próximo mensaje. Los anteriores no se cargan."
+          ? "Crea contactos desde el primer mensaje y actualiza el resumen automáticamente."
+          : "Desactivado. No se crearán ni actualizarán contactos en HubSpot."
       }
     >
       <div className="flex min-h-9 items-center gap-3">
@@ -44,15 +44,13 @@ function EnabledRow({ enabled }: { enabled: boolean | undefined }) {
             mutation.mutate(checked, {
               onSuccess: () =>
                 toast.success(
-                  checked
-                    ? "HubSpot activado. Los leads se crean desde su próximo mensaje."
-                    : "HubSpot apagado. No se escribe nada más en HubSpot.",
+                  checked ? "HubSpot activado." : "HubSpot desactivado.",
                 ),
               onError: (error) => toast.error(error.message),
             })
           }
         />
-        <span className="text-sm">{enabled ? "Activado" : "Apagado"}</span>
+        <span className="text-sm">{enabled ? "Activado" : "Desactivado"}</span>
       </div>
     </FieldRow>
   );
@@ -74,11 +72,11 @@ export function HubspotSection({ companyName }: { companyName?: string }) {
   return (
     <Section
       title="HubSpot"
-      description={`El CRM de ${companyName ?? "la empresa"}, si lo usa. Cada lead queda como contacto, con el resumen del asistente y la conversación en una propiedad de texto largo.`}
+      description={`Sincroniza los leads de ${companyName ?? "la empresa"} como contactos junto con el resumen y la conversación.`}
     >
       <Panel
         title="HubSpot"
-        description="Con una app privada de la cuenta de HubSpot de la empresa."
+        description="Conexión mediante app privada de HubSpot."
         actions={
           <TestActions
             status={testStatus(check.data, missing)}
@@ -92,10 +90,7 @@ export function HubspotSection({ companyName }: { companyName?: string }) {
         }
       >
         {check.data ? (
-          <CheckResults
-            result={check.data}
-            readyText="Listo. LeadScope puede crear y actualizar los contactos y escribir el resumen."
-          />
+          <CheckResults result={check.data} readyText="Conexión verificada." />
         ) : null}
 
         <EnabledRow enabled={account?.enabled} />
@@ -103,7 +98,7 @@ export function HubspotSection({ companyName }: { companyName?: string }) {
         {token ? (
           <SecretRow
             secret={token}
-            hint="El token de acceso de la app privada (empieza con pat-)."
+            hint="Token de acceso de la app privada (comienza con pat-)."
           />
         ) : (
           <RowSkeleton />
@@ -113,7 +108,7 @@ export function HubspotSection({ companyName }: { companyName?: string }) {
 
         <FieldRow
           label="Cuenta"
-          hint="Para el botón Abrir en HubSpot de cada conversación."
+          hint="Se usa para el enlace Abrir en HubSpot en cada conversación."
         >
           <p className="flex min-h-9 items-center text-sm text-muted-foreground">
             {account?.portalId ? (
@@ -125,7 +120,7 @@ export function HubspotSection({ companyName }: { companyName?: string }) {
                 {account.uiDomain ? ` · ${account.uiDomain}` : null}
               </span>
             ) : (
-              "Se completa al guardar el token o al probar la conexión."
+              "Se detecta al guardar el token o probar la conexión."
             )}
           </p>
         </FieldRow>
@@ -134,18 +129,16 @@ export function HubspotSection({ companyName }: { companyName?: string }) {
           <ol className="flex flex-col gap-4">
             <Step n={1} title="Crea una app privada">
               <p>
-                En HubSpot, con un usuario Superadministrador, entra a
-                Configuración (el engranaje) →{" "}
+                En HubSpot (como Superadministrador), ve a Configuración →{" "}
                 <InlineCode>Integraciones</InlineCode> →{" "}
                 <InlineCode>Apps privadas</InlineCode> →{" "}
-                <InlineCode>Crear una app privada</InlineCode>. Ponle de nombre
-                LeadScope. En cuentas nuevas, el mismo lugar se llama{" "}
+                <InlineCode>Crear una app privada</InlineCode> y nómbrala
+                LeadScope. En cuentas nuevas está en{" "}
                 <InlineCode>Desarrollo</InlineCode> →{" "}
-                <InlineCode>Apps heredadas</InlineCode> →{" "}
-                <InlineCode>Crear app heredada</InlineCode> → Privada.
+                <InlineCode>Apps heredadas</InlineCode>.
               </p>
             </Step>
-            <Step n={2} title="Dale los permisos">
+            <Step n={2} title="Asigna los permisos">
               <p>
                 En <InlineCode>Alcances</InlineCode> (Scopes), marca{" "}
                 {SCOPES.map((scope, index) => (
@@ -154,36 +147,29 @@ export function HubspotSection({ companyName }: { companyName?: string }) {
                     <InlineCode>{scope}</InlineCode>
                   </span>
                 ))}
-                . Con eso busca, crea y actualiza contactos y lee la propiedad.
-                No hace falta ningún permiso de esquemas (crm.schemas…), porque
-                LeadScope no crea propiedades.
+                . No se requieren permisos de esquemas.
               </p>
             </Step>
-            <Step n={3} title="Crea la propiedad del resumen a mano">
+            <Step n={3} title="Crea la propiedad del resumen">
               <p>
-                LeadScope no la crea. En Configuración →{" "}
-                <InlineCode>Propiedades</InlineCode>, elige el objeto Contacto →{" "}
-                <InlineCode>Crear propiedad</InlineCode>, de tipo{" "}
-                <InlineCode>Texto de varias líneas</InlineCode>, por ejemplo
-                «Resumen LeadScope». Copia su nombre interno (como{" "}
-                <InlineCode>leadscope_resumen</InlineCode>) en Propiedad del
-                resumen y guarda.
+                En Configuración → <InlineCode>Propiedades</InlineCode>, crea en
+                Contacto una propiedad de tipo{" "}
+                <InlineCode>Texto de varias líneas</InlineCode> (por ejemplo,
+                &quot;Resumen LeadScope&quot;) y copia su nombre interno (como{" "}
+                <InlineCode>leadscope_resumen</InlineCode>) en el campo de
+                arriba.
               </p>
             </Step>
             <Step n={4} title="Copia el token">
               <p>
-                Crea la app y, en <InlineCode>Token de acceso</InlineCode>, toca
-                Mostrar token → Copiar. Pégalo arriba, en Token de HubSpot. Se
-                guarda cifrado y aquí solo ves sus últimos 4 caracteres.
+                Crea la app y, en <InlineCode>Token de acceso</InlineCode>, haz
+                clic en Mostrar token → Copiar y pégalo arriba.
               </p>
             </Step>
             <Step n={5} title="Activa y prueba">
               <p>
-                Activa Usar HubSpot y toca Probar conexión. Revisa que el token
-                sea válido, que tenga los dos permisos y que la propiedad
-                exista, sin crear ni cambiar nada en HubSpot. También guarda la
-                cuenta, para abrir cada contacto desde la conversación. Más
-                detalle en la{" "}
+                Activa Usar HubSpot y haz clic en Probar conexión para validar
+                el token, los permisos y la propiedad. Más información en la{" "}
                 <ExternalLink href="https://developers.hubspot.com/docs/apps/legacy-apps/private-apps/overview">
                   documentación de HubSpot
                 </ExternalLink>

@@ -57,9 +57,8 @@ function ReplyWindow({
         <StatusPill tone={closed ? "muted" : "ok"}>{label}</StatusPill>
       </TooltipTrigger>
       <TooltipContent className="max-w-64">
-        WhatsApp deja responder hasta 24 horas después del último mensaje del
-        lead. Después, ni el asistente ni el panel pueden escribirle hasta que
-        el lead vuelva a escribir.
+        WhatsApp permite responder durante 24 horas desde el último mensaje del
+        lead.
       </TooltipContent>
     </Tooltip>
   );
@@ -139,7 +138,7 @@ export default function ThreadPage() {
               </div>
               <p className="truncate text-[13px] text-muted-foreground tabular-nums">
                 {formatPhone(thread.phone)}
-                {thread.source === "form" ? " · Llegó por un formulario" : ""}
+                {thread.source === "form" ? " · Formulario" : ""}
               </p>
             </div>
             <ThreadActions thread={thread} />
@@ -172,7 +171,7 @@ export default function ThreadPage() {
             {attention ? (
               <StatusDot
                 tone={attention}
-                aria-label="Hay algo para resolver"
+                aria-label="Requiere atención"
                 className="size-1.5"
               />
             ) : null}

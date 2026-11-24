@@ -42,7 +42,7 @@ export default function AssistantTestPage() {
       <header className="flex min-h-8 flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <p className="flex items-center gap-2 text-[13px] text-muted-foreground">
           <InfoIcon className="size-4 shrink-0" />
-          Escribe como si fueras un lead que llega por WhatsApp.
+          Simula una conversación como si fueras un lead.
         </p>
         {chat.messages.length > 0 ? (
           <Button

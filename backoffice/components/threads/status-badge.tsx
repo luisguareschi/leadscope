@@ -73,8 +73,8 @@ export function WroteAgainBadge({
       </TooltipTrigger>
       <TooltipContent className="max-w-64">
         {thread.stage === "contacted"
-          ? "El lead escribió después de que lo marcaran como contactado."
-          : "El lead escribió después de pasar a Por contactar. Sigue en la cola."}
+          ? "El lead escribió después de ser contactado."
+          : "El lead volvió a escribir mientras espera contacto."}
       </TooltipContent>
     </Tooltip>
   );
@@ -89,12 +89,12 @@ const COLUMN_HELP: Record<
   stage: {
     label: "Qué significa cada etapa",
     intro:
-      "Dónde está el lead para el equipo de ventas. El asistente solo la mueve hacia adelante. Cualquier persona del equipo puede cambiarla en cualquier sentido haciendo clic en la etapa.",
+      "Estado del lead en el proceso comercial. Haz clic en una etapa para cambiarla.",
     items: STAGE_META,
   },
   bot: {
     label: "Qué significa cada estado del asistente",
-    intro: "Qué hace el asistente en la conversación, aparte de la etapa.",
+    intro: "Estado actual del asistente en esta conversación.",
     items: BOT_META,
   },
 };

@@ -10,8 +10,8 @@ import type { CompanyConfig, TestLead, TestTurnResponse } from "@/lib/types";
 /** The engine's conversation step, in plain words. */
 const STATE_LABELS: Record<TestLead["state"], string> = {
   greeting: "Saludo",
-  qualify: "Averiguando datos",
-  handoff: "Pidiendo horario",
+  qualify: "Recopilando datos",
+  handoff: "Solicitando horario",
   answer: "Respondiendo preguntas",
   closed: "Cerrada",
 };
@@ -45,7 +45,7 @@ export function AssistantTestLead({
   return (
     <Panel
       title="Estado del lead"
-      description="Lo que el asistente guardaría en la conversación."
+      description="Datos que guardaría el asistente."
       className={cn("min-h-0 overflow-y-auto", className)}
     >
       <Group title="Seguimiento">
@@ -91,9 +91,7 @@ export function AssistantTestLead({
       <Group title="Resumen">
         <p className="text-sm whitespace-pre-wrap text-pretty">
           {lead?.summary ?? (
-            <span className="text-muted-foreground/70">
-              Todavía no hay resumen.
-            </span>
+            <span className="text-muted-foreground/70">Sin resumen aún.</span>
           )}
         </p>
       </Group>

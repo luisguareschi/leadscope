@@ -46,7 +46,7 @@ import { useSaveInstructions } from "@/lib/queries";
 const VIEW_KEY = "leadscope:instructions-view";
 
 const PLACEHOLDER =
-  "## Quiénes somos\nQuiénes son, en qué zonas trabajan, cómo se presentan, qué conviene evitar…";
+  "## Sobre la empresa\nQué ofrecemos, cómo presentarnos y qué evitar…";
 
 type InstructionsView = "edit" | "preview";
 
@@ -228,8 +228,8 @@ export function InstructionsCard({
       (result) =>
         toast.success(
           result.changed
-            ? "Instrucciones guardadas. El asistente las usa desde la próxima respuesta."
-            : "No había cambios para guardar.",
+            ? "Instrucciones guardadas."
+            : "No hay cambios para guardar.",
         ),
       (cause: Error) => {
         setError(
@@ -245,7 +245,7 @@ export function InstructionsCard({
   return (
     <Section
       title="Instrucciones"
-      description="Lo que el asistente tiene que saber de la empresa y cómo quieres que hable de ella. Admite Markdown: títulos, listas y negrita. Precios y proyectos van en Conocimiento."
+      description="Contexto sobre tu empresa y pautas para el asistente. Admite Markdown. Sube catálogos y documentos en Conocimiento."
     >
       <form
         onSubmit={onSubmit}
@@ -361,7 +361,7 @@ export function InstructionsCard({
             className="min-h-80 px-5 py-4 text-sm leading-relaxed text-muted-foreground"
             onDoubleClick={startEditing}
           >
-            Todavía no hay instrucciones. Cambia a Editar para escribirlas.
+            Aún no hay instrucciones. Cambia a Editar para escribirlas.
           </p>
         )}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/70 px-5 py-2.5">
@@ -372,8 +372,7 @@ export function InstructionsCard({
               error ? "text-destructive" : "text-muted-foreground",
             )}
           >
-            {error ??
-              "Van después de las reglas de la plataforma. Si se contradicen, ganan las reglas."}
+            {error ?? "Se aplican después de las reglas de la plataforma."}
           </p>
           <span
             className={cn(
