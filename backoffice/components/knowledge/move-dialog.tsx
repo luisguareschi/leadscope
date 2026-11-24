@@ -125,8 +125,8 @@ function MovePicker({
           Mover &quot;{request.name}&quot;
         </DialogTitle>
         <DialogDescription>
-          Ahora está en {placeLabel(tree, request.from)}. Elige a dónde va
-          {request.kind === "folder" ? ", con todo lo que tiene dentro" : ""}.
+          Ubicación actual: {placeLabel(tree, request.from)}. Selecciona el
+          destino.
         </DialogDescription>
       </DialogHeader>
       <div className="border-b p-3">
@@ -150,7 +150,7 @@ function MovePicker({
       >
         {options.length === 0 ? (
           <li className="px-3 py-6 text-center text-sm text-muted-foreground">
-            Ninguna carpeta coincide.
+            No hay coincidencias.
           </li>
         ) : null}
         {options.map((option) => {

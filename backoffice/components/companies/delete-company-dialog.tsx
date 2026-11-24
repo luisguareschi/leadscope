@@ -44,13 +44,11 @@ export function DeleteCompanyDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            ¿Eliminar {company?.name} para siempre?
+            ¿Eliminar {company?.name} permanentemente?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Se borran la empresa, sus operadores y sus usuarios de Supabase, las
-            conversaciones, los archivos de conocimiento, la configuración y sus
-            versiones. No se puede deshacer. Si solo quieres desactivarla,
-            archívala.
+            Se eliminarán la empresa, sus operadores, conversaciones, archivos y
+            configuración. Esta acción no se puede deshacer.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form
@@ -62,9 +60,9 @@ export function DeleteCompanyDialog({
               { companyId: company.id, confirmSlug: typed.trim() },
               {
                 onSuccess: (result) => {
-                  toast.success(`Eliminaste ${company.name}.`, {
+                  toast.success(`Empresa ${company.name} eliminada.`, {
                     description: result.authUsers.failed.length
-                      ? `No se pudieron borrar en Supabase: ${result.authUsers.failed.join(", ")}.`
+                      ? `No se pudieron eliminar estas cuentas en Supabase: ${result.authUsers.failed.join(", ")}.`
                       : undefined,
                   });
                   close();
@@ -88,7 +86,7 @@ export function DeleteCompanyDialog({
               className="font-mono"
             />
             <FieldDescription>
-              Es el identificador de la empresa.
+              Identificador único de la empresa.
             </FieldDescription>
           </Field>
         </form>

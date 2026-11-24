@@ -67,9 +67,7 @@ export function useUploadQueue(
         });
         update(id, {
           state: "done",
-          message: result.replaced
-            ? "Reemplazó a la versión anterior"
-            : "Subido",
+          message: result.replaced ? "Versión anterior reemplazada" : "Subido",
         });
         onUploaded?.(target);
       } catch (error) {
@@ -119,12 +117,11 @@ export function EmptyDropzone({ queue }: { queue: UploadQueue }) {
       </span>
       <span className="flex flex-col gap-1">
         <span className="text-sm font-medium">
-          Sube la ficha de proyectos y las preguntas frecuentes
+          Sube los documentos del asistente
         </span>
         <span className="text-[13px] text-muted-foreground">
-          Arrastra los archivos aquí o haz clic para elegirlos. PDF, Word,
-          Excel, PowerPoint, CSV, texto o Markdown. Después puedes ordenarlos en
-          carpetas.
+          Arrastra archivos aquí o haz clic para seleccionarlos. PDF, Word,
+          Excel, PowerPoint, CSV, texto o Markdown.
         </span>
       </span>
     </button>

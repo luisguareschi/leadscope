@@ -50,14 +50,12 @@ export function ThreadsTable({
             {filtered ? <SearchXIcon /> : <MessagesSquareIcon />}
           </EmptyMedia>
           <EmptyTitle>
-            {filtered
-              ? "No hay conversaciones con este filtro"
-              : "Todavía no hay conversaciones"}
+            {filtered ? "No hay resultados" : "Sin conversaciones"}
           </EmptyTitle>
           <EmptyDescription>
             {filtered
-              ? "Prueba con otra etapa u otro filtro, o busca por otro nombre o teléfono."
-              : "Cuando un lead escriba al número de WhatsApp, la conversación aparecerá aquí."}
+              ? "Prueba con otros filtros o términos de búsqueda."
+              : "Las conversaciones aparecerán aquí cuando un lead escriba por WhatsApp."}
           </EmptyDescription>
         </EmptyHeader>
       </Empty>

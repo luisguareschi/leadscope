@@ -114,8 +114,8 @@ export function VersionsCard() {
         setViewing(null);
         toast.success(
           result.changed
-            ? `Restauraste ${KIND_PHRASE[version.kind]} del ${formatDateTime(version.createdAt)}. Ya está en uso.`
-            : "Esa versión ya es la que está en uso.",
+            ? `Versión restaurada (${formatDateTime(version.createdAt)}).`
+            : "Esa versión ya está activa.",
         );
       },
       onError: (error) => toast.error(restoreError(error)),
@@ -124,7 +124,7 @@ export function VersionsCard() {
   return (
     <Section
       title="Historial"
-      description="Cada vez que se guarda la configuración, las instrucciones o el número de WhatsApp queda una versión. Al restaurar una, se guarda como versión nueva y la actual queda en el historial."
+      description="Cada cambio en la configuración, instrucciones o número crea una versión que puedes restaurar."
     >
       <div className="flex flex-wrap gap-1.5">
         {FILTERS.map((item) => (
@@ -160,10 +160,10 @@ export function VersionsCard() {
             <EmptyMedia variant="icon">
               <HistoryIcon />
             </EmptyMedia>
-            <EmptyTitle>Todavía no hay versiones</EmptyTitle>
+            <EmptyTitle>Sin versiones aún</EmptyTitle>
             <EmptyDescription>
-              Aparecen cuando se guarda la configuración, las instrucciones o el
-              número de WhatsApp.
+              Las versiones aparecen al guardar cambios en la configuración,
+              instrucciones o número de WhatsApp.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -251,7 +251,7 @@ export function VersionsCard() {
             <DialogDescription>
               {viewing?.createdByEmail
                 ? `Guardada por ${viewing.createdByEmail}${viewing.viaSupport ? " (soporte)" : ""}.`
-                : "La que había antes de que se guardaran versiones."}
+                : "Versión inicial."}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto rounded-xl bg-muted p-4">
@@ -281,8 +281,8 @@ export function VersionsCard() {
               {confirming ? formatDateTime(confirming.createdAt) : null}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Se guarda como una versión nueva y queda en uso enseguida. Lo que
-              está en uso ahora queda en el historial.
+              Se creará una nueva versión con ese contenido y quedará activa de
+              inmediato.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

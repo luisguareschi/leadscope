@@ -1,4 +1,4 @@
-const LOCALE = "es-UY";
+const LOCALE = "es";
 
 const relative = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
 const numberFormat = new Intl.NumberFormat(LOCALE);

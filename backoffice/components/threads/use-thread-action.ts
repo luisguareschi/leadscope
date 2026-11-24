@@ -4,12 +4,11 @@ import { toast } from "sonner";
 import { useMe, useThreadAction, type ThreadAction } from "@/lib/queries";
 
 const SUCCESS: Record<ThreadAction, string> = {
-  "clear-needs-human":
-    "El asistente vuelve a responder desde el próximo mensaje del lead.",
-  resume: "El asistente vuelve a responder desde el próximo mensaje del lead.",
-  pause: "Pausaste el asistente en esta conversación.",
-  "crm-sync": "Guardado en HubSpot.",
-  take: "Tomaste esta conversación.",
+  "clear-needs-human": "Conversación atendida. Asistente activo.",
+  resume: "Asistente reanudado.",
+  pause: "Asistente pausado.",
+  "crm-sync": "Sincronizado con HubSpot.",
+  take: "Conversación asignada a ti.",
 };
 
 export function useThreadActionWithToast(threadId: string) {
@@ -21,14 +20,14 @@ export function useThreadActionWithToast(threadId: string) {
       onSuccess: ({ thread }) => {
         if (action === "crm-sync" && thread.crm?.status !== "synced") {
           toast.error(
-            `HubSpot sigue fallando: ${thread.crm?.lastError ?? "error desconocido"}`,
+            `Error al sincronizar con HubSpot: ${thread.crm?.lastError ?? "error desconocido"}`,
           );
         } else if (
           companyPaused &&
           (action === "resume" || action === "clear-needs-human")
         ) {
           toast.success(
-            "Conversación lista. El asistente volverá a responder cuando reanudes el asistente de la empresa.",
+            "Conversación atendida. El asistente responderá cuando lo reanudes para la empresa.",
           );
         } else {
           toast.success(SUCCESS[action]);

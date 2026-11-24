@@ -91,7 +91,7 @@ export function SearchableSelect({
             !selected && "text-muted-foreground",
           )}
         >
-          {selected?.label ?? placeholder ?? "Elige una opción"}
+          {selected?.label ?? placeholder ?? "Selecciona una opción"}
         </span>
       </ComboboxTrigger>
       <ComboboxContent>

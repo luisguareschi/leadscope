@@ -28,7 +28,7 @@ export function KpiTiles({ metrics }: { metrics: CompanyMetrics }) {
     {
       label: "Fuera de horario",
       value: formatPercent(metrics.outOfHoursRate),
-      caption: "Escribieron fuera de 9 a 18 h o en fin de semana",
+      caption: "Fuera de 9 a 18 h o fines de semana",
     },
     {
       label: "Tiempo hasta contactar",
@@ -36,9 +36,9 @@ export function KpiTiles({ metrics }: { metrics: CompanyMetrics }) {
       caption: `p90: ${formatDuration(metrics.timeToContact.p90Minutes)}`,
     },
     {
-      label: "Pidieron hablar ya",
+      label: "Contacto inmediato",
       value: formatCount(metrics.callNow),
-      caption: "Lo antes posible",
+      caption: "Pidieron hablar de inmediato",
     },
   ];
 

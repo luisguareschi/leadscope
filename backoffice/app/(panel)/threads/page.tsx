@@ -117,8 +117,7 @@ function ThreadsView() {
             </Button>
           }
         >
-          El asistente se detuvo y no responde hasta que alguien la marque como
-          atendida.
+          El asistente está detenido hasta que alguien atienda la conversación.
         </Notice>
       ) : null}
 
@@ -226,8 +225,7 @@ function ThreadsView() {
         </div>
         {stage === "to_contact" ? (
           <p className="px-4 pt-1 text-[13px] text-muted-foreground">
-            Primero los que más esperan. Siguen aquí aunque vuelvan a escribir,
-            hasta que alguien los marque como contactados.
+            Ordenados por mayor tiempo de espera.
           </p>
         ) : null}
 

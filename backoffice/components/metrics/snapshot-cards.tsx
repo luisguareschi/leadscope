@@ -118,7 +118,7 @@ export function SnapshotCards({
           </p>
           {reasons.length === 0 ? (
             <p className="text-[13px] text-muted-foreground">
-              Ninguna conversación está detenida.
+              Sin conversaciones detenidas.
             </p>
           ) : (
             <ul className="flex flex-col gap-1.5">
@@ -154,7 +154,7 @@ export function SnapshotCards({
         <div className="flex flex-col gap-1.5 px-5 py-4">
           {knowledge.files === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Todavía no hay archivos.
+              Aún no hay archivos.
             </p>
           ) : (
             <>
@@ -168,7 +168,7 @@ export function SnapshotCards({
               </p>
               {knowledgeStale ? (
                 <p className="text-[13px] font-medium text-primary">
-                  Revisa que los precios estén al día.
+                  Revisa que los documentos estén actualizados.
                 </p>
               ) : null}
               <p className="text-[13px] text-muted-foreground">

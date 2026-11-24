@@ -93,7 +93,7 @@ function CompanyDetail({ metrics }: { metrics: CompanyMetrics }) {
       </Panel>
       <Panel
         title="Tiempo hasta contactar por semana"
-        description="Mediana entre que quedó Por contactar y que un asesor lo marcó Contactado."
+        description="Mediana desde Por contactar hasta Contactado."
       >
         <div className="px-2 pt-2 pb-4">
           <TimeToContactChart
@@ -101,12 +101,15 @@ function CompanyDetail({ metrics }: { metrics: CompanyMetrics }) {
             emptyLabel={
               metrics.leads === 0
                 ? "Sin leads en este período."
-                : "Todavía no hay leads contactados en este período."
+                : "Aún no hay leads contactados en este período."
             }
           />
         </div>
       </Panel>
-      <Section title="Ahora mismo" description="No depende del período">
+      <Section
+        title="Ahora mismo"
+        description="Estado actual, sin filtro de fechas"
+      >
         <SnapshotCards
           queue={metrics.queue}
           needsHuman={metrics.needsHuman}
@@ -211,7 +214,7 @@ function MetricsView() {
                 value={companyId}
                 onValueChange={setCompany}
                 options={companyOptions}
-                placeholder="Elige una empresa"
+                placeholder="Selecciona una empresa"
               />
             </div>
           )
@@ -220,7 +223,7 @@ function MetricsView() {
 
       {outside && !companyId ? (
         <p className="text-sm text-muted-foreground">
-          Elige una empresa para ver su detalle.
+          Selecciona una empresa para ver sus métricas.
         </p>
       ) : null}
 

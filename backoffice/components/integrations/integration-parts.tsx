@@ -56,7 +56,7 @@ export function CheckResults({
       <p className="text-sm font-medium">
         {result.ready
           ? readyText
-          : "Todavía no está listo. Corrige lo marcado en rojo y prueba de nuevo."}
+          : "Hay errores en la configuración. Corrígelos e intenta de nuevo."}
       </p>
       <ul className="flex flex-col gap-2">
         {result.checks.map((check) => (
@@ -161,7 +161,7 @@ export function ExternalLink({
 
 /** The collapsible step-by-step guide at the bottom of a provider's panel. */
 export function Guide({
-  title = "Guía de conexión paso a paso",
+  title = "Guía de configuración",
   defaultOpen,
   children,
 }: {

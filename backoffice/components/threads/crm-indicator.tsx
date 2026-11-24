@@ -18,7 +18,7 @@ export function crmLabel(crm: Crm): string {
     case "failed":
       return `No se pudo guardar en HubSpot: ${crm.lastError ?? "error desconocido"}`;
     case "none":
-      return "Todavía no se guardó en HubSpot";
+      return "Aún no se ha guardado en HubSpot";
   }
 }
 

@@ -9,25 +9,24 @@ export const STAGE_META: Record<
     label: "Calificando",
     tone: "pending",
     description:
-      "El asistente averigua lo que la empresa pide en Configuración (por ejemplo qué busca y su presupuesto), en el orden que surja.",
+      "El asistente recopila los datos configurados para calificar al lead.",
   },
   to_contact: {
     label: "Por contactar",
     tone: "warning",
     description:
-      'El lead ya dio los datos necesarios, o pidió hablar con alguien ya (horario "Lo antes posible"), y espera a un asesor. Sigue aquí aunque vuelva a escribir, hasta que alguien le cambie la etapa.',
+      "Lead calificado o que pidió hablar con una persona. Espera a un asesor.",
   },
   contacted: {
     label: "Contactado",
     tone: "ok",
     description:
-      "Un asesor ya habló con el lead (queda registrado quién y cuándo). El asistente sigue respondiendo sus preguntas, sin volver a pedirle datos.",
+      "Ya fue atendido por un asesor. El asistente sigue respondiendo preguntas sin volver a calificar.",
   },
   not_interested: {
     label: "Sin interés",
     tone: "muted",
-    description:
-      "El lead dijo que no le interesa, o alguien del equipo lo marcó así. Queda en HubSpot sin asesor. Si vuelve a escribir y da los datos, o pide hablar con alguien, pasa a Por contactar.",
+    description: "El lead indicó que no tiene interés o fue descartado.",
   },
 };
 
@@ -58,19 +57,18 @@ export const BOT_META: Record<
   active: {
     label: "Respondiendo",
     tone: "info",
-    description: "El asistente responde los mensajes del lead.",
+    description: "El asistente responde automáticamente.",
   },
   paused: {
     label: "Pausado",
     tone: "muted",
-    description:
-      "Un asesor pausó el asistente en esta conversación, o le escribió al lead desde el panel. Los mensajes se guardan, pero no responde hasta que lo reanuden.",
+    description: "Pausado manualmente o tras responder desde el panel.",
   },
   needs_human: {
     label: "Requiere asesor",
     tone: "warning",
     description:
-      "El asistente se detuvo (una queja, un tema prohibido o un error) y no responde hasta que alguien la marque como atendida.",
+      "Detenido por tema prohibido, consulta compleja o error. Espera atención humana.",
   },
 };
 
@@ -97,7 +95,7 @@ export function isBotFilter(value: string | null): value is BotFilter {
   return BOT_FILTERS.some((filter) => filter.value === value);
 }
 
-/** "ana@altamira.uy" → "ana". Operators only have an email. */
+/** "ana@empresa.com" → "ana". Operators only have an email. */
 export function operatorName(email: string): string {
   return email.replace(/@.*/, "");
 }
@@ -106,17 +104,17 @@ export function operatorName(email: string): string {
 export function needsHumanReasonLabel(reason: string | null): string {
   if (!reason) return "El asistente se detuvo.";
   if (reason === "lead_needs_human")
-    return "El lead preguntó algo que tiene que responder una persona.";
+    return "El lead hizo una consulta que debe responder una persona.";
   if (reason.startsWith("forbidden_topic"))
-    return `El lead preguntó por un tema prohibido: "${reason.slice("forbidden_topic: ".length)}". El asistente no respondió y envió el mensaje fijo.`;
+    return `Tema prohibido: "${reason.slice("forbidden_topic: ".length)}". Se envió el mensaje fijo.`;
   if (reason.startsWith("blocked_reply"))
-    return "La respuesta del asistente tocaba un tema prohibido y no se envió.";
+    return "La respuesta incluía un tema prohibido y no se envió.";
   if (reason.startsWith("model_failure"))
     return "El modelo de IA no respondió a tiempo.";
   if (reason === "empty_reply")
     return "El modelo de IA devolvió una respuesta vacía.";
   if (reason.startsWith("send_failed"))
-    return `WhatsApp no entregó la respuesta (${reason.slice("send_failed: ".length)}).`;
+    return `WhatsApp no entregó el mensaje (${reason.slice("send_failed: ".length)}).`;
   if (reason === "channel_unavailable")
     return "WhatsApp no está configurado para esta empresa.";
   return reason;

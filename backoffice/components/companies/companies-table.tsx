@@ -83,8 +83,8 @@ export function CompaniesTable({
           </EmptyTitle>
           <EmptyDescription>
             {showingArchived
-              ? "Crea la primera. Se crean la empresa y su primer operador, que recibe una invitación."
-              : "Crea una, o muestra las archivadas para restaurar alguna."}
+              ? "Crea la primera empresa y su primer operador."
+              : "Crea una empresa o muestra las archivadas."}
           </EmptyDescription>
         </EmptyHeader>
         <Button size="sm" onClick={onCreate}>
@@ -102,8 +102,8 @@ export function CompaniesTable({
         onSuccess: () =>
           toast.success(
             restoring
-              ? `Restauraste ${company.name}. Sus operadores pueden entrar y el asistente vuelve a responder.`
-              : `Archivaste ${company.name}. Sus operadores no pueden entrar y el asistente deja de responder.`,
+              ? `${company.name} restaurada.`
+              : `${company.name} archivada.`,
           ),
         onError: (error) => toast.error(error.message),
       },
@@ -117,8 +117,8 @@ export function CompaniesTable({
         onSuccess: () => {
           toast.success(
             paused
-              ? `Pausaste el asistente de ${company.name}. Los mensajes se siguen guardando.`
-              : `Reanudaste el asistente de ${company.name}. Volverá a responder desde el próximo mensaje.`,
+              ? `Asistente de ${company.name} pausado.`
+              : `Asistente de ${company.name} reanudado.`,
           );
           setPausing(null);
         },
@@ -275,8 +275,7 @@ export function CompaniesTable({
           <SheetHeader className="border-b">
             <SheetTitle>Operadores de {managing?.name}</SheetTitle>
             <SheetDescription>
-              Quienes entran al panel de esta empresa. Archivar corta el acceso
-              y se puede deshacer.
+              Usuarios con acceso al panel de esta empresa.
             </SheetDescription>
           </SheetHeader>
           <div className="px-5 pt-1 pb-6">

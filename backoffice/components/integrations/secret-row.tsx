@@ -128,7 +128,7 @@ export function SecretRow({
                     variant="outline"
                     onClick={() => {
                       navigator.clipboard.writeText(draft).then(
-                        () => toast.success("Clave copiada. Pégala en Kapso."),
+                        () => toast.success("Clave copiada."),
                         () => toast.error("No se pudo copiar."),
                       );
                     }}
@@ -151,8 +151,7 @@ export function SecretRow({
             </div>
             {generated ? (
               <p className="text-[13px] text-muted-foreground">
-                Cópiala y pégala en Kapso antes de guardar, porque después no se
-                vuelve a mostrar.
+                Cópiala antes de guardar; después no se volverá a mostrar.
               </p>
             ) : null}
           </form>
@@ -199,8 +198,7 @@ export function SecretRow({
           <AlertDialogHeader>
             <AlertDialogTitle>¿Quitar {title}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta integración deja de usar la clave hasta que cargues otra. Las
-              demás no cambian.
+              La integración dejará de funcionar hasta que agregues otra clave.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -214,7 +212,7 @@ export function SecretRow({
                   onSuccess: () => {
                     close();
                     setConfirming(false);
-                    toast.success("Clave quitada.");
+                    toast.success("Clave eliminada.");
                   },
                   onError: (error) => toast.error(error.message),
                 });

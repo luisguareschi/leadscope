@@ -172,7 +172,7 @@ function LoadedSettings({
         {active === "operators" && supportCompanyId ? (
           <Section
             title="Operadores"
-            description={`Quienes entran al panel de ${companyName ?? "esta empresa"}. Solo lo ve quien administra la plataforma.`}
+            description={`Usuarios con acceso al panel de ${companyName ?? "esta empresa"}.`}
           >
             <OperatorsPanel
               companyId={supportCompanyId}

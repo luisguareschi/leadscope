@@ -59,9 +59,7 @@ export function CreateCompanyDialog({
         onSuccess: (result) => {
           reset();
           onOpenChange(false);
-          toast.success(
-            `Creaste ${result.company.name}. El operador carga las claves en Configuración.`,
-          );
+          toast.success(`Empresa ${result.company.name} creada.`);
           const [operator] = result.company.operators;
           if (operator) toastInvite(operator.email, result.invite);
         },
@@ -76,9 +74,8 @@ export function CreateCompanyDialog({
         <DialogHeader>
           <DialogTitle>Nueva empresa</DialogTitle>
           <DialogDescription>
-            Se crean la empresa, su identificador y el primer operador, que
-            recibe la invitación por email. Esa persona carga las claves en
-            Configuración.
+            Crea la empresa y envía una invitación por correo al primer
+            operador.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -115,16 +112,15 @@ export function CreateCompanyDialog({
                 setSlug(event.target.value);
               }}
               pattern="[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*"
-              title="Letras, números y guiones. Por ejemplo: costa-sur"
+              title="Letras, números y guiones. Ej.: mi-empresa"
             />
             <FieldDescription>
-              En minúsculas, como en la dirección del formulario. Por ejemplo,
-              costa-sur.
+              En minúsculas, usado en las URLs de webhooks. Ej.: mi-empresa.
             </FieldDescription>
           </Field>
           <Field>
             <FieldLabel htmlFor="company-operator">
-              Email del primer operador
+              Correo del primer operador
             </FieldLabel>
             <Input
               id="company-operator"
@@ -136,8 +132,7 @@ export function CreateCompanyDialog({
               onChange={(event) => setOperatorEmail(event.target.value)}
             />
             <FieldDescription>
-              Si el email es nuevo, le llega un enlace para elegir su
-              contraseña.
+              Recibirá un enlace por correo para crear su contraseña.
             </FieldDescription>
           </Field>
         </form>

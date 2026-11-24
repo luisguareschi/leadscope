@@ -205,12 +205,12 @@ export function KnowledgeBrowser({
         : "En la raíz de Conocimiento.",
       label: "Nombre",
       initial: "",
-      placeholder: "Por ejemplo: Tres Cruces",
+      placeholder: "Ej.: Catálogo",
       submitLabel: "Crear carpeta",
       onSubmit: async (name) => {
         await createFolder.mutateAsync({ name, parentId });
         openPath(parentId);
-        toast.success(`Creaste la carpeta "${name}".`);
+        toast.success(`Carpeta "${name}" creada.`);
       },
     });
 
@@ -222,7 +222,7 @@ export function KnowledgeBrowser({
       submitLabel: "Guardar",
       onSubmit: async (name) => {
         await updateFolder.mutateAsync({ id: folder.id, name });
-        toast.success(`La carpeta ahora se llama "${name}".`);
+        toast.success("Carpeta renombrada.");
       },
     });
 
@@ -230,18 +230,17 @@ export function KnowledgeBrowser({
     const [base, extension] = splitExtension(file.name);
     setNameRequest({
       title: "Renombrar archivo",
-      description:
-        "La extensión se mantiene. Para subir una versión nueva, usa Reemplazar.",
+      description: "La extensión se mantiene.",
       label: "Nombre",
       initial: base,
       extension,
       submitLabel: "Guardar",
       onSubmit: async (name) => {
-        const { file: saved } = await updateFile.mutateAsync({
+        await updateFile.mutateAsync({
           id: file.id,
           name,
         });
-        toast.success(`El archivo ahora se llama "${saved.name}".`);
+        toast.success("Archivo renombrado.");
       },
     });
   };
@@ -253,7 +252,7 @@ export function KnowledgeBrowser({
         await updateFile.mutateAsync({ id: request.id, folderId: to });
       else await updateFolder.mutateAsync({ id: request.id, parentId: to });
       openPath(to);
-      toast.success(`Moviste "${request.name}" a ${placeLabel(tree, to)}.`);
+      toast.success(`Movido a ${placeLabel(tree, to)}.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo mover.");
       throw error;
@@ -265,8 +264,8 @@ export function KnowledgeBrowser({
       onSuccess: (result) => {
         toast.success(
           result.deletedFiles > 0
-            ? `Eliminaste "${folder.name}" y ${result.deletedFiles} ${result.deletedFiles === 1 ? "archivo" : "archivos"}.`
-            : `Eliminaste la carpeta "${folder.name}".`,
+            ? `Carpeta "${folder.name}" eliminada junto con ${result.deletedFiles} ${result.deletedFiles === 1 ? "archivo" : "archivos"}.`
+            : `Carpeta "${folder.name}" eliminada.`,
         );
         setDeletingFolder(null);
       },
@@ -442,8 +441,8 @@ export function KnowledgeBrowser({
                       >
                         <span className="w-14" />
                         <span className="col-span-2 @3xl/content:col-span-4">
-                          Carpeta vacía. Arrastra archivos aquí o usa Subir
-                          archivos aquí en su menú.
+                          Carpeta vacía. Arrastra archivos aquí o súbelos desde
+                          el menú.
                         </span>
                       </div>
                     </motion.li>
@@ -730,7 +729,7 @@ export function KnowledgeBrowser({
           upload.mutate(
             { file, replaceId: current.id },
             {
-              onSuccess: () => toast.success(`Reemplazaste "${current.name}".`),
+              onSuccess: () => toast.success(`"${current.name}" reemplazado.`),
               onError: (error) => toast.error(error.message),
               onSettled: () => setReplacing(null),
             },
@@ -756,7 +755,7 @@ export function KnowledgeBrowser({
               ¿Eliminar &quot;{deletingFile?.name}&quot;?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              El asistente deja de usar este archivo desde la próxima respuesta.
+              El asistente dejará de usar este archivo.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -769,7 +768,7 @@ export function KnowledgeBrowser({
                 if (!current) return;
                 removeFile.mutate(current.id, {
                   onSuccess: () => {
-                    toast.success(`Eliminaste "${current.name}".`);
+                    toast.success("Archivo eliminado.");
                     setDeletingFile(null);
                   },
                   onError: (error) => toast.error(error.message),
@@ -823,20 +822,21 @@ function DeleteFolderDialog({
           <AlertDialogDescription>
             {stats && files > 0 ? (
               <>
-                Tiene <strong className="text-foreground">{filesLabel}</strong>
+                Contiene{" "}
+                <strong className="text-foreground">{filesLabel}</strong>
                 {stats.folders > 0
-                  ? ` en total, contando ${stats.folders === 1 ? "su subcarpeta" : `sus ${stats.folders} subcarpetas`}`
+                  ? ` en ${stats.folders === 1 ? "1 subcarpeta" : `${stats.folders} subcarpetas`}`
                   : ""}
-                . Se eliminan con la carpeta y el asistente deja de usarlos
-                desde la próxima respuesta. No se puede deshacer.
+                . Se eliminarán junto con la carpeta y esta acción no se puede
+                deshacer.
               </>
             ) : (
               <>
-                No tiene archivos, solo{" "}
+                Solo contiene{" "}
                 {stats?.folders === 1
                   ? "una subcarpeta vacía"
                   : `${stats?.folders ?? 0} subcarpetas vacías`}
-                , que se eliminan con ella.
+                , que también se eliminarán.
               </>
             )}
           </AlertDialogDescription>

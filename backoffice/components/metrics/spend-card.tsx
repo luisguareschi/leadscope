@@ -25,12 +25,12 @@ export function SpendCard({ spend }: { spend: CompanyMetrics["spend"] }) {
 
   return (
     <Panel
-      title="Gasto estimado del cliente"
+      title="Gasto estimado"
       actions={
         <HelpTip label="Cómo se estima el gasto">
-          Estimación con los precios de lista de Anthropic y Meta. Lo paga la
-          empresa directamente; la factura real puede variar. Cada plantilla de
-          WhatsApp se cuenta como marketing, que es la categoría más cara.
+          Estimación basada en precios de lista de Anthropic y Meta. La factura
+          real puede variar. Las plantillas de WhatsApp se calculan con tarifa
+          de marketing.
         </HelpTip>
       }
     >
@@ -141,7 +141,7 @@ export function SpendCard({ spend }: { spend: CompanyMetrics["spend"] }) {
         </div>
 
         <p className="text-[13px] text-muted-foreground">
-          Kapso se cobra aparte con un plan fijo.
+          No incluye la suscripción de Kapso.
         </p>
       </div>
     </Panel>
