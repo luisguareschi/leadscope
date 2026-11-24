@@ -345,7 +345,7 @@ describe("turn context", () => {
       withOptional,
       COMPANY,
     );
-    expect(step).toContain("ask when an advisor can call");
+    expect(step).toContain("ask when or how an advisor can contact them");
     expect(step).toContain("Still missing, optional: Zona [zone] (optional)");
     expect(buildPlatformRules(withOptional, COMPANY)).toContain(
       "Optional items are nice to have",
@@ -365,7 +365,57 @@ describe("turn context", () => {
       config,
       COMPANY,
     );
-    expect(step).toContain("already with an advisor, who will call mañana");
+    expect(step).toContain(
+      "already with an advisor (preferred contact: mañana)",
+    );
+  });
+
+  it("handles a WhatsApp/message preference naturally once in Por contactar", () => {
+    const step = nextStepFor(
+      {
+        state: "answer",
+        stage: "to_contact",
+        collected: { interest: "2 dormitorios" },
+        callTime: "Por mensaje / WhatsApp",
+      },
+      config,
+      COMPANY,
+    );
+    expect(step).toContain(
+      "already with an advisor (preferred contact: Por mensaje / WhatsApp)",
+    );
+    expect(step).not.toContain("who will call");
+  });
+
+  it("guides all-optional companies without pushing for a call time prematurely", () => {
+    const allOptional = parseCompanyConfig({
+      ...baseConfig,
+      collect: baseConfig.collect.map((item) => ({ ...item, required: false })),
+    });
+    const rules = buildPlatformRules(allOptional, COMPANY);
+    expect(rules).toContain(
+      "None of the items above are required to reach an advisor.",
+    );
+    expect(rules).toContain(
+      'whenever your reply tells the lead that an advisor will call, write, or contact them (outside needsHuman or forbiddenTopic), you must set intent to "qualified" or callNow to true',
+    );
+    expect(rules).toContain(
+      'Do not set "qualified" on a greeting, a general question about zones or prices',
+    );
+
+    const step = nextStepFor(
+      {
+        state: "qualify",
+        stage: "qualifying",
+        collected: { interest: "2 dormitorios" },
+        callTime: null,
+      },
+      allOptional,
+      COMPANY,
+    );
+    expect(step).toContain("all items are optional");
+    expect(step).toContain('set intent to "qualified"');
+    expect(step).not.toContain("Every required item is known");
   });
 
   it("after the handoff asks only for a call time, never for a required item added since", () => {
@@ -392,7 +442,7 @@ describe("turn context", () => {
       withZone,
       COMPANY,
     );
-    expect(scheduling).toContain("ask when an advisor can call");
+    expect(scheduling).toContain("ask when or how an advisor can contact them");
     expect(scheduling).not.toContain("Zona");
 
     const scheduled = nextStepFor(

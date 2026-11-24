@@ -49,6 +49,11 @@ export function missingItems<T extends CollectRule>(
   return items.filter((item) => !fields.collected[item.key]);
 }
 
+/** Whether the company configures at least one required collect item. */
+export function hasAnyRequiredItem(items: CollectRule[]): boolean {
+  return items.some((item) => item.required);
+}
+
 /** The qualify gate: every required item is stored. Optional items never hold the handoff. */
 export function hasRequiredItems(
   fields: LeadFields,
@@ -63,17 +68,18 @@ export function hasRequiredItems(
 }
 
 /**
- * The lead is ready for Por contactar: every required item is stored. A company with no required
- * items would send every "Hola" to the queue, so there the call time is the gate.
+ * The lead is ready for Por contactar: every required item is stored. When a company has no
+ * required items, a bare greeting does not enter the queue; the gate is a preferred contact
+ * time/channel (`callTime`) or the model judging the conversation ready (`intent === "qualified"`).
  */
 export function isReadyForAdvisor(
   fields: LeadFields,
   items: CollectRule[],
+  intent: Intent = "continue",
 ): boolean {
-  return (
-    hasRequiredItems(fields, items) &&
-    (items.some((item) => item.required) || fields.callTime !== null)
-  );
+  if (!hasRequiredItems(fields, items)) return false;
+  if (hasAnyRequiredItem(items)) return true;
+  return fields.callTime !== null || intent === "qualified";
 }
 
 export function isHandoffComplete(
@@ -163,6 +169,8 @@ export function stateForManualStage(
   if (stage === "qualifying") {
     const fields = fieldsOf(thread);
     if (!hasRequiredItems(fields, items)) return "qualify";
+    if (!hasAnyRequiredItem(items) && fields.callTime === null)
+      return "qualify";
     return fields.callTime === null ? "handoff" : "answer";
   }
   return thread.state === "closed" ? "answer" : thread.state;
@@ -171,10 +179,10 @@ export function stateForManualStage(
 /**
  * Forward-only for the bot, from whatever stage the thread is in (a person may have set it by
  * hand). Calificando moves to Por contactar once every required item is stored (with no required
- * items, once there is a call time), or right away on `callNow`, or to Sin interés. From Por
- * contactar only a person moves the lead; nothing the lead writes moves it back. Sin interés comes
- * back to Por contactar only when the lead re-qualifies: the turn completes the required items, or
- * the model says they accept a call.
+ * items, once there is a preferred contact time/channel or the model marks intent as "qualified"),
+ * or right away on `callNow`, or to Sin interés. From Por contactar only a person moves the lead;
+ * nothing the lead writes moves it back. Sin interés comes back to Por contactar only when the
+ * lead re-qualifies: the turn completes the required items, or the model marks them qualified.
  */
 function nextStage(
   previous: ThreadSnapshot,
@@ -185,7 +193,7 @@ function nextStage(
   const stage = stageOf(previous);
   if (isWithSalesTeam(stage)) return stage;
   if (intent === "not_interested") return "not_interested";
-  if (!isReadyForAdvisor(fields, items)) return stage;
+  if (!isReadyForAdvisor(fields, items, intent)) return stage;
   if (stage === "qualifying") return "to_contact";
   const completedNow = !isReadyForAdvisor(fieldsOf(previous), items);
   return completedNow || intent === "qualified" ? "to_contact" : stage;
@@ -194,14 +202,22 @@ function nextStage(
 function nextState(
   previous: ThreadSnapshot,
   fields: LeadFields,
+  nextLeadStage: LeadStage,
   items: CollectRule[],
 ): Pick<TurnDecision, "state" | "crm"> {
   const wasComplete = isHandoffComplete(fieldsOf(previous), items);
   if (!wasComplete && isHandoffComplete(fields, items))
     return { state: "handoff", crm: "handoff" };
 
+  const justHandedOff =
+    nextLeadStage === "to_contact" && !isWithSalesTeam(stageOf(previous));
+  if (justHandedOff && !hasAnyRequiredItem(items))
+    return { state: "answer", crm: "handoff" };
+
   const reopened = stageForPrompt(previous, items) === "answer";
   if (!hasRequiredItems(fields, items))
+    return { state: reopened ? "answer" : "qualify", crm: null };
+  if (!hasAnyRequiredItem(items) && !isWithSalesTeam(nextLeadStage))
     return { state: reopened ? "answer" : "qualify", crm: null };
   if (fields.callTime === null) return { state: "handoff", crm: null };
   return { state: "answer", crm: null };
@@ -290,12 +306,13 @@ export function decideTurn(
   }
 
   // The lead wants a person now: straight to the advisors' queue, missing items or not. The bot
-  // stops qualifying (the prompt never re-qualifies a lead with the sales team).
+  // stops qualifying (the prompt never re-qualifies a lead with the sales team). Keep any
+  // preferred channel/time extracted on this turn instead of overwriting it with "Lo antes posible".
   if (output.callNow) {
     return {
       state: "answer",
       stage: isWithSalesTeam(stage) ? stage : "to_contact",
-      fields: { ...fields, callTime: CALL_NOW_TIME },
+      fields: { ...fields, callTime: clean(output.callTime) ?? CALL_NOW_TIME },
       summary,
       reply,
       needsHuman: null,
@@ -315,9 +332,10 @@ export function decideTurn(
     };
   }
 
+  const stageNext = nextStage(thread, fields, output.intent, rules.collect);
   return {
-    ...nextState(thread, fields, rules.collect),
-    stage: nextStage(thread, fields, output.intent, rules.collect),
+    ...nextState(thread, fields, stageNext, rules.collect),
+    stage: stageNext,
     fields,
     summary,
     reply,

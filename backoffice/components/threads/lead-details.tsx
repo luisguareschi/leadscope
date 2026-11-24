@@ -336,7 +336,7 @@ export function LeadDetails({
               }
             />
           ))}
-          <Detail label="Horario para llamar" value={thread.callTime} />
+          <Detail label="Contacto preferido" value={thread.callTime} />
         </Group>
         <Group title="Contacto">
           <Detail label="Teléfono" value={formatPhone(thread.phone)} />

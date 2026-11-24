@@ -62,7 +62,7 @@ export function AssistantTestLead({
           label="Paso de la conversación"
           value={STATE_LABELS[lead?.state ?? "greeting"]}
         />
-        <Detail label="Horario para llamar" value={lead?.callTime} />
+        <Detail label="Contacto preferido" value={lead?.callTime} />
       </Group>
       {required.length > 0 ? (
         <Group title="Necesario para Por contactar">
