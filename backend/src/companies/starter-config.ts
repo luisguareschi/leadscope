@@ -52,10 +52,10 @@ export function starterCompanyConfig(companyName: string): CompanyConfigInput {
       ],
     },
     messages: {
-      fallback: `Gracias por escribirnos. En breve te contacta un asesor de ${name}.`,
+      fallback: `Gracias por escribirnos. Pronto te contactará un asesor de ${name}.`,
       needsHuman:
-        "Esa consulta la tiene que ver un asesor. Ya le pasé tu mensaje y te va a contactar a la brevedad.",
-      nonText: "Por ahora solo puedo leer mensajes de texto. ¿Me lo escribís?",
+        "Esta consulta debe atenderla un asesor. Ya le envié tu mensaje y te contactará pronto.",
+      nonText: "Por ahora solo puedo leer mensajes de texto. ¿Me lo escribes?",
     },
     maxReplyChars: 600,
     knowledge: DEFAULT_KNOWLEDGE_LIMITS,

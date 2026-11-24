@@ -26,7 +26,7 @@ export type PreparedKnowledgeFile = {
 };
 
 const formatNumber = (value: number) =>
-  new Intl.NumberFormat("es-UY").format(value);
+  new Intl.NumberFormat("es").format(value);
 const megabytes = (bytes: number) =>
   `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`;
 

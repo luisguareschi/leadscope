@@ -31,7 +31,7 @@ export const companyArchived = () =>
 export const operatorArchived = () =>
   new HttpError(
     403,
-    "Tu acceso a este panel está archivado. Pídele a quien administra la plataforma que lo restaure.",
+    "Tu acceso está archivado. Contacta a un administrador de la plataforma para restaurarlo.",
     "operator_archived",
   );
 
