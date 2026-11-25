@@ -367,5 +367,25 @@ describe("custom pipeline stages, disqualified, and no_response (LUI-15/16/17)",
       ctx.integrations.fakes.crm.contacts.get("+59899000001")?.lead.summary;
     expect(crmSummary).toContain("Estado: Visita agendada");
     expect(crmSummary).toContain("Etapa: Visita agendada");
+
+    // Base assistant stages are strictly read-only (label and color cannot be edited).
+    await request(app)
+      .put("/internal/settings/config")
+      .set(asAna)
+      .send({
+        ...settings.body.config,
+        stages: settings.body.config.stages.map(
+          (s: {
+            key: string;
+            label: string;
+            color: string;
+            system: boolean;
+          }) =>
+            s.key === "qualifying"
+              ? { ...s, label: "Otro", color: "error" }
+              : s,
+        ),
+      })
+      .expect(400);
   });
 });

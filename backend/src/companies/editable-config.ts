@@ -235,7 +235,25 @@ export const editableConfigSchema = z.strictObject({
               : "Una etapa personalizada no puede marcarse como del sistema.",
           });
         }
-        if (!sys) customCount += 1;
+        if (sys) {
+          const def = DEFAULT_STAGES.find((d) => d.key === stage.key);
+          if (def && stage.label !== def.label) {
+            issue.addIssue({
+              code: "custom",
+              path: [index, "label"],
+              message: "Las etapas base del asistente son de solo lectura.",
+            });
+          }
+          if (def && stage.color !== def.color) {
+            issue.addIssue({
+              code: "custom",
+              path: [index, "color"],
+              message: "Las etapas base del asistente son de solo lectura.",
+            });
+          }
+        } else {
+          customCount += 1;
+        }
       });
       for (const requiredKey of SYSTEM_STAGE_KEYS) {
         if (!stages.some((stage) => stage.key === requiredKey)) {

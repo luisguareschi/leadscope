@@ -291,7 +291,7 @@ A thread carries three separate things. The panel shows the last two. The first 
 4. **Handoff.** Ask when an advisor can call. Once a call time is captured, write the CRM (the handoff write; the contact already exists from the first message). Later messages go back to Answer.
 5. **Closed.** No interest. Write the CRM, and do not assign an advisor.
 
-**Lead stage** (`Thread.stage`, stored as string, configured in `config.stages`), for the sales team. Every company keeps 6 non-deletable system base stages (editable name, color, and order) plus up to 10 custom company stages (treated as sales-owned). The bot only moves stages forward; a person can set any configured stage, in any direction, from the stage picker (see [Changing the stage by hand](#changing-the-stage-by-hand)):
+**Lead stage** (`Thread.stage`, stored as string, configured in `config.stages`), for the sales team. Every company keeps 6 read-only system base stages plus up to 10 custom company stages (editable name, color, and order; treated as sales-owned). The bot only moves stages forward; a person can set any configured stage, in any direction, from the stage picker (see [Changing the stage by hand](#changing-the-stage-by-hand)):
 
 | Stage | Who moves it there |
 | --- | --- |

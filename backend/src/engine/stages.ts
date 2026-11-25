@@ -76,15 +76,24 @@ export function normalizeStages(
   }
   const seen = new Set<string>();
   const result: StageConfig[] = [];
+  const defaultByKey = new Map(
+    DEFAULT_STAGES.map((stage) => [stage.key, stage]),
+  );
   for (const stage of stages) {
     const key = stage.key.trim();
     if (!key || seen.has(key)) continue;
     seen.add(key);
+    const sysDefault = defaultByKey.get(key);
+    if (sysDefault) {
+      // Base assistant stages stay read-only with canonical label and color.
+      result.push({ ...sysDefault });
+      continue;
+    }
     result.push({
       key,
       label: stage.label.trim() || defaultLabelFor(key),
       color: STAGE_COLORS.includes(stage.color) ? stage.color : "muted",
-      system: isSystemStage(key),
+      system: false,
     });
   }
   for (const def of DEFAULT_STAGES) {

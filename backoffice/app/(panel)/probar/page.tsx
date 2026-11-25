@@ -95,6 +95,7 @@ export default function AssistantTestPage() {
             <Button
               size="sm"
               variant="outline"
+              nativeButton={false}
               render={
                 <Link
                   href={

@@ -39,6 +39,7 @@ export function OperationalAlerts({ metrics }: { metrics: CompanyMetrics }) {
             <Button
               size="sm"
               variant="outline"
+              nativeButton={false}
               render={<Link href="/settings" />}
             >
               Ir a Configuración
@@ -63,6 +64,7 @@ export function OperationalAlerts({ metrics }: { metrics: CompanyMetrics }) {
             <Button
               size="sm"
               variant="outline"
+              nativeButton={false}
               render={<Link href="/settings?tab=hubspot" />}
             >
               Revisar HubSpot
@@ -88,6 +90,7 @@ export function OperationalAlerts({ metrics }: { metrics: CompanyMetrics }) {
             <Button
               size="sm"
               variant="outline"
+              nativeButton={false}
               render={<Link href="/settings?tab=whatsapp" />}
             >
               Revisar WhatsApp
@@ -107,6 +110,7 @@ export function OperationalAlerts({ metrics }: { metrics: CompanyMetrics }) {
             <Button
               size="sm"
               variant="outline"
+              nativeButton={false}
               render={<Link href="/knowledge" />}
             >
               Subir archivos
