@@ -449,4 +449,65 @@ describe("the panel's test chat (Probar asistente)", () => {
       { role: "user", content: "150 mil" },
     ]);
   });
+
+  it("tests an unsaved draft without modifying stored company settings (LUI-32)", async () => {
+    ctx.llm.push({ reply: "Hola desde borrador." });
+    const response = await turn({
+      messages: [{ role: "lead", body: "Hola" }],
+      draft: {
+        companyName: "Altamira Draft",
+        instructions: "Regla temporal de borrador.",
+        config: parseCompanyConfig({
+          ...baseConfig,
+          assistantName: "Luna",
+          tone: "Tono experimental.",
+        }),
+      },
+    }).expect(200);
+    expect(response.body.reply).toBe("Hola desde borrador.");
+    const call = ctx.llm.calls[0]!;
+    expect(call.system).toContain(
+      "You are Luna, the WhatsApp virtual assistant of Altamira Draft.",
+    );
+    expect(call.system).toContain("Regla temporal de borrador.");
+    expect(call.system).toContain("Tono experimental.");
+
+    // DB remains untouched.
+    const stored = await db.company.findUniqueOrThrow({
+      where: { id: companyId },
+    });
+    expect(stored.name).toBe("Altamira");
+    expect(stored.instructions).toBe("Mencioná siempre la piscina.");
+  });
+
+  it("returns sentFiles only for public knowledge files and ignores internal ones", async () => {
+    const pub = await db.knowledgeFile.create({
+      data: {
+        companyId,
+        name: "Brochure.pdf",
+        nameKey: "brochure.pdf",
+        format: "pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 100,
+        sha256: "pub",
+        text: "Brochure",
+        charCount: 8,
+        visibility: "public",
+        storagePath: `${companyId}/pub.pdf`,
+      },
+    });
+    const priv = await db.knowledgeFile.findFirstOrThrow({
+      where: { companyId, name: "Precios.txt" },
+    });
+    ctx.llm.push({
+      reply: "Te envío el brochure.",
+      sendFileIds: [pub.id, priv.id],
+    });
+    const response = await turn({
+      messages: [{ role: "lead", body: "Pasame el brochure" }],
+    }).expect(200);
+    expect(response.body.sentFiles).toEqual([
+      { id: pub.id, path: "Brochure.pdf", format: "pdf" },
+    ]);
+  });
 });

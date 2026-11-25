@@ -761,3 +761,90 @@ describe("after a person picks the stage", () => {
     );
   });
 });
+
+describe("disqualified, no_response, custom stages, consistency, and sendFileIds", () => {
+  it("moves Calificando to Descalificado when intent=disqualified and reopens if re-qualified", () => {
+    const disq = decideTurn(
+      thread(),
+      model({ intent: "disqualified", reply: "No trabajamos esa zona." }),
+      rules,
+    );
+    expect(disq).toMatchObject({
+      stage: "disqualified",
+      state: "closed",
+      crm: "close",
+      sendFileIds: [],
+    });
+
+    const reopened = decideTurn(
+      thread({ state: "closed", stage: "disqualified" }),
+      model({ collected: qualified, reply: "¡Genial!" }),
+      rules,
+    );
+    expect(reopened.stage).toBe("to_contact");
+  });
+
+  it("never sets state=closed or crm=close when a to_contact or custom-stage lead says not_interested (LUI-18)", () => {
+    for (const stage of ["to_contact", "contacted", "visit_scheduled"]) {
+      for (const intent of ["not_interested", "disqualified"] as const) {
+        const decision = decideTurn(
+          thread({
+            state: "answer",
+            stage,
+            collected: qualified,
+            callTime: "mañana",
+          }),
+          model({ intent, reply: "Sin problema, quedamos a disposición." }),
+          rules,
+        );
+        expect(decision.stage).toBe(stage);
+        expect(decision.state).toBe("answer");
+        expect(decision.crm).toBe("update");
+      }
+    }
+  });
+
+  it("re-enters qualifying when a no_response lead replies", () => {
+    const back = decideTurn(
+      thread({ state: "qualify", stage: "no_response" }),
+      model({
+        collected: { interest: "2 dormitorios" },
+        reply: "¡Qué bueno verte de nuevo!",
+      }),
+      rules,
+    );
+    expect(back.stage).toBe("qualifying");
+    expect(back.state).toBe("qualify");
+  });
+
+  it("caps and deduplicates sendFileIds, and strips them on stop/close paths", () => {
+    const normal = decideTurn(
+      thread(),
+      model({ sendFileIds: ["f1", "f1", "f2", "f3"] }),
+      rules,
+    );
+    expect(normal.sendFileIds).toEqual(["f1", "f2"]);
+
+    expect(
+      decideTurn(
+        thread(),
+        model({ needsHuman: true, sendFileIds: ["f1"] }),
+        rules,
+      ).sendFileIds,
+    ).toEqual([]);
+    expect(
+      decideTurn(
+        thread(),
+        model({ forbiddenTopic: "Rentabilidad", sendFileIds: ["f1"] }),
+        rules,
+      ).sendFileIds,
+    ).toEqual([]);
+    expect(
+      decideTurn(
+        thread(),
+        model({ intent: "not_interested", sendFileIds: ["f1"] }),
+        rules,
+      ).sendFileIds,
+    ).toEqual([]);
+  });
+});

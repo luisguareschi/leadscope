@@ -6,8 +6,13 @@ export async function deleteKnowledgeFile(
   companyId: string,
   fileId: string,
 ): Promise<void> {
-  const deleted = await ctx.db.knowledgeFile.deleteMany({
+  const file = await ctx.db.knowledgeFile.findFirst({
     where: { id: fileId, companyId },
+    select: { id: true, storagePath: true },
   });
-  if (deleted.count === 0) throw notFound("Archivo no encontrado");
+  if (!file) throw notFound("Archivo no encontrado");
+  await ctx.db.knowledgeFile.delete({ where: { id: file.id } });
+  if (file.storagePath) {
+    await ctx.storage.remove([file.storagePath]).catch(() => undefined);
+  }
 }

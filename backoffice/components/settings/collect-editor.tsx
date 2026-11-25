@@ -39,6 +39,7 @@ function ItemRow({
   index,
   count,
   isNew,
+  showKey,
   onChange,
   onMove,
   onRemove,
@@ -48,6 +49,8 @@ function ItemRow({
   count: number;
   /** Added in this draft: its key follows the name until edited. */
   isNew: boolean;
+  /** Technical key input stays hidden until Advanced keys are toggled on. */
+  showKey: boolean;
   onChange: (next: CollectItemDraft, keyEdited?: boolean) => void;
   onMove: (delta: -1 | 1) => void;
   onRemove: () => void;
@@ -69,7 +72,12 @@ function ItemRow({
         {index + 1}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <div className="grid gap-3 @2xl/content:grid-cols-[minmax(0,1fr)_14rem]">
+        <div
+          className={cn(
+            "grid gap-3",
+            showKey && "@2xl/content:grid-cols-[minmax(0,1fr)_14rem]",
+          )}
+        >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={id("name")} className="text-[13px]">
               Nombre
@@ -90,23 +98,25 @@ function ItemRow({
               }}
             />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={id("key")} className="text-[13px]">
-              Clave
-            </Label>
-            <Input
-              id={id("key")}
-              value={item.key}
-              maxLength={40}
-              spellCheck={false}
-              placeholder="presupuesto"
-              className="font-mono text-xs md:text-xs"
-              aria-invalid={error("key") ? true : undefined}
-              onChange={(event) =>
-                onChange({ ...item, key: event.target.value }, true)
-              }
-            />
-          </div>
+          {showKey ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={id("key")} className="text-[13px]">
+                Clave técnica
+              </Label>
+              <Input
+                id={id("key")}
+                value={item.key}
+                maxLength={40}
+                spellCheck={false}
+                placeholder="presupuesto"
+                className="font-mono text-xs md:text-xs"
+                aria-invalid={error("key") ? true : undefined}
+                onChange={(event) =>
+                  onChange({ ...item, key: event.target.value }, true)
+                }
+              />
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={id("description")} className="text-[13px]">
@@ -197,12 +207,15 @@ function ItemRow({
 
 /** The information the assistant finds out from each lead, edited as part of the config draft. */
 export function CollectEditor() {
-  const { draft, errors, set } = useConfigEditor();
+  const { draft, errors, itemErrors, set } = useConfigEditor();
   const items = draft.collect;
   // Items added since the draft loaded, whose key still follows the name.
   const [autoKey, setAutoKey] = useState<Set<string>>(() => new Set());
+  const [showKeys, setShowKeys] = useState(false);
   const full = items.length >= MAX_COLLECT_ITEMS;
   const required = items.filter((item) => item.required).length;
+  const hasKeyError = Object.keys(itemErrors).some((k) => k.endsWith(".key"));
+  const keysVisible = showKeys || hasKeyError;
 
   const update = (next: CollectItemDraft[]) => set("collect", next);
 
@@ -211,14 +224,23 @@ export function CollectEditor() {
       title="Información a recopilar"
       description="Datos que el asistente recopila antes de pasar el lead a Por contactar. Si el lead pide hablar con una persona, pasa de inmediato."
       actions={
-        <span
-          className={cn(
-            "text-xs tabular-nums",
-            full ? "font-medium text-foreground" : "text-muted-foreground",
-          )}
-        >
-          {items.length} / {MAX_COLLECT_ITEMS}
-        </span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowKeys((v) => !v)}
+            className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {keysVisible ? "Ocultar claves" : "Claves técnicas"}
+          </button>
+          <span
+            className={cn(
+              "text-xs tabular-nums",
+              full ? "font-medium text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {items.length} / {MAX_COLLECT_ITEMS}
+          </span>
+        </div>
       }
     >
       <div id="config-collect" tabIndex={-1} className="outline-none">
@@ -230,6 +252,7 @@ export function CollectEditor() {
               index={index}
               count={items.length}
               isNew={autoKey.has(item.id)}
+              showKey={keysVisible}
               onChange={(next, keyEdited) => {
                 if (keyEdited && autoKey.has(item.id)) {
                   const rest = new Set(autoKey);

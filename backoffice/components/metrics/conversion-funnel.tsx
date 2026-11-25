@@ -99,6 +99,18 @@ export function ConversionFunnel({
               Sin interés: {formatCount(funnel.notInterested)} (
               {formatPercent(funnel.notInterestedRate)})
             </span>
+            {funnel.disqualified > 0 ? (
+              <span className="inline-flex items-center gap-1.5 tabular-nums">
+                <StatusDot tone={STAGE_META.disqualified.tone} />
+                Descalificados: {formatCount(funnel.disqualified)}
+              </span>
+            ) : null}
+            {funnel.noResponse > 0 ? (
+              <span className="inline-flex items-center gap-1.5 tabular-nums">
+                <StatusDot tone={STAGE_META.no_response.tone} />
+                Sin respuesta: {formatCount(funnel.noResponse)}
+              </span>
+            ) : null}
           </div>
 
           {forms.leads > 0 ? (

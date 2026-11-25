@@ -1,12 +1,28 @@
+export type SupportedImageMediaType =
+  "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+
+export type ImageAttachment = {
+  mediaType: SupportedImageMediaType;
+  base64: string;
+};
+
 export type HistoryMessage = {
   direction: "inbound" | "outbound";
   type: string;
   body: string;
   /** Set when a person wrote it in the panel; null for the assistant's own messages. */
   sentByEmail?: string | null;
+  /** Original filename for document/image messages. */
+  mediaFileName?: string | null;
+  /** Attached image bytes to pass directly to Claude Vision on this turn. */
+  image?: ImageAttachment | null;
 };
 
-export type ChatTurn = { role: "user" | "assistant"; content: string };
+export type ChatTurn = {
+  role: "user" | "assistant";
+  content: string;
+  images?: ImageAttachment[];
+};
 
 /**
  * Starts every message an advisor wrote from the panel. The platform rules name it, so the model
@@ -27,10 +43,23 @@ const NON_TEXT_LABELS: Record<string, string> = {
 function contentOf(message: HistoryMessage): string | null {
   const body = message.body.trim();
   if (message.direction === "outbound") {
-    if (!body) return null;
-    return message.sentByEmail ? `${ADVISOR_LABEL} ${body}` : body;
+    const fileNote =
+      (message.type === "document" || message.type === "image") &&
+      message.mediaFileName
+        ? `[Sent file: ${message.mediaFileName}]`
+        : null;
+    const text = [fileNote, body].filter(Boolean).join(" ").trim();
+    if (!text) return null;
+    return message.sentByEmail ? `${ADVISOR_LABEL} ${text}` : text;
   }
   if (message.type === "text") return body || null;
+  if (message.type === "audio" && body) {
+    return `[The lead sent a voice note. Transcript: "${body}"]`;
+  }
+  if (message.type === "image" && message.image) {
+    const caption = body ? ` with the caption "${body}"` : "";
+    return `[The lead sent an image${caption}.]`;
+  }
   const label = NON_TEXT_LABELS[message.type] ?? "a message you cannot read";
   const caption = body ? ` with the caption "${body}"` : "";
   return `[The lead sent ${label}${caption}. You cannot see or hear attachments.]`;
@@ -56,9 +85,18 @@ export function buildChatTurns(
     const content = contentOf(message);
     if (!content) continue;
     const role = message.direction === "inbound" ? "user" : "assistant";
+    const image = role === "user" && message.image ? message.image : null;
     const last = turns.at(-1);
-    if (last?.role === role) last.content = `${last.content}\n${content}`;
-    else turns.push({ role, content });
+    if (last?.role === role) {
+      last.content = `${last.content}\n${content}`;
+      if (image) last.images = [...(last.images ?? []), image];
+    } else {
+      turns.push({
+        role,
+        content,
+        ...(image ? { images: [image] } : {}),
+      });
+    }
   }
   if (turns[0]?.role === "assistant") {
     turns.unshift({

@@ -3,9 +3,15 @@ import {
   extractKnowledgeText,
   KnowledgeExtractionError,
 } from "../../integrations/knowledge/extract-text.js";
+import {
+  formatFromFilename,
+  isMediaOnlyFormat,
+} from "../../integrations/knowledge/formats.js";
 import { sha256Hex } from "../../lib/crypto.js";
 import { HttpError } from "../../lib/http-error.js";
 import type { KnowledgeTx } from "./knowledge-folders.js";
+
+export type KnowledgeVisibility = "internal" | "public";
 
 export type UploadedFile = {
   originalname: string;
@@ -23,12 +29,29 @@ export type PreparedKnowledgeFile = {
   sha256: string;
   text: string;
   charCount: number;
+  visibility: KnowledgeVisibility;
+  buffer: Buffer;
 };
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("es").format(value);
 const megabytes = (bytes: number) =>
   `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`;
+
+const MIME_BY_FORMAT: Record<string, string> = {
+  pdf: "application/pdf",
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  csv: "text/csv",
+  txt: "text/plain",
+  md: "text/markdown",
+  html: "text/html",
+  json: "application/json",
+};
 
 export function cleanFilename(raw: string): string {
   const base = raw.split(/[\\/]/).pop() ?? raw;
@@ -41,10 +64,11 @@ export function cleanFilename(raw: string): string {
   );
 }
 
-/** Extracts the text and checks the per-file limits. Nothing is stored yet. */
+/** Extracts text (if applicable) and checks limits. Images automatically become `public`. */
 export async function prepareKnowledgeFile(
   company: LoadedCompany,
   file: UploadedFile | undefined,
+  requestedVisibility?: KnowledgeVisibility,
 ): Promise<PreparedKnowledgeFile> {
   if (!file)
     throw new HttpError(400, "Elige un archivo para subir.", "missing_file");
@@ -57,9 +81,24 @@ export async function prepareKnowledgeFile(
     );
   }
   const name = cleanFilename(file.originalname);
+  const detected = formatFromFilename(name);
+  const mediaOnly = detected ? isMediaOnlyFormat(detected) : false;
+  if (mediaOnly && requestedVisibility === "internal") {
+    throw new HttpError(
+      422,
+      "Las imágenes no tienen texto para el conocimiento interno; súbelas como archivos públicos para enviar a leads.",
+      "media_requires_public",
+    );
+  }
+  const visibility: KnowledgeVisibility = mediaOnly
+    ? "public"
+    : (requestedVisibility ?? "internal");
+
   let extracted;
   try {
-    extracted = await extractKnowledgeText(name, file.buffer);
+    extracted = await extractKnowledgeText(name, file.buffer, {
+      allowEmptyText: visibility === "public",
+    });
   } catch (error) {
     if (error instanceof KnowledgeExtractionError) {
       throw new HttpError(
@@ -81,11 +120,16 @@ export async function prepareKnowledgeFile(
     name,
     nameKey: name.toLowerCase(),
     format: extracted.format,
-    mimeType: file.mimetype || "application/octet-stream",
+    mimeType:
+      file.mimetype && file.mimetype !== "application/octet-stream"
+        ? file.mimetype
+        : (MIME_BY_FORMAT[extracted.format] ?? "application/octet-stream"),
     sizeBytes: file.size,
     sha256: sha256Hex(file.buffer),
     text: extracted.text,
     charCount: extracted.text.length,
+    visibility,
+    buffer: file.buffer,
   };
 }
 
@@ -96,6 +140,7 @@ export async function assertFitsCompanyTotal(
   charCount: number,
   replacingId: string | null,
 ): Promise<void> {
+  if (charCount === 0) return;
   const others = await tx.knowledgeFile.aggregate({
     where: {
       companyId: company.id,

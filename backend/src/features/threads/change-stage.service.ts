@@ -1,19 +1,19 @@
 import { parseCompanyConfig } from "../../companies/company-config.js";
 import type { AppContext } from "../../context.js";
 import { crmRequest } from "../../conversation/crm-sync.js";
+import { findStage, isClosedStage } from "../../engine/stages.js";
 import { stateForManualStage } from "../../engine/turn.js";
 import type { LeadStage } from "../../engine/types.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import type { CompanyAccess } from "../../http/company-access.js";
-import { conflict, notFound } from "../../lib/http-error.js";
+import { badRequest, conflict, notFound } from "../../lib/http-error.js";
 import { findThreadDto } from "./thread-dto.js";
 
 /**
- * A person sets the lead stage, in any direction (the bot itself only moves forward). Contactado
+ * A person sets the lead stage, in any direction (the bot itself only moves forward). Any stage
+ * configured on the company (the 6 system stages plus custom stages) is accepted. Contactado
  * records who and when and gives the thread to that operator if nobody had it; leaving Contactado
- * clears that. Leaving Por contactar for Calificando or Sin interés clears the handoff time, so
- * coming back puts the lead at the end of the queue. The conversation step follows the stage
- * (`stateForManualStage`), HubSpot is rewritten, and the change is logged.
+ * clears that. Leaving Por contactar for Calificando or a closed stage clears the handoff time.
  */
 export async function changeThreadStage(
   ctx: AppContext,
@@ -24,12 +24,22 @@ export async function changeThreadStage(
   const { companyId, operatorId, actorEmail, support } = access;
   const thread = await ctx.db.thread.findFirst({
     where: { id: threadId, companyId },
-    include: { company: { select: { config: true, hubspotEnabled: true } } },
+    include: {
+      company: { select: { name: true, config: true, hubspotEnabled: true } },
+    },
   });
   if (!thread) throw notFound("Conversación no encontrada");
+
+  const config = parseCompanyConfig(thread.company.config, thread.company.name);
+  if (!findStage(config.stages, stage)) {
+    throw badRequest(
+      "La etapa elegida no existe en esta empresa.",
+      "invalid_stage",
+    );
+  }
   if (thread.stage === stage) return findThreadDto(ctx.db, threadId);
 
-  const { collect } = parseCompanyConfig(thread.company.config);
+  const { collect } = config;
   const hubspot = thread.company.hubspotEnabled === true;
   const now = ctx.now();
   const data: Prisma.ThreadUncheckedUpdateManyInput = {
@@ -41,8 +51,7 @@ export async function changeThreadStage(
     ...(hubspot ? crmRequest(thread.crmPendingAction ?? "update") : {}),
   };
   if (stage === "to_contact") data.handedOffAt = thread.handedOffAt ?? now;
-  if (stage === "qualifying" || stage === "not_interested")
-    data.handedOffAt = null;
+  if (stage === "qualifying" || isClosedStage(stage)) data.handedOffAt = null;
   if (stage === "contacted") {
     data.contactedAt = now;
     data.contactedById = operatorId;

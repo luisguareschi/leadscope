@@ -87,6 +87,7 @@ describe("Anthropic client", () => {
       callNow: false,
       forbiddenTopic: null,
       summary: "- Busca 2 dormitorios.",
+      sendFileIds: [],
     });
     expect(result.usage).toMatchObject({
       inputTokens: 1200,
@@ -136,6 +137,7 @@ describe("Anthropic client", () => {
       "continue",
       "qualified",
       "not_interested",
+      "disqualified",
     ]);
     expect(schema.properties.forbiddenTopic.enum).toEqual([
       "Rentabilidad futura",
@@ -233,5 +235,65 @@ describe("Anthropic client", () => {
       maxRetries: 0,
     });
     await expect(client.complete(input)).rejects.toThrow(/Overloaded/);
+  });
+
+  it("sends Anthropic vision image blocks and exposes sendFileIds when public files exist", async () => {
+    const fetchImpl = vi.fn(async (..._args: Parameters<typeof fetch>) =>
+      messageResponse({
+        reply: "Te paso el brochure.",
+        collected: { interest: null, budget: null, knowsProjects: null },
+        callTime: null,
+        intent: "continue",
+        needsHuman: false,
+        callNow: false,
+        forbiddenTopic: null,
+        summary: "- Pidió brochure.",
+        sendFileIds: ["file-pub-1"],
+      }),
+    );
+    const client = createAnthropicClient("sk-test", {
+      fetch: fetchImpl as unknown as typeof fetch,
+      maxRetries: 0,
+    });
+    const result = await client.complete({
+      ...input,
+      messages: [
+        {
+          role: "user",
+          content: "Miralo",
+          images: [{ mediaType: "image/jpeg", base64: "JVBERi0=" }],
+        },
+      ],
+      scenario: {
+        ...input.scenario,
+        sendableFiles: [
+          {
+            id: "file-pub-1",
+            path: "Brochure.pdf",
+            format: "pdf",
+            description: null,
+          },
+        ],
+      },
+    });
+    expect(result.output.sendFileIds).toEqual(["file-pub-1"]);
+    const body = JSON.parse(String(fetchImpl.mock.calls[0]![1]?.body));
+    expect(body.messages[0]).toEqual({
+      role: "user",
+      content: [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: "image/jpeg",
+            data: "JVBERi0=",
+          },
+        },
+        { type: "text", text: "Miralo" },
+      ],
+    });
+    expect(
+      body.tools[0].input_schema.properties.sendFileIds.items.enum,
+    ).toEqual(["file-pub-1"]);
   });
 });

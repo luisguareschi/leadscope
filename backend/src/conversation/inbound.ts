@@ -1,4 +1,9 @@
+import { decryptSecrets } from "../companies/company-secrets.js";
 import type { AppContext } from "../context.js";
+import {
+  downloadKapsoMedia,
+  normalizeVisionMimeType,
+} from "../integrations/whatsapp/kapso/kapso-channel.js";
 import type {
   InboundMessage,
   StatusUpdate,
@@ -32,6 +37,56 @@ export type RecordResult =
         "duplicate" | "unknown_company" | "archived_company" | "invalid_phone";
     };
 
+function extensionForMime(mimeType: string): string {
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/gif") return "gif";
+  if (mimeType === "image/webp") return "webp";
+  return "jpg";
+}
+
+async function storeInboundImage(
+  ctx: AppContext,
+  company: { id: string; encryptedSecrets: string | null },
+  message: InboundMessage,
+): Promise<{
+  mediaPath: string;
+  mediaMimeType: string;
+  mediaFileName: string;
+} | null> {
+  if (message.type !== "image") return null;
+  if (!message.mediaUrl && !message.mediaId) return null;
+  const apiKey = decryptSecrets(
+    company.encryptedSecrets,
+    ctx.encryptionKey,
+  ).kapsoApiKey;
+  if (!apiKey && !message.mediaUrl) return null;
+  try {
+    const downloaded = await downloadKapsoMedia({
+      apiKey: apiKey ?? "",
+      mediaUrl: message.mediaUrl,
+      mediaId: message.mediaId,
+      fetchImpl: ctx.integrations.kapsoFetch,
+    });
+    if (!downloaded) return null;
+    const mimeType =
+      normalizeVisionMimeType(downloaded.mimeType) ??
+      normalizeVisionMimeType(message.mediaMimeType);
+    if (!mimeType) return null;
+    const ext = extensionForMime(mimeType);
+    const safeId = message.waMessageId.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const fileName = message.mediaFileName?.trim() || `imagen.${ext}`;
+    const mediaPath = `${company.id}/messages/inbound-${safeId}.${ext}`;
+    await ctx.storage.upload(mediaPath, downloaded.data, mimeType);
+    return { mediaPath, mediaMimeType: mimeType, mediaFileName: fileName };
+  } catch (error) {
+    ctx.logger.warn(
+      { err: error, companyId: company.id, waMessageId: message.waMessageId },
+      "failed to download or store inbound image; continuing without vision",
+    );
+    return null;
+  }
+}
+
 async function recordOnce(
   ctx: AppContext,
   message: InboundMessage,
@@ -43,6 +98,7 @@ async function recordOnce(
       archivedAt: true,
       hubspotEnabled: true,
       assistantPaused: true,
+      encryptedSecrets: true,
     },
   });
   if (!company) return { status: "unknown_company" };
@@ -51,7 +107,18 @@ async function recordOnce(
   const phone = waIdToE164(message.from);
   if (!phone) return { status: "invalid_phone" };
 
-  const preview = messagePreview(message.type, message.body);
+  // Avoid duplicate downloads if Meta/Kapso redelivered the same message.
+  const duplicate = await ctx.db.message.findUnique({
+    where: { waMessageId: message.waMessageId },
+    select: { id: true },
+  });
+  if (duplicate) return { status: "duplicate" };
+
+  const storedImage = await storeInboundImage(ctx, company, message);
+  const preview = messagePreview(
+    message.type,
+    message.body || storedImage?.mediaFileName || "",
+  );
   const recorded = await ctx.db.$transaction(async (tx) => {
     const thread = await tx.thread.upsert({
       where: { companyId_phone: { companyId: company.id, phone } },
@@ -63,6 +130,7 @@ async function recordOnce(
         lastInboundAt: message.sentAt,
         lastMessageAt: message.sentAt,
         lastMessagePreview: preview,
+        followUpCount: 0,
       },
       update: {
         waId: message.from,
@@ -70,6 +138,7 @@ async function recordOnce(
         lastInboundAt: message.sentAt,
         lastMessageAt: message.sentAt,
         lastMessagePreview: preview,
+        followUpCount: 0,
       },
       select: {
         id: true,
@@ -103,6 +172,11 @@ async function recordOnce(
         direction: "inbound",
         type: message.type,
         body: message.body,
+        mediaPath: storedImage?.mediaPath ?? null,
+        mediaMimeType:
+          storedImage?.mediaMimeType ?? message.mediaMimeType ?? null,
+        mediaFileName:
+          storedImage?.mediaFileName ?? message.mediaFileName ?? null,
         waMessageId: message.waMessageId,
         sentAt: message.sentAt,
         handledAt: botSilent ? ctx.now() : null,

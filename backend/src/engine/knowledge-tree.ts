@@ -1,4 +1,4 @@
-import type { KnowledgeDocument } from "./prompt.js";
+import type { KnowledgeDocument, SendableFile } from "./prompt.js";
 
 export type FolderNode = { id: string; parentId: string | null; name: string };
 
@@ -8,6 +8,10 @@ export type FileNode = {
   name: string;
   updatedAt: Date;
   text: string;
+  format?: string;
+  visibility?: "internal" | "public";
+  storagePath?: string | null;
+  description?: string | null;
 };
 
 const collator = new Intl.Collator("es", {
@@ -56,15 +60,10 @@ export function isSameOrInside(
   return false;
 }
 
-/**
- * The company's files in the order the prompt lists them, each with its folder path: depth-first
- * from the root, a folder's own files (by name) before its subfolders (by name), so the files of
- * one folder stay together.
- */
-export function knowledgeDocuments(
+function walkFiles(
   folders: FolderNode[],
   files: FileNode[],
-): KnowledgeDocument[] {
+): Array<{ file: FileNode; path: string[] }> {
   const byId = new Map(folders.map((folder) => [folder.id, folder]));
   const childFolders = new Map<string | null, FolderNode[]>();
   for (const folder of folders) {
@@ -79,17 +78,12 @@ export function knowledgeDocuments(
     childFiles.set(folder, [...(childFiles.get(folder) ?? []), file]);
   }
 
-  const documents: KnowledgeDocument[] = [];
+  const ordered: Array<{ file: FileNode; path: string[] }> = [];
   const visited = new Set<string>();
   const walk = (folderId: string | null) => {
     const path = folderPath(byId, folderId);
     for (const file of [...(childFiles.get(folderId) ?? [])].sort(byName)) {
-      documents.push({
-        name: file.name,
-        folders: path,
-        updatedAt: file.updatedAt,
-        text: file.text,
-      });
+      ordered.push({ file, path });
     }
     for (const folder of [...(childFolders.get(folderId) ?? [])].sort(byName)) {
       if (visited.has(folder.id)) continue;
@@ -98,5 +92,43 @@ export function knowledgeDocuments(
     }
   };
   walk(null);
-  return documents;
+  return ordered;
+}
+
+/**
+ * The company's text-bearing files in the order the prompt lists them, each with its folder path:
+ * depth-first from the root, a folder's own files (by name) before its subfolders (by name).
+ */
+export function knowledgeDocuments(
+  folders: FolderNode[],
+  files: FileNode[],
+): KnowledgeDocument[] {
+  return walkFiles(folders, files)
+    .filter(({ file }) => file.text.trim().length > 0)
+    .map(({ file, path }) => ({
+      name: file.name,
+      folders: path,
+      updatedAt: file.updatedAt,
+      text: file.text,
+    }));
+}
+
+/**
+ * Public files that have an original binary stored and can be sent to leads by the assistant.
+ * Internal files are strictly excluded.
+ */
+export function sendableKnowledgeFiles(
+  folders: FolderNode[],
+  files: FileNode[],
+): SendableFile[] {
+  return walkFiles(folders, files)
+    .filter(
+      ({ file }) => file.visibility === "public" && Boolean(file.storagePath),
+    )
+    .map(({ file, path }) => ({
+      id: file.id,
+      path: [...path, file.name].join(" / "),
+      format: file.format ?? "file",
+      description: file.description?.trim() || null,
+    }));
 }

@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useUploadKnowledgeFile } from "@/lib/queries";
+import type { KnowledgeVisibility } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { rowMotion } from "./row-motion";
 
@@ -24,7 +25,11 @@ type UploadStatus = {
 };
 
 /** Where picked or dropped files go: a folder (with its path for the status rows) or the root. */
-export type UploadTarget = { folderId: string | null; place: string | null };
+export type UploadTarget = {
+  folderId: string | null;
+  place: string | null;
+  visibility?: KnowledgeVisibility;
+};
 
 const ROOT: UploadTarget = { folderId: null, place: null };
 
@@ -35,6 +40,7 @@ export type UploadQueue = ReturnType<typeof useUploadQueue>;
 /** Uploads picked or dropped files into a folder and keeps the last few outcomes on screen. */
 export function useUploadQueue(
   accept: string[],
+  defaultVisibility: KnowledgeVisibility = "internal",
   onUploaded?: (target: UploadTarget) => void,
 ) {
   const input = useRef<HTMLInputElement>(null);
@@ -60,10 +66,15 @@ export function useUploadQueue(
     // One at a time, so each upload is checked against the space the previous ones used.
     for (const [index, file] of files.entries()) {
       const id = queued[index]!.id;
+      const isImage = file.type.startsWith("image/");
+      const visibility: KnowledgeVisibility = isImage
+        ? "public"
+        : (target.visibility ?? defaultVisibility);
       try {
         const result = await upload.mutateAsync({
           file,
           folderId: target.folderId,
+          visibility,
         });
         update(id, {
           state: "done",
@@ -121,7 +132,7 @@ export function EmptyDropzone({ queue }: { queue: UploadQueue }) {
         </span>
         <span className="text-[13px] text-muted-foreground">
           Arrastra archivos aquí o haz clic para seleccionarlos. PDF, Word,
-          Excel, PowerPoint, CSV, texto o Markdown.
+          Excel, PowerPoint, CSV, texto, Markdown o imágenes (JPG, PNG, WebP).
         </span>
       </span>
     </button>

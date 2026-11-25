@@ -184,6 +184,61 @@ describe("parseKapsoWebhook", () => {
       withoutPhone: 0,
     });
   });
+
+  it("reads Kapso audio transcripts and inbound image media metadata", () => {
+    const audioStr = receivedEvent({
+      id: "wamid.aud1",
+      type: "audio",
+      text: undefined,
+      audio: { id: "aud-1", mime_type: "audio/ogg" },
+      kapso: {
+        direction: "inbound",
+        origin: "cloud_api",
+        transcript: "Hola, quiero saber precios",
+      },
+    });
+    const audioObj = receivedEvent({
+      id: "wamid.aud2",
+      type: "audio",
+      text: undefined,
+      audio: { id: "aud-2" },
+      kapso: {
+        direction: "inbound",
+        origin: "cloud_api",
+        transcript: { text: "Busco 2 dormitorios" },
+      },
+    });
+    const image = receivedEvent({
+      id: "wamid.img1",
+      type: "image",
+      text: undefined,
+      image: { id: "img-1", mime_type: "image/jpeg", caption: "Este plano" },
+      kapso: {
+        direction: "inbound",
+        origin: "cloud_api",
+        media_url: "https://cdn.kapso.ai/img-1.jpg",
+        media_data: { content_type: "image/jpeg", filename: "plano.jpg" },
+      },
+    });
+    expect(parseKapsoWebhook(RECEIVED, audioStr).messages[0]).toMatchObject({
+      type: "audio",
+      body: "Hola, quiero saber precios",
+      mediaId: "aud-1",
+      mediaMimeType: "audio/ogg",
+    });
+    expect(parseKapsoWebhook(RECEIVED, audioObj).messages[0]).toMatchObject({
+      type: "audio",
+      body: "Busco 2 dormitorios",
+    });
+    expect(parseKapsoWebhook(RECEIVED, image).messages[0]).toMatchObject({
+      type: "image",
+      body: "Este plano",
+      mediaId: "img-1",
+      mediaUrl: "https://cdn.kapso.ai/img-1.jpg",
+      mediaMimeType: "image/jpeg",
+      mediaFileName: "plano.jpg",
+    });
+  });
 });
 
 describe("Kapso webhook signature", () => {
@@ -348,6 +403,38 @@ describe("Kapso channel", () => {
     await expect(
       channelWith(fetchImpl).sendText({ to: "1", body: "x" }),
     ).rejects.toThrow("no message id");
+  });
+
+  it("uploads and sends image and document media via Kapso", async () => {
+    const fetchImpl = mockFetch((url) =>
+      url.endsWith("/media")
+        ? Response.json({ id: "media-999" })
+        : Response.json({ messages: [{ id: "wamid.media-1" }] }),
+    );
+    const result = await channelWith(fetchImpl).sendMedia({
+      to: "59899111222",
+      kind: "document",
+      data: Buffer.from("%PDF-1.4"),
+      mimeType: "application/pdf",
+      fileName: "brochure.pdf",
+      caption: "Aquí tienes el brochure",
+    });
+    expect(result).toEqual({ waMessageId: "wamid.media-1" });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(String(fetchImpl.mock.calls[0]![0])).toBe(
+      "https://api.kapso.ai/meta/whatsapp/v24.0/647015955153740/media",
+    );
+    expect(callOf(fetchImpl, 1).body).toEqual({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: "59899111222",
+      type: "document",
+      document: {
+        id: "media-999",
+        filename: "brochure.pdf",
+        caption: "Aquí tienes el brochure",
+      },
+    });
   });
 });
 

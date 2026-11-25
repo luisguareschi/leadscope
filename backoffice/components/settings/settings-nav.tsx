@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { ChevronRightIcon } from "lucide-react";
 import { cn } from "cn";
-import type { SectionId, SectionItem } from "./sections";
+import type { SectionGroup, SectionId } from "./sections";
 
 export function SettingsNav({
   groups,
@@ -9,66 +11,100 @@ export function SettingsNav({
   onSelect,
   stateOf,
 }: {
-  groups: Array<{ label: string; items: SectionItem[] }>;
+  groups: SectionGroup[];
   active: SectionId;
   onSelect: (id: SectionId) => void;
   stateOf?: (id: SectionId) => "error" | "changed" | null;
 }) {
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
   return (
     <nav
       aria-label="Secciones de configuración"
       className="-mx-4 overflow-x-auto px-4 scrollbar-none lg:-mx-6 lg:px-6 @4xl/main:mx-0 @4xl/main:overflow-visible @4xl/main:px-0"
     >
       <div className="flex w-max gap-1 @4xl/main:w-auto @4xl/main:flex-col @4xl/main:gap-6">
-        {groups.map((group) => (
-          <div
-            key={group.label}
-            className="flex gap-1 @4xl/main:flex-col @4xl/main:gap-0.5"
-          >
-            <p className="hidden px-3 pb-1.5 text-xs font-medium text-muted-foreground @4xl/main:block">
-              {group.label}
-            </p>
-            {group.items.map((item) => {
-              const Icon = item.icon;
-              const current = item.id === active;
-              const state = stateOf?.(item.id) ?? null;
-              return (
+        {groups.map((group) => {
+          const groupActive = group.items.some((item) => item.id === active);
+          const groupDirtyOrError = group.items.some(
+            (item) => (stateOf?.(item.id) ?? null) !== null,
+          );
+          const expanded =
+            !group.advanced || advancedOpen || groupActive || groupDirtyOrError;
+
+          return (
+            <div
+              key={group.label}
+              className="flex gap-1 @4xl/main:flex-col @4xl/main:gap-0.5"
+            >
+              {group.advanced ? (
                 <button
-                  key={item.id}
                   type="button"
-                  aria-current={current ? "page" : undefined}
-                  onClick={() => onSelect(item.id)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-2.5 rounded-full px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
-                    current
-                      ? "bg-card font-semibold text-foreground shadow-xs dark:bg-white/8 dark:shadow-none"
-                      : "text-muted-foreground hover:bg-card/70 hover:text-foreground dark:hover:bg-white/5",
-                  )}
+                  aria-expanded={expanded}
+                  onClick={() => setAdvancedOpen((v) => !v)}
+                  className="hidden items-center gap-1 px-3 pb-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground @4xl/main:flex"
                 >
-                  <Icon
+                  <ChevronRightIcon
                     className={cn(
-                      "size-4 shrink-0",
-                      current ? "text-primary" : "text-muted-foreground",
+                      "size-3.5 transition-transform",
+                      expanded && "rotate-90",
                     )}
                   />
-                  <span className="flex-1 text-left">{item.label}</span>
-                  {state ? (
-                    <span
-                      className={cn(
-                        "size-1.5 shrink-0 rounded-full",
-                        state === "error" ? "bg-destructive" : "bg-primary",
-                      )}
-                    >
-                      <span className="sr-only">
-                        {state === "error" ? "Con errores" : "Sin guardar"}
-                      </span>
-                    </span>
-                  ) : null}
+                  {group.label}
                 </button>
-              );
-            })}
-          </div>
-        ))}
+              ) : (
+                <p className="hidden px-3 pb-1.5 text-xs font-medium text-muted-foreground @4xl/main:block">
+                  {group.label}
+                </p>
+              )}
+              {expanded
+                ? group.items.map((item) => {
+                    const Icon = item.icon;
+                    const current = item.id === active;
+                    const state = stateOf?.(item.id) ?? null;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        aria-current={current ? "page" : undefined}
+                        onClick={() => onSelect(item.id)}
+                        className={cn(
+                          "flex shrink-0 items-center gap-2.5 rounded-full px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
+                          current
+                            ? "bg-card font-semibold text-foreground shadow-xs dark:bg-white/8 dark:shadow-none"
+                            : "text-muted-foreground hover:bg-card/70 hover:text-foreground dark:hover:bg-white/5",
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            "size-4 shrink-0",
+                            current ? "text-primary" : "text-muted-foreground",
+                          )}
+                        />
+                        <span className="flex-1 text-left">{item.label}</span>
+                        {state ? (
+                          <span
+                            className={cn(
+                              "size-1.5 shrink-0 rounded-full",
+                              state === "error"
+                                ? "bg-destructive"
+                                : "bg-primary",
+                            )}
+                          >
+                            <span className="sr-only">
+                              {state === "error"
+                                ? "Con errores"
+                                : "Sin guardar"}
+                            </span>
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })
+                : null}
+            </div>
+          );
+        })}
       </div>
     </nav>
   );

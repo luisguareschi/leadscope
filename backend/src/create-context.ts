@@ -12,6 +12,10 @@ import {
   createIntegrations,
   type Integrations,
 } from "./integrations/registry.js";
+import {
+  createFileStorage,
+  type FileStorage,
+} from "./integrations/storage/storage.js";
 import { parseEncryptionKey } from "./lib/crypto.js";
 import { logger as defaultLogger, type Logger } from "./lib/logger.js";
 import { createPrisma, type Db } from "./lib/prisma.js";
@@ -19,6 +23,7 @@ import { createPrisma, type Db } from "./lib/prisma.js";
 export type ContextOptions = {
   db?: Db;
   integrations?: Integrations;
+  storage?: FileStorage;
   authAdmin?: AuthAdmin;
   logger?: Logger;
   now?: () => Date;
@@ -34,6 +39,7 @@ export function createContext(
     db: options.db ?? createPrisma(env.DATABASE_URL),
     encryptionKey: parseEncryptionKey(env.SECRETS_ENCRYPTION_KEY),
     integrations: options.integrations ?? createIntegrations(env),
+    storage: options.storage ?? createFileStorage(env),
     authAdmin: options.authAdmin ?? createAuthAdmin(env),
     logger,
     now: options.now ?? (() => new Date()),

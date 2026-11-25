@@ -16,6 +16,17 @@ export const STATUS_EVENTS: Record<string, string> = {
   "whatsapp.message.failed": "failed",
 };
 
+const transcriptSchema = z
+  .union([z.string(), z.object({ text: z.string().nullish() }).loose()])
+  .nullish()
+  .transform((value) => {
+    if (typeof value === "string") return value.trim() || null;
+    if (value && typeof value === "object" && typeof value.text === "string") {
+      return value.text.trim() || null;
+    }
+    return null;
+  });
+
 const messageSchema = z
   .object({
     id: z.string(),
@@ -30,9 +41,39 @@ const messageSchema = z
         list_reply: z.object({ title: z.string() }).optional(),
       })
       .optional(),
-    image: z.object({ caption: z.string().optional() }).optional(),
-    video: z.object({ caption: z.string().optional() }).optional(),
-    document: z.object({ caption: z.string().optional() }).optional(),
+    audio: z
+      .object({
+        id: z.string().optional(),
+        mime_type: z.string().optional(),
+        voice: z.boolean().optional(),
+      })
+      .loose()
+      .optional(),
+    image: z
+      .object({
+        id: z.string().optional(),
+        mime_type: z.string().optional(),
+        caption: z.string().optional(),
+      })
+      .loose()
+      .optional(),
+    video: z
+      .object({
+        id: z.string().optional(),
+        mime_type: z.string().optional(),
+        caption: z.string().optional(),
+      })
+      .loose()
+      .optional(),
+    document: z
+      .object({
+        id: z.string().optional(),
+        mime_type: z.string().optional(),
+        filename: z.string().optional(),
+        caption: z.string().optional(),
+      })
+      .loose()
+      .optional(),
     kapso: z
       .object({
         direction: z.string().optional(),
@@ -41,6 +82,16 @@ const messageSchema = z
         passive: z.boolean().optional(),
         phone_number: z.string().nullish(),
         phone_number_id: z.string().nullish(),
+        transcript: transcriptSchema,
+        media_url: z.string().nullish(),
+        media_data: z
+          .object({
+            url: z.string().nullish(),
+            content_type: z.string().nullish(),
+            filename: z.string().nullish(),
+          })
+          .loose()
+          .nullish(),
       })
       .loose()
       .optional(),
@@ -83,12 +134,37 @@ const IGNORED_ORIGINS = new Set(["history_sync", "other_app"]);
 
 type KapsoMessage = z.infer<typeof messageSchema>;
 
-function textOf(message: KapsoMessage): { type: string; body: string } {
+function contentOf(message: KapsoMessage): {
+  type: string;
+  body: string;
+  mediaUrl: string | null;
+  mediaId: string | null;
+  mediaMimeType: string | null;
+  mediaFileName: string | null;
+} {
+  const mediaUrl =
+    message.kapso?.media_url ?? message.kapso?.media_data?.url ?? null;
+  const mediaFileName =
+    message.document?.filename ?? message.kapso?.media_data?.filename ?? null;
   switch (message.type) {
     case "text":
-      return { type: "text", body: message.text?.body ?? "" };
+      return {
+        type: "text",
+        body: message.text?.body ?? "",
+        mediaUrl: null,
+        mediaId: null,
+        mediaMimeType: null,
+        mediaFileName: null,
+      };
     case "button":
-      return { type: "text", body: message.button?.text ?? "" };
+      return {
+        type: "text",
+        body: message.button?.text ?? "",
+        mediaUrl: null,
+        mediaId: null,
+        mediaMimeType: null,
+        mediaFileName: null,
+      };
     case "interactive":
       return {
         type: "text",
@@ -96,15 +172,68 @@ function textOf(message: KapsoMessage): { type: string; body: string } {
           message.interactive?.button_reply?.title ??
           message.interactive?.list_reply?.title ??
           "",
+        mediaUrl: null,
+        mediaId: null,
+        mediaMimeType: null,
+        mediaFileName: null,
+      };
+    case "audio":
+      return {
+        type: "audio",
+        body: message.kapso?.transcript ?? "",
+        mediaUrl,
+        mediaId: message.audio?.id ?? null,
+        mediaMimeType:
+          message.audio?.mime_type ??
+          message.kapso?.media_data?.content_type ??
+          null,
+        mediaFileName,
       };
     case "image":
-      return { type: "image", body: message.image?.caption ?? "" };
+      return {
+        type: "image",
+        body: message.image?.caption ?? "",
+        mediaUrl,
+        mediaId: message.image?.id ?? null,
+        mediaMimeType:
+          message.image?.mime_type ??
+          message.kapso?.media_data?.content_type ??
+          null,
+        mediaFileName,
+      };
     case "video":
-      return { type: "video", body: message.video?.caption ?? "" };
+      return {
+        type: "video",
+        body: message.video?.caption ?? "",
+        mediaUrl,
+        mediaId: message.video?.id ?? null,
+        mediaMimeType:
+          message.video?.mime_type ??
+          message.kapso?.media_data?.content_type ??
+          null,
+        mediaFileName,
+      };
     case "document":
-      return { type: "document", body: message.document?.caption ?? "" };
+      return {
+        type: "document",
+        body: message.document?.caption ?? "",
+        mediaUrl,
+        mediaId: message.document?.id ?? null,
+        mediaMimeType:
+          message.document?.mime_type ??
+          message.kapso?.media_data?.content_type ??
+          null,
+        mediaFileName,
+      };
     default:
-      return { type: message.type, body: "" };
+      return {
+        type: message.type,
+        body: "",
+        mediaUrl,
+        mediaId: null,
+        mediaMimeType: message.kapso?.media_data?.content_type ?? null,
+        mediaFileName,
+      };
   }
 }
 
@@ -170,7 +299,8 @@ export function parseKapsoWebhook(
       result.withoutPhone += 1;
       continue;
     }
-    const { type, body } = textOf(message.data);
+    const { type, body, mediaUrl, mediaId, mediaMimeType, mediaFileName } =
+      contentOf(message.data);
     const seconds = Number(message.data.timestamp);
     result.messages.push({
       phoneNumberId,
@@ -179,6 +309,10 @@ export function parseKapsoWebhook(
       profileName: conversation?.contact_name || null,
       type,
       body: body.trim(),
+      ...(mediaUrl ? { mediaUrl } : {}),
+      ...(mediaId ? { mediaId } : {}),
+      ...(mediaMimeType ? { mediaMimeType } : {}),
+      ...(mediaFileName ? { mediaFileName } : {}),
       sentAt:
         Number.isFinite(seconds) && seconds > 0
           ? new Date(seconds * 1000)

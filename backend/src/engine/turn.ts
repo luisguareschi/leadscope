@@ -1,4 +1,5 @@
 import { capReply } from "./guardrails.js";
+import { isClosedStage, isSystemStage } from "./stages.js";
 import type {
   Collected,
   CollectRule,
@@ -15,12 +16,29 @@ import type {
 /** Bullets are for a person skimming the panel or HubSpot; a longer one is cut. */
 export const MAX_SUMMARY_CHARS = 1_200;
 
+/** Maximum number of public files the assistant may send in a single turn. */
+export const MAX_FILES_PER_TURN = 2;
+
 /** The call time stored when the lead wants to talk to a person now (`callNow`). */
 export const CALL_NOW_TIME = "Lo antes posible";
 
 function clean(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function cleanFileIds(ids: string[] | undefined): string[] {
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of ids) {
+    const id = typeof raw === "string" ? raw.trim() : "";
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    result.push(id);
+    if (result.length >= MAX_FILES_PER_TURN) break;
+  }
+  return result;
 }
 
 /** Reads `Thread.collected` (JSON) defensively: anything that is not a non-empty string is dropped. */
@@ -141,9 +159,14 @@ export function stageOf(thread: Pick<ThreadSnapshot, "stage">): LeadStage {
   return thread.stage ?? "qualifying";
 }
 
-/** Por contactar and Contactado: the lead is the sales team's, and the bot does not re-qualify. */
+/**
+ * Por contactar, Contactado, and any company-defined custom stage: the lead is owned by the sales
+ * team, and the bot keeps answering without re-qualifying or moving the stage backwards.
+ */
 export function isWithSalesTeam(stage: LeadStage): boolean {
-  return stage === "to_contact" || stage === "contacted";
+  return (
+    stage === "to_contact" || stage === "contacted" || !isSystemStage(stage)
+  );
 }
 
 /** The current stage was picked by a person in the panel, not reached by the bot. */
@@ -155,9 +178,8 @@ export function stageSetByPerson(
 
 /**
  * The conversation step that goes with a stage a person picked, so the next turn behaves like that
- * stage: Calificando asks for what is still missing (then the call time), Sin interés closes, and
- * Por contactar or Contactado reopen a closed conversation. A thread nobody has answered yet keeps
- * its greeting.
+ * stage: Calificando asks for what is still missing (then the call time), closed stages close, and
+ * sales stages reopen a closed conversation. A thread nobody has answered yet keeps its greeting.
  */
 export function stateForManualStage(
   thread: ThreadSnapshot,
@@ -165,7 +187,7 @@ export function stateForManualStage(
   items: CollectRule[],
 ): ThreadState {
   if (thread.state === "greeting") return "greeting";
-  if (stage === "not_interested") return "closed";
+  if (isClosedStage(stage)) return "closed";
   if (stage === "qualifying") {
     const fields = fieldsOf(thread);
     if (!hasRequiredItems(fields, items)) return "qualify";
@@ -180,9 +202,10 @@ export function stateForManualStage(
  * Forward-only for the bot, from whatever stage the thread is in (a person may have set it by
  * hand). Calificando moves to Por contactar once every required item is stored (with no required
  * items, once there is a preferred contact time/channel or the model marks intent as "qualified"),
- * or right away on `callNow`, or to Sin interés. From Por contactar only a person moves the lead;
- * nothing the lead writes moves it back. Sin interés comes back to Por contactar only when the
- * lead re-qualifies: the turn completes the required items, or the model marks them qualified.
+ * or right away on `callNow`, or to Sin interés / Descalificado. A silent thread in Sin respuesta
+ * re-enters Calificando (or Por contactar) as soon as the lead writes back. From sales stages
+ * (`to_contact`, `contacted`, custom) only a person moves the lead; nothing the lead writes moves
+ * it back. Sin interés / Descalificado come back to Por contactar only when the lead re-qualifies.
  */
 function nextStage(
   previous: ThreadSnapshot,
@@ -193,10 +216,14 @@ function nextStage(
   const stage = stageOf(previous);
   if (isWithSalesTeam(stage)) return stage;
   if (intent === "not_interested") return "not_interested";
-  if (!isReadyForAdvisor(fields, items, intent)) return stage;
-  if (stage === "qualifying") return "to_contact";
-  const completedNow = !isReadyForAdvisor(fieldsOf(previous), items);
-  return completedNow || intent === "qualified" ? "to_contact" : stage;
+  if (intent === "disqualified") return "disqualified";
+  if (isReadyForAdvisor(fields, items, intent)) {
+    if (stage === "qualifying" || stage === "no_response") return "to_contact";
+    const completedNow = !isReadyForAdvisor(fieldsOf(previous), items);
+    return completedNow || intent === "qualified" ? "to_contact" : stage;
+  }
+  if (stage === "no_response") return "qualifying";
+  return stage;
 }
 
 function nextState(
@@ -244,6 +271,7 @@ export function decideTurn(
       fields: current,
       summary: keptSummary,
       reply: rules.messages.nonText,
+      sendFileIds: [],
       needsHuman: null,
       crm: null,
     };
@@ -256,6 +284,7 @@ export function decideTurn(
       fields: current,
       summary: keptSummary,
       reply: rules.messages.fallback,
+      sendFileIds: [],
       needsHuman: { reason: `model_failure: ${input.reason}` },
       crm: "needs_human",
     };
@@ -265,7 +294,7 @@ export function decideTurn(
   const fields = mergeFields(current, output, rules.collect);
   const summary = summaryOf(thread, output.summary);
 
-  // The model's own words are never sent on these two paths: the lead gets the fixed line.
+  // The model's own words (and files) are never sent on these two paths: the lead gets the fixed line.
   const forbiddenTopic = clean(output.forbiddenTopic);
   if (forbiddenTopic) {
     return {
@@ -274,6 +303,7 @@ export function decideTurn(
       fields,
       summary,
       reply: rules.messages.needsHuman,
+      sendFileIds: [],
       needsHuman: {
         reason: `forbidden_topic: ${forbiddenTopic.slice(0, 200)}`,
       },
@@ -287,6 +317,7 @@ export function decideTurn(
       fields,
       summary,
       reply: rules.messages.needsHuman,
+      sendFileIds: [],
       needsHuman: { reason: "lead_needs_human" },
       crm: "needs_human",
     };
@@ -300,10 +331,13 @@ export function decideTurn(
       fields,
       summary,
       reply: rules.messages.fallback,
+      sendFileIds: [],
       needsHuman: { reason: "empty_reply" },
       crm: "needs_human",
     };
   }
+
+  const sendFileIds = cleanFileIds(output.sendFileIds);
 
   // The lead wants a person now: straight to the advisors' queue, missing items or not. The bot
   // stops qualifying (the prompt never re-qualifies a lead with the sales team). Keep any
@@ -315,18 +349,34 @@ export function decideTurn(
       fields: { ...fields, callTime: clean(output.callTime) ?? CALL_NOW_TIME },
       summary,
       reply,
+      sendFileIds,
       needsHuman: null,
       crm: "handoff",
     };
   }
 
-  if (output.intent === "not_interested") {
+  if (output.intent === "not_interested" || output.intent === "disqualified") {
+    // Sales stages (`to_contact`, `contacted`, custom) stay owned by the sales team: keep state in
+    // `answer` and send an `update` so Thread.state and HubSpot status never contradict Thread.stage.
+    if (isWithSalesTeam(stage)) {
+      return {
+        state: "answer",
+        stage,
+        fields,
+        summary,
+        reply,
+        sendFileIds: [],
+        needsHuman: null,
+        crm: "update",
+      };
+    }
     return {
       state: "closed",
       stage: nextStage(thread, fields, output.intent, rules.collect),
       fields,
       summary,
       reply,
+      sendFileIds: [],
       needsHuman: null,
       crm: "close",
     };
@@ -339,6 +389,7 @@ export function decideTurn(
     fields,
     summary,
     reply,
+    sendFileIds,
     needsHuman: null,
   };
 }

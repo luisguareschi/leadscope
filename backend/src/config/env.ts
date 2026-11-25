@@ -24,6 +24,7 @@ const envSchema = z
     SUPABASE_URL: optionalString,
     SUPABASE_JWT_SECRET: optionalString,
     SUPABASE_SERVICE_ROLE_KEY: optionalString,
+    SUPABASE_STORAGE_BUCKET: z.string().min(1).default("leadscope-files"),
     BACKOFFICE_ORIGIN: z.string().default("http://localhost:3000"),
     /**
      * Comma-separated emails that may create companies. Checked against the signed-in

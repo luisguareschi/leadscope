@@ -137,10 +137,12 @@ describe("knowledge files", () => {
   });
 
   it("explains what is wrong with a rejected file", async () => {
-    const unsupported = await upload("foto.png", Buffer.from("png")).expect(
+    const unsupported = await upload("video.mp4", Buffer.from("mp4")).expect(
       415,
     );
     expect(unsupported.body.error.code).toBe("unsupported_format");
+    const corruptPng = await upload("foto.png", Buffer.from("png")).expect(422);
+    expect(corruptPng.body.error.code).toBe("corrupt_file");
     const scanned = await upload("escaneado.pdf", makePdf("")).expect(422);
     expect(scanned.body.error.message).toContain("escaneado");
     const corrupt = await upload(
@@ -149,6 +151,50 @@ describe("knowledge files", () => {
     ).expect(422);
     expect(corrupt.body.error.code).toBe("corrupt_file");
     await request(app).post("/internal/knowledge/files").set(auth).expect(400);
+  });
+
+  it("supports public vs internal visibility, image uploads, and binary download", async () => {
+    const pngBytes = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+    ]);
+    const uploadedImg = await upload("fachada.png", pngBytes).expect(201);
+    expect(uploadedImg.body.file).toMatchObject({
+      name: "fachada.png",
+      format: "png",
+      visibility: "public",
+      hasFile: true,
+      charCount: 0,
+    });
+
+    // Images cannot be marked internal (they have no text).
+    await request(app)
+      .patch(`/internal/knowledge/files/${uploadedImg.body.file.id}`)
+      .set(auth)
+      .send({ visibility: "internal" })
+      .expect(400);
+
+    const downloaded = await request(app)
+      .get(`/internal/knowledge/files/${uploadedImg.body.file.id}/download`)
+      .set(auth)
+      .expect(200);
+    expect(Buffer.compare(downloaded.body, pngBytes)).toBe(0);
+
+    // PDFs default to internal, can be marked public with a description.
+    const pdf = await upload("brochure.pdf", makePdf("Torre Sur")).expect(201);
+    expect(pdf.body.file).toMatchObject({
+      visibility: "internal",
+      hasFile: true,
+    });
+    const updated = await request(app)
+      .patch(`/internal/knowledge/files/${pdf.body.file.id}`)
+      .set(auth)
+      .send({ visibility: "public", description: "Brochure general" })
+      .expect(200);
+    expect(updated.body.file).toMatchObject({
+      visibility: "public",
+      hasFile: true,
+      description: "Brochure general",
+    });
   });
 
   it("enforces the per-file and per-company text limits", async () => {

@@ -288,6 +288,8 @@ describe("cohort, funnel, forms, and assistant quality", () => {
       toContact: 1,
       notInterested: 1,
       notInterestedRate: 1 / 5,
+      disqualified: 0,
+      noResponse: 0,
     });
     expect(body.forms).toEqual({
       leads: 2,
@@ -333,6 +335,8 @@ describe("cohort, funnel, forms, and assistant quality", () => {
         to_contact: 1,
         contacted: 0,
         not_interested: 0,
+        disqualified: 0,
+        no_response: 0,
       },
       {
         date: "2026-11-02",
@@ -340,6 +344,8 @@ describe("cohort, funnel, forms, and assistant quality", () => {
         to_contact: 0,
         contacted: 0,
         not_interested: 1,
+        disqualified: 0,
+        no_response: 0,
       },
       {
         date: "2026-11-03",
@@ -347,6 +353,8 @@ describe("cohort, funnel, forms, and assistant quality", () => {
         to_contact: 0,
         contacted: 1,
         not_interested: 0,
+        disqualified: 0,
+        no_response: 0,
       },
       {
         date: "2026-11-04",
@@ -354,6 +362,8 @@ describe("cohort, funnel, forms, and assistant quality", () => {
         to_contact: 0,
         contacted: 0,
         not_interested: 0,
+        disqualified: 0,
+        no_response: 0,
       },
     ]);
   });
@@ -373,6 +383,8 @@ describe("cohort, funnel, forms, and assistant quality", () => {
         to_contact: 0,
         contacted: 0,
         not_interested: 0,
+        disqualified: 0,
+        no_response: 0,
       },
       {
         date: "2026-11-02",
@@ -380,6 +392,8 @@ describe("cohort, funnel, forms, and assistant quality", () => {
         to_contact: 0,
         contacted: 0,
         not_interested: 0,
+        disqualified: 0,
+        no_response: 0,
       },
     ]);
   });

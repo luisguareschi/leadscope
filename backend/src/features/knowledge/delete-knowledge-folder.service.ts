@@ -9,16 +9,25 @@ export async function deleteKnowledgeFolder(
   companyId: string,
   folderId: string,
 ) {
-  return withKnowledgeLock(ctx, companyId, async (tx) => {
+  let storagePaths: string[] = [];
+  const result = await withKnowledgeLock(ctx, companyId, async (tx) => {
     const folders = await loadFolders(tx, companyId);
     if (!folders.has(folderId)) throw notFound("Carpeta no encontrada");
     const inside = [...folders.keys()].filter((id) =>
       isSameOrInside(folders, folderId, id),
     );
-    const deletedFiles = await tx.knowledgeFile.count({
+    const files = await tx.knowledgeFile.findMany({
       where: { companyId, folderId: { in: inside } },
+      select: { storagePath: true },
     });
+    storagePaths = files
+      .map((f) => f.storagePath)
+      .filter((path): path is string => Boolean(path));
     await tx.knowledgeFolder.delete({ where: { id: folderId } });
-    return { deletedFolders: inside.length, deletedFiles };
+    return { deletedFolders: inside.length, deletedFiles: files.length };
   });
+  if (storagePaths.length > 0) {
+    await ctx.storage.remove(storagePaths).catch(() => undefined);
+  }
+  return result;
 }

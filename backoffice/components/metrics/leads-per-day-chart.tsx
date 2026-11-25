@@ -14,7 +14,7 @@ import {
   STAGE_ORDER,
 } from "@/lib/thread-status";
 import { formatCount, formatDay } from "@/lib/metrics-format";
-import type { CompanyMetrics, LeadStage } from "@/lib/types";
+import type { CompanyMetrics, SystemLeadStage } from "@/lib/types";
 import { usePrefersReducedMotion } from "./use-reduced-motion";
 
 type Day = CompanyMetrics["leadsPerDay"][number];
@@ -38,6 +38,14 @@ const chartConfig = {
     label: STAGE_META.not_interested.label,
     color: STAGE_CHART_COLOR.not_interested,
   },
+  disqualified: {
+    label: STAGE_META.disqualified.label,
+    color: STAGE_CHART_COLOR.disqualified,
+  },
+  no_response: {
+    label: STAGE_META.no_response.label,
+    color: STAGE_CHART_COLOR.no_response,
+  },
 } satisfies ChartConfig;
 
 function isoMonday(dateStr: string): string {
@@ -60,6 +68,8 @@ function aggregateByWeek(days: Day[]): Day[] {
       bucket.to_contact += day.to_contact;
       bucket.contacted += day.contacted;
       bucket.not_interested += day.not_interested;
+      bucket.disqualified += day.disqualified;
+      bucket.no_response += day.no_response;
     } else {
       weeks.set(monday, {
         date: monday,
@@ -67,6 +77,8 @@ function aggregateByWeek(days: Day[]): Day[] {
         to_contact: day.to_contact,
         contacted: day.contacted,
         not_interested: day.not_interested,
+        disqualified: day.disqualified,
+        no_response: day.no_response,
       });
     }
   }
@@ -74,7 +86,14 @@ function aggregateByWeek(days: Day[]): Day[] {
 }
 
 function dayTotal(day: Day): number {
-  return day.qualifying + day.to_contact + day.contacted + day.not_interested;
+  return (
+    day.qualifying +
+    day.to_contact +
+    day.contacted +
+    day.not_interested +
+    day.disqualified +
+    day.no_response
+  );
 }
 
 function LeadsTooltip({
@@ -165,7 +184,7 @@ export function LeadsPerDayChart({
         {STAGE_ORDER.map((stage) => (
           <Bar
             key={stage}
-            dataKey={stage satisfies LeadStage}
+            dataKey={stage satisfies SystemLeadStage}
             stackId="leads"
             fill={`var(--color-${stage})`}
             maxBarSize={28}

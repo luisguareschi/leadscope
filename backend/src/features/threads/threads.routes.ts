@@ -1,9 +1,11 @@
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import type { AppContext } from "../../context.js";
+import { singleFileUpload } from "../knowledge/upload-middleware.js";
 import { assignThreadController } from "./assign-thread.controller.js";
 import { changeStageController } from "./change-stage.controller.js";
 import { clearNeedsHumanController } from "./clear-needs-human.controller.js";
 import { deleteThreadController } from "./delete-thread.controller.js";
+import { downloadMessageMediaController } from "./download-message-media.controller.js";
 import { getThreadController } from "./get-thread.controller.js";
 import { getThreadsSummaryController } from "./get-threads-summary.controller.js";
 import { listAssigneesController } from "./list-assignees.controller.js";
@@ -14,12 +16,25 @@ import { retryCrmSyncController } from "./retry-crm-sync.controller.js";
 import { sendMessageController } from "./send-message.controller.js";
 import { takeThreadController } from "./take-thread.controller.js";
 
+/** Runs multer only for multipart/form-data requests; leaves JSON requests untouched. */
+const optionalFileUpload: RequestHandler = (req, res, next) => {
+  if (req.is("multipart/form-data")) {
+    singleFileUpload(req, res, next);
+    return;
+  }
+  next();
+};
+
 export function threadsRoutes(ctx: AppContext): Router {
   const router = Router();
   router.get("/", listThreadsController(ctx));
   router.get("/summary", getThreadsSummaryController(ctx));
   router.get("/assignees", listAssigneesController(ctx));
   router.get("/:id", getThreadController(ctx));
+  router.get(
+    "/:id/messages/:messageId/media",
+    downloadMessageMediaController(ctx),
+  );
   router.post("/:id/pause", pauseThreadController(ctx));
   router.post("/:id/resume", resumeThreadController(ctx));
   router.post("/:id/clear-needs-human", clearNeedsHumanController(ctx));
@@ -27,7 +42,7 @@ export function threadsRoutes(ctx: AppContext): Router {
   router.post("/:id/take", takeThreadController(ctx));
   router.post("/:id/assign", assignThreadController(ctx));
   router.post("/:id/stage", changeStageController(ctx));
-  router.post("/:id/messages", sendMessageController(ctx));
+  router.post("/:id/messages", optionalFileUpload, sendMessageController(ctx));
   router.delete("/:id", deleteThreadController(ctx));
   return router;
 }

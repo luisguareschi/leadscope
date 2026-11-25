@@ -13,12 +13,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { BOT_META, STAGE_META } from "@/lib/thread-status";
+import { useSettings } from "@/lib/queries";
+import { BOT_META, stageMetaOf, stagesForCompany } from "@/lib/thread-status";
 import type { BotActivity, LeadStage, Thread } from "@/lib/types";
 
 /** The lead stage pill; hovering it says what the stage means. */
 export function StageBadge({ stage }: { stage: LeadStage }) {
-  const meta = STAGE_META[stage];
+  const settings = useSettings();
+  const meta = stageMetaOf(stage, settings.data?.config.stages);
   return (
     <Tooltip>
       <TooltipTrigger render={<span className="inline-flex" />}>
@@ -82,26 +84,26 @@ export function WroteAgainBadge({
 
 type Meta = { label: string; tone: Tone; description: string };
 
-const COLUMN_HELP: Record<
-  "stage" | "bot",
-  { label: string; intro: string; items: Record<string, Meta> }
-> = {
-  stage: {
-    label: "Qué significa cada etapa",
-    intro:
-      "Estado del lead en el proceso comercial. Haz clic en una etapa para cambiarla.",
-    items: STAGE_META,
-  },
-  bot: {
-    label: "Qué significa cada estado del asistente",
-    intro: "Estado actual del asistente en esta conversación.",
-    items: BOT_META,
-  },
-};
-
 /** The "?" next to a column header: hovering or focusing it explains that column's values. */
 export function ColumnHelp({ column }: { column: "stage" | "bot" }) {
-  const help = COLUMN_HELP[column];
+  const settings = useSettings();
+  const stages = stagesForCompany(settings.data?.config.stages);
+  const stageItems: Record<string, Meta> = Object.fromEntries(
+    stages.map((stage) => [stage.key, stageMetaOf(stage.key, stages)]),
+  );
+  const help =
+    column === "stage"
+      ? {
+          label: "Qué significa cada etapa",
+          intro:
+            "Estado del lead en el proceso comercial. Haz clic en una etapa para cambiarla.",
+          items: stageItems,
+        }
+      : {
+          label: "Qué significa cada estado del asistente",
+          intro: "Estado actual del asistente en esta conversación.",
+          items: BOT_META,
+        };
   return (
     <HelpTip
       label={help.label}

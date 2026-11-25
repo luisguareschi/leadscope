@@ -14,22 +14,26 @@ import {
   ComboboxTrigger,
 } from "@/components/ui/combobox";
 import { Spinner } from "@/components/ui/spinner";
-import { useChangeStage } from "@/lib/queries";
-import { STAGE_META, STAGE_ORDER } from "@/lib/thread-status";
-import type { LeadStage, Thread } from "@/lib/types";
+import { useChangeStage, useSettings } from "@/lib/queries";
+import { stageMetaOf, stagesForCompany } from "@/lib/thread-status";
+import type { LeadStage, StageConfig, Thread } from "@/lib/types";
 
 const fold = (text: string) =>
   text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
-function matches(stage: LeadStage, query: string): boolean {
+function matches(
+  stage: LeadStage,
+  query: string,
+  stages: StageConfig[],
+): boolean {
   const words = fold(query).trim().split(/\s+/).filter(Boolean);
-  const label = fold(STAGE_META[stage].label);
+  const label = fold(stageMetaOf(stage, stages).label);
   return words.every((word) => label.includes(word));
 }
 
 /**
- * The lead stage, and the one control to change it (Linear-style): any stage, in any direction.
- * Contactado records who and when; leaving it clears that. No confirmation, since it can be undone.
+ * The lead stage, and the one control to change it (Linear-style): any configured stage, in any
+ * direction. Contactado records who and when; leaving it clears that. No confirmation.
  */
 export function StagePicker({
   thread,
@@ -39,8 +43,11 @@ export function StagePicker({
   /** `compact` fits a table cell. */
   size?: "default" | "compact";
 }) {
+  const settings = useSettings();
+  const stages = stagesForCompany(settings.data?.config.stages);
+  const stageKeys = stages.map((stage) => stage.key);
   const change = useChangeStage(thread.id);
-  const meta = STAGE_META[thread.stage];
+  const meta = stageMetaOf(thread.stage, stages);
   const compact = size === "compact";
 
   const choose = (stage: LeadStage | null) => {
@@ -49,7 +56,7 @@ export function StagePicker({
       onError: (error) => toast.error(error.message),
       onSuccess: ({ thread: updated }) => {
         if (stage !== "contacted") {
-          toast.success(`Etapa: ${STAGE_META[stage].label}.`);
+          toast.success(`Etapa: ${stageMetaOf(stage, stages).label}.`);
           return;
         }
         const assignedNow = !thread.assignee && updated.assignee;
@@ -64,11 +71,11 @@ export function StagePicker({
 
   return (
     <Combobox
-      items={STAGE_ORDER}
+      items={stageKeys}
       value={thread.stage}
       onValueChange={choose}
-      itemToStringLabel={(stage: LeadStage) => STAGE_META[stage].label}
-      filter={matches}
+      itemToStringLabel={(stage: LeadStage) => stageMetaOf(stage, stages).label}
+      filter={(stage, query) => matches(stage, query, stages)}
       autoHighlight
     >
       <ComboboxTrigger
@@ -96,12 +103,15 @@ export function StagePicker({
         <ComboboxInput showTrigger={false} placeholder="Cambiar etapa…" />
         <ComboboxEmpty>No hay coincidencias.</ComboboxEmpty>
         <ComboboxList>
-          {(stage: LeadStage) => (
-            <ComboboxItem key={stage} value={stage}>
-              <StatusDot tone={STAGE_META[stage].tone} />
-              <span className="truncate">{STAGE_META[stage].label}</span>
-            </ComboboxItem>
-          )}
+          {(stage: LeadStage) => {
+            const item = stageMetaOf(stage, stages);
+            return (
+              <ComboboxItem key={stage} value={stage}>
+                <StatusDot tone={item.tone} />
+                <span className="truncate">{item.label}</span>
+              </ComboboxItem>
+            );
+          }}
         </ComboboxList>
       </ComboboxContent>
     </Combobox>

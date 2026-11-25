@@ -1,6 +1,6 @@
+import type { LeadStage } from "../../src/engine/types.js";
 import type {
   CrmAction,
-  LeadStage,
   ThreadSource,
   ThreadState,
 } from "../../src/generated/prisma/client.js";

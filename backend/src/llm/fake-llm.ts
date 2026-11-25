@@ -14,6 +14,7 @@ import type { CompleteInput, CompleteResult, LlmClient } from "./types.js";
 
 const NOT_INTERESTED =
   /\b(no me interesa|no gracias|no quiero|equivoque|equivocado|equivocada|dejame|no molesten)\b/;
+const DISQUALIFIED = /\b(busco alquiler|solo alquilar|fuera de zona)\b/;
 const GREETING_ONLY =
   /^(hola|buenas|buen dia|buenos dias|buenas tardes|buenas noches|hey|que tal)[\s!.,]*$/;
 const QUESTION =
@@ -222,7 +223,14 @@ export function createFakeLlm(): LlmClient {
   return {
     kind: "fake",
     async complete(input: CompleteInput): Promise<CompleteResult> {
-      const { thread, config, companyName, documents } = input.scenario;
+      const {
+        thread,
+        config,
+        companyName,
+        documents,
+        sendableFiles,
+        followUp,
+      } = input.scenario;
       const items = config.collect;
       const lastLead =
         [...input.messages].reverse().find((turn) => turn.role === "user")
@@ -244,6 +252,7 @@ export function createFakeLlm(): LlmClient {
       const isQuestion = QUESTION.test(text);
       let intent: Intent = "continue";
       let reply: string;
+      const sendFileIds: string[] = [];
       const collected: Collected = { ...fields.collected };
 
       const nextAsk = (): string => {
@@ -251,7 +260,8 @@ export function createFakeLlm(): LlmClient {
         const required = missing.find((item) => item.required);
         if (
           leadStage === "contacted" ||
-          (leadStage === "not_interested" && stageSetByPerson(thread))
+          ((leadStage === "not_interested" || leadStage === "disqualified") &&
+            stageSetByPerson(thread))
         )
           return "¿Te puedo ayudar con algo más?";
         if (required && !isWithSalesTeam(leadStage)) return askFor(required);
@@ -262,7 +272,13 @@ export function createFakeLlm(): LlmClient {
       };
 
       const topics = config.forbiddenTopics.describe;
-      if (
+      if (followUp) {
+        const open = missingItems({ collected, callTime: null }, items);
+        const nextItem = open.find((item) => item.required) ?? open[0];
+        reply = nextItem
+          ? `¿Seguís por ahí? Si querés, contame ${nextItem.name.toLowerCase()} así te ayudo mejor.`
+          : "¿Seguís por ahí? Quedo atento por si te quedó alguna consulta.";
+      } else if (
         topics.length > 0 &&
         lines.some((line) => YIELD_QUESTION.test(foldText(line)))
       ) {
@@ -281,6 +297,10 @@ export function createFakeLlm(): LlmClient {
         intent = "not_interested";
         reply =
           "Perfecto, gracias por avisar. Si más adelante te interesa, escríbenos por aquí.";
+      } else if (DISQUALIFIED.test(text)) {
+        intent = "disqualified";
+        reply =
+          "Por el momento no trabajamos esa opción. Si en otro momento buscás algo de nuestra oferta, escribinos.";
       } else if (
         (stage === "handoff" || leadStage === "to_contact") &&
         fields.callTime === null &&
@@ -302,6 +322,13 @@ export function createFakeLlm(): LlmClient {
             if (!item) continue;
             collected[item.key] = update[item.key] = valueFor(item, piece);
           }
+        }
+        if (
+          sendableFiles &&
+          sendableFiles.length > 0 &&
+          /\b(brochure|folleto|catalogo|pdf|foto|imagen|archivo)\b/.test(text)
+        ) {
+          sendFileIds.push(sendableFiles[0]!.id);
         }
         const fact = isQuestion ? findFact(text, documents) : null;
         const answer = isQuestion
@@ -326,6 +353,7 @@ export function createFakeLlm(): LlmClient {
         needsHuman: false,
         callNow,
         forbiddenTopic,
+        sendFileIds,
         summary: buildSummary({
           source: thread.source,
           items,

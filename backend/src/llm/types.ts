@@ -1,6 +1,10 @@
 import type { CompanyConfig } from "../companies/company-config.js";
 import type { ChatTurn } from "../engine/history.js";
-import type { KnowledgeDocument, PromptThread } from "../engine/prompt.js";
+import type {
+  KnowledgeDocument,
+  PromptThread,
+  SendableFile,
+} from "../engine/prompt.js";
 import type { ModelTurn } from "../engine/types.js";
 
 export type CompleteInput = {
@@ -13,8 +17,8 @@ export type CompleteInput = {
   turnContext: string;
   messages: ChatTurn[];
   /**
-   * Structured view of the same turn. The real client builds submit_turn from its config and sends
-   * nothing else from it; the local fake reads all of it.
+   * Structured view of the same turn. The real client builds submit_turn from its config and
+   * sendable public files and sends nothing else from it; the local fake reads all of it.
    */
   scenario: {
     thread: PromptThread;
@@ -22,6 +26,8 @@ export type CompleteInput = {
     /** `Company.name`. The assistant's own name is `config.assistantName`. */
     companyName: string;
     documents: KnowledgeDocument[];
+    sendableFiles?: SendableFile[];
+    followUp?: boolean;
   };
 };
 

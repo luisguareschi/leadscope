@@ -1,10 +1,16 @@
 import { loadCompany, type LoadedCompany } from "../companies/load-company.js";
 import type { AppContext } from "../context.js";
-import { buildChatTurns, type ChatTurn } from "../engine/history.js";
+import {
+  buildChatTurns,
+  type ChatTurn,
+  type HistoryMessage,
+  type ImageAttachment,
+} from "../engine/history.js";
 import {
   buildTurnContext,
   type KnowledgeDocument,
   type PromptThread,
+  type SendableFile,
 } from "../engine/prompt.js";
 import { collectedOf, decideTurn } from "../engine/turn.js";
 import type {
@@ -15,13 +21,14 @@ import type {
 } from "../engine/types.js";
 import type { Thread } from "../generated/prisma/client.js";
 import type { Channel } from "../integrations/whatsapp/channel.js";
+import { normalizeVisionMimeType } from "../integrations/whatsapp/kapso/kapso-channel.js";
 import type { LlmClient, LlmUsageRecord } from "../llm/types.js";
 import { crmRequest } from "./crm-sync.js";
 import { messagePreview } from "./inbound.js";
 import { isWithinReplyWindow } from "./reply-window.js";
 import { loadSystemPrompt } from "./system-prompt.js";
-import { rulesFor } from "./turn-rules.js";
 import { withThreadLease } from "./thread-lease.js";
+import { rulesFor } from "./turn-rules.js";
 
 export type TurnOutcome =
   | "replied"
@@ -32,6 +39,8 @@ export type TurnOutcome =
   | "company_archived"
   | "company_paused"
   | "busy";
+
+const MAX_IMAGES_PER_TURN = 3;
 
 function sameCollected(a: Collected, b: Collected): boolean {
   const keys = Object.keys(a);
@@ -70,8 +79,8 @@ export type ModelCall = { input: TurnInput; usage: LlmUsageRecord | null };
 
 /**
  * One model call for a lead's turn: the turn context from the lead's state, then `complete()`. An
- * error from the model becomes a `model_failure` turn. WhatsApp and the panel's test chat
- * (Probar asistente) both go through it, so they cannot drift apart.
+ * error from the model becomes a `model_failure` turn. WhatsApp, follow-ups, and the panel's test
+ * chat (Probar asistente) all go through it, so they cannot drift apart.
  */
 export async function callModel(
   ctx: AppContext,
@@ -83,7 +92,9 @@ export async function callModel(
     threadId: string | null;
     system: string;
     documents: KnowledgeDocument[];
+    sendableFiles?: SendableFile[];
     messages: ChatTurn[];
+    followUpHours?: number;
   },
 ): Promise<ModelCall> {
   const { config } = company;
@@ -98,6 +109,9 @@ export async function callModel(
         config,
         company.name,
         ctx.now(),
+        turn.followUpHours !== undefined
+          ? { followUpHours: turn.followUpHours }
+          : undefined,
       ),
       messages: turn.messages,
       scenario: {
@@ -105,6 +119,8 @@ export async function callModel(
         config,
         companyName: company.name,
         documents: turn.documents,
+        sendableFiles: turn.sendableFiles,
+        followUp: turn.followUpHours !== undefined,
       },
     });
     return {
@@ -119,40 +135,173 @@ export async function callModel(
   }
 }
 
+async function loadImageAttachment(
+  ctx: AppContext,
+  mediaPath: string,
+  mediaMimeType: string | null,
+): Promise<ImageAttachment | null> {
+  try {
+    const stored = await ctx.storage.download(mediaPath);
+    const mediaType =
+      normalizeVisionMimeType(mediaMimeType) ??
+      normalizeVisionMimeType(stored.contentType);
+    if (!mediaType) return null;
+    return { mediaType, base64: stored.data.toString("base64") };
+  } catch (error) {
+    ctx.logger.warn(
+      { err: error, mediaPath },
+      "could not load stored inbound image for vision",
+    );
+    return null;
+  }
+}
+
 async function askModel(
   ctx: AppContext,
   company: LoadedCompany,
   thread: Thread,
+  pendingIds: Set<string>,
 ): Promise<ModelCall> {
   const { config } = company;
   try {
     // Inside the try: on WhatsApp a missing key is a model failure, so the bot stops and says so.
     const llm = ctx.integrations.llmFor(company);
-    const [{ system, documents }, recent] = await Promise.all([
+    const [{ system, documents, sendableFiles }, recent] = await Promise.all([
       loadSystemPrompt(ctx, company),
       ctx.db.message.findMany({
         where: { threadId: thread.id },
         orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
         take: config.llm.historyLimit,
-        select: { direction: true, type: true, body: true, sentByEmail: true },
+        select: {
+          id: true,
+          direction: true,
+          type: true,
+          body: true,
+          sentByEmail: true,
+          mediaPath: true,
+          mediaMimeType: true,
+          mediaFileName: true,
+        },
       }),
     ]);
+
+    const ordered = recent.reverse();
+    let attachedImages = 0;
+    const history: HistoryMessage[] = [];
+    for (const msg of ordered) {
+      let image: ImageAttachment | null = null;
+      if (
+        msg.direction === "inbound" &&
+        msg.type === "image" &&
+        msg.mediaPath &&
+        pendingIds.has(msg.id) &&
+        attachedImages < MAX_IMAGES_PER_TURN
+      ) {
+        image = await loadImageAttachment(
+          ctx,
+          msg.mediaPath,
+          msg.mediaMimeType,
+        );
+        if (image) attachedImages += 1;
+      }
+      history.push({
+        direction: msg.direction,
+        type: msg.type,
+        body: msg.body,
+        sentByEmail: msg.sentByEmail,
+        mediaFileName: msg.mediaFileName,
+        image,
+      });
+    }
+
     return await callModel(ctx, llm, company, {
       thread,
       threadId: thread.id,
       system,
       documents,
-      messages: buildChatTurns(
-        recent.reverse(),
-        config.llm.historyLimit,
-        thread.source,
-      ),
+      sendableFiles,
+      messages: buildChatTurns(history, config.llm.historyLimit, thread.source),
     });
   } catch (error) {
     return modelFailure(ctx, error, {
       threadId: thread.id,
       companyId: company.id,
     });
+  }
+}
+
+/** Sends public KnowledgeFiles requested by the model via `sendFileIds`. Internal files are never sent. */
+async function sendPublicFiles(
+  ctx: AppContext,
+  company: LoadedCompany,
+  thread: Thread,
+  channel: Channel,
+  fileIds: string[],
+): Promise<void> {
+  if (fileIds.length === 0) return;
+  const rows = await ctx.db.knowledgeFile.findMany({
+    where: {
+      id: { in: fileIds },
+      companyId: company.id,
+      visibility: "public",
+      storagePath: { not: null },
+    },
+    select: {
+      id: true,
+      name: true,
+      mimeType: true,
+      storagePath: true,
+    },
+  });
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  for (const id of fileIds) {
+    const file = byId.get(id);
+    if (!file?.storagePath) continue;
+    const kind = file.mimeType.startsWith("image/") ? "image" : "document";
+    let waMessageId: string | null = null;
+    let sendError: string | null = null;
+    try {
+      const stored = await ctx.storage.download(file.storagePath);
+      ({ waMessageId } = await channel.sendMedia({
+        to: thread.waId,
+        kind,
+        data: stored.data,
+        mimeType: file.mimeType || stored.contentType,
+        fileName: file.name,
+      }));
+    } catch (error) {
+      sendError = error instanceof Error ? error.message : String(error);
+      ctx.logger.error(
+        { err: error, threadId: thread.id, companyId: company.id, fileId: id },
+        "failed to send public knowledge file",
+      );
+    }
+    const sentAt = ctx.now();
+    await ctx.db.$transaction([
+      ctx.db.message.create({
+        data: {
+          companyId: company.id,
+          threadId: thread.id,
+          direction: "outbound",
+          type: kind,
+          body: "",
+          mediaPath: file.storagePath,
+          mediaMimeType: file.mimeType,
+          mediaFileName: file.name,
+          waMessageId,
+          status: sendError ? "failed" : "sent",
+          error: sendError?.slice(0, 500) ?? null,
+          sentAt,
+        },
+      }),
+      ctx.db.thread.update({
+        where: { id: thread.id },
+        data: {
+          lastMessageAt: sentAt,
+          lastMessagePreview: messagePreview(kind, file.name),
+        },
+      }),
+    ]);
   }
 }
 
@@ -168,10 +317,19 @@ async function runTurn(
   const pending = await ctx.db.message.findMany({
     where: { threadId, direction: "inbound", handledAt: null },
     orderBy: { sentAt: "asc" },
-    select: { id: true, body: true, waMessageId: true, sentAt: true },
+    select: {
+      id: true,
+      type: true,
+      body: true,
+      mediaPath: true,
+      mediaMimeType: true,
+      waMessageId: true,
+      sentAt: true,
+    },
   });
   if (pending.length === 0) return "no_pending";
   const pendingIds = pending.map((message) => message.id);
+  const pendingIdSet = new Set(pendingIds);
   const markHandled = () =>
     ctx.db.message.updateMany({
       where: { id: { in: pendingIds } },
@@ -223,9 +381,15 @@ async function runTurn(
   const lastWaId = pending.at(-1)?.waMessageId;
   if (lastWaId) void channel.markReadWithTyping(lastWaId);
 
-  const hasText = pending.some((message) => message.body.trim().length > 0);
-  const { input, usage } = hasText
-    ? await askModel(ctx, company, thread)
+  const hasUnderstandableInput = pending.some(
+    (message) =>
+      message.body.trim().length > 0 ||
+      (message.type === "image" &&
+        Boolean(message.mediaPath) &&
+        normalizeVisionMimeType(message.mediaMimeType) !== null),
+  );
+  const { input, usage } = hasUnderstandableInput
+    ? await askModel(ctx, company, thread, pendingIdSet)
     : { input: { kind: "non_text" } as TurnInput, usage: null };
   const decision: TurnDecision = decideTurn(thread, input, rulesFor(company));
 
@@ -345,6 +509,10 @@ async function runTurn(
         ]
       : []),
   ]);
+
+  if (!sendError && decision.sendFileIds.length > 0) {
+    await sendPublicFiles(ctx, company, thread, channel, decision.sendFileIds);
+  }
 
   // In the background: the next turn of this thread must not wait for HubSpot either.
   if (crmAction) ctx.crm.schedule(threadId);

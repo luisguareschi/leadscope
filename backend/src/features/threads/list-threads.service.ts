@@ -1,5 +1,8 @@
+import { parseCompanyConfig } from "../../companies/company-config.js";
 import type { AppContext } from "../../context.js";
+import { findStage } from "../../engine/stages.js";
 import type { Prisma } from "../../generated/prisma/client.js";
+import { badRequest } from "../../lib/http-error.js";
 import {
   assigneeWhere,
   botWhere,
@@ -46,6 +49,16 @@ export async function listThreads(
   operatorId: string | null,
   input: ListThreadsInput,
 ) {
+  if (input.stage !== "all") {
+    const company = await ctx.db.company.findUnique({
+      where: { id: companyId },
+      select: { name: true, config: true },
+    });
+    const config = parseCompanyConfig(company?.config, company?.name);
+    if (!findStage(config.stages, input.stage)) {
+      throw badRequest("Etapa no válida.", "invalid_input");
+    }
+  }
   const rows = await ctx.db.thread.findMany({
     where: {
       AND: [

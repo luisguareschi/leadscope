@@ -2,9 +2,11 @@ import {
   BotIcon,
   Building2Icon,
   ClipboardListIcon,
+  ClockIcon,
   FileTextIcon,
   GaugeIcon,
   HistoryIcon,
+  KanbanIcon,
   MessageCircleIcon,
   MessageSquareQuoteIcon,
   MessagesSquareIcon,
@@ -16,9 +18,15 @@ import {
 } from "lucide-react";
 import type { ConfigDraft } from "./config-draft";
 
-/** Sections of the Asistente group, all inside the one config form. */
+/** Sections of the Asistente group (plus advanced limits), all inside the one config form. */
 export type AssistantSectionId =
-  "general" | "conversation" | "forbidden" | "messages" | "limits";
+  | "general"
+  | "conversation"
+  | "stages"
+  | "followup"
+  | "forbidden"
+  | "messages"
+  | "limits";
 
 /** One per provider: what it needs, its guide, and its test. */
 export type IntegrationSectionId =
@@ -45,23 +53,27 @@ export type SectionItem = {
   supportOnly?: boolean;
 };
 
-export const SECTION_GROUPS: Array<{ label: string; items: SectionItem[] }> = [
+export type SectionGroup = {
+  label: string;
+  advanced?: boolean;
+  items: SectionItem[];
+};
+
+export const SECTION_GROUPS: SectionGroup[] = [
   {
     label: "Asistente",
     items: [
       { id: "general", label: "General", icon: Building2Icon },
       { id: "conversation", label: "Conversación", icon: MessagesSquareIcon },
+      { id: "stages", label: "Etapas", icon: KanbanIcon },
+      { id: "followup", label: "Seguimiento", icon: ClockIcon },
       { id: "forbidden", label: "Temas prohibidos", icon: ShieldBanIcon },
       { id: "messages", label: "Mensajes fijos", icon: MessageSquareQuoteIcon },
-      { id: "limits", label: "Respuestas y límites", icon: GaugeIcon },
     ],
   },
   {
     label: "Prompt",
-    items: [
-      { id: "instructions", label: "Instrucciones", icon: FileTextIcon },
-      { id: "prompt", label: "Reglas y prompt", icon: ScrollTextIcon },
-    ],
+    items: [{ id: "instructions", label: "Instrucciones", icon: FileTextIcon }],
   },
   {
     label: "Integraciones",
@@ -84,6 +96,14 @@ export const SECTION_GROUPS: Array<{ label: string; items: SectionItem[] }> = [
       },
     ],
   },
+  {
+    label: "Avanzado",
+    advanced: true,
+    items: [
+      { id: "limits", label: "Respuestas y límites", icon: GaugeIcon },
+      { id: "prompt", label: "Reglas y prompt", icon: ScrollTextIcon },
+    ],
+  },
 ];
 
 export const DEFAULT_SECTION: SectionId = "general";
@@ -99,6 +119,8 @@ export const LEGACY_SECTIONS: Record<string, SectionId> = {
 export const ASSISTANT_SECTIONS: AssistantSectionId[] = [
   "general",
   "conversation",
+  "stages",
+  "followup",
   "forbidden",
   "messages",
   "limits",
@@ -117,6 +139,14 @@ export const CONFIG_SECTION_FIELDS: Record<
     "businessHours",
   ],
   conversation: ["tone", "maxReplyChars", "collect"],
+  stages: ["stages"],
+  followup: [
+    "followUpEnabled",
+    "followUpDelayHours",
+    "followUpMaxCount",
+    "noResponseEnabled",
+    "noResponseHours",
+  ],
   forbidden: ["forbiddenDescribe"],
   messages: ["needsHuman", "fallback", "nonText"],
   limits: [

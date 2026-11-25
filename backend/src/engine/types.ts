@@ -1,12 +1,17 @@
-export const INTENTS = ["continue", "qualified", "not_interested"] as const;
+import type { LeadStage, SystemLeadStage } from "./stages.js";
+
+export const INTENTS = [
+  "continue",
+  "qualified",
+  "not_interested",
+  "disqualified",
+] as const;
 export type Intent = (typeof INTENTS)[number];
 
 export type ThreadState =
   "greeting" | "qualify" | "answer" | "handoff" | "closed";
 
-/** Where the lead is for the sales team. The bot only moves it forward (`nextStage`); a person can set any. */
-export type LeadStage =
-  "qualifying" | "to_contact" | "contacted" | "not_interested";
+export type { LeadStage, SystemLeadStage };
 
 /** What the lead told us, by collect item key (`config.collect[].key`). Only non-empty values. */
 export type Collected = Record<string, string>;
@@ -46,6 +51,8 @@ export type ModelTurn = {
   forbiddenTopic: string | null;
   /** Short bullets: the conversation so far and what the lead wants. */
   summary: string | null;
+  /** Optional IDs of public KnowledgeFiles the model wants to send to the lead on this turn. */
+  sendFileIds?: string[];
 };
 
 export type TurnInput =
@@ -67,6 +74,8 @@ export type TurnDecision = {
   fields: LeadFields;
   summary: string | null;
   reply: string;
+  /** Validated IDs of public files to send after the reply (empty when none or on stop paths). */
+  sendFileIds: string[];
   /** Set when the bot stops itself and waits for an operator. */
   needsHuman: { reason: string } | null;
   crm: CrmActionKind | null;

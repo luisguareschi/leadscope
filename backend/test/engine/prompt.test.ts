@@ -197,9 +197,10 @@ describe("the assistant's name and the company's name", () => {
     const rules = buildPlatformRules(almira, "Altamira");
     expect(
       rules.startsWith(
-        "You are Almira, the WhatsApp virtual assistant of Altamira. You chat on WhatsApp with people who contacted Altamira about its real-estate projects.",
+        "You are Almira, the WhatsApp virtual assistant of Altamira. You chat on WhatsApp with people who contacted Altamira.",
       ),
     ).toBe(true);
+    expect(rules).not.toMatch(/real-estate|real estate/i);
     expect(rules).toContain(
       '"Almira" is your name; "Altamira" is the company you work for. Never call yourself Altamira, and never call the company Almira.',
     );
@@ -400,7 +401,7 @@ describe("turn context", () => {
       'whenever your reply tells the lead that an advisor will call, write, or contact them (outside needsHuman or forbiddenTopic), you must set intent to "qualified" or callNow to true',
     );
     expect(rules).toContain(
-      'Do not set "qualified" on a greeting, a general question about zones or prices',
+      'Do not set "qualified" on a greeting, a general question',
     );
 
     const step = nextStepFor(
@@ -520,6 +521,96 @@ describe("turn context", () => {
     expect(step).toContain("ask naturally about one thing still missing");
     expect(step).toContain("Presupuesto [budget]");
   });
+
+  it("includes sendable public files in the system prompt only when present", () => {
+    const withoutFiles = buildSystemPrompt({
+      config,
+      companyName: COMPANY,
+      instructions: "",
+      documents: [],
+      sendableFiles: [],
+    });
+    expect(withoutFiles).not.toContain("<sendable_files>");
+
+    const withFiles = buildSystemPrompt({
+      config,
+      companyName: COMPANY,
+      instructions: "",
+      documents: [],
+      sendableFiles: [
+        {
+          id: "file-1",
+          path: "Proyectos / Brochure.pdf",
+          format: "pdf",
+          description: "Folleto comercial",
+        },
+      ],
+    });
+    expect(withFiles).toContain("<sendable_files>");
+    expect(withFiles).toContain(
+      '<file id="file-1" path="Proyectos / Brochure.pdf" format="pdf" description="Folleto comercial" />',
+    );
+  });
+
+  it("adds follow-up instructions in turn context when followUpHours is set", () => {
+    const context = buildTurnContext(
+      {
+        state: "qualify",
+        stage: "qualifying",
+        ...empty,
+        name: "Ana",
+        source: "whatsapp",
+      },
+      config,
+      COMPANY,
+      now,
+      { followUpHours: 4 },
+    );
+    expect(context).toContain("has not replied for about 4 hour(s)");
+    expect(context).toContain("brief, warm, low-pressure message");
+  });
+
+  it("handles disqualified, no_response, and custom stages in nextStepFor", () => {
+    expect(
+      nextStepFor(
+        {
+          state: "closed",
+          stage: "disqualified",
+          stageChangedByEmail: "vicky@altamira.uy",
+          collected: {},
+          callTime: null,
+        },
+        config,
+        COMPANY,
+      ),
+    ).toContain("marked this lead as disqualified");
+
+    expect(
+      nextStepFor(
+        {
+          state: "qualify",
+          stage: "no_response",
+          collected: {},
+          callTime: null,
+        },
+        config,
+        COMPANY,
+      ),
+    ).toContain("one thing still missing");
+
+    expect(
+      nextStepFor(
+        {
+          state: "answer",
+          stage: "visit_scheduled",
+          collected: {},
+          callTime: null,
+        },
+        config,
+        COMPANY,
+      ),
+    ).toContain("already being handled by the sales team");
+  });
 });
 
 describe("buildChatTurns", () => {
@@ -575,6 +666,34 @@ describe("buildChatTurns", () => {
       { role: "user", content: "m2" },
       { role: "assistant", content: "m3" },
       { role: "user", content: "m4" },
+    ]);
+  });
+
+  it("includes voice note transcripts and image attachments on user turns", () => {
+    const turns = buildChatTurns(
+      [
+        {
+          direction: "inbound",
+          type: "audio",
+          body: "Hola, busco un 2 dormitorios en Pocitos",
+        },
+        {
+          direction: "inbound",
+          type: "image",
+          body: "¿Tienen algo parecido?",
+          image: { mediaType: "image/png", base64: "AAAA" },
+        },
+      ],
+      40,
+      "whatsapp",
+    );
+    expect(turns).toEqual([
+      {
+        role: "user",
+        content:
+          '[The lead sent a voice note. Transcript: "Hola, busco un 2 dormitorios en Pocitos"]\n[The lead sent an image with the caption "¿Tienen algo parecido?".]',
+        images: [{ mediaType: "image/png", base64: "AAAA" }],
+      },
     ]);
   });
 });

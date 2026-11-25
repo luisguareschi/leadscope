@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { InfoIcon, RotateCcwIcon } from "lucide-react";
+import Link from "next/link";
+import { FlaskConicalIcon, InfoIcon, RotateCcwIcon } from "lucide-react";
 import { cn } from "cn";
 import { AssistantTestChat } from "@/components/assistant-test/assistant-test-chat";
 import { AssistantTestLead } from "@/components/assistant-test/assistant-test-lead";
@@ -15,15 +16,27 @@ import { useSettings } from "@/lib/queries";
 type MobileView = "chat" | "lead";
 
 /**
- * Probar asistente: chat with the company's assistant as a lead, on the saved settings and files,
- * with no WhatsApp number. Nothing reaches Conversaciones, WhatsApp, or HubSpot.
+ * Probar asistente: chat with the company's assistant as a lead, on the saved settings and files
+ * (or an unsaved draft from Configuración), with no WhatsApp number. Nothing reaches
+ * Conversaciones, WhatsApp, or HubSpot.
  */
 export default function AssistantTestPage() {
   const settings = useSettings();
   const test = useAssistantTest();
   const [view, setView] = useState<MobileView>("chat");
-  const config = settings.data?.config;
+  const savedConfig = settings.data?.config;
+  const config = test.settingsDraft?.config ?? savedConfig;
   const { chat } = test;
+  const draftParts: string[] = [];
+  if (
+    test.settingsDraft?.config ||
+    test.settingsDraft?.companyName !== undefined
+  ) {
+    draftParts.push("Configuración");
+  }
+  if (test.settingsDraft?.instructions !== undefined) {
+    draftParts.push("Instrucciones");
+  }
 
   if (settings.isError) {
     return (
@@ -60,6 +73,43 @@ export default function AssistantTestPage() {
           </Button>
         ) : null}
       </header>
+
+      {draftParts.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-primary/10 px-4 py-2.5 text-[13px] ring-1 ring-primary/20">
+          <div className="flex items-center gap-2">
+            <FlaskConicalIcon className="size-4 shrink-0 text-primary" />
+            <span>
+              Probando borrador sin guardar ({draftParts.join(" e ")}). Todavía
+              no afecta a leads reales.
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={test.clearSettingsDraft}
+            >
+              Usar versión guardada
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              render={
+                <Link
+                  href={
+                    draftParts.length === 1 && draftParts[0] === "Instrucciones"
+                      ? "/settings?tab=instructions"
+                      : "/settings"
+                  }
+                />
+              }
+            >
+              Volver a Configuración
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <Tabs
         value={view}

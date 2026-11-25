@@ -1,7 +1,16 @@
 import { isSupportedCountry } from "libphonenumber-js";
 import { z } from "zod";
+import {
+  DEFAULT_STAGES,
+  isSystemStage,
+  MAX_CUSTOM_STAGES,
+  STAGE_COLORS,
+  SYSTEM_STAGE_KEYS,
+} from "../engine/stages.js";
 import { HttpError } from "../lib/http-error.js";
 import {
+  DEFAULT_FOLLOW_UP,
+  DEFAULT_INACTIVITY,
   MAX_COLLECT_ITEMS,
   MAX_UPLOAD_BYTES,
   type CompanyConfig,
@@ -186,7 +195,78 @@ export const editableConfigSchema = z.strictObject({
       })
       .nullable(),
   }),
-}) satisfies z.ZodType<CompanyConfig>;
+  stages: z
+    .array(
+      z.strictObject({
+        key: z
+          .string()
+          .trim()
+          .max(40, "Máximo 40 caracteres.")
+          .regex(
+            /^[a-zA-Z][a-zA-Z0-9_]*$/,
+            "Usa letras, números y guiones bajos, y empieza con una letra. Por ejemplo, visita_agendada.",
+          ),
+        label: required(40),
+        color: z.enum(STAGE_COLORS),
+        system: z.boolean(),
+      }),
+    )
+    .default(() => DEFAULT_STAGES.map((stage) => ({ ...stage })))
+    .superRefine((stages, issue) => {
+      const seen = new Set<string>();
+      let customCount = 0;
+      stages.forEach((stage, index) => {
+        const lower = stage.key.toLowerCase();
+        if (seen.has(lower)) {
+          issue.addIssue({
+            code: "custom",
+            path: [index, "key"],
+            message: "Ya hay otra etapa con esta clave.",
+          });
+        }
+        seen.add(lower);
+        const sys = isSystemStage(stage.key);
+        if (stage.system !== sys) {
+          issue.addIssue({
+            code: "custom",
+            path: [index, "system"],
+            message: sys
+              ? "Las etapas base del sistema no pueden dejar de ser del sistema."
+              : "Una etapa personalizada no puede marcarse como del sistema.",
+          });
+        }
+        if (!sys) customCount += 1;
+      });
+      for (const requiredKey of SYSTEM_STAGE_KEYS) {
+        if (!seen.has(requiredKey)) {
+          issue.addIssue({
+            code: "custom",
+            path: [],
+            message: `Falta la etapa base "${requiredKey}".`,
+          });
+        }
+      }
+      if (customCount > MAX_CUSTOM_STAGES) {
+        issue.addIssue({
+          code: "custom",
+          path: [],
+          message: `Máximo ${MAX_CUSTOM_STAGES} etapas personalizadas.`,
+        });
+      }
+    }),
+  followUp: z
+    .strictObject({
+      enabled: z.boolean(),
+      delayHours: integer(1, 20),
+      maxCount: integer(1, 2),
+    })
+    .default(DEFAULT_FOLLOW_UP),
+  inactivity: z
+    .strictObject({
+      noResponseHours: integer(1, 720).nullable(),
+    })
+    .default(DEFAULT_INACTIVITY),
+}) satisfies z.ZodType<CompanyConfig, unknown>;
 
 /**
  * `Company.name`: what the prompt, Empresas, and the panel call the company. Same limit as when

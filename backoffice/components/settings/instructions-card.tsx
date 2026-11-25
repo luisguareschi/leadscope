@@ -9,9 +9,11 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import {
   BoldIcon,
   EyeIcon,
+  FlaskConicalIcon,
   Heading1Icon,
   Heading2Icon,
   Heading3Icon,
@@ -33,6 +35,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ApiError } from "@/lib/api";
+import { testChatOwner } from "@/lib/assistant-test-storage";
+import { useAuth } from "@/lib/auth";
 import { formatNumber } from "@/lib/format";
 import {
   toggleLinePrefix,
@@ -41,7 +45,12 @@ import {
   type MarkdownLineKind,
   type MarkdownMarker,
 } from "@/lib/markdown-format";
-import { useSaveInstructions } from "@/lib/queries";
+import { useMe, useSaveInstructions } from "@/lib/queries";
+import {
+  clearSettingsTestDraftKeys,
+  loadSettingsTestDraft,
+  saveSettingsTestDraft,
+} from "@/lib/settings-draft-storage";
 
 const VIEW_KEY = "leadscope:instructions-view";
 
@@ -151,7 +160,17 @@ export function InstructionsCard({
   instructions: string;
   maxChars: number;
 }) {
-  const [draft, setDraft] = useState(instructions);
+  const router = useRouter();
+  const { email } = useAuth();
+  const me = useMe();
+  const companyId = me.data?.company?.id ?? null;
+  const owner = email && companyId ? testChatOwner(email, companyId) : null;
+  const [draft, setDraft] = useState(() => {
+    const saved = owner ? loadSettingsTestDraft(owner) : null;
+    return saved?.instructions !== undefined
+      ? saved.instructions
+      : instructions;
+  });
   const [error, setError] = useState<string | null>(null);
   const save = useSaveInstructions();
   const input = useRef<HTMLTextAreaElement>(null);
@@ -225,12 +244,14 @@ export function InstructionsCard({
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     save.mutateAsync(draft).then(
-      (result) =>
+      (result) => {
+        if (owner) clearSettingsTestDraftKeys(owner, ["instructions"]);
         toast.success(
           result.changed
             ? "Instrucciones guardadas."
             : "No hay cambios para guardar.",
-        ),
+        );
+      },
       (cause: Error) => {
         setError(
           cause instanceof ApiError
@@ -391,9 +412,25 @@ export function InstructionsCard({
               onClick={() => {
                 setDraft(instructions);
                 setError(null);
+                if (owner) clearSettingsTestDraftKeys(owner, ["instructions"]);
               }}
             >
               Descartar
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!dirty || save.isPending}
+              onClick={() => {
+                if (owner) {
+                  saveSettingsTestDraft(owner, { instructions: draft });
+                }
+                router.push("/probar");
+              }}
+            >
+              <FlaskConicalIcon />
+              Probar borrador
             </Button>
             <Button type="submit" size="sm" disabled={!dirty || save.isPending}>
               {save.isPending ? <Spinner /> : null}

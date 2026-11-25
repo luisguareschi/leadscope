@@ -22,12 +22,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
-import { useMe, useThreads, useThreadsSummary } from "@/lib/queries";
+import {
+  useMe,
+  useSettings,
+  useThreads,
+  useThreadsSummary,
+} from "@/lib/queries";
 import {
   BOT_FILTERS,
   isBotFilter,
   isStageFilter,
-  STAGE_FILTERS,
+  stageFiltersFor,
 } from "@/lib/thread-status";
 import type { BotFilter, StageFilter, ThreadsSummary } from "@/lib/types";
 
@@ -36,7 +41,7 @@ function countFor(
   stage: StageFilter,
 ): number | undefined {
   if (!counts) return undefined;
-  return stage === "all" ? counts.total : counts.stages[stage];
+  return stage === "all" ? counts.total : (counts.stages[stage] ?? 0);
 }
 
 function ThreadsView() {
@@ -44,9 +49,14 @@ function ThreadsView() {
   const pathname = usePathname();
   const params = useSearchParams();
   const me = useMe();
+  const settings = useSettings();
+  const companyStages = settings.data?.config.stages;
+  const stageFilters = stageFiltersFor(companyStages);
   const rawStage = params.get("stage");
   const rawBot = params.get("bot");
-  const stage: StageFilter = isStageFilter(rawStage) ? rawStage : "all";
+  const stage: StageFilter = isStageFilter(rawStage, companyStages)
+    ? rawStage
+    : "all";
   const bot: BotFilter = isBotFilter(rawBot) ? rawBot : "all";
   // A platform admin in support access has no operator row here, so nothing is "theirs".
   const canBeAssigned = me.data ? !me.data.supportAccess : false;
@@ -128,7 +138,7 @@ function ThreadsView() {
             aria-label="Filtrar por etapa"
             className="-mx-3 flex gap-1 overflow-x-auto px-3 scrollbar-none @3xl/content:mx-0 @3xl/content:px-0"
           >
-            {STAGE_FILTERS.map((filter) => {
+            {stageFilters.map((filter) => {
               const count = countFor(counts, filter.value);
               const selected = stage === filter.value;
               const attention =

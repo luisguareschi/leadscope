@@ -6,17 +6,10 @@ import { hubspotRecordUrl } from "../../integrations/crm/hubspot-check.js";
 import { badRequest } from "../../lib/http-error.js";
 import type { Db } from "../../lib/prisma.js";
 
-export const STAGE_FILTERS = [
-  "all",
-  "qualifying",
-  "to_contact",
-  "contacted",
-  "not_interested",
-] as const;
 export const BOT_FILTERS = ["all", "active", "paused", "needs_human"] as const;
 export const ASSIGNEE_FILTERS = ["all", "me", "none"] as const;
 
-export type StageFilter = (typeof STAGE_FILTERS)[number];
+export type StageFilter = string;
 export type BotFilter = (typeof BOT_FILTERS)[number];
 export type AssigneeFilter = (typeof ASSIGNEE_FILTERS)[number];
 export type BotActivity = Exclude<BotFilter, "all">;

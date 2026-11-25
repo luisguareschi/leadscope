@@ -1,12 +1,21 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FlaskConicalIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api";
-import { useSaveConfig } from "@/lib/queries";
+import { testChatOwner } from "@/lib/assistant-test-storage";
+import { useAuth } from "@/lib/auth";
+import { useMe, useSaveConfig } from "@/lib/queries";
+import {
+  clearSettingsTestDraftKeys,
+  loadSettingsTestDraft,
+  saveSettingsTestDraft,
+} from "@/lib/settings-draft-storage";
 import type { CompanyConfig } from "@/lib/types";
 import {
   errorsByField,
@@ -14,6 +23,7 @@ import {
   fromDraft,
   itemErrors,
   sameDraftValue,
+  stageErrors,
   toDraft,
   type ConfigDraft,
 } from "./config-draft";
@@ -26,6 +36,8 @@ export type ConfigEditor = {
   errors: Errors;
   /** Errors on one collect item, keyed "<index>.<field>". */
   itemErrors: Record<string, string>;
+  /** Errors on one pipeline stage, keyed "<index>.<field>". */
+  stageErrors: Record<string, string>;
   formError: string | null;
   changedKeys: Array<keyof ConfigDraft>;
   saving: boolean;
@@ -33,6 +45,8 @@ export type ConfigEditor = {
   discard: () => void;
   /** Resolves with the first field the API rejected, if any. */
   save: () => Promise<keyof ConfigDraft | null>;
+  /** Stores the unsaved config in sessionStorage and opens Probar asistente. */
+  testDraft: () => void;
   sectionState: (section: ConfigSectionId) => "error" | "changed" | null;
 };
 
@@ -45,13 +59,28 @@ export function useConfigEditorState(
   companyName: string,
   version: string,
 ): ConfigEditor {
+  const router = useRouter();
+  const { email } = useAuth();
+  const me = useMe();
+  const companyId = me.data?.company?.id ?? null;
+  const owner = email && companyId ? testChatOwner(email, companyId) : null;
+
   const [base, setBase] = useState(() => ({
     version,
     initial: toDraft(config, companyName),
   }));
-  const [draft, setDraft] = useState(base.initial);
+  const [draft, setDraft] = useState(() => {
+    const saved = owner ? loadSettingsTestDraft(owner) : null;
+    if (saved && (saved.config || saved.companyName !== undefined)) {
+      return toDraft(saved.config ?? config, saved.companyName ?? companyName);
+    }
+    return base.initial;
+  });
   const [errors, setErrors] = useState<Errors>({});
   const [itemErrorsState, setItemErrors] = useState<Record<string, string>>({});
+  const [stageErrorsState, setStageErrors] = useState<Record<string, string>>(
+    {},
+  );
   const [formError, setFormError] = useState<string | null>(null);
   const mutation = useSaveConfig();
 
@@ -61,6 +90,7 @@ export function useConfigEditorState(
     setDraft(initial);
     setErrors({});
     setItemErrors({});
+    setStageErrors({});
     setFormError(null);
   }
 
@@ -79,6 +109,7 @@ export function useConfigEditorState(
     draft,
     errors,
     itemErrors: itemErrorsState,
+    stageErrors: stageErrorsState,
     formError,
     changedKeys,
     saving: mutation.isPending,
@@ -86,13 +117,25 @@ export function useConfigEditorState(
       setDraft((current) => ({ ...current, [key]: value }));
       setErrors((current) => ({ ...current, [key]: undefined }));
       if (key === "collect") setItemErrors({});
+      if (key === "stages") setStageErrors({});
       setFormError(null);
     },
     discard: () => {
       setDraft(base.initial);
       setErrors({});
       setItemErrors({});
+      setStageErrors({});
       setFormError(null);
+      if (owner) clearSettingsTestDraftKeys(owner, ["config", "companyName"]);
+    },
+    testDraft: () => {
+      if (owner) {
+        saveSettingsTestDraft(owner, {
+          companyName: draft.companyName,
+          config: fromDraft(draft),
+        });
+      }
+      router.push("/probar");
     },
     // The outcome is read from the promise: a save replaces the draft before mutate() callbacks run.
     save: () =>
@@ -103,6 +146,8 @@ export function useConfigEditorState(
         })
         .then(
           (result) => {
+            if (owner)
+              clearSettingsTestDraftKeys(owner, ["config", "companyName"]);
             toast.success(
               result.changed
                 ? "Configuración guardada."
@@ -116,6 +161,7 @@ export function useConfigEditorState(
             const next = errorsByField(error.fields);
             setErrors(next);
             setItemErrors(itemErrors(error.fields));
+            setStageErrors(stageErrors(error.fields));
             return (
               (Object.keys(FIELD_PATHS) as Array<keyof ConfigDraft>).find(
                 (key) => next[key],
@@ -172,6 +218,16 @@ export function ConfigSaveBar() {
           onClick={editor.discard}
         >
           Descartar
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={count === 0 || editor.saving}
+          onClick={editor.testDraft}
+        >
+          <FlaskConicalIcon />
+          Probar borrador
         </Button>
         <Button type="submit" size="sm" disabled={count === 0 || editor.saving}>
           {editor.saving ? <Spinner /> : null}

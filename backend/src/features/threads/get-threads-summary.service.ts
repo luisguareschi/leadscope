@@ -1,24 +1,15 @@
+import { parseCompanyConfig } from "../../companies/company-config.js";
 import type { AppContext } from "../../context.js";
 import type { Prisma } from "../../generated/prisma/client.js";
-import {
-  BOT_FILTERS,
-  botWhere,
-  STAGE_FILTERS,
-  stageWhere,
-  type BotActivity,
-  type StageFilter,
-} from "./thread-dto.js";
+import { BOT_FILTERS, botWhere, type BotActivity } from "./thread-dto.js";
 
-const STAGES = STAGE_FILTERS.filter(
-  (stage): stage is Exclude<StageFilter, "all"> => stage !== "all",
-);
 const ACTIVITIES = BOT_FILTERS.filter(
   (bot): bot is BotActivity => bot !== "all",
 );
 
 /**
- * Counts for the filters. Stages and bot activities each partition the threads, so each set adds
- * up to the total. `mine` is null for a platform admin in support access (no operator row).
+ * Counts for the filters. Stages include every stage configured on the company (plus any stage
+ * key present on existing threads). `mine` is null for a platform admin in support access.
  */
 export async function getThreadsSummary(
   ctx: AppContext,
@@ -27,23 +18,40 @@ export async function getThreadsSummary(
 ) {
   const count = (where: Prisma.ThreadWhereInput) =>
     ctx.db.thread.count({ where: { AND: [{ companyId }, where] } });
-  const [total, unassignedToContact, stages, bot, mine] = await Promise.all([
-    count({}),
-    count({ stage: "to_contact", assignedToId: null }),
-    Promise.all(STAGES.map((stage) => count(stageWhere(stage)))),
-    Promise.all(ACTIVITIES.map((activity) => count(botWhere(activity)))),
-    operatorId
-      ? Promise.all([
-          count({ assignedToId: operatorId }),
-          count({ assignedToId: operatorId, stage: "to_contact" }),
-        ])
-      : null,
-  ]);
+  const [company, total, unassignedToContact, groupedStages, bot, mine] =
+    await Promise.all([
+      ctx.db.company.findUnique({
+        where: { id: companyId },
+        select: { name: true, config: true },
+      }),
+      count({}),
+      count({ stage: "to_contact", assignedToId: null }),
+      ctx.db.thread.groupBy({
+        by: ["stage"],
+        where: { companyId },
+        _count: { _all: true },
+      }),
+      Promise.all(ACTIVITIES.map((activity) => count(botWhere(activity)))),
+      operatorId
+        ? Promise.all([
+            count({ assignedToId: operatorId }),
+            count({ assignedToId: operatorId, stage: "to_contact" }),
+          ])
+        : null,
+    ]);
+
+  const stages: Record<string, number> = {};
+  if (company) {
+    const parsed = parseCompanyConfig(company.config, company.name);
+    for (const stage of parsed.stages) stages[stage.key] = 0;
+  }
+  for (const row of groupedStages) {
+    stages[row.stage] = row._count._all;
+  }
+
   return {
     total,
-    stages: Object.fromEntries(
-      STAGES.map((stage, index) => [stage, stages[index] ?? 0]),
-    ) as Record<(typeof STAGES)[number], number>,
+    stages,
     bot: Object.fromEntries(
       ACTIVITIES.map((activity, index) => [activity, bot[index] ?? 0]),
     ) as Record<BotActivity, number>,

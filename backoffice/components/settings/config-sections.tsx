@@ -22,6 +22,7 @@ import { useMe, useSettings, useSettingsOptions } from "@/lib/queries";
 import type { ConfigDraft } from "./config-draft";
 import { useConfigEditor } from "./config-editor";
 import { CollectEditor } from "./collect-editor";
+import { StagesEditor } from "./stages-editor";
 import { SearchableSelect, type SearchableOption } from "./searchable-select";
 import { Panel, FieldRow, Section, StatusPill } from "@/components/panel";
 import type { AssistantSectionId } from "./sections";
@@ -334,6 +335,95 @@ function ConversationSection() {
   );
 }
 
+function StagesSection() {
+  return (
+    <Section
+      title="Etapas"
+      description="Configura el pipeline de Conversaciones para tu empresa."
+    >
+      <StagesEditor />
+    </Section>
+  );
+}
+
+function FollowUpSection() {
+  const { draft, set } = useConfigEditor();
+  return (
+    <Section
+      title="Seguimiento"
+      description="Recordatorios automáticos dentro de las 24 h de WhatsApp y cierre por inactividad."
+    >
+      <Panel
+        title="Seguimiento automático (dentro de 24 h)"
+        description="Si un lead en Calificando deja de responder, el asistente redacta un recordatorio breve y contextual dentro de la ventana gratuita de 24 horas."
+        actions={
+          <Switch
+            id={fieldId("followUpEnabled")}
+            aria-label="Activar seguimiento automático"
+            checked={draft.followUpEnabled}
+            onCheckedChange={(checked) => set("followUpEnabled", checked)}
+          />
+        }
+      >
+        {draft.followUpEnabled ? (
+          <>
+            <TextRow
+              name="followUpDelayHours"
+              label="Esperar antes de escribir"
+              hint="Horas sin respuesta del lead antes de enviar un seguimiento (entre 1 y 20 h)."
+              inputMode="numeric"
+              suffix="horas"
+              narrow
+            />
+            <TextRow
+              name="followUpMaxCount"
+              label="Máximo de seguimientos"
+              hint="Cuántos recordatorios enviar por cada silencio del lead (1 o 2)."
+              inputMode="numeric"
+              suffix="intentos"
+              narrow
+            />
+          </>
+        ) : (
+          <p className="px-5 py-4 text-sm text-muted-foreground">
+            Desactivado. El asistente solo responde cuando el lead vuelve a
+            escribir.
+          </p>
+        )}
+      </Panel>
+
+      <Panel
+        title="Sin respuesta por inactividad"
+        description="Mueve automáticamente a Sin respuesta las conversaciones en Calificando que llevan tiempo sin actividad. Si el lead vuelve a escribir, retoma la calificación."
+        actions={
+          <Switch
+            id={fieldId("noResponseEnabled")}
+            aria-label="Marcar leads inactivos como Sin respuesta"
+            checked={draft.noResponseEnabled}
+            onCheckedChange={(checked) => set("noResponseEnabled", checked)}
+          />
+        }
+      >
+        {draft.noResponseEnabled ? (
+          <TextRow
+            name="noResponseHours"
+            label="Marcar tras"
+            hint="Horas desde el último mensaje antes de pasar a Sin respuesta (entre 1 y 720 h)."
+            inputMode="numeric"
+            suffix="horas"
+            narrow
+          />
+        ) : (
+          <p className="px-5 py-4 text-sm text-muted-foreground">
+            Desactivado. Los leads en Calificando no cambian de etapa por
+            inactividad.
+          </p>
+        )}
+      </Panel>
+    </Section>
+  );
+}
+
 function ForbiddenSection() {
   const { draft } = useConfigEditor();
   const topics = draft.forbiddenDescribe
@@ -540,6 +630,8 @@ function LimitsSection() {
 export const CONFIG_SECTIONS: Record<AssistantSectionId, () => ReactNode> = {
   general: GeneralSection,
   conversation: ConversationSection,
+  stages: StagesSection,
+  followup: FollowUpSection,
   forbidden: ForbiddenSection,
   messages: MessagesSection,
   limits: LimitsSection,
