@@ -238,7 +238,7 @@ export const editableConfigSchema = z.strictObject({
         if (!sys) customCount += 1;
       });
       for (const requiredKey of SYSTEM_STAGE_KEYS) {
-        if (!seen.has(requiredKey)) {
+        if (!stages.some((stage) => stage.key === requiredKey)) {
           issue.addIssue({
             code: "custom",
             path: [],

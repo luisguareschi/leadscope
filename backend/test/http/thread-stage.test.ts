@@ -345,6 +345,16 @@ describe("custom pipeline stages, disqualified, and no_response (LUI-15/16/17)",
       state: "answer",
     });
 
+    // Advancing from contacted to a custom stage preserves contactedAt/contactedBy (#8).
+    const contacted = await setStage(thread.id, "contacted").expect(200);
+    const contactedAt = contacted.body.thread.contactedAt;
+    expect(contactedAt).toBeTruthy();
+    const movedCustom = await setStage(thread.id, "visit_scheduled").expect(
+      200,
+    );
+    expect(movedCustom.body.thread.contactedAt).toBe(contactedAt);
+    expect(movedCustom.body.thread.contactedBy).toBe("ana@altamira.uy");
+
     const filtered = await request(app)
       .get("/internal/threads?stage=visit_scheduled")
       .set(asAna)

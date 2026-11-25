@@ -99,6 +99,7 @@ export async function syncThreadToCrm(
         sentAt: true,
         sentByEmail: true,
         sentBySupport: true,
+        mediaFileName: true,
       },
     });
     const summary = buildCrmSummary({

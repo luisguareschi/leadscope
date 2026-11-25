@@ -1,7 +1,9 @@
 import { loadCompanyById } from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
 import type { CompanyAccess } from "../../http/company-access.js";
-import { notFound } from "../../lib/http-error.js";
+import { isMediaOnlyFormat } from "../../integrations/knowledge/formats.js";
+import { removeStorageIfUnreferenced } from "../../integrations/storage/cleanup.js";
+import { HttpError, notFound } from "../../lib/http-error.js";
 import { toKnowledgeFileDto } from "./knowledge-dto.js";
 import {
   assertFileNameFree,
@@ -53,16 +55,31 @@ export async function replaceKnowledgeFile(
         });
       }
       await assertFitsCompanyTotal(tx, company, metadata.charCount, current.id);
+      const visibility = isMediaOnlyFormat(metadata.format)
+        ? "public"
+        : current.visibility;
+      if (visibility === "internal" && metadata.charCount === 0) {
+        throw new HttpError(
+          422,
+          "No encontramos texto en este archivo para reemplazar un documento interno.",
+          "empty_text",
+        );
+      }
       oldStoragePath = current.storagePath ?? null;
       const saved = await tx.knowledgeFile.update({
         where: { id: current.id },
-        data: { uploadedById: access.operatorId, ...metadata, storagePath },
+        data: {
+          uploadedById: access.operatorId,
+          ...metadata,
+          visibility,
+          storagePath,
+        },
         include: { uploadedBy: { select: { email: true } } },
       });
       return { file: toKnowledgeFileDto(saved), replaced: true };
     });
     if (oldStoragePath) {
-      await ctx.storage.remove([oldStoragePath]).catch(() => undefined);
+      await removeStorageIfUnreferenced(ctx, [oldStoragePath]);
     }
     return result;
   } catch (error) {

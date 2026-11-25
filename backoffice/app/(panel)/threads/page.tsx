@@ -54,9 +54,14 @@ function ThreadsView() {
   const stageFilters = stageFiltersFor(companyStages);
   const rawStage = params.get("stage");
   const rawBot = params.get("bot");
-  const stage: StageFilter = isStageFilter(rawStage, companyStages)
-    ? rawStage
-    : "all";
+  const stage: StageFilter =
+    companyStages === undefined &&
+    rawStage &&
+    /^[a-zA-Z][a-zA-Z0-9_]{0,39}$/.test(rawStage)
+      ? rawStage
+      : isStageFilter(rawStage, companyStages)
+        ? rawStage
+        : "all";
   const bot: BotFilter = isBotFilter(rawBot) ? rawBot : "all";
   // A platform admin in support access has no operator row here, so nothing is "theirs".
   const canBeAssigned = me.data ? !me.data.supportAccess : false;

@@ -41,8 +41,15 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api";
+import { testChatOwner } from "@/lib/assistant-test-storage";
+import { useAuth } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
-import { useRestoreSettingsVersion, useSettingsVersions } from "@/lib/queries";
+import {
+  useMe,
+  useRestoreSettingsVersion,
+  useSettingsVersions,
+} from "@/lib/queries";
+import { clearSettingsTestDraftKeys } from "@/lib/settings-draft-storage";
 import type { SettingsVersion } from "@/lib/types";
 import { Section } from "@/components/panel";
 
@@ -95,6 +102,10 @@ function restoreError(error: Error): string {
 }
 
 export function VersionsCard() {
+  const { email } = useAuth();
+  const me = useMe();
+  const companyId = me.data?.company?.id ?? null;
+  const owner = email && companyId ? testChatOwner(email, companyId) : null;
   const query = useSettingsVersions();
   const restore = useRestoreSettingsVersion();
   const [filter, setFilter] = useState<Kind | "all">("all");
@@ -110,6 +121,14 @@ export function VersionsCard() {
   const runRestore = (version: SettingsVersion) =>
     restore.mutate(version.id, {
       onSuccess: (result) => {
+        if (owner) {
+          if (version.kind === "config")
+            clearSettingsTestDraftKeys(owner, ["config"]);
+          else if (version.kind === "companyName")
+            clearSettingsTestDraftKeys(owner, ["companyName"]);
+          else if (version.kind === "instructions")
+            clearSettingsTestDraftKeys(owner, ["instructions"]);
+        }
         setConfirming(null);
         setViewing(null);
         toast.success(

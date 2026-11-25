@@ -129,13 +129,30 @@ export function MessageComposer({ thread }: { thread: Thread }) {
   const input = useRef<HTMLTextAreaElement>(null);
   const now = useNow(30_000);
 
-  const publicFiles = useMemo(
-    () =>
-      (knowledge.data?.files ?? []).filter(
-        (file) => file.visibility === "public" && file.hasFile,
-      ),
-    [knowledge.data?.files],
-  );
+  const publicFiles = useMemo(() => {
+    const foldersById = new Map(
+      (knowledge.data?.folders ?? []).map((folder) => [folder.id, folder]),
+    );
+    const folderPathOf = (folderId: string | null): string => {
+      const parts: string[] = [];
+      let current = folderId;
+      const seen = new Set<string>();
+      while (current && !seen.has(current)) {
+        seen.add(current);
+        const folder = foldersById.get(current);
+        if (!folder) break;
+        parts.unshift(folder.name);
+        current = folder.parentId;
+      }
+      return parts.join(" / ");
+    };
+    return (knowledge.data?.files ?? [])
+      .filter((file) => file.visibility === "public" && file.hasFile)
+      .map((file) => ({
+        file,
+        folderPath: folderPathOf(file.folderId),
+      }));
+  }, [knowledge.data?.files, knowledge.data?.folders]);
 
   const closesAt = thread.replyWindowClosesAt
     ? new Date(thread.replyWindowClosesAt).getTime()
@@ -298,15 +315,26 @@ export function MessageComposer({ thread }: { thread: Thread }) {
                     <FolderOpenIcon className="size-3.5" />
                     Archivos públicos de Conocimiento
                   </DropdownMenuLabel>
-                  {publicFiles.slice(0, 12).map((file) => (
-                    <DropdownMenuItem
-                      key={file.id}
-                      onClick={() => setAttachment({ kind: "knowledge", file })}
-                    >
-                      <FileTextIcon />
-                      <span className="truncate">{file.name}</span>
-                    </DropdownMenuItem>
-                  ))}
+                  <div className="max-h-64 overflow-y-auto">
+                    {publicFiles.map(({ file, folderPath }) => (
+                      <DropdownMenuItem
+                        key={file.id}
+                        onClick={() =>
+                          setAttachment({ kind: "knowledge", file })
+                        }
+                      >
+                        <FileTextIcon className="shrink-0" />
+                        <span className="flex min-w-0 flex-col">
+                          <span className="truncate">{file.name}</span>
+                          {folderPath ? (
+                            <span className="truncate text-[11px] text-muted-foreground">
+                              {folderPath}
+                            </span>
+                          ) : null}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
                 </>
               ) : null}
             </DropdownMenuContent>

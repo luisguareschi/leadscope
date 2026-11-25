@@ -218,7 +218,7 @@ export default function ThreadPage() {
               </div>
             )}
           </div>
-          {thread ? <MessageComposer thread={thread} /> : null}
+          {thread ? <MessageComposer key={thread.id} thread={thread} /> : null}
         </Panel>
         {thread && data ? (
           <LeadDetails

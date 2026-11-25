@@ -2,6 +2,7 @@ import type { RequestHandler } from "express";
 import { z } from "zod";
 import type { AppContext } from "../../context.js";
 import { companyAccessOf } from "../../http/company-access.js";
+import { sendSafeStoredFile } from "../../http/safe-file-response.js";
 import { parseInput } from "../../http/validate.js";
 import { notFound } from "../../lib/http-error.js";
 
@@ -24,16 +25,13 @@ export function downloadMessageMediaController(
       throw notFound("Archivo adjunto no disponible.");
     }
     const stored = await ctx.storage.download(message.mediaPath);
-    res.setHeader(
-      "Content-Type",
-      message.mediaMimeType || stored.contentType || "application/octet-stream",
-    );
-    if (message.mediaFileName) {
-      res.setHeader(
-        "Content-Disposition",
-        `inline; filename="${encodeURIComponent(message.mediaFileName)}"`,
-      );
-    }
-    res.send(stored.data);
+    sendSafeStoredFile(res, {
+      data: stored.data,
+      mimeType:
+        message.mediaMimeType ||
+        stored.contentType ||
+        "application/octet-stream",
+      fileName: message.mediaFileName,
+    });
   };
 }

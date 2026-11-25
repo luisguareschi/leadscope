@@ -18,6 +18,7 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-chart-6: var(--chart-6);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -96,6 +97,7 @@
   --chart-3: var(--status-ok);
   --chart-4: var(--muted-foreground);
   --chart-5: var(--status-info);
+  --chart-6: #a1a7b3;
   --radius: 0.875rem;
   --sidebar: #f2f3f7;
   --sidebar-foreground: #191c1f;
@@ -140,6 +142,7 @@
   --chart-3: var(--status-ok);
   --chart-4: var(--muted-foreground);
   --chart-5: var(--status-info);
+  --chart-6: #6f758a;
   --sidebar: #03040b;
   --sidebar-foreground: #f5f6fa;
   --sidebar-primary: #8c9bff;

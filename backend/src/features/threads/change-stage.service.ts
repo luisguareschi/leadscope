@@ -1,7 +1,11 @@
 import { parseCompanyConfig } from "../../companies/company-config.js";
 import type { AppContext } from "../../context.js";
 import { crmRequest } from "../../conversation/crm-sync.js";
-import { findStage, isClosedStage } from "../../engine/stages.js";
+import {
+  findStage,
+  isClosedStage,
+  isSystemStage,
+} from "../../engine/stages.js";
 import { stateForManualStage } from "../../engine/turn.js";
 import type { LeadStage } from "../../engine/types.js";
 import type { Prisma } from "../../generated/prisma/client.js";
@@ -52,17 +56,30 @@ export async function changeThreadStage(
   };
   if (stage === "to_contact") data.handedOffAt = thread.handedOffAt ?? now;
   if (stage === "qualifying" || isClosedStage(stage)) data.handedOffAt = null;
+  const isCustomSalesStage = !isSystemStage(stage);
+  const clearContacted =
+    stage === "qualifying" || stage === "to_contact" || isClosedStage(stage);
   if (stage === "contacted") {
     data.contactedAt = now;
     data.contactedById = operatorId;
     data.contactedByEmail = actorEmail;
-  } else if (thread.stage === "contacted") {
+  } else if (isCustomSalesStage) {
+    // Preserve contacted metadata across post-contact custom stages; record it if jumping
+    // directly from an uncontacted stage into a custom sales stage.
+    if (thread.contactedAt === null) {
+      data.contactedAt = now;
+      data.contactedById = operatorId;
+      data.contactedByEmail = actorEmail;
+    }
+  } else if (clearContacted && thread.contactedAt !== null) {
     data.contactedAt = null;
     data.contactedById = null;
     data.contactedByEmail = null;
   }
   const assignToMe =
-    stage === "contacted" && thread.assignedToId === null && operatorId;
+    (stage === "contacted" || isCustomSalesStage) &&
+    thread.assignedToId === null &&
+    operatorId;
 
   const changed = await ctx.db.$transaction(async (tx) => {
     // Conditional on what we read, so a bot turn or another person who changed it first wins.

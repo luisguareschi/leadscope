@@ -19,6 +19,7 @@ import type {
   TurnDecision,
   TurnInput,
 } from "../engine/types.js";
+import { whatsappMediaKind } from "../features/knowledge/prepare-upload.js";
 import type { Thread } from "../generated/prisma/client.js";
 import type { Channel } from "../integrations/whatsapp/channel.js";
 import { normalizeVisionMimeType } from "../integrations/whatsapp/kapso/kapso-channel.js";
@@ -257,16 +258,18 @@ async function sendPublicFiles(
   for (const id of fileIds) {
     const file = byId.get(id);
     if (!file?.storagePath) continue;
-    const kind = file.mimeType.startsWith("image/") ? "image" : "document";
+    let kind: "image" | "document" = whatsappMediaKind(file.mimeType, 0);
     let waMessageId: string | null = null;
     let sendError: string | null = null;
     try {
       const stored = await ctx.storage.download(file.storagePath);
+      const mimeType = file.mimeType || stored.contentType;
+      kind = whatsappMediaKind(mimeType, stored.data.length);
       ({ waMessageId } = await channel.sendMedia({
         to: thread.waId,
         kind,
         data: stored.data,
-        mimeType: file.mimeType || stored.contentType,
+        mimeType,
         fileName: file.name,
       }));
     } catch (error) {

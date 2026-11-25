@@ -1,5 +1,6 @@
 import type { AppContext } from "../../context.js";
 import { isSameOrInside } from "../../engine/knowledge-tree.js";
+import { removeStorageIfUnreferenced } from "../../integrations/storage/cleanup.js";
 import { notFound } from "../../lib/http-error.js";
 import { loadFolders, withKnowledgeLock } from "./knowledge-folders.js";
 
@@ -27,7 +28,7 @@ export async function deleteKnowledgeFolder(
     return { deletedFolders: inside.length, deletedFiles: files.length };
   });
   if (storagePaths.length > 0) {
-    await ctx.storage.remove(storagePaths).catch(() => undefined);
+    await removeStorageIfUnreferenced(ctx, storagePaths);
   }
   return result;
 }

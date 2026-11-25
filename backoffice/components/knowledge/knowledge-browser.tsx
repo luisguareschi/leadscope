@@ -708,17 +708,27 @@ export function KnowledgeBrowser({
                         <span className="truncate text-xs text-muted-foreground tabular-nums">
                           {file.formatLabel} · {formatBytes(file.sizeBytes)}
                           {file.description ? ` · ${file.description}` : ""}
-                          <span className="@3xl/content:hidden">
-                            {" "}
-                            · {formatNumber(file.charCount)} caracteres
-                          </span>
+                          {file.charCount > 0 ? (
+                            <span className="@3xl/content:hidden">
+                              {" "}
+                              · {formatNumber(file.charCount)} caracteres
+                            </span>
+                          ) : null}
                         </span>
                       </div>
                       <span className="hidden text-right text-sm tabular-nums @3xl/content:block">
-                        {formatNumber(file.charCount)}
-                        <span className="block text-xs text-muted-foreground">
-                          caracteres
-                        </span>
+                        {file.charCount > 0 ? (
+                          <>
+                            {formatNumber(file.charCount)}
+                            <span className="block text-xs text-muted-foreground">
+                              caracteres
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Solo archivo
+                          </span>
+                        )}
                       </span>
                       <span className="hidden min-w-0 text-right text-sm text-muted-foreground @3xl/content:block">
                         {formatRelative(file.updatedAt)}
@@ -756,21 +766,25 @@ export function KnowledgeBrowser({
                                 Descargar archivo
                               </DropdownMenuItem>
                             ) : null}
-                            <DropdownMenuItem
-                              onClick={() => toggleVisibility(file)}
-                            >
-                              {file.visibility === "public" ? (
-                                <>
-                                  <LockIcon />
-                                  Hacer interno (solo conocimiento)
-                                </>
-                              ) : (
-                                <>
-                                  <GlobeIcon />
-                                  Hacer público (enviable al lead)
-                                </>
-                              )}
-                            </DropdownMenuItem>
+                            {(file.visibility === "public" &&
+                              file.charCount > 0) ||
+                            (file.visibility === "internal" && file.hasFile) ? (
+                              <DropdownMenuItem
+                                onClick={() => toggleVisibility(file)}
+                              >
+                                {file.visibility === "public" ? (
+                                  <>
+                                    <LockIcon />
+                                    Hacer interno (solo conocimiento)
+                                  </>
+                                ) : (
+                                  <>
+                                    <GlobeIcon />
+                                    Hacer público (enviable al lead)
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            ) : null}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => askRenameFile(file)}

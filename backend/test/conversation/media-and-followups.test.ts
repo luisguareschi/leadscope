@@ -296,6 +296,8 @@ describe("automatic 24h follow-ups, no_response sweep, and CRM consistency (LUI-
     expect(ctx.llm.calls[1]!.turnContext).toContain(
       "has not replied for about 5 hour(s)",
     );
+    // Critical #1: follow-up turn must end with a `user` message for Anthropic forced tool_choice.
+    expect(ctx.llm.calls[1]!.messages.at(-1)?.role).toBe("user");
 
     // 2 hours later: maxCount=1 already reached, no second follow-up.
     now = new Date(now.getTime() + 2 * 3_600_000);
@@ -311,7 +313,7 @@ describe("automatic 24h follow-ups, no_response sweep, and CRM consistency (LUI-
     });
     expect(inactive.stage).toBe("no_response");
 
-    // Lead replies later: resets followUpCount and moves back to qualifying.
+    // Lead replies later: resets followUpCount & lastFollowUpAt and returns to state=qualify (#12, #13).
     ctx.llm.push({ reply: "¡Hola de nuevo! Contame tu presupuesto." });
     await recordInboundMessage(
       ctx,
@@ -326,7 +328,138 @@ describe("automatic 24h follow-ups, no_response sweep, and CRM consistency (LUI-
       where: { id: recorded.threadId },
     });
     expect(revived.followUpCount).toBe(0);
+    expect(revived.lastFollowUpAt).toBeNull();
     expect(revived.stage).toBe("qualifying");
+    expect(revived.state).toBe("qualify");
+  });
+
+  it("stops retrying failed or flagged follow-ups and records usage (Critical #2)", async () => {
+    ctx.llm.push({ reply: "¡Hola! ¿Qué buscás?" });
+    const recorded = await recordInboundMessage(
+      ctx,
+      inbound(phoneNumberId, {
+        waMessageId: "wamid.fu-fail",
+        from: "59899111999",
+        body: "Hola",
+        sentAt: now,
+      }),
+    );
+    if (recorded.status !== "recorded") throw new Error(recorded.status);
+    await processThread(ctx, recorded.threadId);
+
+    // 5 hours later: follow-up hits forbiddenTopic -> must record usage and cap attempts so next sweep skips it.
+    now = new Date(now.getTime() + 5 * 3_600_000);
+    ctx.llm.push({
+      reply: "Renta 10%",
+      forbiddenTopic: "Rentabilidad futura",
+    });
+    const first = await sweepOnce(ctx);
+    expect(first.followUpsSent).toBe(0);
+    const after = await db.thread.findUniqueOrThrow({
+      where: { id: recorded.threadId },
+    });
+    expect(after.followUpCount).toBe(1);
+    expect(after.lastFollowUpAt).not.toBeNull();
+    expect(
+      await db.llmUsage.count({ where: { threadId: recorded.threadId } }),
+    ).toBe(2);
+
+    // Next 30s tick must NOT call the LLM again.
+    now = new Date(now.getTime() + 30_000);
+    const second = await sweepOnce(ctx);
+    expect(second.followUpsSent).toBe(0);
+    expect(ctx.llm.calls).toHaveLength(2);
+  });
+
+  it("blocks SVG/HTML manual uploads, sets safe download headers, preserves referenced binaries, and sends WebP as document (#4, #5, #14, #17)", async () => {
+    const thread = await db.thread.create({
+      data: {
+        companyId,
+        phone: "+59899111444",
+        waId: "59899111444",
+        lastInboundAt: now,
+        lastMessageAt: now,
+      },
+    });
+    // #4: SVG and HTML direct uploads rejected.
+    await request(app)
+      .post(`/internal/threads/${thread.id}/messages`)
+      .set(asAna)
+      .attach("file", Buffer.from("<svg><script>alert(1)</script></svg>"), {
+        filename: "xss.svg",
+        contentType: "image/svg+xml",
+      })
+      .expect(415);
+    await request(app)
+      .post(`/internal/threads/${thread.id}/messages`)
+      .set(asAna)
+      .attach("file", Buffer.from("<html><script>alert(1)</script></html>"), {
+        filename: "xss.html",
+        contentType: "text/html",
+      })
+      .expect(415);
+
+    // #14: WebP sent as WhatsApp document, not image.
+    const webpBytes = Buffer.from([
+      0x52, 0x49, 0x46, 0x46, 0x10, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+    ]);
+    const sentWebp = await request(app)
+      .post(`/internal/threads/${thread.id}/messages`)
+      .set(asAna)
+      .attach("file", webpBytes, "render.webp")
+      .expect(201);
+    expect(sentWebp.body.message.type).toBe("document");
+
+    // #4: Safe headers on download.
+    const dl = await request(app)
+      .get(
+        `/internal/threads/${thread.id}/messages/${sentWebp.body.message.id}/media`,
+      )
+      .set(asAna)
+      .expect(200);
+    expect(dl.headers["x-content-type-options"]).toBe("nosniff");
+    expect(dl.headers["content-security-policy"]).toBe(
+      "default-src 'none'; sandbox",
+    );
+
+    // #5: Deleting a KnowledgeFile that was sent in a conversation keeps the binary for the message;
+    // deleting the thread then removes it from storage.
+    const uploadedPdf = await request(app)
+      .post("/internal/knowledge/files")
+      .set(asAna)
+      .field("visibility", "public")
+      .attach("file", makePdf("Folleto"), "folleto.pdf")
+      .expect(201);
+    const kfileId = uploadedPdf.body.file.id as string;
+    const sentKfile = await request(app)
+      .post(`/internal/threads/${thread.id}/messages`)
+      .set(asAna)
+      .send({ knowledgeFileId: kfileId })
+      .expect(201);
+    await request(app)
+      .delete(`/internal/knowledge/files/${kfileId}`)
+      .set(asAna)
+      .expect(204);
+    await request(app)
+      .get(
+        `/internal/threads/${thread.id}/messages/${sentKfile.body.message.id}/media`,
+      )
+      .set(asAna)
+      .expect(200);
+
+    // #17: Re-uploading an existing internal file with visibility=public preserves internal.
+    await request(app)
+      .post("/internal/knowledge/files")
+      .set(asAna)
+      .attach("file", makePdf("Interno v1"), "secreto.pdf")
+      .expect(201);
+    const replaced = await request(app)
+      .post("/internal/knowledge/files")
+      .set(asAna)
+      .field("visibility", "public")
+      .attach("file", makePdf("Interno v2"), "secreto.pdf")
+      .expect(200);
+    expect(replaced.body.file.visibility).toBe("internal");
   });
 
   it("keeps HubSpot status consistent with Etapa when a to_contact lead says not_interested (LUI-18)", async () => {

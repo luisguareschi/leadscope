@@ -149,7 +149,9 @@ export function stageForPrompt(
   thread: ThreadSnapshot,
   items: CollectRule[],
 ): ThreadState {
-  if (thread.state === "closed") return "answer";
+  if (thread.state === "closed") {
+    return stageOf(thread) === "no_response" ? "qualify" : "answer";
+  }
   if (thread.state === "handoff" && isHandoffComplete(fieldsOf(thread), items))
     return "answer";
   return thread.state;
@@ -241,7 +243,9 @@ function nextState(
   if (justHandedOff && !hasAnyRequiredItem(items))
     return { state: "answer", crm: "handoff" };
 
-  const reopened = stageForPrompt(previous, items) === "answer";
+  const reopened =
+    stageForPrompt(previous, items) === "answer" &&
+    stageOf(previous) !== "no_response";
   if (!hasRequiredItems(fields, items))
     return { state: reopened ? "answer" : "qualify", crm: null };
   if (!hasAnyRequiredItem(items) && !isWithSalesTeam(nextLeadStage))

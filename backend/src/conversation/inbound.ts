@@ -131,6 +131,7 @@ async function recordOnce(
         lastMessageAt: message.sentAt,
         lastMessagePreview: preview,
         followUpCount: 0,
+        lastFollowUpAt: null,
       },
       update: {
         waId: message.from,
@@ -139,6 +140,7 @@ async function recordOnce(
         lastMessageAt: message.sentAt,
         lastMessagePreview: preview,
         followUpCount: 0,
+        lastFollowUpAt: null,
       },
       select: {
         id: true,

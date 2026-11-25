@@ -197,5 +197,10 @@ export function createFileStorage(
       fetchImpl,
     });
   }
+  if (env.NODE_ENV === "production") {
+    throw new Error(
+      "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for file storage in production",
+    );
+  }
   return new FakeFileStorage();
 }

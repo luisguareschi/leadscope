@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { ChannelError } from "../../src/integrations/whatsapp/channel.js";
-import { createKapsoChannel } from "../../src/integrations/whatsapp/kapso/kapso-channel.js";
+import {
+  createKapsoChannel,
+  downloadKapsoMedia,
+  parseAllowedMediaUrl,
+} from "../../src/integrations/whatsapp/kapso/kapso-channel.js";
 import { checkKapsoConnection } from "../../src/integrations/whatsapp/kapso/kapso-connection.js";
 import {
   isValidKapsoSignature,
@@ -435,6 +439,63 @@ describe("Kapso channel", () => {
         caption: "Aquí tienes el brochure",
       },
     });
+  });
+
+  it("blocks SSRF hosts, prevents X-API-Key exfiltration, and caps streaming downloads (Critical #3)", async () => {
+    const base = "https://api.kapso.ai";
+    expect(
+      parseAllowedMediaUrl("http://169.254.169.254/latest/meta-data", base),
+    ).toBeNull();
+    expect(
+      parseAllowedMediaUrl("http://127.0.0.1:3001/health", base),
+    ).toBeNull();
+    expect(
+      parseAllowedMediaUrl("https://evil-kapso.ai/img.png", base),
+    ).toBeNull();
+    expect(
+      parseAllowedMediaUrl("https://kapso.ai@evil.com/img.png", base),
+    ).toBeNull();
+    expect(
+      parseAllowedMediaUrl("https://api.kapso.ai.evil.com/img.png", base),
+    ).toBeNull();
+    expect(
+      parseAllowedMediaUrl("http://cdn.kapso.ai/img.png", base),
+    ).toBeNull();
+
+    expect(
+      parseAllowedMediaUrl("https://api.kapso.ai/meta/v24.0/media/1", base),
+    ).toEqual({
+      url: "https://api.kapso.ai/meta/v24.0/media/1",
+      sendApiKey: true,
+    });
+    expect(parseAllowedMediaUrl("https://cdn.kapso.ai/img.png", base)).toEqual({
+      url: "https://cdn.kapso.ai/img.png",
+      sendApiKey: false,
+    });
+
+    // Does not send X-API-Key to CDN subdomain and aborts oversized chunked streams.
+    const cdnFetch = mockFetch(
+      () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new Uint8Array(60));
+              controller.enqueue(new Uint8Array(60));
+              controller.close();
+            },
+          }),
+          { status: 200, headers: { "content-type": "image/png" } },
+        ),
+    );
+    const tooBig = await downloadKapsoMedia({
+      apiKey: "secret-key",
+      mediaUrl: "https://cdn.kapso.ai/big.png",
+      maxBytes: 100,
+      fetchImpl: cdnFetch,
+    });
+    expect(tooBig).toBeNull();
+    expect(cdnFetch.mock.calls[0]![1]?.headers).toBeUndefined();
+    expect(cdnFetch.mock.calls[0]![1]?.redirect).toBe("error");
   });
 });
 

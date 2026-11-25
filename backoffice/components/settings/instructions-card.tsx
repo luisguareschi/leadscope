@@ -165,6 +165,7 @@ export function InstructionsCard({
   const me = useMe();
   const companyId = me.data?.company?.id ?? null;
   const owner = email && companyId ? testChatOwner(email, companyId) : null;
+  const [hydratedOwner, setHydratedOwner] = useState<string | null>(owner);
   const [draft, setDraft] = useState(() => {
     const saved = owner ? loadSettingsTestDraft(owner) : null;
     return saved?.instructions !== undefined
@@ -173,6 +174,14 @@ export function InstructionsCard({
   });
   const [error, setError] = useState<string | null>(null);
   const save = useSaveInstructions();
+
+  if (owner && owner !== hydratedOwner) {
+    setHydratedOwner(owner);
+    if (draft.trim() === instructions) {
+      const saved = loadSettingsTestDraft(owner);
+      if (saved?.instructions !== undefined) setDraft(saved.instructions);
+    }
+  }
   const input = useRef<HTMLTextAreaElement>(null);
   const focusOnEdit = useRef(false);
   // Server and hydration both use the saved-text default. The browser's last choice is read on

@@ -42,7 +42,7 @@ export function SettingsNav({
                   type="button"
                   aria-expanded={expanded}
                   onClick={() => setAdvancedOpen((v) => !v)}
-                  className="hidden items-center gap-1 px-3 pb-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground @4xl/main:flex"
+                  className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-sm text-muted-foreground whitespace-nowrap transition-colors hover:bg-card/70 hover:text-foreground @4xl/main:rounded-none @4xl/main:px-3 @4xl/main:py-0 @4xl/main:pb-1.5 @4xl/main:text-xs @4xl/main:font-medium @4xl/main:hover:bg-transparent dark:hover:bg-white/5 @4xl/main:dark:hover:bg-transparent"
                 >
                   <ChevronRightIcon
                     className={cn(

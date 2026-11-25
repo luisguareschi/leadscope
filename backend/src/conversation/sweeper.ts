@@ -31,6 +31,8 @@ export async function sweepNoResponse(ctx: AppContext): Promise<number> {
         paused: false,
         needsHuman: false,
         lastMessageAt: { lte: cutoff },
+        OR: [{ processingUntil: null }, { processingUntil: { lt: now } }],
+        messages: { none: { direction: "inbound", handledAt: null } },
       },
       select: {
         id: true,
@@ -38,11 +40,12 @@ export async function sweepNoResponse(ctx: AppContext): Promise<number> {
         lastMessageAt: true,
         stageChangedAt: true,
         messages: {
-          orderBy: [{ createdAt: "desc" }, { sentAt: "desc" }],
+          orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
           take: 1,
           select: { direction: true },
         },
       },
+      orderBy: { lastMessageAt: "asc" },
       take: 100,
     });
     for (const thread of candidates) {
@@ -56,8 +59,11 @@ export async function sweepNoResponse(ctx: AppContext): Promise<number> {
           id: thread.id,
           stage: "qualifying",
           stageChangedAt: thread.stageChangedAt,
+          lastMessageAt: thread.lastMessageAt,
+          lastInboundAt: thread.lastInboundAt,
           paused: false,
           needsHuman: false,
+          OR: [{ processingUntil: null }, { processingUntil: { lt: now } }],
         },
         data: {
           stage: "no_response",
@@ -107,6 +113,10 @@ export async function sweepFollowUps(ctx: AppContext): Promise<number> {
         followUpCount: { lt: config.followUp.maxCount },
         lastInboundAt: { gt: windowCutoff },
         lastMessageAt: { lte: delayCutoff },
+        OR: [
+          { lastFollowUpAt: null },
+          { lastFollowUpAt: { lte: delayCutoff } },
+        ],
       },
       select: {
         id: true,
@@ -114,11 +124,12 @@ export async function sweepFollowUps(ctx: AppContext): Promise<number> {
         lastMessageAt: true,
         lastFollowUpAt: true,
         messages: {
-          orderBy: [{ createdAt: "desc" }, { sentAt: "desc" }],
+          orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
           take: 1,
           select: { direction: true },
         },
       },
+      orderBy: { lastMessageAt: "asc" },
       take: 25,
     });
     for (const thread of candidates) {

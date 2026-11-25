@@ -36,6 +36,13 @@ const TYPE_META: Record<string, { label: string; icon: React.ReactNode }> = {
   template: { label: "Plantilla de bienvenida", icon: <LayoutTemplateIcon /> },
 };
 
+const SAFE_INLINE_IMAGE_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+
 function MessageMedia({
   threadId,
   message,
@@ -49,11 +56,13 @@ function MessageMedia({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const media = message.media;
-  const isImage = Boolean(media?.mimeType.startsWith("image/"));
+  const hasMedia = Boolean(media);
+  const mime = media?.mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
+  const isImage = SAFE_INLINE_IMAGE_MIMES.has(mime);
   const path = `/internal/threads/${threadId}/messages/${message.id}/media`;
 
   useEffect(() => {
-    if (!media || !isImage) return;
+    if (!hasMedia || !isImage) return;
     let active = true;
     let objectUrl: string | null = null;
     void fetchBlob(path)
@@ -67,7 +76,7 @@ function MessageMedia({
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [media, isImage, fetchBlob, path]);
+  }, [hasMedia, isImage, fetchBlob, path]);
 
   if (!media) return null;
 

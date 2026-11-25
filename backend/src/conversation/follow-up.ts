@@ -58,7 +58,7 @@ export async function runFollowUpTurn(
       // Last message must be outbound (waiting on the lead) and older than delayHours.
       const lastMsg = await ctx.db.message.findFirst({
         where: { threadId },
-        orderBy: [{ createdAt: "desc" }, { sentAt: "desc" }],
+        orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
         select: { direction: true },
       });
       if (lastMsg?.direction !== "outbound") return "skipped";
@@ -103,24 +103,66 @@ export async function runFollowUpTurn(
         }),
       ]);
 
+      // Anthropic's Messages API rejects a trailing `assistant` turn when forced `tool_choice` is
+      // active. Append a synthetic `user` turn so the conversation always ends with `role: "user"`.
+      const turns = buildChatTurns(
+        recent.reverse(),
+        company.config.llm.historyLimit,
+        thread.source,
+      );
+      const messages = [
+        ...turns,
+        {
+          role: "user" as const,
+          content:
+            "[System: the lead has not replied yet. Write a brief, friendly follow-up message in the company's tone.]",
+        },
+      ];
+
       const { input, usage } = await callModel(ctx, llm, company, {
         thread,
         threadId,
         system,
         documents,
-        messages: buildChatTurns(
-          recent.reverse(),
-          company.config.llm.historyLimit,
-          thread.source,
-        ),
+        messages,
         followUpHours: Math.max(1, Math.round(elapsedMs / HOUR_MS)),
       });
-      if (input.kind !== "model") return "failed";
+
+      // Record attempt/usage even when skipped or failed so the 30s sweeper never loops on the
+      // same thread or drops Anthropic spend accounting.
+      const recordNoSend = async (capAttempts: boolean) => {
+        const at = ctx.now();
+        await ctx.db.$transaction([
+          ctx.db.thread.update({
+            where: { id: threadId },
+            data: {
+              lastFollowUpAt: at,
+              followUpCount: capAttempts ? followUp.maxCount : { increment: 1 },
+            },
+          }),
+          ...(usage
+            ? [
+                ctx.db.llmUsage.create({
+                  data: { companyId: company.id, threadId, ...usage },
+                }),
+              ]
+            : []),
+        ]);
+      };
+
+      if (input.kind !== "model") {
+        await recordNoSend(false);
+        return "failed";
+      }
       if (input.output.forbiddenTopic || input.output.needsHuman) {
+        await recordNoSend(true);
         return "skipped";
       }
       const reply = capReply(input.output.reply, company.config.maxReplyChars);
-      if (!reply) return "failed";
+      if (!reply) {
+        await recordNoSend(false);
+        return "failed";
+      }
 
       // Re-check before sending: a person pausing or the lead replying wins.
       const latest = await ctx.db.thread.findUnique({

@@ -16,6 +16,84 @@ type KapsoChannelOptions = KapsoClientOptions & {
 /** Max inbound image size accepted for Claude Vision (Anthropic's limit is 5 MB). */
 export const MAX_INBOUND_IMAGE_BYTES = 5 * 1024 * 1024;
 
+const ALLOWED_MEDIA_HOST_SUFFIXES = [
+  "kapso.ai",
+  "whatsapp.net",
+  "fbcdn.net",
+  "fbsbx.com",
+  "r2.cloudflarestorage.com",
+  "amazonaws.com",
+  "googleapis.com",
+];
+
+function isAllowedMediaHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return ALLOWED_MEDIA_HOST_SUFFIXES.some(
+    (suffix) => host === suffix || host.endsWith(`.${suffix}`),
+  );
+}
+
+/**
+ * Validates an inbound media URL to prevent SSRF and API key exfiltration:
+ * - Requires HTTPS (unless matching the configured `baseUrl` origin in tests).
+ * - Forbids embedded credentials (`user:pass@host`).
+ * - Restricts hosts to `baseUrl` or known Kapso/WhatsApp/Meta media CDNs.
+ * - Sends `X-API-Key` ONLY to the exact `baseUrl` origin.
+ */
+export function parseAllowedMediaUrl(
+  rawUrl: string,
+  baseUrl: string,
+): { url: string; sendApiKey: boolean } | null {
+  let parsed: URL;
+  let base: URL;
+  try {
+    parsed = new URL(rawUrl);
+    base = new URL(baseUrl);
+  } catch {
+    return null;
+  }
+  if (parsed.username || parsed.password) return null;
+  const sameOrigin = parsed.origin === base.origin;
+  if (sameOrigin) {
+    return { url: parsed.toString(), sendApiKey: true };
+  }
+  if (parsed.protocol !== "https:") return null;
+  if (!isAllowedMediaHost(parsed.hostname)) return null;
+  return { url: parsed.toString(), sendApiKey: false };
+}
+
+async function readResponseBounded(
+  response: Response,
+  maxBytes: number,
+): Promise<Buffer | null> {
+  const contentLength = Number(response.headers.get("content-length") ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) return null;
+  if (!response.body) {
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return buffer.length > 0 && buffer.length <= maxBytes ? buffer : null;
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  if (total === 0) return null;
+  return Buffer.concat(chunks, total);
+}
+
 const SUPPORTED_VISION_MIME: Record<string, SupportedImageMediaType> = {
   "image/jpeg": "image/jpeg",
   "image/jpg": "image/jpeg",
@@ -35,25 +113,27 @@ export function normalizeVisionMimeType(
 /**
  * Downloads an inbound WhatsApp media binary through Kapso (either a direct `media_url` from the
  * webhook or Meta's media lookup `/meta/whatsapp/<v>/<mediaId>`). Best-effort: returns null if
- * unavailable or above `maxBytes`.
+ * disallowed, unavailable, or above `maxBytes`.
  */
 export async function downloadKapsoMedia(
   options: KapsoClientOptions & {
     mediaUrl?: string | null;
     mediaId?: string | null;
     maxBytes?: number;
+    timeoutMs?: number;
   },
 ): Promise<{ data: Buffer; mimeType: string } | null> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const baseUrl = (options.baseUrl ?? KAPSO_API_BASE_URL).replace(/\/$/, "");
   const maxBytes = options.maxBytes ?? MAX_INBOUND_IMAGE_BYTES;
+  const timeoutMs = options.timeoutMs ?? 5_000;
 
   let downloadUrl = options.mediaUrl?.trim() || null;
   if (!downloadUrl && options.mediaId) {
     const meta = await kapsoRequest(
       options,
       `/meta/whatsapp/${KAPSO_WHATSAPP_API_VERSION}/${encodeURIComponent(options.mediaId)}`,
-      { method: "GET", timeoutMs: 8_000 },
+      { method: "GET", timeoutMs: Math.min(timeoutMs, 4_000) },
     );
     if (!meta.ok) return null;
     const url = (meta.json as { url?: unknown })?.url;
@@ -61,19 +141,21 @@ export async function downloadKapsoMedia(
   }
   if (!downloadUrl) return null;
 
-  const isKapsoHost =
-    downloadUrl.startsWith(baseUrl) ||
-    /^https:\/\/[^/]*kapso\.ai\//i.test(downloadUrl);
-  const response = await fetchImpl(downloadUrl, {
+  const target = parseAllowedMediaUrl(downloadUrl, baseUrl);
+  if (!target) return null;
+
+  const response = await fetchImpl(target.url, {
     method: "GET",
-    headers: isKapsoHost ? { "X-API-Key": options.apiKey } : undefined,
-    signal: AbortSignal.timeout(10_000),
+    headers:
+      target.sendApiKey && options.apiKey
+        ? { "X-API-Key": options.apiKey }
+        : undefined,
+    redirect: "error",
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) return null;
-  const contentLength = Number(response.headers.get("content-length") ?? 0);
-  if (Number.isFinite(contentLength) && contentLength > maxBytes) return null;
-  const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length === 0 || buffer.length > maxBytes) return null;
+  const buffer = await readResponseBounded(response, maxBytes);
+  if (!buffer) return null;
   const mimeType =
     response.headers.get("content-type")?.split(";")[0]?.trim() ||
     "application/octet-stream";

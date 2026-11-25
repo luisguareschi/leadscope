@@ -56,6 +56,7 @@ export type SummaryMessage = {
   /** Set when a person wrote it in the panel. */
   sentByEmail?: string | null;
   sentBySupport?: boolean;
+  mediaFileName?: string | null;
 };
 
 /**
@@ -117,7 +118,7 @@ function transcriptLine(
   const body =
     message.type === "text"
       ? message.body
-      : `[${message.type}]${message.body ? ` ${message.body}` : ""}`;
+      : `[${message.type}${message.mediaFileName ? `: ${message.mediaFileName}` : ""}]${message.body ? ` ${message.body}` : ""}`;
   return `[${stamp(message.sentAt, config, "short")}] ${who}: ${body}`;
 }
 

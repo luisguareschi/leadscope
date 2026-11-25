@@ -472,8 +472,8 @@ function MessagesSection() {
         />
         <TextRow
           name="nonText"
-          label="Audio, fotos o stickers"
-          hint="Se envía cuando el lead manda un mensaje que no es texto."
+          label="Adjuntos no compatibles"
+          hint="Se envía cuando el lead manda un audio sin transcripción, video, sticker u otro adjunto que el asistente no puede leer."
           multiline
           maxLength={1000}
         />

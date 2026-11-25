@@ -1,4 +1,5 @@
 import type { AppContext } from "../../context.js";
+import { removeStorageIfUnreferenced } from "../../integrations/storage/cleanup.js";
 import { notFound } from "../../lib/http-error.js";
 
 export async function deleteKnowledgeFile(
@@ -13,6 +14,6 @@ export async function deleteKnowledgeFile(
   if (!file) throw notFound("Archivo no encontrado");
   await ctx.db.knowledgeFile.delete({ where: { id: file.id } });
   if (file.storagePath) {
-    await ctx.storage.remove([file.storagePath]).catch(() => undefined);
+    await removeStorageIfUnreferenced(ctx, [file.storagePath]);
   }
 }

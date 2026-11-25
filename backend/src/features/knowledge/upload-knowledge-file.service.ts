@@ -2,6 +2,9 @@ import { randomUUID } from "node:crypto";
 import { loadCompanyById } from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
 import type { CompanyAccess } from "../../http/company-access.js";
+import { isMediaOnlyFormat } from "../../integrations/knowledge/formats.js";
+import { removeStorageIfUnreferenced } from "../../integrations/storage/cleanup.js";
+import { HttpError } from "../../lib/http-error.js";
 import { toKnowledgeFileDto } from "./knowledge-dto.js";
 import {
   assertFolder,
@@ -66,10 +69,20 @@ export async function uploadKnowledgeFile(
         options.description !== undefined
           ? options.description?.trim() || null
           : (existing?.description ?? null);
-      const visibility =
-        options.visibility !== undefined
-          ? metadata.visibility
-          : (existing?.visibility ?? metadata.visibility);
+      // Preserve an existing file's visibility when replacing by name so dropping an updated
+      // internal file while the Público tab is active never silently exposes it to leads.
+      const visibility = existing
+        ? isMediaOnlyFormat(metadata.format)
+          ? "public"
+          : existing.visibility
+        : metadata.visibility;
+      if (visibility === "internal" && metadata.charCount === 0) {
+        throw new HttpError(
+          422,
+          "No encontramos texto en este archivo. Si es un PDF escaneado, sube una versión con texto o cámbialo a público primero.",
+          "empty_text",
+        );
+      }
       const data = {
         uploadedById: access.operatorId,
         ...metadata,
@@ -90,7 +103,7 @@ export async function uploadKnowledgeFile(
       return { file: toKnowledgeFileDto(saved), replaced: existing !== null };
     });
     if (oldStoragePath) {
-      await ctx.storage.remove([oldStoragePath]).catch(() => undefined);
+      await removeStorageIfUnreferenced(ctx, [oldStoragePath]);
     }
     return result;
   } catch (error) {

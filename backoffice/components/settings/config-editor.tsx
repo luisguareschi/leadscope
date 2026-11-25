@@ -69,6 +69,7 @@ export function useConfigEditorState(
     version,
     initial: toDraft(config, companyName),
   }));
+  const [hydratedOwner, setHydratedOwner] = useState<string | null>(owner);
   const [draft, setDraft] = useState(() => {
     const saved = owner ? loadSettingsTestDraft(owner) : null;
     if (saved && (saved.config || saved.companyName !== undefined)) {
@@ -97,6 +98,19 @@ export function useConfigEditorState(
   const changedKeys = (Object.keys(draft) as Array<keyof ConfigDraft>).filter(
     (key) => !sameDraftValue(key, draft[key], base.initial[key]),
   );
+
+  // Hydrate an unsaved draft from sessionStorage if `me` finished loading after `settings`.
+  if (owner && owner !== hydratedOwner) {
+    setHydratedOwner(owner);
+    if (changedKeys.length === 0) {
+      const saved = loadSettingsTestDraft(owner);
+      if (saved && (saved.config || saved.companyName !== undefined)) {
+        setDraft(
+          toDraft(saved.config ?? config, saved.companyName ?? companyName),
+        );
+      }
+    }
+  }
 
   useEffect(() => {
     if (changedKeys.length === 0) return;
@@ -129,10 +143,45 @@ export function useConfigEditorState(
       if (owner) clearSettingsTestDraftKeys(owner, ["config", "companyName"]);
     },
     testDraft: () => {
+      const parsed = fromDraft(draft);
+      const numericChecks: Array<[keyof ConfigDraft, number]> = [
+        ["maxReplyChars", parsed.maxReplyChars],
+        ["temperature", parsed.llm.temperature],
+        ["historyLimit", parsed.llm.historyLimit],
+        ["timeoutSeconds", parsed.llm.timeoutMs],
+        ["maxFileMegabytes", parsed.knowledge.maxFileBytes],
+        ["maxCharsPerFile", parsed.knowledge.maxCharsPerFile],
+        ["maxCharsTotal", parsed.knowledge.maxCharsTotal],
+        ...(parsed.followUp.enabled
+          ? ([
+              ["followUpDelayHours", parsed.followUp.delayHours],
+              ["followUpMaxCount", parsed.followUp.maxCount],
+            ] as Array<[keyof ConfigDraft, number]>)
+          : []),
+        ...(parsed.inactivity.noResponseHours !== null
+          ? ([["noResponseHours", parsed.inactivity.noResponseHours]] as Array<
+              [keyof ConfigDraft, number]
+            >)
+          : []),
+      ];
+      const invalid = numericChecks.filter(
+        ([, value]) => !Number.isFinite(value),
+      );
+      if (invalid.length > 0) {
+        const nextErrors: Errors = {};
+        for (const [key] of invalid) {
+          nextErrors[key] = "Ingresa un número válido.";
+        }
+        setErrors((current) => ({ ...current, ...nextErrors }));
+        setFormError(
+          "Completa los valores numéricos marcados antes de probar el borrador.",
+        );
+        return;
+      }
       if (owner) {
         saveSettingsTestDraft(owner, {
           companyName: draft.companyName,
-          config: fromDraft(draft),
+          config: parsed,
         });
       }
       router.push("/probar");

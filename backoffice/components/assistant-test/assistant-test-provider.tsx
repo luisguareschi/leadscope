@@ -163,7 +163,17 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
           }));
           setError(
             cause instanceof ApiError
-              ? { message: cause.message, code: cause.code }
+              ? {
+                  message: cause.fields
+                    ? [
+                        cause.message,
+                        ...Object.entries(cause.fields).map(
+                          ([field, msg]) => `${field}: ${msg}`,
+                        ),
+                      ].join(" ")
+                    : cause.message,
+                  code: cause.code,
+                }
               : {
                   message:
                     cause instanceof Error

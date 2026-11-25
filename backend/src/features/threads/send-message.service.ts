@@ -12,7 +12,8 @@ import {
   notFound,
 } from "../../lib/http-error.js";
 import {
-  cleanFilename,
+  validateManualAttachment,
+  whatsappMediaKind,
   type UploadedFile,
 } from "../knowledge/prepare-upload.js";
 import { messageSelect, toMessageDto } from "./message-dto.js";
@@ -30,10 +31,6 @@ export type ManualMessageInput = {
   file?: UploadedFile;
   knowledgeFileId?: string;
 };
-
-function mediaKindForMime(mimeType: string): "image" | "document" {
-  return mimeType.toLowerCase().startsWith("image/") ? "image" : "document";
-}
 
 /**
  * A person writes to the lead from the thread view, through the company's WhatsApp number.
@@ -124,24 +121,24 @@ export async function sendManualMessage(
     const stored = await ctx.storage.download(kfile.storagePath);
     const mimeType = kfile.mimeType || stored.contentType;
     resolvedMedia = {
-      kind: mediaKindForMime(mimeType),
+      kind: whatsappMediaKind(mimeType, stored.data.length),
       data: stored.data,
       mimeType,
       fileName: kfile.name,
       storagePath: kfile.storagePath,
     };
   } else if (file) {
-    const fileName = cleanFilename(file.originalname);
-    const mimeType = file.mimetype || "application/octet-stream";
+    const validated = validateManualAttachment(file);
     const safeName =
-      fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "file";
+      validated.fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) ||
+      "file";
     const storagePath = `${companyId}/messages/${randomUUID()}-${safeName}`;
-    await ctx.storage.upload(storagePath, file.buffer, mimeType);
+    await ctx.storage.upload(storagePath, file.buffer, validated.mimeType);
     resolvedMedia = {
-      kind: mediaKindForMime(mimeType),
+      kind: whatsappMediaKind(validated.mimeType, file.buffer.length),
       data: file.buffer,
-      mimeType,
-      fileName,
+      mimeType: validated.mimeType,
+      fileName: validated.fileName,
       storagePath,
     };
   }
