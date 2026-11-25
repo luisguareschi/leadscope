@@ -610,8 +610,10 @@ export type TestTurnRequest = {
 };
 
 export type TestTurnResponse = {
-  /** What the lead would receive on WhatsApp. */
+  /** What the lead would receive on WhatsApp (all bubbles joined). */
   reply: string;
+  /** Separate WhatsApp bubbles to send in order. */
+  replies: string[];
   /** What the model wrote when the lead gets a fixed line instead. */
   modelReply: string | null;
   /** Public files from Conocimiento that the assistant would send on this turn. */

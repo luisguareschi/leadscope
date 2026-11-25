@@ -26,7 +26,7 @@ const RULES = [
   },
   {
     title: "Formato de salida",
-    text: "Responde mediante submit_turn con el mensaje, los datos extraídos y la intención. El motor controla el estado de la conversación.",
+    text: "Responde mediante submit_turn con uno o más mensajes cortos, los datos extraídos y la intención. El motor controla el estado de la conversación.",
   },
   {
     title: "Paso a Por contactar",

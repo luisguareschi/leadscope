@@ -71,6 +71,7 @@ import type {
   KnowledgeList,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { filePreviewKind } from "./file-preview-dialog";
 import { MoveDialog, type MoveRequest } from "./move-dialog";
 import { NameDialog, splitExtension, type NameRequest } from "./name-dialog";
 import { rowMotion } from "./row-motion";
@@ -637,6 +638,7 @@ export function KnowledgeBrowser({
                   );
                 }
                 const { file } = row;
+                const previewKind = filePreviewKind(file);
                 const item: MoveRequest = {
                   kind: "file",
                   id: file.id,
@@ -672,11 +674,11 @@ export function KnowledgeBrowser({
                         <button
                           type="button"
                           onClick={() =>
-                            file.charCount > 0
+                            previewKind !== "none"
                               ? onPreview(file)
                               : file.hasFile
                                 ? void downloadFile(file)
-                                : onPreview(file)
+                                : undefined
                           }
                           className="flex min-w-0 items-center gap-2 text-left text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
                         >
@@ -752,10 +754,13 @@ export function KnowledgeBrowser({
                             <EllipsisVerticalIcon />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="min-w-52">
-                            {file.charCount > 0 ? (
+                            {previewKind !== "none" ? (
                               <DropdownMenuItem onClick={() => onPreview(file)}>
                                 <EyeIcon />
-                                Ver texto
+                                {previewKind === "image" ||
+                                previewKind === "pdf"
+                                  ? "Previsualizar"
+                                  : "Ver texto"}
                               </DropdownMenuItem>
                             ) : null}
                             {file.hasFile ? (
