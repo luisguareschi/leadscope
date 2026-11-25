@@ -1,5 +1,14 @@
 import { randomUUID } from "node:crypto";
 
+export type SendMediaInput = {
+  to: string;
+  kind: "image" | "document";
+  data: Buffer;
+  mimeType: string;
+  fileName: string;
+  caption?: string;
+};
+
 /**
  * Outbound WhatsApp for one company. Kapso is the provider that ships; another one plugs in by
  * implementing this type and its own webhook route.
@@ -15,6 +24,7 @@ export type Channel = {
     name: string;
     language: string;
   }): Promise<{ waMessageId: string }>;
+  sendMedia(input: SendMediaInput): Promise<{ waMessageId: string }>;
   /** Marks the lead's message as read and shows "typing…" while the reply is prepared. Best effort. */
   markReadWithTyping(waMessageId: string): Promise<void>;
 };
@@ -32,8 +42,11 @@ export class ChannelError extends Error {
 
 export type SentFakeMessage = {
   to: string;
-  kind: "text" | "template";
+  kind: "text" | "template" | "image" | "document";
   body: string;
+  fileName?: string;
+  mimeType?: string;
+  sizeBytes?: number;
   waMessageId: string;
   at: Date;
 };
@@ -62,6 +75,21 @@ export class FakeChannel implements Channel {
       to,
       kind: "template",
       body: name,
+      waMessageId,
+      at: new Date(),
+    });
+    return { waMessageId };
+  }
+
+  async sendMedia(input: SendMediaInput) {
+    const waMessageId = `wamid.fake.${randomUUID()}`;
+    this.sent.push({
+      to: input.to,
+      kind: input.kind,
+      body: input.caption ?? "",
+      fileName: input.fileName,
+      mimeType: input.mimeType,
+      sizeBytes: input.data.length,
       waMessageId,
       at: new Date(),
     });

@@ -9,6 +9,8 @@ import { updateKnowledgeFile } from "./update-knowledge-file.service.js";
 const bodySchema = z.strictObject({
   name: z.string().max(400).optional(),
   folderId: folderRefSchema.optional(),
+  visibility: z.enum(["internal", "public"]).optional(),
+  description: z.string().max(300).nullable().optional(),
 });
 
 export function updateKnowledgeFileController(ctx: AppContext): RequestHandler {

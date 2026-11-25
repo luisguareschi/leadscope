@@ -300,3 +300,92 @@ describe("company scoping", () => {
     ]);
   });
 });
+
+describe("custom pipeline stages, disqualified, and no_response (LUI-15/16/17)", () => {
+  it("supports disqualified, no_response, and company-defined custom stages", async () => {
+    const settings = await request(app)
+      .get("/internal/settings")
+      .set(asAna)
+      .expect(200);
+    const nextConfig = {
+      ...settings.body.config,
+      stages: [
+        ...settings.body.config.stages,
+        {
+          key: "visit_scheduled",
+          label: "Visita agendada",
+          color: "purple",
+          system: false,
+        },
+      ],
+    };
+    await request(app)
+      .put("/internal/settings/config")
+      .set(asAna)
+      .send(nextConfig)
+      .expect(200);
+
+    const thread = await makeThread({
+      ...handedOff(30),
+      crmContactId: "fake-contact-custom",
+    });
+
+    const disq = await setStage(thread.id, "disqualified").expect(200);
+    expect(disq.body.thread).toMatchObject({
+      stage: "disqualified",
+      state: "closed",
+    });
+
+    const noResp = await setStage(thread.id, "no_response").expect(200);
+    expect(noResp.body.thread).toMatchObject({ stage: "no_response" });
+
+    const custom = await setStage(thread.id, "visit_scheduled").expect(200);
+    expect(custom.body.thread).toMatchObject({
+      stage: "visit_scheduled",
+      state: "answer",
+    });
+
+    // Advancing from contacted to a custom stage preserves contactedAt/contactedBy (#8).
+    const contacted = await setStage(thread.id, "contacted").expect(200);
+    const contactedAt = contacted.body.thread.contactedAt;
+    expect(contactedAt).toBeTruthy();
+    const movedCustom = await setStage(thread.id, "visit_scheduled").expect(
+      200,
+    );
+    expect(movedCustom.body.thread.contactedAt).toBe(contactedAt);
+    expect(movedCustom.body.thread.contactedBy).toBe("ana@altamira.uy");
+
+    const filtered = await request(app)
+      .get("/internal/threads?stage=visit_scheduled")
+      .set(asAna)
+      .expect(200);
+    expect(filtered.body.threads).toHaveLength(1);
+    expect(filtered.body.threads[0].stage).toBe("visit_scheduled");
+
+    await ctx.crm.drain();
+    const crmSummary =
+      ctx.integrations.fakes.crm.contacts.get("+59899000001")?.lead.summary;
+    expect(crmSummary).toContain("Estado: Visita agendada");
+    expect(crmSummary).toContain("Etapa: Visita agendada");
+
+    // Base assistant stages are strictly read-only (label and color cannot be edited).
+    await request(app)
+      .put("/internal/settings/config")
+      .set(asAna)
+      .send({
+        ...settings.body.config,
+        stages: settings.body.config.stages.map(
+          (s: {
+            key: string;
+            label: string;
+            color: string;
+            system: boolean;
+          }) =>
+            s.key === "qualifying"
+              ? { ...s, label: "Otro", color: "error" }
+              : s,
+        ),
+      })
+      .expect(400);
+  });
+});

@@ -5,6 +5,7 @@ import WordExtractor from "word-extractor";
 import * as XLSX from "xlsx";
 import {
   formatFromFilename,
+  isMediaOnlyFormat,
   matchesContainer,
   type KnowledgeFormat,
 } from "./formats.js";
@@ -160,6 +161,10 @@ async function extractRaw(
     case "md":
     case "json":
       return decodeText(data);
+    case "jpg":
+    case "png":
+    case "webp":
+      return "";
   }
 }
 
@@ -168,12 +173,13 @@ export type ExtractedKnowledge = { format: KnowledgeFormat; text: string };
 export async function extractKnowledgeText(
   filename: string,
   data: Buffer,
+  options: { allowEmptyText?: boolean } = {},
 ): Promise<ExtractedKnowledge> {
   const format = formatFromFilename(filename);
   if (!format) {
     throw new KnowledgeExtractionError(
       "unsupported_format",
-      "Formato no soportado. Sube PDF, Word, Excel, PowerPoint, CSV, texto o Markdown.",
+      "Formato no soportado. Sube PDF, Word, Excel, PowerPoint, CSV, texto, Markdown o imágenes (JPG, PNG, WebP).",
     );
   }
   if (!matchesContainer(format, data)) {
@@ -181,6 +187,9 @@ export async function extractKnowledgeText(
       "corrupt_file",
       "El archivo está dañado o no coincide con su extensión.",
     );
+  }
+  if (isMediaOnlyFormat(format)) {
+    return { format, text: "" };
   }
   let raw: string;
   try {
@@ -192,11 +201,11 @@ export async function extractKnowledgeText(
     );
   }
   const text = normalizeText(raw);
-  if (!text) {
+  if (!text && !options.allowEmptyText) {
     throw new KnowledgeExtractionError(
       "empty_text",
       format === "pdf"
-        ? "El PDF no tiene texto seleccionable y parece escaneado. Sube una versión con texto."
+        ? "El PDF no tiene texto seleccionable y parece escaneado. Sube una versión con texto o márcalo como archivo público."
         : "El archivo no tiene texto.",
     );
   }

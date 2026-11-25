@@ -1,4 +1,5 @@
 import type { AppContext } from "../../context.js";
+import { removeStorageIfUnreferenced } from "../../integrations/storage/cleanup.js";
 import { badRequest } from "../../lib/http-error.js";
 import { removeAuthUserIfUnused } from "../operators/remove-auth-user.js";
 
@@ -25,8 +26,22 @@ export async function deleteCompany(
       "Para eliminarla, escribe el identificador exacto de la empresa.",
       "slug_mismatch",
     );
+  const [knowledgePaths, messagePaths] = await Promise.all([
+    ctx.db.knowledgeFile.findMany({
+      where: { companyId, storagePath: { not: null } },
+      select: { storagePath: true },
+    }),
+    ctx.db.message.findMany({
+      where: { companyId, mediaPath: { not: null } },
+      select: { mediaPath: true },
+    }),
+  ]);
   await ctx.db.company.delete({ where: { id: company.id } });
   ctx.logger.warn({ companyId, slug: company.slug }, "company deleted");
+  await removeStorageIfUnreferenced(ctx, [
+    ...knowledgePaths.map((f) => f.storagePath),
+    ...messagePaths.map((m) => m.mediaPath),
+  ]);
 
   const authUsers = { removed: 0, kept: 0, failed: [] as string[] };
   for (const operator of company.operators) {

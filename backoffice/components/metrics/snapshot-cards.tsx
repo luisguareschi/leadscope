@@ -80,6 +80,7 @@ export function SnapshotCards({
             variant="link"
             size="sm"
             className="px-0"
+            nativeButton={false}
             render={<Link href="/threads?stage=to_contact" />}
           >
             Ver cola
@@ -108,6 +109,7 @@ export function SnapshotCards({
             variant="link"
             size="sm"
             className="px-0"
+            nativeButton={false}
             render={<Link href="/threads?bot=needs_human" />}
           >
             Ver conversaciones

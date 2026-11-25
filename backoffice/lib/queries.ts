@@ -7,7 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { ApiError, apiFetch } from "./api";
+import { ApiError, API_URL, apiFetch } from "./api";
 import { useAuth } from "./auth";
 import { COMPANY_ID_HEADER, supportCompanyIdFor } from "./support";
 import type {
@@ -18,6 +18,7 @@ import type {
   KnowledgeFile,
   KnowledgeFolder,
   KnowledgeList,
+  KnowledgeVisibility,
   LeadStage,
   CompaniesList,
   CompanyConfig,
@@ -223,18 +224,64 @@ export function useAssistantTestTurn() {
   });
 }
 
-/** An operator writes to the lead through the company's WhatsApp number. */
+export type SendMessageInput =
+  string | { body?: string; file?: File; knowledgeFileId?: string };
+
+/** An operator writes text or sends media to the lead through the company's WhatsApp number. */
 export function useSendMessage(id: string) {
   const api = useApi();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (body: string) =>
-      api<{ thread: Thread; message: ChatMessage }>(
+    mutationFn: (input: SendMessageInput) => {
+      if (typeof input !== "string" && input.file) {
+        const form = new FormData();
+        if (input.body?.trim()) form.append("body", input.body.trim());
+        form.append("file", input.file);
+        return api<{ thread: Thread; message: ChatMessage }>(
+          `/internal/threads/${id}/messages`,
+          { method: "POST", body: form },
+        );
+      }
+      const payload =
+        typeof input === "string"
+          ? { body: input }
+          : {
+              ...(input.body?.trim() ? { body: input.body.trim() } : {}),
+              ...(input.knowledgeFileId
+                ? { knowledgeFileId: input.knowledgeFileId }
+                : {}),
+            };
+      return api<{ thread: Thread; message: ChatMessage }>(
         `/internal/threads/${id}/messages`,
-        { method: "POST", body: JSON.stringify({ body }) },
-      ),
+        { method: "POST", body: JSON.stringify(payload) },
+      );
+    },
     onSuccess: () => client.invalidateQueries({ queryKey: ["threads"] }),
   });
+}
+
+/** Downloads an authenticated binary endpoint (message media or knowledge file) as a Blob. */
+export function useFetchBlob() {
+  const { getToken, email } = useAuth();
+  return useCallback(
+    async (path: string): Promise<Blob> => {
+      const companyId = supportCompanyIdFor(email);
+      const token = await getToken();
+      if (!token)
+        throw new ApiError(401, "Tu sesión terminó. Vuelve a entrar.");
+      const response = await fetch(`${API_URL}${path}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(companyId ? { [COMPANY_ID_HEADER]: companyId } : {}),
+        },
+      });
+      if (!response.ok) {
+        throw new ApiError(response.status, "No se pudo descargar el archivo.");
+      }
+      return response.blob();
+    },
+    [getToken, email],
+  );
 }
 
 export function useDeleteThread() {
@@ -286,14 +333,20 @@ export function useUploadKnowledgeFile() {
       file,
       replaceId,
       folderId,
+      visibility,
+      description,
     }: {
       file: File;
       replaceId?: string;
       /** Where a new upload goes; null or missing is the root. */
       folderId?: string | null;
+      visibility?: KnowledgeVisibility;
+      description?: string;
     }) => {
       const body = new FormData();
       if (folderId) body.append("folderId", folderId);
+      if (visibility) body.append("visibility", visibility);
+      if (description) body.append("description", description);
       body.append("file", file);
       return replaceId
         ? api<UploadResult>(`/internal/knowledge/files/${replaceId}`, {
@@ -336,6 +389,8 @@ export type KnowledgeFileChange = {
   id: string;
   name?: string;
   folderId?: string | null;
+  visibility?: KnowledgeVisibility;
+  description?: string | null;
 };
 
 export function useUpdateKnowledgeFile() {

@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { ChannelError } from "../../src/integrations/whatsapp/channel.js";
-import { createKapsoChannel } from "../../src/integrations/whatsapp/kapso/kapso-channel.js";
+import {
+  createKapsoChannel,
+  downloadKapsoMedia,
+  parseAllowedMediaUrl,
+} from "../../src/integrations/whatsapp/kapso/kapso-channel.js";
 import { checkKapsoConnection } from "../../src/integrations/whatsapp/kapso/kapso-connection.js";
 import {
   isValidKapsoSignature,
@@ -184,6 +188,61 @@ describe("parseKapsoWebhook", () => {
       withoutPhone: 0,
     });
   });
+
+  it("reads Kapso audio transcripts and inbound image media metadata", () => {
+    const audioStr = receivedEvent({
+      id: "wamid.aud1",
+      type: "audio",
+      text: undefined,
+      audio: { id: "aud-1", mime_type: "audio/ogg" },
+      kapso: {
+        direction: "inbound",
+        origin: "cloud_api",
+        transcript: "Hola, quiero saber precios",
+      },
+    });
+    const audioObj = receivedEvent({
+      id: "wamid.aud2",
+      type: "audio",
+      text: undefined,
+      audio: { id: "aud-2" },
+      kapso: {
+        direction: "inbound",
+        origin: "cloud_api",
+        transcript: { text: "Busco 2 dormitorios" },
+      },
+    });
+    const image = receivedEvent({
+      id: "wamid.img1",
+      type: "image",
+      text: undefined,
+      image: { id: "img-1", mime_type: "image/jpeg", caption: "Este plano" },
+      kapso: {
+        direction: "inbound",
+        origin: "cloud_api",
+        media_url: "https://cdn.kapso.ai/img-1.jpg",
+        media_data: { content_type: "image/jpeg", filename: "plano.jpg" },
+      },
+    });
+    expect(parseKapsoWebhook(RECEIVED, audioStr).messages[0]).toMatchObject({
+      type: "audio",
+      body: "Hola, quiero saber precios",
+      mediaId: "aud-1",
+      mediaMimeType: "audio/ogg",
+    });
+    expect(parseKapsoWebhook(RECEIVED, audioObj).messages[0]).toMatchObject({
+      type: "audio",
+      body: "Busco 2 dormitorios",
+    });
+    expect(parseKapsoWebhook(RECEIVED, image).messages[0]).toMatchObject({
+      type: "image",
+      body: "Este plano",
+      mediaId: "img-1",
+      mediaUrl: "https://cdn.kapso.ai/img-1.jpg",
+      mediaMimeType: "image/jpeg",
+      mediaFileName: "plano.jpg",
+    });
+  });
 });
 
 describe("Kapso webhook signature", () => {
@@ -348,6 +407,95 @@ describe("Kapso channel", () => {
     await expect(
       channelWith(fetchImpl).sendText({ to: "1", body: "x" }),
     ).rejects.toThrow("no message id");
+  });
+
+  it("uploads and sends image and document media via Kapso", async () => {
+    const fetchImpl = mockFetch((url) =>
+      url.endsWith("/media")
+        ? Response.json({ id: "media-999" })
+        : Response.json({ messages: [{ id: "wamid.media-1" }] }),
+    );
+    const result = await channelWith(fetchImpl).sendMedia({
+      to: "59899111222",
+      kind: "document",
+      data: Buffer.from("%PDF-1.4"),
+      mimeType: "application/pdf",
+      fileName: "brochure.pdf",
+      caption: "Aquí tienes el brochure",
+    });
+    expect(result).toEqual({ waMessageId: "wamid.media-1" });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(String(fetchImpl.mock.calls[0]![0])).toBe(
+      "https://api.kapso.ai/meta/whatsapp/v24.0/647015955153740/media",
+    );
+    expect(callOf(fetchImpl, 1).body).toEqual({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: "59899111222",
+      type: "document",
+      document: {
+        id: "media-999",
+        filename: "brochure.pdf",
+        caption: "Aquí tienes el brochure",
+      },
+    });
+  });
+
+  it("blocks SSRF hosts, prevents X-API-Key exfiltration, and caps streaming downloads (Critical #3)", async () => {
+    const base = "https://api.kapso.ai";
+    expect(
+      parseAllowedMediaUrl("http://169.254.169.254/latest/meta-data", base),
+    ).toBeNull();
+    expect(
+      parseAllowedMediaUrl("http://127.0.0.1:3001/health", base),
+    ).toBeNull();
+    expect(
+      parseAllowedMediaUrl("https://evil-kapso.ai/img.png", base),
+    ).toBeNull();
+    expect(
+      parseAllowedMediaUrl("https://kapso.ai@evil.com/img.png", base),
+    ).toBeNull();
+    expect(
+      parseAllowedMediaUrl("https://api.kapso.ai.evil.com/img.png", base),
+    ).toBeNull();
+    expect(
+      parseAllowedMediaUrl("http://cdn.kapso.ai/img.png", base),
+    ).toBeNull();
+
+    expect(
+      parseAllowedMediaUrl("https://api.kapso.ai/meta/v24.0/media/1", base),
+    ).toEqual({
+      url: "https://api.kapso.ai/meta/v24.0/media/1",
+      sendApiKey: true,
+    });
+    expect(parseAllowedMediaUrl("https://cdn.kapso.ai/img.png", base)).toEqual({
+      url: "https://cdn.kapso.ai/img.png",
+      sendApiKey: false,
+    });
+
+    // Does not send X-API-Key to CDN subdomain and aborts oversized chunked streams.
+    const cdnFetch = mockFetch(
+      () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new Uint8Array(60));
+              controller.enqueue(new Uint8Array(60));
+              controller.close();
+            },
+          }),
+          { status: 200, headers: { "content-type": "image/png" } },
+        ),
+    );
+    const tooBig = await downloadKapsoMedia({
+      apiKey: "secret-key",
+      mediaUrl: "https://cdn.kapso.ai/big.png",
+      maxBytes: 100,
+      fetchImpl: cdnFetch,
+    });
+    expect(tooBig).toBeNull();
+    expect(cdnFetch.mock.calls[0]![1]?.headers).toBeUndefined();
+    expect(cdnFetch.mock.calls[0]![1]?.redirect).toBe("error");
   });
 });
 

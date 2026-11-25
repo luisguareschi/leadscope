@@ -51,6 +51,10 @@ const CONDITIONS = [
     title: "Retención de mensajes en 30 días.",
     text: "En planes de pago de Kapso, configura Project settings → Message retention en 30 días.",
   },
+  {
+    title: "Transcripción de audios activa.",
+    text: "Verifica en Project settings de Kapso que la transcripción automática de notas de voz entrantes esté activada para que el asistente pueda entender audios sin servicios externos.",
+  },
 ];
 
 function PhoneNumberIdRow({ settings }: { settings: CompanySettings }) {

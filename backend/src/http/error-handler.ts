@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import multer from "multer";
 import type { AppContext } from "../context.js";
+import { StorageError } from "../integrations/storage/storage.js";
 import { HttpError } from "../lib/http-error.js";
 import { reportError } from "../lib/monitoring.js";
 
@@ -53,6 +54,15 @@ export function errorHandler(ctx: AppContext): ErrorRequestHandler {
           message: tooLarge
             ? "El archivo es demasiado grande."
             : "No se pudo leer el archivo enviado.",
+        },
+      });
+      return;
+    }
+    if (error instanceof StorageError && error.status === 404) {
+      res.status(404).json({
+        error: {
+          code: "not_found",
+          message: "Archivo no disponible.",
         },
       });
       return;

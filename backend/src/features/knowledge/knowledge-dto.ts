@@ -17,8 +17,12 @@ export function toKnowledgeFileDto(
     format: file.format,
     formatLabel:
       KNOWLEDGE_FORMATS[file.format as KnowledgeFormat]?.label ?? file.format,
+    mimeType: file.mimeType,
     sizeBytes: file.sizeBytes,
     charCount: file.charCount,
+    visibility: file.visibility,
+    hasFile: Boolean(file.storagePath),
+    description: file.description ?? null,
     uploadedBy: file.uploadedBy?.email ?? null,
     createdAt: file.createdAt,
     updatedAt: file.updatedAt,

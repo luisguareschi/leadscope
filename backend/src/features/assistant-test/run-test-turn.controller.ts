@@ -1,5 +1,10 @@
 import type { RequestHandler } from "express";
 import { z } from "zod";
+import {
+  companyNameSchema,
+  MAX_INSTRUCTIONS_CHARS,
+  parseEditableConfig,
+} from "../../companies/editable-config.js";
 import type { AppContext } from "../../context.js";
 import { MAX_SUMMARY_CHARS } from "../../engine/turn.js";
 import { companyAccessOf } from "../../http/company-access.js";
@@ -17,7 +22,12 @@ export const MAX_HISTORY_CHARS = 60_000;
 
 const leadSchema = z.strictObject({
   state: z.enum(["greeting", "qualify", "answer", "handoff", "closed"]),
-  stage: z.enum(["qualifying", "to_contact", "contacted", "not_interested"]),
+  stage: z
+    .string()
+    .trim()
+    .min(1)
+    .max(40)
+    .regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, "Etapa no válida."),
   // The engine stores the model's values as they come, so any value it returned must come back.
   // The body limit is what bounds them.
   collected: z
@@ -25,6 +35,18 @@ const leadSchema = z.strictObject({
     .refine((value) => Object.keys(value).length <= 10, "Hasta 10 datos."),
   callTime: z.string().max(MAX_HISTORY_CHARS).nullable(),
   summary: z.string().max(MAX_SUMMARY_CHARS).nullable(),
+});
+
+const draftSchema = z.strictObject({
+  companyName: companyNameSchema.optional(),
+  config: z.unknown().optional(),
+  instructions: z
+    .string()
+    .max(
+      MAX_INSTRUCTIONS_CHARS,
+      `Máximo ${MAX_INSTRUCTIONS_CHARS} caracteres en las instrucciones.`,
+    )
+    .optional(),
 });
 
 const bodySchema = z
@@ -40,6 +62,7 @@ const bodySchema = z
       .max(MAX_MESSAGES, `Hasta ${MAX_MESSAGES} mensajes.`),
     lead: leadSchema.optional(),
     leadName: z.string().max(80).nullable().optional(),
+    draft: draftSchema.optional(),
   })
   .refine((body) => body.messages.at(-1)?.role === "lead", {
     message: "El último mensaje debe ser del lead.",
@@ -63,6 +86,23 @@ export function runTestTurnController(ctx: AppContext): RequestHandler {
   return async (req, res) => {
     const access = companyAccessOf(req);
     const body = parseInput(bodySchema, req.body);
-    res.json(await runTestTurn(ctx, access.companyId, body));
+    const draft = body.draft
+      ? {
+          companyName: body.draft.companyName,
+          config:
+            body.draft.config !== undefined
+              ? parseEditableConfig(body.draft.config)
+              : undefined,
+          instructions: body.draft.instructions,
+        }
+      : undefined;
+    res.json(
+      await runTestTurn(ctx, access.companyId, {
+        messages: body.messages,
+        lead: body.lead,
+        leadName: body.leadName,
+        draft,
+      }),
+    );
   };
 }

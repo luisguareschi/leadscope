@@ -301,10 +301,13 @@ describe("a bot turn", () => {
     expect(saved.messages.at(-3)?.body).toBe(
       "La entrega es en diciembre de 2027.",
     );
-    // HubSpot shows the close, while the advisor still has the lead in the queue.
+    // HubSpot stays consistent with Por contactar instead of contradicting it with Cerrado.
     expect(
       ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary,
-    ).toContain("Estado: Cerrado, sin interés\nEtapa: Por contactar");
+    ).toContain("Estado: Derivado a asesor\nEtapa: Por contactar");
+    expect(
+      ctx.integrations.fakes.crm.contacts.get("+59899111222")?.lead.summary,
+    ).not.toContain("Cerrado, sin interés");
   });
 
   it("does not let a turn overwrite Contactado set by a person while the model was answering", async () => {

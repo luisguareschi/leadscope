@@ -1,7 +1,32 @@
 import { z } from "zod";
+import {
+  DEFAULT_STAGES,
+  normalizeStages,
+  STAGE_COLORS,
+  type StageConfig,
+} from "../engine/stages.js";
 
 /** Hard ceiling for any upload. A company's own `knowledge.maxFileBytes` cannot go above it. */
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+export const DEFAULT_FOLLOW_UP = {
+  enabled: false,
+  delayHours: 4,
+  maxCount: 1,
+};
+
+export const DEFAULT_INACTIVITY = {
+  noResponseHours: 24 as number | null,
+};
+
+const stageConfigSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  color: z.enum(STAGE_COLORS).default("muted"),
+  system: z.boolean().default(false),
+});
+
+export type { StageConfig };
 
 export const DEFAULT_KNOWLEDGE_LIMITS = {
   /** Raw upload size. PDFs with images are large even when their text is small. */
@@ -171,6 +196,41 @@ const configShape = z.object({
         .default(null),
     })
     .default({ welcomeTemplate: null }),
+  /** Pipeline stages for this company: all 6 system stages plus optional custom stages. */
+  stages: z
+    .array(stageConfigSchema)
+    .default(() => DEFAULT_STAGES.map((stage) => ({ ...stage })))
+    .transform((stages) => normalizeStages(stages)),
+  /** Automatic bot-generated follow-up within WhatsApp's 24-hour window while qualifying. */
+  followUp: z
+    .object({
+      enabled: z.boolean().default(DEFAULT_FOLLOW_UP.enabled),
+      delayHours: z
+        .number()
+        .int()
+        .min(1)
+        .max(20)
+        .default(DEFAULT_FOLLOW_UP.delayHours),
+      maxCount: z
+        .number()
+        .int()
+        .min(1)
+        .max(2)
+        .default(DEFAULT_FOLLOW_UP.maxCount),
+    })
+    .default(DEFAULT_FOLLOW_UP),
+  /** Auto-transition silent qualifying threads to `no_response` after N hours (null disables). */
+  inactivity: z
+    .object({
+      noResponseHours: z
+        .number()
+        .int()
+        .min(1)
+        .max(720)
+        .nullable()
+        .default(DEFAULT_INACTIVITY.noResponseHours),
+    })
+    .default(DEFAULT_INACTIVITY),
 });
 
 export const companyConfigSchema = z.preprocess(

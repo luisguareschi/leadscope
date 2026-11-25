@@ -4,10 +4,15 @@ import type { AppContext } from "../../context.js";
 import { companyAccessOf } from "../../http/company-access.js";
 import { parseInput } from "../../http/validate.js";
 import { listThreads } from "./list-threads.service.js";
-import { ASSIGNEE_FILTERS, BOT_FILTERS, STAGE_FILTERS } from "./thread-dto.js";
+import { ASSIGNEE_FILTERS, BOT_FILTERS } from "./thread-dto.js";
 
 const querySchema = z.object({
-  stage: z.enum(STAGE_FILTERS).default("all"),
+  stage: z
+    .string()
+    .trim()
+    .max(40)
+    .regex(/^all$|^[a-zA-Z][a-zA-Z0-9_]*$/, "Etapa no válida.")
+    .default("all"),
   bot: z.enum(BOT_FILTERS).default("all"),
   assignee: z.enum(ASSIGNEE_FILTERS).default("all"),
   search: z.string().max(100).optional(),

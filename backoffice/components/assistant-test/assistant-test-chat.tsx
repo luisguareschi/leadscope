@@ -10,6 +10,7 @@ import {
   CircleAlertIcon,
   OctagonPauseIcon,
   MessagesSquareIcon,
+  PaperclipIcon,
   SendHorizontalIcon,
   UserRoundIcon,
 } from "lucide-react";
@@ -45,6 +46,7 @@ function toChatMessage(message: TestChatMessage): ChatMessage {
     error: null,
     sentAt: message.sentAt,
     sentBy: null,
+    media: null,
   };
 }
 
@@ -200,6 +202,20 @@ export function AssistantTestChat({
     if (!test || test.role !== "assistant") return null;
     return (
       <>
+        {test.sentFiles && test.sentFiles.length > 0 ? (
+          <div className="mt-1.5 flex max-w-[85%] flex-wrap gap-1.5 self-start sm:max-w-[70%]">
+            {test.sentFiles.map((file) => (
+              <span
+                key={file.id}
+                className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs text-muted-foreground ring-1 ring-border/60 dark:bg-secondary dark:ring-0"
+              >
+                <PaperclipIcon className="size-3 shrink-0" />
+                Enviaría:{" "}
+                <span className="font-medium text-foreground">{file.path}</span>
+              </span>
+            ))}
+          </div>
+        ) : null}
         {test.modelReply ? <ModelReplyNote text={test.modelReply} /> : null}
         {test.stoppedReason ? (
           <div className="mt-2 flex max-w-[85%] items-start gap-2 self-start rounded-xl bg-primary/10 px-3.5 py-2.5 text-[13px] leading-relaxed sm:max-w-[70%]">

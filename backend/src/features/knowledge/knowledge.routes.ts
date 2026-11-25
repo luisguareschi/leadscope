@@ -3,6 +3,7 @@ import type { AppContext } from "../../context.js";
 import { createKnowledgeFolderController } from "./create-knowledge-folder.controller.js";
 import { deleteKnowledgeFileController } from "./delete-knowledge-file.controller.js";
 import { deleteKnowledgeFolderController } from "./delete-knowledge-folder.controller.js";
+import { downloadKnowledgeFileController } from "./download-knowledge-file.controller.js";
 import { getKnowledgeFileController } from "./get-knowledge-file.controller.js";
 import { listKnowledgeFilesController } from "./list-knowledge-files.controller.js";
 import { replaceKnowledgeFileController } from "./replace-knowledge-file.controller.js";
@@ -15,6 +16,7 @@ export function knowledgeRoutes(ctx: AppContext): Router {
   const router = Router();
   router.get("/files", listKnowledgeFilesController(ctx));
   router.get("/files/:id", getKnowledgeFileController(ctx));
+  router.get("/files/:id/download", downloadKnowledgeFileController(ctx));
   router.post("/files", singleFileUpload, uploadKnowledgeFileController(ctx));
   router.put(
     "/files/:id",

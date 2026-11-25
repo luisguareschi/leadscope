@@ -1,12 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   BotIcon,
   CheckCheckIcon,
   CheckIcon,
   CircleAlertIcon,
   ContactIcon,
+  DownloadIcon,
   FileIcon,
   ImageIcon,
   LayoutTemplateIcon,
@@ -16,7 +17,9 @@ import {
   UserRoundIcon,
   VideoIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 import { formatDayLabel, formatTime } from "@/lib/format";
+import { useFetchBlob } from "@/lib/queries";
 import { operatorName } from "@/lib/thread-status";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/types";
@@ -32,6 +35,115 @@ const TYPE_META: Record<string, { label: string; icon: React.ReactNode }> = {
   contacts: { label: "Contacto", icon: <ContactIcon /> },
   template: { label: "Plantilla de bienvenida", icon: <LayoutTemplateIcon /> },
 };
+
+const SAFE_INLINE_IMAGE_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+
+function MessageMedia({
+  threadId,
+  message,
+  right,
+}: {
+  threadId: string;
+  message: ChatMessage;
+  right: boolean;
+}) {
+  const fetchBlob = useFetchBlob();
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const media = message.media;
+  const hasMedia = Boolean(media);
+  const mime = media?.mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
+  const isImage = SAFE_INLINE_IMAGE_MIMES.has(mime);
+  const path = `/internal/threads/${threadId}/messages/${message.id}/media`;
+
+  useEffect(() => {
+    if (!hasMedia || !isImage) return;
+    let active = true;
+    let objectUrl: string | null = null;
+    void fetchBlob(path)
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setImageUrl(objectUrl);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [hasMedia, isImage, fetchBlob, path]);
+
+  if (!media) return null;
+
+  const download = async () => {
+    setDownloading(true);
+    try {
+      const blob = await fetchBlob(path);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = media.fileName ?? "archivo";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5_000);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "No se pudo descargar el archivo.",
+      );
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  if (isImage && imageUrl) {
+    return (
+      <div className="mb-1.5 overflow-hidden rounded-xl">
+        <a
+          href={imageUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="block"
+          title={media.fileName ?? "Abrir imagen"}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl}
+            alt={media.fileName ?? "Imagen adjunta"}
+            className="max-h-64 max-w-full rounded-xl object-contain"
+          />
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void download()}
+      disabled={downloading}
+      className={cn(
+        "mb-1.5 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium transition-opacity hover:opacity-85",
+        right
+          ? "bg-white/15 text-bubble-foreground"
+          : "bg-muted text-foreground",
+      )}
+    >
+      <FileIcon className="size-4 shrink-0" />
+      <span className="min-w-0 flex-1 truncate">
+        {media.fileName ?? "Archivo adjunto"}
+      </span>
+      <DownloadIcon className="size-3.5 shrink-0 opacity-75" />
+    </button>
+  );
+}
 
 function DeliveryStatus({ status }: { status: string | null }) {
   if (status === "failed") {
@@ -52,11 +164,13 @@ function DeliveryStatus({ status }: { status: string | null }) {
 }
 
 function Bubble({
+  threadId,
   message,
   continued,
   showDelivery,
   rightSide,
 }: {
+  threadId?: string;
   message: ChatMessage;
   /** Same side as the message before it: tighter spacing, no tail. */
   continued: boolean;
@@ -66,7 +180,12 @@ function Bubble({
   const outbound = message.direction === "outbound";
   // The right side is "ours": the accent bubble. The panel's own messages, or the lead's in the test chat.
   const right = message.direction === rightSide;
-  const meta = message.type === "text" ? null : TYPE_META[message.type];
+  const meta =
+    message.type === "text"
+      ? null
+      : message.type === "audio" && message.body
+        ? { label: "Nota de voz (transcripción)", icon: <MicIcon /> }
+        : TYPE_META[message.type];
   return (
     <div
       className={cn(
@@ -97,12 +216,15 @@ function Bubble({
             {meta.label}
           </div>
         ) : null}
+        {threadId && message.media ? (
+          <MessageMedia threadId={threadId} message={message} right={right} />
+        ) : null}
         {message.body ? (
           <p className="wrap-break-word whitespace-pre-wrap">
             {renderWhatsapp(message.body)}
           </p>
         ) : null}
-        {!message.body && !meta ? (
+        {!message.body && !meta && !message.media ? (
           <p
             className={cn(
               "italic",
@@ -155,12 +277,14 @@ function Author({ sentBy }: { sentBy: ChatMessage["sentBy"] }) {
 }
 
 export function ChatTranscript({
+  threadId,
   messages,
   after,
   children,
   showDelivery = true,
   rightSide = "outbound",
 }: {
+  threadId?: string;
   messages: ChatMessage[];
   /**
    * Which direction sits on the right. The panel writes as the company, so outbound by default;
@@ -203,6 +327,7 @@ export function ChatTranscript({
               </div>
             ) : null}
             <Bubble
+              threadId={threadId}
               message={message}
               continued={continued}
               showDelivery={showDelivery}

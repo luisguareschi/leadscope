@@ -1,5 +1,6 @@
 import type { AppContext } from "../../context.js";
 import { parseCompanyConfig } from "../../companies/company-config.js";
+import { isSystemStage } from "../../engine/stages.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import type { MetricsRange } from "./metrics-range.js";
 import {
@@ -56,6 +57,8 @@ type DayRow = {
   to_contact: number;
   contacted: number;
   not_interested: number;
+  disqualified: number;
+  no_response: number;
 };
 
 export type AdvisorMetrics = {
@@ -98,6 +101,8 @@ export type CompanyMetrics = {
     toContact: number;
     notInterested: number;
     notInterestedRate: number | null;
+    disqualified: number;
+    noResponse: number;
   };
   forms: {
     leads: number;
@@ -182,6 +187,8 @@ function emptyDay(date: string): DayRow {
     to_contact: 0,
     contacted: 0,
     not_interested: 0,
+    disqualified: 0,
+    no_response: 0,
   };
 }
 
@@ -496,24 +503,44 @@ export async function computeCompanyMetrics(
   let qualifying = 0;
   let toContactInCohort = 0;
   let notInterested = 0;
+  let disqualified = 0;
+  let noResponse = 0;
   let outOfHours = 0;
   let autonomousLeads = 0;
 
   for (const thread of threads) {
     leadsBySource[thread.source] += 1;
     const day = days.get(localParts(thread.createdAt, timeZone).dateStr);
-    if (day) day[thread.stage] += 1;
+    if (day) {
+      if (
+        thread.stage === "qualifying" ||
+        thread.stage === "to_contact" ||
+        thread.stage === "contacted" ||
+        thread.stage === "not_interested" ||
+        thread.stage === "disqualified" ||
+        thread.stage === "no_response"
+      ) {
+        day[thread.stage] += 1;
+      } else {
+        // Custom sales pipeline stages count under contacted in the stacked chart.
+        day.contacted += 1;
+      }
+    }
     if (
       thread.handedOffAt !== null ||
       thread.stage === "to_contact" ||
-      thread.stage === "contacted"
+      thread.stage === "contacted" ||
+      !isSystemStage(thread.stage)
     ) {
       qualified += 1;
     }
-    if (thread.stage === "contacted") contacted += 1;
+    if (thread.stage === "contacted" || !isSystemStage(thread.stage))
+      contacted += 1;
     else if (thread.stage === "qualifying") qualifying += 1;
     else if (thread.stage === "to_contact") toContactInCohort += 1;
     else if (thread.stage === "not_interested") notInterested += 1;
+    else if (thread.stage === "disqualified") disqualified += 1;
+    else if (thread.stage === "no_response") noResponse += 1;
 
     if (isOutOfHours(thread.createdAt, timeZone)) outOfHours += 1;
     if (
@@ -662,6 +689,8 @@ export async function computeCompanyMetrics(
       toContact: toContactInCohort,
       notInterested,
       notInterestedRate: rate(notInterested, leads),
+      disqualified,
+      noResponse,
     },
     forms: {
       leads: formThreadIds.length,

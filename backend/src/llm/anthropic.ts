@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import type { CompanyConfig } from "../companies/company-config.js";
+import type { ChatTurn } from "../engine/history.js";
+import { MAX_FILES_PER_TURN } from "../engine/turn.js";
 import { INTENTS } from "../engine/types.js";
 import type { CompleteInput, CompleteResult, LlmClient } from "./types.js";
 
@@ -48,16 +50,23 @@ export const modelTurnSchema = z.object({
           : null,
     ),
   summary: nullableText,
+  sendFileIds: z
+    .array(z.string())
+    .nullish()
+    .transform((ids) => (ids ?? []).filter((id) => id.trim().length > 0)),
 });
 
 /**
- * The submit_turn tool for one company: `collected` has one property per collect item, and
- * `forbiddenTopic` lists the company's topics. Stable until the config changes, so it caches.
+ * The submit_turn tool for one company: `collected` has one property per collect item,
+ * `forbiddenTopic` lists the company's topics, and `sendFileIds` lists public sendable files
+ * when the company has any. Stable until config/public files change, so it caches.
  */
 export function submitTurnTool(
   config: Pick<CompanyConfig, "collect" | "forbiddenTopics">,
+  sendableFileIds: string[] = [],
 ): Anthropic.Tool {
   const topics = config.forbiddenTopics.describe;
+  const hasSendable = sendableFileIds.length > 0;
   return {
     name: "submit_turn",
     description:
@@ -95,7 +104,7 @@ export function submitTurnTool(
           type: "string",
           enum: [...INTENTS],
           description:
-            '"not_interested" if not interested or asks to stop; "qualified" when the lead is ready for an advisor to contact them (including whenever reply confirms an advisor will call or message them); otherwise "continue".',
+            '"not_interested" if not interested or asks to stop; "disqualified" if interested but does not fit what the company offers; "qualified" when the lead is ready for an advisor to contact them (including whenever reply confirms an advisor will call or message them); otherwise "continue".',
         },
         needsHuman: {
           type: "boolean",
@@ -118,6 +127,17 @@ export function submitTurnTool(
           description:
             'Two to five short bullets, each starting with "- ": the conversation so far and what the lead wants.',
         },
+        ...(hasSendable
+          ? {
+              sendFileIds: {
+                type: "array",
+                maxItems: MAX_FILES_PER_TURN,
+                items: { type: "string", enum: sendableFileIds },
+                description:
+                  "IDs from <sendable_files> to send to the lead on this turn (only public files, at most 2). Empty array [] when no file should be sent.",
+              },
+            }
+          : {}),
       },
       required: [
         "reply",
@@ -128,9 +148,30 @@ export function submitTurnTool(
         "callNow",
         "forbiddenTopic",
         "summary",
+        ...(hasSendable ? ["sendFileIds"] : []),
       ],
     },
   };
+}
+
+function toAnthropicMessages(turns: ChatTurn[]): Anthropic.MessageParam[] {
+  return turns.map((turn) => {
+    if (turn.role === "user" && turn.images && turn.images.length > 0) {
+      const blocks: Anthropic.ContentBlockParam[] = [
+        ...turn.images.map((image): Anthropic.ImageBlockParam => ({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: image.mediaType,
+            data: image.base64,
+          },
+        })),
+        { type: "text", text: turn.content },
+      ];
+      return { role: "user", content: blocks };
+    }
+    return { role: turn.role, content: turn.content };
+  });
 }
 
 const MAX_ATTEMPTS_ON_INVALID_OUTPUT = 2;
@@ -149,7 +190,10 @@ export function createAnthropicClient(
 
   async function callOnce(input: CompleteInput): Promise<CompleteResult> {
     const started = Date.now();
-    const tool = submitTurnTool(input.scenario.config);
+    const sendableIds = (input.scenario.sendableFiles ?? []).map(
+      (file) => file.id,
+    );
+    const tool = submitTurnTool(input.scenario.config, sendableIds);
     const response = await client.messages.create(
       {
         model: input.model,
@@ -163,7 +207,7 @@ export function createAnthropicClient(
           },
           { type: "text", text: input.turnContext },
         ],
-        messages: input.messages,
+        messages: toAnthropicMessages(input.messages),
         tools: [tool],
         tool_choice: {
           type: "tool",

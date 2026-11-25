@@ -1,5 +1,6 @@
 import type {
   TestChatRole,
+  TestDraftOverride,
   TestLead,
   TestTurnRequest,
   TestTurnResponse,
@@ -13,6 +14,7 @@ export type TestChatMessage = {
   sentAt: string;
   modelReply?: string | null;
   stoppedReason?: string | null;
+  sentFiles?: Array<{ id: string; path: string; format: string }>;
 };
 
 export type TestChat = {
@@ -47,7 +49,7 @@ export const MAX_HISTORY_CHARS = 60_000;
 const MAX_REQUEST_BYTES = 95_000;
 
 const STATES = ["greeting", "qualify", "answer", "handoff", "closed"];
-const STAGES = ["qualifying", "to_contact", "contacted", "not_interested"];
+const STAGE_KEY = /^[a-zA-Z][a-zA-Z0-9_]{0,39}$/;
 
 /** A stored lead from an older version, or edited by hand, is dropped rather than sent. */
 function validLead(value: unknown): TestLead | null {
@@ -57,7 +59,8 @@ function validLead(value: unknown): TestLead | null {
   const collected = lead.collected;
   if (
     !STATES.includes(lead.state as string) ||
-    !STAGES.includes(lead.stage as string) ||
+    typeof lead.stage !== "string" ||
+    !STAGE_KEY.test(lead.stage) ||
     !text(lead.callTime) ||
     !text(lead.summary) ||
     !collected ||
@@ -141,6 +144,7 @@ export function buildTurnRequest(
   historyLimit: number,
   lead: TestLead | null,
   leadName: string,
+  draft?: TestDraftOverride | null,
 ): TestTurnRequest {
   const recent = messages.slice(-Math.max(1, historyLimit));
   let total = recent.reduce((sum, message) => sum + message.body.length, 0);
@@ -155,6 +159,7 @@ export function buildTurnRequest(
       .map((message) => ({ role: message.role, body: message.body })),
     ...(lead ? { lead } : {}),
     leadName: leadName.trim() || null,
+    ...(draft ? { draft } : {}),
   };
   while (request.messages.length > 1 && bytesOf(request) > MAX_REQUEST_BYTES)
     request.messages.shift();

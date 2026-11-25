@@ -1,6 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { loadCompanyById } from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
 import type { CompanyAccess } from "../../http/company-access.js";
+import { isMediaOnlyFormat } from "../../integrations/knowledge/formats.js";
+import { removeStorageIfUnreferenced } from "../../integrations/storage/cleanup.js";
+import { HttpError } from "../../lib/http-error.js";
 import { toKnowledgeFileDto } from "./knowledge-dto.js";
 import {
   assertFolder,
@@ -10,48 +14,100 @@ import {
 import {
   assertFitsCompanyTotal,
   prepareKnowledgeFile,
+  type KnowledgeVisibility,
   type UploadedFile,
 } from "./prepare-upload.js";
 
+export function knowledgeStoragePath(companyId: string, name: string): string {
+  const safe = name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "file";
+  return `${companyId}/knowledge/${randomUUID()}-${safe}`;
+}
+
 /**
- * Stores an uploaded file's text in a folder (null is the root). A file with the same name (any
- * case) in that folder replaces the previous version; the same name in another folder is another
- * file.
+ * Stores an uploaded file's text and binary (in Supabase Storage) in a folder (null is the root).
+ * A file with the same name (any case) in that folder replaces the previous version.
  */
 export async function uploadKnowledgeFile(
   ctx: AppContext,
   access: CompanyAccess,
   folderId: string | null,
   file: UploadedFile | undefined,
+  options: {
+    visibility?: KnowledgeVisibility;
+    description?: string | null;
+  } = {},
 ) {
   const company = await loadCompanyById(
     ctx.db,
     access.companyId,
     ctx.encryptionKey,
   );
-  const prepared = await prepareKnowledgeFile(company, file);
-  return withKnowledgeLock(ctx, company.id, async (tx) => {
-    assertFolder(await loadFolders(tx, company.id), folderId);
-    const existing = await tx.knowledgeFile.findFirst({
-      where: { companyId: company.id, folderId, nameKey: prepared.nameKey },
+  const prepared = await prepareKnowledgeFile(
+    company,
+    file,
+    options.visibility,
+  );
+  const { buffer, ...metadata } = prepared;
+  const storagePath = knowledgeStoragePath(company.id, metadata.name);
+  await ctx.storage.upload(storagePath, buffer, metadata.mimeType);
+
+  let oldStoragePath: string | null = null;
+  try {
+    const result = await withKnowledgeLock(ctx, company.id, async (tx) => {
+      assertFolder(await loadFolders(tx, company.id), folderId);
+      const existing = await tx.knowledgeFile.findFirst({
+        where: { companyId: company.id, folderId, nameKey: metadata.nameKey },
+      });
+      await assertFitsCompanyTotal(
+        tx,
+        company,
+        metadata.charCount,
+        existing?.id ?? null,
+      );
+      oldStoragePath = existing?.storagePath ?? null;
+      const description =
+        options.description !== undefined
+          ? options.description?.trim() || null
+          : (existing?.description ?? null);
+      // Preserve an existing file's visibility when replacing by name so dropping an updated
+      // internal file while the Público tab is active never silently exposes it to leads.
+      const visibility = existing
+        ? isMediaOnlyFormat(metadata.format)
+          ? "public"
+          : existing.visibility
+        : metadata.visibility;
+      if (visibility === "internal" && metadata.charCount === 0) {
+        throw new HttpError(
+          422,
+          "No encontramos texto en este archivo. Si es un PDF escaneado, sube una versión con texto o cámbialo a público primero.",
+          "empty_text",
+        );
+      }
+      const data = {
+        uploadedById: access.operatorId,
+        ...metadata,
+        visibility,
+        storagePath,
+        description,
+      };
+      const saved = existing
+        ? await tx.knowledgeFile.update({
+            where: { id: existing.id },
+            data,
+            include: { uploadedBy: { select: { email: true } } },
+          })
+        : await tx.knowledgeFile.create({
+            data: { companyId: company.id, folderId, ...data },
+            include: { uploadedBy: { select: { email: true } } },
+          });
+      return { file: toKnowledgeFileDto(saved), replaced: existing !== null };
     });
-    await assertFitsCompanyTotal(
-      tx,
-      company,
-      prepared.charCount,
-      existing?.id ?? null,
-    );
-    const data = { uploadedById: access.operatorId, ...prepared };
-    const saved = existing
-      ? await tx.knowledgeFile.update({
-          where: { id: existing.id },
-          data,
-          include: { uploadedBy: { select: { email: true } } },
-        })
-      : await tx.knowledgeFile.create({
-          data: { companyId: company.id, folderId, ...data },
-          include: { uploadedBy: { select: { email: true } } },
-        });
-    return { file: toKnowledgeFileDto(saved), replaced: existing !== null };
-  });
+    if (oldStoragePath) {
+      await removeStorageIfUnreferenced(ctx, [oldStoragePath]);
+    }
+    return result;
+  } catch (error) {
+    await ctx.storage.remove([storagePath]).catch(() => undefined);
+    throw error;
+  }
 }

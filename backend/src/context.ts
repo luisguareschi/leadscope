@@ -3,6 +3,7 @@ import type { CrmQueue } from "./conversation/crm-queue.js";
 import type { ReplyScheduler } from "./conversation/reply-scheduler.js";
 import type { AuthAdmin } from "./integrations/auth/auth-admin.js";
 import type { Integrations } from "./integrations/registry.js";
+import type { FileStorage } from "./integrations/storage/storage.js";
 import type { Logger } from "./lib/logger.js";
 import type { Db } from "./lib/prisma.js";
 
@@ -12,6 +13,8 @@ export type AppContext = {
   db: Db;
   encryptionKey: Buffer;
   integrations: Integrations;
+  /** Binary storage for knowledge attachments and WhatsApp media (Supabase Storage or dev fake). */
+  storage: FileStorage;
   /** Panel logins: Supabase's admin API, or an in-memory fake with `AUTH_MODE=dev`. */
   authAdmin: AuthAdmin;
   logger: Logger;

@@ -4,7 +4,7 @@ import { cn } from "cn";
 import { Panel, StatusDot } from "@/components/panel";
 import { Detail, Group } from "@/components/threads/lead-details";
 import { formatNumber } from "@/lib/format";
-import { STAGE_META } from "@/lib/thread-status";
+import { stageMetaOf } from "@/lib/thread-status";
 import type { CompanyConfig, TestLead, TestTurnResponse } from "@/lib/types";
 
 /** The engine's conversation step, in plain words. */
@@ -20,6 +20,7 @@ const INTENT_LABELS: Record<string, string> = {
   continue: "Seguir",
   qualified: "Calificado",
   not_interested: "Sin interés",
+  disqualified: "Descalificado",
 };
 
 const yesNo = (value: boolean) => (value ? "Sí" : "No");
@@ -37,6 +38,7 @@ export function AssistantTestLead({
   className?: string;
 }) {
   const stage = lead?.stage ?? "qualifying";
+  const stageMeta = stageMetaOf(stage, config.stages);
   const required = config.collect.filter((item) => item.required);
   const optional = config.collect.filter((item) => !item.required);
   const valueOf = (key: string) =>
@@ -53,8 +55,8 @@ export function AssistantTestLead({
           label="Etapa"
           value={
             <span className="inline-flex items-center gap-2">
-              <StatusDot tone={STAGE_META[stage].tone} />
-              {STAGE_META[stage].label}
+              <StatusDot tone={stageMeta.tone} />
+              {stageMeta.label}
             </span>
           }
         />

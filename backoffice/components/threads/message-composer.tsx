@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -11,13 +12,27 @@ import { toast } from "sonner";
 import {
   BoldIcon,
   ClockIcon,
+  FileTextIcon,
+  FolderOpenIcon,
   ItalicIcon,
+  PaperclipIcon,
   SendHorizontalIcon,
   StrikethroughIcon,
   TimerOffIcon,
+  UploadIcon,
+  XIcon,
 } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -25,12 +40,18 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useMe, useSendMessage } from "@/lib/queries";
-import type { Thread } from "@/lib/types";
+import { formatBytes } from "@/lib/format";
+import { useKnowledgeFiles, useMe, useSendMessage } from "@/lib/queries";
+import type { KnowledgeFile, Thread } from "@/lib/types";
 import { toggleMarker, type WhatsappMarker } from "@/lib/whatsapp-format";
 
 /** WhatsApp's limit for one text message. Mirrors the backend. */
 const MAX_CHARS = 4096;
+const MAX_CAPTION_CHARS = 1024;
+const MAX_FILE_BYTES = 15 * 1024 * 1024;
+
+type PendingAttachment =
+  { kind: "upload"; file: File } | { kind: "knowledge"; file: KnowledgeFile };
 
 const FORMATS: Array<{
   marker: WhatsappMarker;
@@ -85,13 +106,16 @@ function useNow(intervalMs: number): number {
 }
 
 /**
- * Writes to the lead from the company's WhatsApp number. Sending pauses the assistant, and a thread
- * nobody has is assigned to the sender. Free-form text only inside WhatsApp's 24-hour window.
+ * Writes text or sends files (direct upload or public Conocimiento files) to the lead from the
+ * company's WhatsApp number. Sending pauses the assistant and assigns an unassigned thread.
  */
 export function MessageComposer({ thread }: { thread: Thread }) {
   const me = useMe();
+  const knowledge = useKnowledgeFiles();
   const send = useSendMessage(thread.id);
   const [draft, setDraft] = useState("");
+  const [attachment, setAttachment] = useState<PendingAttachment | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const isMac = useSyncExternalStore(
     noSubscription,
     () => /Mac|iPhone|iPad/.test(navigator.userAgent),
@@ -106,14 +130,44 @@ export function MessageComposer({ thread }: { thread: Thread }) {
   const input = useRef<HTMLTextAreaElement>(null);
   const now = useNow(30_000);
 
+  const publicFiles = useMemo(() => {
+    const foldersById = new Map(
+      (knowledge.data?.folders ?? []).map((folder) => [folder.id, folder]),
+    );
+    const folderPathOf = (folderId: string | null): string => {
+      const parts: string[] = [];
+      let current = folderId;
+      const seen = new Set<string>();
+      while (current && !seen.has(current)) {
+        seen.add(current);
+        const folder = foldersById.get(current);
+        if (!folder) break;
+        parts.unshift(folder.name);
+        current = folder.parentId;
+      }
+      return parts.join(" / ");
+    };
+    return (knowledge.data?.files ?? [])
+      .filter((file) => file.visibility === "public" && file.hasFile)
+      .map((file) => ({
+        file,
+        folderPath: folderPathOf(file.folderId),
+      }));
+  }, [knowledge.data?.files, knowledge.data?.folders]);
+
   const closesAt = thread.replyWindowClosesAt
     ? new Date(thread.replyWindowClosesAt).getTime()
     : null;
   const open = closesAt !== null && closesAt > now;
   const left = closesAt !== null ? closesAt - now : 0;
   const text = draft.trim();
-  const tooLong = text.length > MAX_CHARS;
-  const canSend = open && text.length > 0 && !tooLong && !send.isPending;
+  const maxChars = attachment ? MAX_CAPTION_CHARS : MAX_CHARS;
+  const tooLong = text.length > maxChars;
+  const canSend =
+    open &&
+    (text.length > 0 || attachment !== null) &&
+    !tooLong &&
+    !send.isPending;
 
   const shortcut = (key: string, shift: boolean) =>
     `${isMac ? "⌘" : "Ctrl+"}${shift ? (isMac ? "⇧" : "Shift+") : ""}${key.toUpperCase()}`;
@@ -137,9 +191,16 @@ export function MessageComposer({ thread }: { thread: Thread }) {
   const submit = () => {
     if (!canSend) return;
     const wasActive = !thread.paused || thread.needsHuman;
-    send.mutate(text, {
+    const payload =
+      attachment?.kind === "upload"
+        ? { body: text, file: attachment.file }
+        : attachment?.kind === "knowledge"
+          ? { body: text, knowledgeFileId: attachment.file.id }
+          : text;
+    send.mutate(payload, {
       onSuccess: ({ message }) => {
         setDraft("");
+        setAttachment(null);
         if (message.status === "failed") {
           toast.error(
             `WhatsApp no envió el mensaje${message.error ? `: ${message.error}` : "."}`,
@@ -228,12 +289,89 @@ export function MessageComposer({ thread }: { thread: Thread }) {
               </TooltipContent>
             </Tooltip>
           ))}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="max-lg:size-8"
+                  aria-label="Adjuntar archivo"
+                  disabled={!open || send.isPending}
+                />
+              }
+            >
+              <PaperclipIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-56">
+              <DropdownMenuItem onClick={() => fileInput.current?.click()}>
+                <UploadIcon />
+                Subir desde tu equipo
+              </DropdownMenuItem>
+              {publicFiles.length > 0 ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <FolderOpenIcon className="size-3.5" />
+                      Archivos públicos de Conocimiento
+                    </DropdownMenuLabel>
+                    <div className="max-h-64 overflow-y-auto">
+                      {publicFiles.map(({ file, folderPath }) => (
+                        <DropdownMenuItem
+                          key={file.id}
+                          onClick={() =>
+                            setAttachment({ kind: "knowledge", file })
+                          }
+                        >
+                          <FileTextIcon className="shrink-0" />
+                          <span className="flex min-w-0 flex-col">
+                            <span className="truncate">{file.name}</span>
+                            {folderPath ? (
+                              <span className="truncate text-[11px] text-muted-foreground">
+                                {folderPath}
+                              </span>
+                            ) : null}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  </DropdownMenuGroup>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
           {touch ? null : (
             <span className="ml-auto px-1.5 text-[11px] text-muted-foreground max-sm:hidden">
               Enter para enviar · Shift+Enter nueva línea
             </span>
           )}
         </div>
+        {attachment ? (
+          <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-xs">
+            <FileTextIcon className="size-4 shrink-0 text-primary" />
+            <span className="min-w-0 flex-1 truncate font-medium">
+              {attachment.file.name}
+            </span>
+            <span className="shrink-0 text-muted-foreground tabular-nums">
+              {formatBytes(
+                attachment.kind === "upload"
+                  ? attachment.file.size
+                  : attachment.file.sizeBytes,
+              )}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Quitar adjunto"
+              onClick={() => setAttachment(null)}
+            >
+              <XIcon />
+            </Button>
+          </div>
+        ) : null}
         <div className="flex items-end gap-2 p-1.5 pl-0">
           <Textarea
             ref={input}
@@ -245,7 +383,11 @@ export function MessageComposer({ thread }: { thread: Thread }) {
             enterKeyHint={touch ? "enter" : "send"}
             aria-label="Mensaje para el lead"
             placeholder={
-              open ? "Escribe un mensaje…" : "Ventana de 24 h cerrada"
+              !open
+                ? "Ventana de 24 h cerrada"
+                : attachment
+                  ? "Agrega un comentario (opcional)…"
+                  : "Escribe un mensaje…"
             }
             className="max-h-40 min-h-9 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 max-lg:max-h-28"
           />
@@ -261,6 +403,22 @@ export function MessageComposer({ thread }: { thread: Thread }) {
           </Button>
         </div>
       </div>
+      <input
+        ref={fileInput}
+        type="file"
+        hidden
+        accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+        onChange={(event) => {
+          const picked = event.target.files?.[0];
+          event.target.value = "";
+          if (!picked) return;
+          if (picked.size > MAX_FILE_BYTES) {
+            toast.error("El archivo supera el máximo de 15 MB.");
+            return;
+          }
+          setAttachment({ kind: "upload", file: picked });
+        }}
+      />
       {open ? (
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span>{hint}</span>
@@ -273,7 +431,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
             title="WhatsApp permite enviar mensajes libres durante 24 horas desde el último mensaje del lead."
           >
             {tooLong ? (
-              `${text.length} / ${MAX_CHARS} caracteres`
+              `${text.length} / ${maxChars} caracteres`
             ) : (
               <>
                 <ClockIcon className="size-3.5" />

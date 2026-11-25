@@ -1,4 +1,5 @@
 import type { CompanyConfig } from "../companies/company-config.js";
+import { stageLabel } from "../engine/stages.js";
 import { collectedOf } from "../engine/turn.js";
 import type { LeadStage, ThreadState } from "../engine/types.js";
 import { senderLabel } from "../lib/operator-name.js";
@@ -55,22 +56,15 @@ export type SummaryMessage = {
   /** Set when a person wrote it in the panel. */
   sentByEmail?: string | null;
   sentBySupport?: boolean;
-};
-
-const STAGE_LABEL: Record<LeadStage, string> = {
-  qualifying: "Calificando",
-  to_contact: "Por contactar",
-  contacted: "Contactado",
-  not_interested: "Sin interés",
+  mediaFileName?: string | null;
 };
 
 /**
- * Where the lead is now, from the thread, not from the request that queued the write: the outbox
- * keeps only the latest request, and the property is rewritten whole every time.
+ * Where the lead is now, derived strictly from `needsHuman` and `thread.stage` (so Estado and
+ * Etapa never contradict each other in HubSpot).
  */
-function statusOf(thread: SummaryThread): string {
+function statusOf(thread: SummaryThread, config: CompanyConfig): string {
   if (thread.needsHuman) return "Requiere atención de un asesor";
-  if (thread.state === "closed") return "Cerrado, sin interés";
   switch (thread.stage) {
     case "to_contact":
       return "Derivado a asesor";
@@ -78,8 +72,14 @@ function statusOf(thread: SummaryThread): string {
       return "Contactado por un asesor";
     case "not_interested":
       return "Cerrado, sin interés";
+    case "disqualified":
+      return "Descalificado";
+    case "no_response":
+      return "Sin respuesta";
     case "qualifying":
       return "En conversación con el asistente";
+    default:
+      return stageLabel(config.stages, thread.stage);
   }
 }
 
@@ -118,7 +118,7 @@ function transcriptLine(
   const body =
     message.type === "text"
       ? message.body
-      : `[${message.type}]${message.body ? ` ${message.body}` : ""}`;
+      : `[${message.type}${message.mediaFileName ? `: ${message.mediaFileName}` : ""}]${message.body ? ` ${message.body}` : ""}`;
   return `[${stamp(message.sentAt, config, "short")}] ${who}: ${body}`;
 }
 
@@ -135,8 +135,8 @@ export function buildCrmSummary(input: {
   const { thread, config } = input;
   const header = [
     `Resumen del asistente de WhatsApp (actualizado ${stamp(input.now, config, "full")})`,
-    `Estado: ${statusOf(thread)}`,
-    `Etapa: ${STAGE_LABEL[thread.stage]}${
+    `Estado: ${statusOf(thread, config)}`,
+    `Etapa: ${stageLabel(config.stages, thread.stage)}${
       thread.stageChangedByEmail && thread.stageChangedAt
         ? ` (la eligió ${thread.stageChangedByEmail} el ${stamp(thread.stageChangedAt, config, "full")})`
         : ""

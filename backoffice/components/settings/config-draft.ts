@@ -1,9 +1,10 @@
-import type { CollectItem, CompanyConfig } from "@/lib/types";
+import type { CollectItem, CompanyConfig, StageConfig } from "@/lib/types";
 
 const MEGABYTE = 1024 * 1024;
 
 /** An item as the form edits it. `id` only keeps React rows stable while items move. */
 export type CollectItemDraft = CollectItem & { id: string };
+export type StageConfigDraft = StageConfig & { id: string };
 
 /** The config as the form edits it: numbers and text lists are strings until they are saved. */
 export type ConfigDraft = {
@@ -17,6 +18,12 @@ export type ConfigDraft = {
   tone: string;
   maxReplyChars: string;
   collect: CollectItemDraft[];
+  stages: StageConfigDraft[];
+  followUpEnabled: boolean;
+  followUpDelayHours: string;
+  followUpMaxCount: string;
+  noResponseEnabled: boolean;
+  noResponseHours: string;
   forbiddenDescribe: string;
   needsHuman: string;
   fallback: string;
@@ -46,6 +53,12 @@ export const FIELD_PATHS: Record<keyof ConfigDraft, string> = {
   tone: "tone",
   maxReplyChars: "maxReplyChars",
   collect: "collect",
+  stages: "stages",
+  followUpEnabled: "followUp.enabled",
+  followUpDelayHours: "followUp.delayHours",
+  followUpMaxCount: "followUp.maxCount",
+  noResponseEnabled: "inactivity.noResponseHours",
+  noResponseHours: "inactivity.noResponseHours",
   forbiddenDescribe: "forbiddenTopics.describe",
   needsHuman: "messages.needsHuman",
   fallback: "messages.fallback",
@@ -74,6 +87,8 @@ export function errorsByField(
   }
   if (!errors.collect && Object.keys(itemErrors(fields)).length > 0)
     errors.collect = "Revisa los datos marcados.";
+  if (!errors.stages && Object.keys(stageErrors(fields)).length > 0)
+    errors.stages = "Revisa las etapas marcadas.";
   return errors;
 }
 
@@ -88,12 +103,32 @@ export function itemErrors(
   );
 }
 
+/** Per-stage messages keyed "<index>.<field>", from the API's "stages.<index>.<field>". */
+export function stageErrors(
+  fields: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(fields)
+      .filter(([path]) => /^stages\.\d+\./.test(path))
+      .map(([path, message]) => [path.slice("stages.".length), message]),
+  );
+}
+
 function withoutId(item: CollectItemDraft): CollectItem {
   return {
     key: item.key,
     name: item.name,
     description: item.description,
     required: item.required,
+  };
+}
+
+function withoutStageId(stage: StageConfigDraft): StageConfig {
+  return {
+    key: stage.key,
+    label: stage.label,
+    color: stage.color,
+    system: stage.system,
   };
 }
 
@@ -109,10 +144,17 @@ export function sameDraftValue<K extends keyof ConfigDraft>(
   a: ConfigDraft[K],
   b: ConfigDraft[K],
 ): boolean {
-  if (key !== "collect") return a === b;
-  const strip = (items: CollectItemDraft[]) =>
-    JSON.stringify(items.map(withoutId));
-  return strip(a as CollectItemDraft[]) === strip(b as CollectItemDraft[]);
+  if (key === "collect") {
+    const strip = (items: CollectItemDraft[]) =>
+      JSON.stringify(items.map(withoutId));
+    return strip(a as CollectItemDraft[]) === strip(b as CollectItemDraft[]);
+  }
+  if (key === "stages") {
+    const strip = (stages: StageConfigDraft[]) =>
+      JSON.stringify(stages.map(withoutStageId));
+    return strip(a as StageConfigDraft[]) === strip(b as StageConfigDraft[]);
+  }
+  return a === b;
 }
 
 const lines = (values: string[]) => values.join("\n");
@@ -121,7 +163,7 @@ const fromLines = (value: string) =>
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-/** An empty or unreadable number is sent as null, so the API says which field to complete. */
+/** An empty or unreadable number is sent as NaN, so the API says which field to complete. */
 const toNumber = (value: string) =>
   value.trim() === "" ? Number.NaN : Number(value.trim().replace(",", "."));
 const round = (value: number) => Math.round(value * 100) / 100;
@@ -141,6 +183,12 @@ export function toDraft(
     tone: config.tone,
     maxReplyChars: String(config.maxReplyChars),
     collect: config.collect.map((item) => ({ ...item, id: newItemId() })),
+    stages: config.stages.map((stage) => ({ ...stage, id: newItemId() })),
+    followUpEnabled: config.followUp.enabled,
+    followUpDelayHours: String(config.followUp.delayHours),
+    followUpMaxCount: String(config.followUp.maxCount),
+    noResponseEnabled: config.inactivity.noResponseHours !== null,
+    noResponseHours: String(config.inactivity.noResponseHours ?? 24),
     forbiddenDescribe: lines(config.forbiddenTopics.describe),
     needsHuman: config.messages.needsHuman,
     fallback: config.messages.fallback,
@@ -170,6 +218,17 @@ export function fromDraft(draft: ConfigDraft): CompanyConfig {
     defaultCountry: draft.defaultCountry,
     businessHours: draft.businessHours,
     collect: draft.collect.map(withoutId),
+    stages: draft.stages.map(withoutStageId),
+    followUp: {
+      enabled: draft.followUpEnabled,
+      delayHours: toNumber(draft.followUpDelayHours),
+      maxCount: toNumber(draft.followUpMaxCount),
+    },
+    inactivity: {
+      noResponseHours: draft.noResponseEnabled
+        ? toNumber(draft.noResponseHours)
+        : null,
+    },
     forbiddenTopics: {
       describe: fromLines(draft.forbiddenDescribe),
     },

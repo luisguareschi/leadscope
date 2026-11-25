@@ -3,9 +3,17 @@ import {
   extractKnowledgeText,
   KnowledgeExtractionError,
 } from "../../integrations/knowledge/extract-text.js";
+import {
+  formatFromFilename,
+  isMediaOnlyFormat,
+  matchesContainer,
+  type KnowledgeFormat,
+} from "../../integrations/knowledge/formats.js";
 import { sha256Hex } from "../../lib/crypto.js";
 import { HttpError } from "../../lib/http-error.js";
 import type { KnowledgeTx } from "./knowledge-folders.js";
+
+export type KnowledgeVisibility = "internal" | "public";
 
 export type UploadedFile = {
   originalname: string;
@@ -23,12 +31,102 @@ export type PreparedKnowledgeFile = {
   sha256: string;
   text: string;
   charCount: number;
+  visibility: KnowledgeVisibility;
+  buffer: Buffer;
 };
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("es").format(value);
 const megabytes = (bytes: number) =>
   `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`;
+
+/** WhatsApp Cloud API accepts JPEG and PNG up to 5 MB for `type: "image"`. */
+export const MAX_WHATSAPP_IMAGE_BYTES = 5 * 1024 * 1024;
+const WHATSAPP_NATIVE_IMAGE_MIMES = new Set(["image/jpeg", "image/png"]);
+
+/**
+ * Formats allowed as direct manual attachments from the panel composer. Excludes active/scriptable
+ * formats such as HTML and SVG.
+ */
+const MANUAL_ATTACHMENT_FORMATS = new Set<KnowledgeFormat>([
+  "pdf",
+  "jpg",
+  "png",
+  "webp",
+  "docx",
+  "doc",
+  "odt",
+  "pptx",
+  "xlsx",
+  "xls",
+  "ods",
+  "csv",
+  "txt",
+  "md",
+]);
+
+export const MIME_BY_FORMAT: Record<KnowledgeFormat, string> = {
+  pdf: "application/pdf",
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  doc: "application/msword",
+  odt: "application/vnd.oasis.opendocument.text",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  xls: "application/vnd.ms-excel",
+  ods: "application/vnd.oasis.opendocument.spreadsheet",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  csv: "text/csv",
+  txt: "text/plain",
+  md: "text/markdown",
+  html: "text/html",
+  json: "application/json",
+};
+
+/**
+ * WhatsApp Cloud API only accepts `image/jpeg` and `image/png` (<= 5 MB) for `type: "image"`.
+ * WebP and larger images must be sent as `type: "document"`.
+ */
+export function whatsappMediaKind(
+  mimeType: string,
+  sizeBytes: number,
+): "image" | "document" {
+  const base = mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
+  return WHATSAPP_NATIVE_IMAGE_MIMES.has(base) &&
+    sizeBytes <= MAX_WHATSAPP_IMAGE_BYTES
+    ? "image"
+    : "document";
+}
+
+/** Validates a direct file uploaded from the panel composer (extension allowlist + magic bytes). */
+export function validateManualAttachment(file: UploadedFile): {
+  fileName: string;
+  format: KnowledgeFormat;
+  mimeType: string;
+} {
+  const fileName = cleanFilename(file.originalname);
+  const format = formatFromFilename(fileName);
+  if (!format || !MANUAL_ATTACHMENT_FORMATS.has(format)) {
+    throw new HttpError(
+      415,
+      "Formato de archivo no compatible para envío. Usa PDF, JPG, PNG, WebP, Word, Excel, PowerPoint, CSV o texto.",
+      "unsupported_format",
+    );
+  }
+  if (file.buffer.length === 0 || !matchesContainer(format, file.buffer)) {
+    throw new HttpError(
+      422,
+      "El archivo está dañado o no coincide con su extensión.",
+      "corrupt_file",
+    );
+  }
+  return {
+    fileName,
+    format,
+    mimeType: MIME_BY_FORMAT[format],
+  };
+}
 
 export function cleanFilename(raw: string): string {
   const base = raw.split(/[\\/]/).pop() ?? raw;
@@ -41,10 +139,11 @@ export function cleanFilename(raw: string): string {
   );
 }
 
-/** Extracts the text and checks the per-file limits. Nothing is stored yet. */
+/** Extracts text (if applicable) and checks limits. Images automatically become `public`. */
 export async function prepareKnowledgeFile(
   company: LoadedCompany,
   file: UploadedFile | undefined,
+  requestedVisibility?: KnowledgeVisibility,
 ): Promise<PreparedKnowledgeFile> {
   if (!file)
     throw new HttpError(400, "Elige un archivo para subir.", "missing_file");
@@ -57,9 +156,24 @@ export async function prepareKnowledgeFile(
     );
   }
   const name = cleanFilename(file.originalname);
+  const detected = formatFromFilename(name);
+  const mediaOnly = detected ? isMediaOnlyFormat(detected) : false;
+  if (mediaOnly && requestedVisibility === "internal") {
+    throw new HttpError(
+      422,
+      "Las imágenes no tienen texto para el conocimiento interno; súbelas como archivos públicos para enviar a leads.",
+      "media_requires_public",
+    );
+  }
+  const visibility: KnowledgeVisibility = mediaOnly
+    ? "public"
+    : (requestedVisibility ?? "internal");
+
   let extracted;
   try {
-    extracted = await extractKnowledgeText(name, file.buffer);
+    extracted = await extractKnowledgeText(name, file.buffer, {
+      allowEmptyText: visibility === "public",
+    });
   } catch (error) {
     if (error instanceof KnowledgeExtractionError) {
       throw new HttpError(
@@ -81,11 +195,15 @@ export async function prepareKnowledgeFile(
     name,
     nameKey: name.toLowerCase(),
     format: extracted.format,
-    mimeType: file.mimetype || "application/octet-stream",
+    mimeType:
+      MIME_BY_FORMAT[extracted.format as KnowledgeFormat] ??
+      "application/octet-stream",
     sizeBytes: file.size,
     sha256: sha256Hex(file.buffer),
     text: extracted.text,
     charCount: extracted.text.length,
+    visibility,
+    buffer: file.buffer,
   };
 }
 
@@ -96,6 +214,7 @@ export async function assertFitsCompanyTotal(
   charCount: number,
   replacingId: string | null,
 ): Promise<void> {
+  if (charCount === 0) return;
   const others = await tx.knowledgeFile.aggregate({
     where: {
       companyId: company.id,

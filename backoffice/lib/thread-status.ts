@@ -1,8 +1,15 @@
 import type { Tone } from "@/components/panel";
-import type { BotActivity, BotFilter, LeadStage, StageFilter } from "./types";
-
-export const STAGE_META: Record<
+import type {
+  BotActivity,
+  BotFilter,
   LeadStage,
+  StageConfig,
+  StageFilter,
+  SystemLeadStage,
+} from "./types";
+
+export const SYSTEM_STAGE_META: Record<
+  SystemLeadStage,
   { label: string; tone: Tone; description: string }
 > = {
   qualifying: {
@@ -26,29 +33,96 @@ export const STAGE_META: Record<
   not_interested: {
     label: "Sin interés",
     tone: "muted",
-    description: "El lead indicó que no tiene interés o fue descartado.",
+    description: "El lead indicó que no tiene interés o escribió por error.",
+  },
+  disqualified: {
+    label: "Descalificado",
+    tone: "error",
+    description:
+      "El lead tiene interés pero no cumple con lo que ofrece la empresa.",
+  },
+  no_response: {
+    label: "Sin respuesta",
+    tone: "muted",
+    description:
+      "El lead dejó de responder durante la calificación. Si vuelve a escribir, retoma automáticamente.",
   },
 };
 
-/** The order of the stage picker. */
-export const STAGE_ORDER: LeadStage[] = [
+/** Backwards-compatible alias for the system stages. */
+export const STAGE_META = SYSTEM_STAGE_META;
+
+export const DEFAULT_STAGE_CONFIGS: StageConfig[] = [
+  { key: "qualifying", label: "Calificando", color: "pending", system: true },
+  { key: "to_contact", label: "Por contactar", color: "warning", system: true },
+  { key: "contacted", label: "Contactado", color: "ok", system: true },
+  { key: "not_interested", label: "Sin interés", color: "muted", system: true },
+  { key: "disqualified", label: "Descalificado", color: "error", system: true },
+  { key: "no_response", label: "Sin respuesta", color: "muted", system: true },
+];
+
+/** Default order of system stages for charts and fallbacks. */
+export const STAGE_ORDER: SystemLeadStage[] = [
   "qualifying",
   "to_contact",
   "contacted",
   "not_interested",
+  "disqualified",
+  "no_response",
 ];
 
-/**
- * Chart series for each stage, in `STAGE_ORDER`. The tokens in `app/globals.css`
- * follow the picker dots: a lighter primary (Calificando), the solid primary
- * (Por contactar), status-ok (Contactado), and muted (Sin interés).
- */
-export const STAGE_CHART_COLOR: Record<LeadStage, string> = {
+export const STAGE_CHART_COLOR: Record<SystemLeadStage, string> = {
   qualifying: "var(--chart-1)",
   to_contact: "var(--chart-2)",
   contacted: "var(--chart-3)",
   not_interested: "var(--chart-4)",
+  disqualified: "var(--chart-5)",
+  no_response: "var(--chart-6)",
 };
+
+export function stagesForCompany(
+  stages: StageConfig[] | undefined,
+): StageConfig[] {
+  return stages && stages.length > 0 ? stages : DEFAULT_STAGE_CONFIGS;
+}
+
+export function stageMetaOf(
+  stage: LeadStage,
+  stages?: StageConfig[],
+): { label: string; tone: Tone; description: string } {
+  const configured = stages?.find((item) => item.key === stage);
+  const sys = SYSTEM_STAGE_META[stage as SystemLeadStage];
+  if (configured) {
+    return {
+      label: configured.label,
+      tone: configured.color,
+      description:
+        sys?.description ??
+        "Etapa personalizada del proceso comercial. El asistente responde preguntas sin volver a calificar.",
+    };
+  }
+  if (sys) return sys;
+  return {
+    label: stage,
+    tone: "muted",
+    description: "Etapa personalizada.",
+  };
+}
+
+export function stageFiltersFor(
+  stages?: StageConfig[],
+): Array<{ value: StageFilter; label: string }> {
+  const list = stagesForCompany(stages);
+  // Show Por contactar right after Todas so the advisors' queue stays prominent.
+  const ordered = [
+    ...list.filter((s) => s.key === "to_contact"),
+    ...list.filter((s) => s.key !== "to_contact"),
+  ];
+  return [
+    { value: "all", label: "Todas" },
+    ...ordered.map((s) => ({ value: s.key, label: s.label })),
+  ];
+}
 
 export const BOT_META: Record<
   BotActivity,
@@ -72,14 +146,6 @@ export const BOT_META: Record<
   },
 };
 
-export const STAGE_FILTERS: Array<{ value: StageFilter; label: string }> = [
-  { value: "all", label: "Todas" },
-  { value: "to_contact", label: "Por contactar" },
-  { value: "qualifying", label: "Calificando" },
-  { value: "contacted", label: "Contactadas" },
-  { value: "not_interested", label: "Sin interés" },
-];
-
 export const BOT_FILTERS: Array<{ value: BotFilter; label: string }> = [
   { value: "all", label: "Asistente: todos" },
   { value: "active", label: "Respondiendo" },
@@ -87,8 +153,13 @@ export const BOT_FILTERS: Array<{ value: BotFilter; label: string }> = [
   { value: "needs_human", label: "Requiere asesor" },
 ];
 
-export function isStageFilter(value: string | null): value is StageFilter {
-  return STAGE_FILTERS.some((filter) => filter.value === value);
+export function isStageFilter(
+  value: string | null,
+  stages?: StageConfig[],
+): value is StageFilter {
+  if (!value) return false;
+  if (value === "all") return true;
+  return stagesForCompany(stages).some((stage) => stage.key === value);
 }
 
 export function isBotFilter(value: string | null): value is BotFilter {

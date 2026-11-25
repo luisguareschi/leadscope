@@ -8,8 +8,13 @@ export type InboundMessage = {
   profileName: string | null;
   /** WhatsApp type. Quick-reply buttons and interactive replies count as text. */
   type: string;
-  /** Message text, or the caption of an image, video, or document. Empty when there is none. */
+  /** Message text, audio transcript (from Kapso), or the caption of an image/video/document. */
   body: string;
+  /** Media download URL or provider media id for inbound attachments (e.g. images). */
+  mediaUrl?: string | null;
+  mediaId?: string | null;
+  mediaMimeType?: string | null;
+  mediaFileName?: string | null;
   sentAt: Date;
 };
 

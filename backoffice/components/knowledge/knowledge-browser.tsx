@@ -12,6 +12,7 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
   ArrowRightLeftIcon,
   ChevronRightIcon,
+  DownloadIcon,
   EllipsisVerticalIcon,
   EyeIcon,
   FileSpreadsheetIcon,
@@ -20,7 +21,10 @@ import {
   FolderIcon,
   FolderOpenIcon,
   FolderPlusIcon,
+  GlobeIcon,
   HouseIcon,
+  ImageIcon,
+  LockIcon,
   PencilIcon,
   PresentationIcon,
   RefreshCwIcon,
@@ -56,6 +60,7 @@ import {
   useCreateKnowledgeFolder,
   useDeleteKnowledgeFile,
   useDeleteKnowledgeFolder,
+  useFetchBlob,
   useUpdateKnowledgeFile,
   useUpdateKnowledgeFolder,
   useUploadKnowledgeFile,
@@ -90,6 +95,8 @@ type Row =
 type DropTarget = string | null | undefined;
 
 function FormatIcon({ format }: { format: string }) {
+  if (["jpg", "png", "webp"].includes(format))
+    return <ImageIcon className="size-4 text-sky-600" />;
   if (["xlsx", "xls", "ods", "csv"].includes(format))
     return <FileSpreadsheetIcon className="size-4 text-emerald-600" />;
   if (format === "pptx")
@@ -171,6 +178,43 @@ export function KnowledgeBrowser({
   const updateFile = useUpdateKnowledgeFile();
   const removeFile = useDeleteKnowledgeFile();
   const upload = useUploadKnowledgeFile();
+  const fetchBlob = useFetchBlob();
+
+  const toggleVisibility = (file: KnowledgeFile) => {
+    const next = file.visibility === "public" ? "internal" : "public";
+    updateFile.mutate(
+      { id: file.id, visibility: next },
+      {
+        onSuccess: () =>
+          toast.success(
+            next === "public"
+              ? `"${file.name}" ahora es público y se puede enviar a leads.`
+              : `"${file.name}" ahora es interno (solo conocimiento).`,
+          ),
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
+
+  const downloadFile = async (file: KnowledgeFile) => {
+    try {
+      const blob = await fetchBlob(
+        `/internal/knowledge/files/${file.id}/download`,
+      );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5_000);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "No se pudo descargar.",
+      );
+    }
+  };
 
   const rows = visibleRows(tree, collapsed);
 
@@ -627,27 +671,64 @@ export function KnowledgeBrowser({
                       <div className="flex min-w-0 flex-col gap-0.5">
                         <button
                           type="button"
-                          onClick={() => onPreview(file)}
+                          onClick={() =>
+                            file.charCount > 0
+                              ? onPreview(file)
+                              : file.hasFile
+                                ? void downloadFile(file)
+                                : onPreview(file)
+                          }
                           className="flex min-w-0 items-center gap-2 text-left text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
                         >
                           <span className="truncate">{file.name}</span>
+                          <span
+                            className={cn(
+                              "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                              file.visibility === "public"
+                                ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {file.visibility === "public" ? (
+                              <>
+                                <GlobeIcon className="size-2.5" />
+                                Público
+                              </>
+                            ) : (
+                              <>
+                                <LockIcon className="size-2.5" />
+                                Interno
+                              </>
+                            )}
+                          </span>
                           {upload.isPending && replacing?.id === file.id ? (
                             <Spinner className="size-3.5 shrink-0" />
                           ) : null}
                         </button>
                         <span className="truncate text-xs text-muted-foreground tabular-nums">
                           {file.formatLabel} · {formatBytes(file.sizeBytes)}
-                          <span className="@3xl/content:hidden">
-                            {" "}
-                            · {formatNumber(file.charCount)} caracteres
-                          </span>
+                          {file.description ? ` · ${file.description}` : ""}
+                          {file.charCount > 0 ? (
+                            <span className="@3xl/content:hidden">
+                              {" "}
+                              · {formatNumber(file.charCount)} caracteres
+                            </span>
+                          ) : null}
                         </span>
                       </div>
                       <span className="hidden text-right text-sm tabular-nums @3xl/content:block">
-                        {formatNumber(file.charCount)}
-                        <span className="block text-xs text-muted-foreground">
-                          caracteres
-                        </span>
+                        {file.charCount > 0 ? (
+                          <>
+                            {formatNumber(file.charCount)}
+                            <span className="block text-xs text-muted-foreground">
+                              caracteres
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Solo archivo
+                          </span>
+                        )}
                       </span>
                       <span className="hidden min-w-0 text-right text-sm text-muted-foreground @3xl/content:block">
                         {formatRelative(file.updatedAt)}
@@ -670,11 +751,41 @@ export function KnowledgeBrowser({
                           >
                             <EllipsisVerticalIcon />
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="min-w-44">
-                            <DropdownMenuItem onClick={() => onPreview(file)}>
-                              <EyeIcon />
-                              Ver texto
-                            </DropdownMenuItem>
+                          <DropdownMenuContent align="end" className="min-w-52">
+                            {file.charCount > 0 ? (
+                              <DropdownMenuItem onClick={() => onPreview(file)}>
+                                <EyeIcon />
+                                Ver texto
+                              </DropdownMenuItem>
+                            ) : null}
+                            {file.hasFile ? (
+                              <DropdownMenuItem
+                                onClick={() => void downloadFile(file)}
+                              >
+                                <DownloadIcon />
+                                Descargar archivo
+                              </DropdownMenuItem>
+                            ) : null}
+                            {(file.visibility === "public" &&
+                              file.charCount > 0) ||
+                            (file.visibility === "internal" && file.hasFile) ? (
+                              <DropdownMenuItem
+                                onClick={() => toggleVisibility(file)}
+                              >
+                                {file.visibility === "public" ? (
+                                  <>
+                                    <LockIcon />
+                                    Hacer interno (solo conocimiento)
+                                  </>
+                                ) : (
+                                  <>
+                                    <GlobeIcon />
+                                    Hacer público (enviable al lead)
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            ) : null}
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => askRenameFile(file)}
                             >

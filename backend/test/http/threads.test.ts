@@ -121,6 +121,8 @@ describe("threads", () => {
         to_contact: 2,
         contacted: 1,
         not_interested: 1,
+        disqualified: 0,
+        no_response: 0,
       },
       bot: { active: 3, paused: 1, needs_human: 1 },
       mine: { all: 0, toContact: 0 },

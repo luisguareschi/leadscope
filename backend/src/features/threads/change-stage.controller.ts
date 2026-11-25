@@ -7,7 +7,12 @@ import { changeThreadStage } from "./change-stage.service.js";
 import { threadParamsSchema } from "./thread-params.js";
 
 const bodySchema = z.strictObject({
-  stage: z.enum(["qualifying", "to_contact", "contacted", "not_interested"]),
+  stage: z
+    .string()
+    .trim()
+    .min(1)
+    .max(40)
+    .regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, "Etapa no válida."),
 });
 
 export function changeStageController(ctx: AppContext): RequestHandler {

@@ -61,7 +61,7 @@ The engine never imports HubSpot, Google, Kapso, or Meta directly. It talks to s
 | LLM | Anthropic (`claude-haiku-4-5` to start) | Already agreed with Altamira. Each company uses its own API key. One `complete()` wrapper, so a later provider swap is one file. No fine-tune. No multi-provider framework. |
 | WhatsApp | Official WhatsApp Cloud API through Kapso (a Business Solution Provider) | The company's own number in its own Kapso project and its own Meta Business portfolio. Meta Cloud API direct was dropped in Oct 2026 because the client did not want to set up and maintain a Meta app. See [WhatsApp through Kapso](#whatsapp-through-kapso). |
 | CRM | HubSpot API (first adapter) | Direct API. No Zapier / Make / n8n. No HubSpot native AI. |
-| Knowledge | Files operators upload in the backoffice | PDF, Word (DOCX, DOC), Excel (XLSX, XLS), OpenDocument (ODT, ODS), PowerPoint (PPTX), CSV/TSV, plain text, Markdown, HTML, JSON. Text is extracted on upload, stored per company, and injected into the prompt. No RAG. Google Drive / Sheets is later. |
+| Knowledge | Files operators upload in the backoffice + Supabase Storage | PDF, Word (DOCX, DOC), Excel (XLSX, XLS), OpenDocument (ODT, ODS), PowerPoint (PPTX), CSV/TSV, plain text, Markdown, HTML, JSON, plus images (JPG, PNG, WebP). Extracted text is stored in Postgres for the prompt; original binaries are stored in Supabase Storage (`SUPABASE_STORAGE_BUCKET`, in-memory fake in dev/test). Files are strictly marked `internal` (knowledge-only) or `public` (sendable to leads). No RAG. Google Drive / Sheets is later. |
 
 ## Architecture
 
@@ -268,7 +268,8 @@ Every model call returns, through Anthropic tool use (`submit_turn`, built per c
 - `reply` is the text to send.
 - `collected` has one entry per collect item key, filled in a few words when the lead's own messages state it, and null when the turn adds nothing. Values are text (a yes/no item is "Sí"/"No" plus any detail).
 - `callTime` is when the lead agrees to a call.
-- `intent` is one of `continue`, `qualified`, `not_interested`. `not_interested` stays explicit. It closes the thread and writes the CRM with no advisor.
+- `intent` is one of `continue`, `qualified`, `not_interested`, `disqualified`. `not_interested` (lead declined) and `disqualified` (lead does not match offering/profile) close a `qualifying` thread and write the CRM with no advisor, while keeping a `to_contact`, `contacted`, or custom sales-stage thread open in `answer` so HubSpot never contradicts `Etapa`.
+- `sendFileIds` is an optional array of up to 2 `public` `KnowledgeFile` IDs from `<sendable_files>` to send as WhatsApp media right after the text reply (always ignored/stripped on stop or close paths, and validated against `visibility === "public"` in code).
 - `needsHuman` is true for a complaint, an existing purchase, or something only a person can answer.
 - `callNow` is true when the lead wants to talk to a person now or asks to be called ("llámenme", "quiero hablar con alguien"). See [A lead who wants to talk now](#a-lead-who-wants-to-talk-now).
 - `forbiddenTopic` is the forbidden topic the lead asked about or the reply would touch, copied from the config's list (which is the schema's enum), and otherwise null. Any non-empty value counts as flagged.
@@ -290,7 +291,7 @@ A thread carries three separate things. The panel shows the last two. The first 
 4. **Handoff.** Ask when an advisor can call. Once a call time is captured, write the CRM (the handoff write; the contact already exists from the first message). Later messages go back to Answer.
 5. **Closed.** No interest. Write the CRM, and do not assign an advisor.
 
-**Lead stage** (`Thread.stage`), for the sales team. The bot only moves it forward. A person can set any stage, in any direction, from the stage picker (see [Changing the stage by hand](#changing-the-stage-by-hand)):
+**Lead stage** (`Thread.stage`, stored as string, configured in `config.stages`), for the sales team. Every company keeps 6 read-only system base stages plus up to 10 custom company stages (editable name, color, and order; treated as sales-owned). The bot only moves stages forward; a person can set any configured stage, in any direction, from the stage picker (see [Changing the stage by hand](#changing-the-stage-by-hand)):
 
 | Stage | Who moves it there |
 | --- | --- |
@@ -298,8 +299,11 @@ A thread carries three separate things. The panel shows the last two. The first 
 | **Por contactar** (`to_contact`) | The engine, on the turn that leaves every required item stored (before the call time; the bot still asks for it), or with no required items in the config, on the turn that stores a call time; or on a `callNow` turn, whatever is missing. `handedOffAt` is the time of the lead message that did it. A person. |
 | **Contactado** (`contacted`) | Only a person. |
 | **Sin interés** (`not_interested`) | The engine, when the model returns `not_interested` while the lead is Calificando. A person. |
+| **Descalificado** (`disqualified`) | The engine, when the model returns `disqualified` while the lead is Calificando (lead does not match profile/offering). A person. |
+| **Sin respuesta** (`no_response`) | The sweeper, when a `qualifying` thread has been silent for `config.inactivity.noResponseHours` (if enabled). Returns to `qualifying` (or `to_contact` if ready) when the lead writes back. A person. |
+| **Custom stages** (`config.stages`, up to 10) | Only a person. Treated as sales-owned (bot keeps answering without re-qualifying or closing). |
 
-The bot never moves a thread backwards. Once a thread is Por contactar, it stays there until a person changes the stage, whatever the lead writes. That includes a question, a new call time, and even "ya no me interesa". In that last case the conversation step closes and HubSpot gets the close, but the advisor still sees the lead in the queue and the summary says why. The bot never moves a thread out of Contactado. A Sin interés lead comes back to Por contactar only if they re-qualify, when a turn completes the required items or the model returns `qualified` with them stored. Turns where the bot stops itself (`needsHuman`, forbidden topic, model failure, non-text) never move the stage.
+The bot never moves a thread backwards. Once a thread is Por contactar, Contactado, or a custom sales stage, it stays there until a person changes the stage, whatever the lead writes. Even if the lead later says "ya no me interesa", the conversation step stays `answer` (never `closed`) and HubSpot gets an `update` with status derived strictly from `stage` + `needsHuman`, so `Estado` and `Etapa` never contradict each other. A Sin interés or Descalificado lead comes back to Por contactar only if they re-qualify, when a turn completes the required items, the model returns `qualified`, or `callNow` is set. Turns where the bot stops itself (`needsHuman`, forbidden topic, model failure, non-text) never move the stage.
 
 The turn writes the stage and the conversation step only if the stage and the last stage change are still what it read. So a person who changes the stage while the model is answering wins, even with a round trip back to the same stage. The turn still saves its reply, collected values, and summary, and a thread it greeted leaves Greeting either way.
 
@@ -340,7 +344,8 @@ How the bot continues after a manual move (it only moves forward, from wherever 
 ### Rules
 
 - Inbound text is stored as-is.
-- A non-text message (voice, image, sticker) gets one reply asking the lead to type. No transcription in v1.
+- Inbound voice notes use Kapso's built-in transcript (`message.kapso.transcript`) when available and are answered by the LLM; inbound images are downloaded into storage and passed to Anthropic Vision (`image` content blocks). Audio without a transcript, stickers, or unsupported media get `messages.nonText` asking the lead to type.
+- Optional automatic 24-hour follow-ups (`config.followUp`: `enabled`, `delayHours` 1–20, `maxCount` 1–2) are run by the sweeper for silent `qualifying` threads inside WhatsApp's 24-hour reply window (with safety margin). Each follow-up is generated contextually by the LLM, increments `Thread.followUpCount`, and resets to 0 when the lead writes back. Follow-ups outside the 24-hour window (templates) remain out of scope in v1.
 - Duplicate webhook deliveries are ignored by WhatsApp `message.id` uniqueness.
 - A lead who writes on the API number gets the greeting.
 - A lead who fills a form gets one approved welcome template, then the same flow. A HubSpot workflow calls `POST /hooks/crm/form-lead` with the contact's phone, and the backend sends the template. The company pays Meta for that send.

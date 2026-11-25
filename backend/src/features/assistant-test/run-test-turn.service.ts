@@ -1,4 +1,8 @@
-import { loadCompanyById } from "../../companies/load-company.js";
+import type { CompanyConfig } from "../../companies/company-config.js";
+import {
+  loadCompanyById,
+  type LoadedCompany,
+} from "../../companies/load-company.js";
 import type { AppContext } from "../../context.js";
 import { callModel } from "../../conversation/process-thread.js";
 import { loadSystemPrompt } from "../../conversation/system-prompt.js";
@@ -24,16 +28,26 @@ export type TestLead = {
   summary: string | null;
 };
 
+export type TestDraftOverride = {
+  companyName?: string;
+  config?: CompanyConfig;
+  instructions?: string;
+};
+
 export type TestTurnRequest = {
   messages: Array<{ role: "lead" | "assistant"; body: string }>;
   lead?: TestLead;
   leadName?: string | null;
+  /** Unsaved Configuración draft to test before publishing to production. */
+  draft?: TestDraftOverride;
 };
 
 export type TestTurnResponse = {
   reply: string;
   /** The model's own words when the lead would get a fixed line instead. */
   modelReply: string | null;
+  /** Public files from Conocimiento that the assistant would send on this turn. */
+  sentFiles: Array<{ id: string; path: string; format: string }>;
   lead: TestLead;
   model: {
     intent: Intent;
@@ -60,17 +74,29 @@ const NEW_LEAD: TestLead = {
 };
 
 /**
- * One turn of the panel's test chat (Probar asistente): the company's saved prompt, knowledge, and
- * turn rules, exactly as on WhatsApp, for a lead whose conversation and state the browser keeps.
- * Nothing is stored except the Anthropic usage (the company pays for it like any other turn), and
- * nothing reaches WhatsApp or HubSpot.
+ * One turn of the panel's test chat (Probar asistente): runs the company's saved settings (or an
+ * unsaved draft override) and knowledge through the exact same prompt and turn engine as WhatsApp.
+ * Nothing is stored except the Anthropic usage, and nothing reaches WhatsApp or HubSpot.
  */
 export async function runTestTurn(
   ctx: AppContext,
   companyId: string,
   request: TestTurnRequest,
 ): Promise<TestTurnResponse> {
-  const company = await loadCompanyById(ctx.db, companyId, ctx.encryptionKey);
+  const savedCompany = await loadCompanyById(
+    ctx.db,
+    companyId,
+    ctx.encryptionKey,
+  );
+  const company: LoadedCompany = request.draft
+    ? {
+        ...savedCompany,
+        name: request.draft.companyName ?? savedCompany.name,
+        config: request.draft.config ?? savedCompany.config,
+        instructions: request.draft.instructions ?? savedCompany.instructions,
+      }
+    : savedCompany;
+
   let llm: LlmClient;
   try {
     llm = ctx.integrations.llmFor(company);
@@ -96,13 +122,17 @@ export async function runTestTurn(
     source: "whatsapp",
   };
 
-  const { system, documents } = await loadSystemPrompt(ctx, company);
+  const { system, documents, sendableFiles } = await loadSystemPrompt(
+    ctx,
+    company,
+  );
   const { config } = company;
   const { input, usage } = await callModel(ctx, llm, company, {
     thread,
     threadId: null,
     system,
     documents,
+    sendableFiles,
     messages: buildChatTurns(
       request.messages.map((message) => ({
         direction: message.role === "lead" ? "inbound" : "outbound",
@@ -127,6 +157,12 @@ export async function runTestTurn(
       );
   }
 
+  const sendableById = new Map(sendableFiles.map((file) => [file.id, file]));
+  const sentFiles = decision.sendFileIds
+    .map((id) => sendableById.get(id))
+    .filter((file): file is NonNullable<typeof file> => Boolean(file))
+    .map(({ id, path, format }) => ({ id, path, format }));
+
   const output = input.kind === "model" ? input.output : null;
   // The lead gets a fixed line whenever the turn stops the assistant, even if the model's own
   // text happened to match it.
@@ -135,6 +171,7 @@ export async function runTestTurn(
   return {
     reply: decision.reply,
     modelReply,
+    sentFiles,
     lead: {
       state: decision.state,
       stage: decision.stage,

@@ -1,11 +1,43 @@
 export type ThreadState =
   "greeting" | "qualify" | "answer" | "handoff" | "closed";
-/** Where the lead is for the sales team. The bot only moves it forward; a person can pick any. */
-export type LeadStage =
-  "qualifying" | "to_contact" | "contacted" | "not_interested";
+
+export type SystemLeadStage =
+  | "qualifying"
+  | "to_contact"
+  | "contacted"
+  | "not_interested"
+  | "disqualified"
+  | "no_response";
+
+/** Pipeline stage key: one of the 6 system stages or a company-defined custom stage. */
+export type LeadStage = string;
+
+export type StageColor =
+  | "pending"
+  | "warning"
+  | "ok"
+  | "muted"
+  | "error"
+  | "info"
+  | "purple"
+  | "cyan"
+  | "amber"
+  | "orange"
+  | "pink"
+  | "lime";
+
+export type StageConfig = {
+  key: string;
+  label: string;
+  color: StageColor;
+  system: boolean;
+};
+
+export const MAX_CUSTOM_STAGES = 10;
+
 /** What the assistant is doing in the thread, independent of the stage. */
 export type BotActivity = "active" | "paused" | "needs_human";
-export type StageFilter = "all" | LeadStage;
+export type StageFilter = string;
 export type BotFilter = "all" | BotActivity;
 export type AssigneeFilter = "all" | "me" | "none";
 export type ThreadFilters = {
@@ -84,6 +116,7 @@ export type ChatMessage = {
   direction: "inbound" | "outbound";
   type: string;
   body: string;
+  media: { mimeType: string; fileName: string | null } | null;
   status: string | null;
   /** Why WhatsApp refused it when it was sent. */
   error: string | null;
@@ -96,7 +129,7 @@ export type ThreadsPage = { threads: Thread[]; nextCursor: string | null };
 
 export type ThreadsSummary = {
   total: number;
-  stages: Record<LeadStage, number>;
+  stages: Record<string, number>;
   bot: Record<BotActivity, number>;
   /** Null for a platform admin in support access, who has no operator row here. */
   mine: { all: number; toContact: number } | null;
@@ -112,6 +145,8 @@ export type KnowledgeFolder = {
   updatedAt: string;
 };
 
+export type KnowledgeVisibility = "internal" | "public";
+
 export type KnowledgeFile = {
   id: string;
   /** Null at the root. */
@@ -119,8 +154,12 @@ export type KnowledgeFile = {
   name: string;
   format: string;
   formatLabel: string;
+  mimeType: string;
   sizeBytes: number;
   charCount: number;
+  visibility: KnowledgeVisibility;
+  hasFile: boolean;
+  description: string | null;
   uploadedBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -294,6 +333,15 @@ export type CompanyConfig = {
       bodyPreview: string;
     } | null;
   };
+  stages: StageConfig[];
+  followUp: {
+    enabled: boolean;
+    delayHours: number;
+    maxCount: number;
+  };
+  inactivity: {
+    noResponseHours: number | null;
+  };
 };
 
 export type CompanySettings = {
@@ -431,6 +479,8 @@ export type CompanyMetrics = {
     to_contact: number;
     contacted: number;
     not_interested: number;
+    disqualified: number;
+    no_response: number;
   }[];
   funnel: {
     leads: number;
@@ -442,6 +492,8 @@ export type CompanyMetrics = {
     toContact: number;
     notInterested: number;
     notInterestedRate: number | null;
+    disqualified: number;
+    noResponse: number;
   };
   forms: {
     leads: number;
@@ -544,10 +596,17 @@ export type TestLead = {
   summary: string | null;
 };
 
+export type TestDraftOverride = {
+  companyName?: string;
+  config?: CompanyConfig;
+  instructions?: string;
+};
+
 export type TestTurnRequest = {
   messages: Array<{ role: TestChatRole; body: string }>;
   lead?: TestLead;
   leadName?: string | null;
+  draft?: TestDraftOverride;
 };
 
 export type TestTurnResponse = {
@@ -555,9 +614,11 @@ export type TestTurnResponse = {
   reply: string;
   /** What the model wrote when the lead gets a fixed line instead. */
   modelReply: string | null;
+  /** Public files from Conocimiento that the assistant would send on this turn. */
+  sentFiles: Array<{ id: string; path: string; format: string }>;
   lead: TestLead;
   model: {
-    intent: "continue" | "qualified" | "not_interested";
+    intent: "continue" | "qualified" | "not_interested" | "disqualified";
     callNow: boolean;
     needsHuman: boolean;
     forbiddenTopic: string | null;

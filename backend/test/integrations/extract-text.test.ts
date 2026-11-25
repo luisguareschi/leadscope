@@ -110,7 +110,7 @@ describe("extractKnowledgeText", () => {
   });
 
   it("rejects formats it does not support", async () => {
-    expect(await extractionError("foto.png", Buffer.from("png"))).toBe(
+    expect(await extractionError("video.mp4", Buffer.from("mp4"))).toBe(
       "unsupported_format",
     );
   });

@@ -206,7 +206,10 @@ export default function ThreadPage() {
             className="min-h-0 flex-1 overflow-y-auto bg-muted/70 dark:bg-black/25"
           >
             {data ? (
-              <ChatTranscript messages={data.messages} />
+              <ChatTranscript
+                threadId={data.thread.id}
+                messages={data.messages}
+              />
             ) : (
               <div className="flex flex-col gap-3 p-5">
                 <Skeleton className="h-12 w-2/3 rounded-[20px]" />
@@ -215,7 +218,7 @@ export default function ThreadPage() {
               </div>
             )}
           </div>
-          {thread ? <MessageComposer thread={thread} /> : null}
+          {thread ? <MessageComposer key={thread.id} thread={thread} /> : null}
         </Panel>
         {thread && data ? (
           <LeadDetails

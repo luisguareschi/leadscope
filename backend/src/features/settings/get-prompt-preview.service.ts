@@ -21,7 +21,10 @@ const FIRST_MESSAGE_LEAD: PromptThread = {
 /** What the model receives on the company's next turn, from the saved settings and files. */
 export async function getPromptPreview(ctx: AppContext, companyId: string) {
   const company = await loadCompanyById(ctx.db, companyId, ctx.encryptionKey);
-  const { system, documents } = await loadSystemPrompt(ctx, company);
+  const { system, documents, sendableFiles } = await loadSystemPrompt(
+    ctx,
+    company,
+  );
   return {
     model: company.config.llm.model,
     /** Who the prompt says is talking, and for whom. */
@@ -36,7 +39,10 @@ export async function getPromptPreview(ctx: AppContext, companyId: string) {
       company.name,
       ctx.now(),
     ),
-    tool: submitTurnTool(company.config),
+    tool: submitTurnTool(
+      company.config,
+      sendableFiles.map((file) => file.id),
+    ),
     knowledge: {
       files: documents.length,
       chars: documents.reduce((sum, doc) => sum + doc.text.length, 0),

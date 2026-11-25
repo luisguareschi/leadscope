@@ -22,11 +22,20 @@ import {
   type TestChatMessage,
 } from "@/lib/assistant-test-storage";
 import { useAssistantTestTurn, useMe } from "@/lib/queries";
+import {
+  clearSettingsTestDraft,
+  loadSettingsTestDraft,
+  subscribeSettingsTestDraft,
+} from "@/lib/settings-draft-storage";
+import type { TestDraftOverride } from "@/lib/types";
 
 type TestError = { message: string; code?: string };
 
 type AssistantTest = {
   chat: TestChat;
+  /** Unsaved Configuración / Instrucciones draft loaded for testing, if any. */
+  settingsDraft: TestDraftOverride | null;
+  clearSettingsDraft: () => void;
   /** The lead's message while its reply is on the way. */
   sending: TestChatMessage | null;
   pending: boolean;
@@ -62,6 +71,9 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
   const turn = useAssistantTestTurn();
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [chat, setChat] = useState<TestChat>(EMPTY_TEST_CHAT);
+  const [settingsDraft, setSettingsDraft] = useState<TestDraftOverride | null>(
+    null,
+  );
   const [sending, setSending] = useState<TestChatMessage | null>(null);
   const [error, setError] = useState<TestError | null>(null);
   const current = useRef(company);
@@ -75,9 +87,17 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
   if (company !== loadedFor) {
     setLoadedFor(company);
     setChat(company ? loadTestChat(company) : EMPTY_TEST_CHAT);
+    setSettingsDraft(company ? loadSettingsTestDraft(company) : null);
     setSending(null);
     setError(null);
   }
+
+  useEffect(() => {
+    if (!company) return;
+    return subscribeSettingsTestDraft(() => {
+      setSettingsDraft(loadSettingsTestDraft(company));
+    });
+  }, [company]);
 
   useEffect(() => {
     if (company && company === loadedFor) saveTestChat(company, chat);
@@ -98,7 +118,13 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
       setSending(lead);
       try {
         const response = await turn.mutateAsync(
-          buildTurnRequest(messages, historyLimit, chat.lead, chat.leadName),
+          buildTurnRequest(
+            messages,
+            historyLimit,
+            chat.lead,
+            chat.leadName,
+            settingsDraft,
+          ),
         );
         const next: TestChat = {
           ...chat,
@@ -111,6 +137,7 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
               sentAt: new Date().toISOString(),
               modelReply: response.modelReply,
               stoppedReason: response.stoppedReason,
+              sentFiles: response.sentFiles,
             },
           ],
           lead: response.lead,
@@ -136,7 +163,17 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
           }));
           setError(
             cause instanceof ApiError
-              ? { message: cause.message, code: cause.code }
+              ? {
+                  message: cause.fields
+                    ? [
+                        cause.message,
+                        ...Object.entries(cause.fields).map(
+                          ([field, msg]) => `${field}: ${msg}`,
+                        ),
+                      ].join(" ")
+                    : cause.message,
+                  code: cause.code,
+                }
               : {
                   message:
                     cause instanceof Error
@@ -150,11 +187,16 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
         setSending(null);
       }
     },
-    [company, chat, turn],
+    [company, chat, settingsDraft, turn],
   );
 
   const value: AssistantTest = {
     chat,
+    settingsDraft,
+    clearSettingsDraft: () => {
+      if (company) clearSettingsTestDraft(company);
+      setSettingsDraft(null);
+    },
     sending,
     pending: turn.isPending,
     error,

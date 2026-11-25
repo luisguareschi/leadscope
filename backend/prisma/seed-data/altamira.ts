@@ -77,8 +77,11 @@ export const altamiraConfig: CompanyConfigInput = {
 };
 
 /** Altamira's company instructions: the part of the prompt its operators edit in Configuración. */
-export const altamiraInstructions =
-  "Altamira es una desarrolladora inmobiliaria en Uruguay.";
+export const altamiraInstructions = `Altamira es una desarrolladora inmobiliaria en Uruguay.
+
+- Puedes compartir valores "precio desde", tipologías, fechas estimadas de entrega, orientación, ubicación y amenities que figuren en la documentación.
+- Nunca informes disponibilidad por unidad ni listes el inventario completo: un asesor confirma disponibilidad actualizada.
+- No agendes visitas ni reserves unidades; ofrece que un asesor coordine esos pasos.`;
 
 export const SAMPLE_KNOWLEDGE_NAME = "proyectos-ejemplo.md";
 
