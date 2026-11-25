@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -311,30 +312,32 @@ export function MessageComposer({ thread }: { thread: Thread }) {
               {publicFiles.length > 0 ? (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <FolderOpenIcon className="size-3.5" />
-                    Archivos públicos de Conocimiento
-                  </DropdownMenuLabel>
-                  <div className="max-h-64 overflow-y-auto">
-                    {publicFiles.map(({ file, folderPath }) => (
-                      <DropdownMenuItem
-                        key={file.id}
-                        onClick={() =>
-                          setAttachment({ kind: "knowledge", file })
-                        }
-                      >
-                        <FileTextIcon className="shrink-0" />
-                        <span className="flex min-w-0 flex-col">
-                          <span className="truncate">{file.name}</span>
-                          {folderPath ? (
-                            <span className="truncate text-[11px] text-muted-foreground">
-                              {folderPath}
-                            </span>
-                          ) : null}
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
-                  </div>
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <FolderOpenIcon className="size-3.5" />
+                      Archivos públicos de Conocimiento
+                    </DropdownMenuLabel>
+                    <div className="max-h-64 overflow-y-auto">
+                      {publicFiles.map(({ file, folderPath }) => (
+                        <DropdownMenuItem
+                          key={file.id}
+                          onClick={() =>
+                            setAttachment({ kind: "knowledge", file })
+                          }
+                        >
+                          <FileTextIcon className="shrink-0" />
+                          <span className="flex min-w-0 flex-col">
+                            <span className="truncate">{file.name}</span>
+                            {folderPath ? (
+                              <span className="truncate text-[11px] text-muted-foreground">
+                                {folderPath}
+                              </span>
+                            ) : null}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  </DropdownMenuGroup>
                 </>
               ) : null}
             </DropdownMenuContent>

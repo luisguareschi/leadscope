@@ -137,11 +137,11 @@ function ThreadsView() {
       ) : null}
 
       <Panel className="divide-y-0">
-        <div className="flex flex-col gap-2 px-3 pt-3 pb-1 @3xl/content:flex-row @3xl/content:items-center @3xl/content:justify-between">
+        <div className="flex flex-col gap-2 px-3 pt-3 pb-1">
           <div
             role="group"
             aria-label="Filtrar por etapa"
-            className="-mx-3 flex gap-1 overflow-x-auto px-3 scrollbar-none @3xl/content:mx-0 @3xl/content:px-0"
+            className="-mx-3 flex gap-1 overflow-x-auto px-3 scrollbar-none"
           >
             {stageFilters.map((filter) => {
               const count = countFor(counts, filter.value);
