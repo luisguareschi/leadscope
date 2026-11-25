@@ -2,6 +2,7 @@ import type {
   CollectItem,
   CompanyConfig,
 } from "../companies/company-config.js";
+import { MAX_REPLY_BUBBLES } from "./guardrails.js";
 import { ADVISOR_LABEL } from "./history.js";
 import { isSystemStage, stageLabel } from "./stages.js";
 import {
@@ -146,8 +147,9 @@ ${handoffJobLine}
 You do not book appointments, negotiate terms, make binding commitments, or replace the sales team.`,
     `# How you write
 - Write in ${config.language}. ${config.tone}
-- This is WhatsApp: short, plain messages, under ${config.maxReplyChars} characters. No markdown, headings, or tables.
-- At most one question per message. Answer what the lead asked before asking your next question.
+- This is WhatsApp: write like a real person texting, never in long blocks or essays. Split your turn into 1 to 3 short messages in submit_turn.replies (about 1 to 2 short sentences each, totaling under ${config.maxReplyChars} characters across the turn). Put a greeting, an answer or detail, and your next question in separate messages instead of one wall of text. When one short message is enough, return just 1 item.
+- No markdown: never use **bold**, headings, bullet lists, or tables. Plain conversational text only.
+- At most one question per turn. Answer what the lead asked before asking your next question.
 - Do not greet again after your first message.
 - Every fact about products, services, prices, availability, schedules, locations, policies, or terms must come from <knowledge> or the instructions from ${company}. If a detail is not there, say you do not have it and that an advisor can confirm it. Never guess.
 - If documents disagree, trust the most recently updated one.
@@ -166,7 +168,7 @@ Advisors from ${company} can write to the lead from the same WhatsApp number. In
 You can only reply within 24 hours of the lead's last message, and you never initiate outside that window. Do not promise to follow up later yourself; an advisor will contact them.`,
     `# Returning your turn
 Always call the submit_turn tool exactly once.
-- reply: the WhatsApp message to send.
+- replies: 1 to 3 short WhatsApp messages to send in order (at most ${MAX_REPLY_BUBBLES}). Split distinct ideas (greeting, answer, next question) into separate short bubbles, or return 1 item when a single short message fits.
 - collected: one entry per item key above. A value only when the lead's own messages state it, in a few words. Use null when this turn does not add or change it.
 - callTime: when or how the lead prefers an advisor to contact them, in a few words (for example "mañana después de las 18", "por la tarde", "Por mensaje / WhatsApp"), otherwise null.
 - intent:
@@ -326,7 +328,7 @@ export function buildTurnContext(
   const missing = describeMissing(missingItems(fields, config.collect));
   const nextStep =
     options?.followUpHours !== undefined
-      ? `Automatic follow-up nudge: the lead has not replied for about ${options.followUpHours} hour(s). Write one brief, warm, low-pressure message checking if they still have questions or want to continue${missing ? ` (still open: ${missing})` : ""}. Do not greet again as if it were the first message, and do not mention being automated. Keep intent as "continue" and sendFileIds empty.`
+      ? `Automatic follow-up nudge: the lead has not replied for about ${options.followUpHours} hour(s). Write one brief, warm, low-pressure message (a single item in replies) checking if they still have questions or want to continue${missing ? ` (still open: ${missing})` : ""}. Do not greet again as if it were the first message, and do not mention being automated. Keep intent as "continue" and sendFileIds empty.`
       : nextStepFor(thread, config, companyName);
   const lines = [
     "<turn_context>",

@@ -43,6 +43,11 @@ export type TurnOutcome =
 
 const MAX_IMAGES_PER_TURN = 3;
 
+/** Natural typing pause between consecutive WhatsApp bubbles in the same turn. */
+export function interMessageDelayMs(nextBody: string): number {
+  return Math.min(1_400, Math.max(500, 350 + nextBody.length * 8));
+}
+
 function sameCollected(a: Collected, b: Collected): boolean {
   const keys = Object.keys(a);
   return (
@@ -415,21 +420,71 @@ async function runTurn(
     return "silenced";
   }
 
-  let waMessageId: string | null = null;
+  type AttemptedBubble = {
+    body: string;
+    waMessageId: string | null;
+    status: "sent" | "failed";
+    error: string | null;
+    sentAt: Date;
+  };
+  const attempted: AttemptedBubble[] = [];
   let sendError: string | null = null;
-  try {
-    ({ waMessageId } = await channel.sendText({
-      to: thread.waId,
-      body: decision.reply,
-    }));
-  } catch (error) {
-    sendError = error instanceof Error ? error.message : String(error);
-    ctx.logger.error(
-      { err: error, threadId, companyId: company.id },
-      "whatsapp send failed",
-    );
+  let interruptedByPause = false;
+  let lastBubbleTimeMs = 0;
+
+  for (const [index, body] of decision.replies.entries()) {
+    if (index > 0) {
+      await ctx.sleep(interMessageDelayMs(body));
+      const midCheck = await ctx.db.thread.findUnique({
+        where: { id: threadId },
+        select: {
+          paused: true,
+          company: { select: { assistantPaused: true } },
+        },
+      });
+      if (!midCheck || midCheck.paused || midCheck.company.assistantPaused) {
+        interruptedByPause = true;
+        break;
+      }
+    }
+
+    let waMessageId: string | null = null;
+    let bubbleError: string | null = null;
+    try {
+      ({ waMessageId } = await channel.sendText({
+        to: thread.waId,
+        body,
+      }));
+    } catch (error) {
+      bubbleError = error instanceof Error ? error.message : String(error);
+      ctx.logger.error(
+        { err: error, threadId, companyId: company.id, bubbleIndex: index },
+        "whatsapp send failed",
+      );
+    }
+
+    // Keep timestamps strictly monotonic so `orderBy: { sentAt: "asc" }` preserves bubble order
+    // even when a frozen clock returns the same instant.
+    const nowMs = ctx.now().getTime();
+    const sentAtMs =
+      index > 0 && nowMs <= lastBubbleTimeMs ? lastBubbleTimeMs + 1 : nowMs;
+    lastBubbleTimeMs = sentAtMs;
+    attempted.push({
+      body,
+      waMessageId,
+      status: bubbleError ? "failed" : "sent",
+      error: bubbleError?.slice(0, 500) ?? null,
+      sentAt: new Date(sentAtMs),
+    });
+
+    if (bubbleError) {
+      sendError = bubbleError;
+      break;
+    }
   }
 
+  const lastAttempt = attempted.at(-1)!;
+  const sentAt = lastAttempt.sentAt;
   const needsHumanReason = sendError
     ? `send_failed: ${sendError.slice(0, 200)}`
     : decision.needsHuman?.reason;
@@ -438,26 +493,27 @@ async function runTurn(
     : (decision.crm ??
       (sendError ? "needs_human" : null) ??
       (crmChanged(thread, decision) ? "update" : null));
-  const sentAt = ctx.now();
   // The queue counts from the lead message that qualified them; anything later is "wrote again".
   const handedOff =
     decision.stage === "to_contact" && thread.stage !== "to_contact";
   const qualifiedAt = pending.at(-1)?.sentAt ?? sentAt;
 
   await ctx.db.$transaction([
-    ctx.db.message.create({
-      data: {
-        companyId: company.id,
-        threadId,
-        direction: "outbound",
-        type: "text",
-        body: decision.reply,
-        waMessageId,
-        status: sendError ? "failed" : "sent",
-        error: sendError?.slice(0, 500) ?? null,
-        sentAt,
-      },
-    }),
+    ...attempted.map((bubble) =>
+      ctx.db.message.create({
+        data: {
+          companyId: company.id,
+          threadId,
+          direction: "outbound",
+          type: "text",
+          body: bubble.body,
+          waMessageId: bubble.waMessageId,
+          status: bubble.status,
+          error: bubble.error,
+          sentAt: bubble.sentAt,
+        },
+      }),
+    ),
     ctx.db.message.updateMany({
       where: { id: { in: pendingIds } },
       data: { handledAt: sentAt },
@@ -470,7 +526,7 @@ async function runTurn(
         summary: decision.summary,
         ...(needsHumanReason ? { needsHuman: true, needsHumanReason } : {}),
         lastMessageAt: sentAt,
-        lastMessagePreview: messagePreview("text", decision.reply),
+        lastMessagePreview: messagePreview("text", lastAttempt.body),
         ...(crmAction ? crmRequest(crmAction) : {}),
       },
     }),
@@ -513,7 +569,7 @@ async function runTurn(
       : []),
   ]);
 
-  if (!sendError && decision.sendFileIds.length > 0) {
+  if (!sendError && !interruptedByPause && decision.sendFileIds.length > 0) {
     await sendPublicFiles(ctx, company, thread, channel, decision.sendFileIds);
   }
 

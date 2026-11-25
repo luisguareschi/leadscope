@@ -22,4 +22,6 @@ export type AppContext = {
   /** Background CRM writes; see `crmRequest` for how one is asked for. */
   crm: CrmQueue;
   now: () => Date;
+  /** Delay between sequential WhatsApp bubbles (no-op in tests). */
+  sleep: (ms: number) => Promise<void>;
 };

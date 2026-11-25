@@ -251,7 +251,7 @@ export function createFakeLlm(): LlmClient {
       let callNow = false;
       const isQuestion = QUESTION.test(text);
       let intent: Intent = "continue";
-      let reply: string;
+      let replies: string[];
       const sendFileIds: string[] = [];
       const collected: Collected = { ...fields.collected };
 
@@ -275,32 +275,34 @@ export function createFakeLlm(): LlmClient {
       if (followUp) {
         const open = missingItems({ collected, callTime: null }, items);
         const nextItem = open.find((item) => item.required) ?? open[0];
-        reply = nextItem
-          ? `¿Seguís por ahí? Si querés, contame ${nextItem.name.toLowerCase()} así te ayudo mejor.`
-          : "¿Seguís por ahí? Quedo atento por si te quedó alguna consulta.";
+        replies = [
+          nextItem
+            ? `¿Seguís por ahí? Si querés, contame ${nextItem.name.toLowerCase()} así te ayudo mejor.`
+            : "¿Seguís por ahí? Quedo atento por si te quedó alguna consulta.",
+        ];
       } else if (
         topics.length > 0 &&
         lines.some((line) => YIELD_QUESTION.test(foldText(line)))
       ) {
         forbiddenTopic = closestTopic(text, topics);
-        reply = "Eso te lo explica un asesor.";
+        replies = ["Eso te lo explica un asesor."];
       } else if (lines.some((line) => CALL_NOW.test(foldText(line)))) {
         callNow = true;
         const phone = instructionsPhone(input.system);
-        reply = [
+        replies = [
           "¡Perfecto! Un asesor te va a contactar lo antes posible.",
           phone ? `Si prefieres, puedes llamarnos ya al ${phone}.` : null,
-        ]
-          .filter(Boolean)
-          .join(" ");
+        ].filter((part): part is string => Boolean(part));
       } else if (NOT_INTERESTED.test(text)) {
         intent = "not_interested";
-        reply =
-          "Perfecto, gracias por avisar. Si más adelante te interesa, escríbenos por aquí.";
+        replies = [
+          "Perfecto, gracias por avisar. Si más adelante te interesa, escríbenos por aquí.",
+        ];
       } else if (DISQUALIFIED.test(text)) {
         intent = "disqualified";
-        reply =
-          "Por el momento no trabajamos esa opción. Si en otro momento buscás algo de nuestra oferta, escribinos.";
+        replies = [
+          "Por el momento no trabajamos esa opción. Si en otro momento buscás algo de nuestra oferta, escribinos.",
+        ];
       } else if (
         (stage === "handoff" || leadStage === "to_contact") &&
         fields.callTime === null &&
@@ -308,7 +310,9 @@ export function createFakeLlm(): LlmClient {
       ) {
         callTime = said;
         intent = "qualified";
-        reply = `Listo, un asesor te va a llamar ${said.charAt(0).toLowerCase()}${said.slice(1)}. ¡Gracias por escribirnos!`;
+        replies = [
+          `Listo, un asesor te va a llamar ${said.charAt(0).toLowerCase()}${said.slice(1)}. ¡Gracias por escribirnos!`,
+        ];
       } else {
         for (const line of lines) {
           const cleaned = line.replace(/^(hola|buenas)[!,.\s]*/i, "").trim();
@@ -342,11 +346,12 @@ export function createFakeLlm(): LlmClient {
               ? `¡Hola! Soy ${config.assistantName.trim()}, asistente virtual de ${companyName}.`
               : `¡Hola! Soy el asistente virtual de ${companyName}.`
             : "";
-        reply = [intro, answer, nextAsk()].filter(Boolean).join(" ");
+        replies = [intro, answer, nextAsk()].filter(Boolean);
       }
 
       const output: ModelTurn = {
-        reply,
+        reply: replies.join("\n\n"),
+        replies,
         intent,
         collected: update,
         callTime,

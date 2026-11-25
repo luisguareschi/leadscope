@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import type { CompanyConfig } from "../companies/company-config.js";
+import { MAX_REPLY_BUBBLES } from "../engine/guardrails.js";
 import type { ChatTurn } from "../engine/history.js";
 import { MAX_FILES_PER_TURN } from "../engine/turn.js";
 import { INTENTS } from "../engine/types.js";
@@ -11,50 +12,74 @@ const nullableText = z
   .nullish()
   .transform((value) => value ?? null);
 
-export const modelTurnSchema = z.object({
-  reply: z.string(),
-  collected: z
-    .record(z.string(), z.unknown())
-    .nullish()
-    .transform((values) =>
-      Object.fromEntries(
-        Object.entries(values ?? {}).map(([key, value]) => [
-          key,
-          typeof value === "string"
-            ? value
-            : typeof value === "number"
-              ? String(value)
-              : null,
-        ]),
+export const modelTurnSchema = z
+  .object({
+    replies: z.array(z.string()).optional(),
+    reply: z.string().optional(),
+    collected: z
+      .record(z.string(), z.unknown())
+      .nullish()
+      .transform((values) =>
+        Object.fromEntries(
+          Object.entries(values ?? {}).map(([key, value]) => [
+            key,
+            typeof value === "string"
+              ? value
+              : typeof value === "number"
+                ? String(value)
+                : null,
+          ]),
+        ),
       ),
-    ),
-  callTime: nullableText,
-  intent: z.enum(INTENTS),
-  needsHuman: z
-    .boolean()
-    .nullish()
-    .transform((value) => value ?? false),
-  callNow: z
-    .boolean()
-    .nullish()
-    .transform((value) => value ?? false),
-  // Fails safe: anything set (even `true` instead of the topic) counts as flagged.
-  forbiddenTopic: z
-    .union([z.string(), z.boolean()])
-    .nullish()
-    .transform((value) =>
-      value === true
-        ? "(sin especificar)"
-        : typeof value === "string"
-          ? value.trim() || null
-          : null,
-    ),
-  summary: nullableText,
-  sendFileIds: z
-    .array(z.string())
-    .nullish()
-    .transform((ids) => (ids ?? []).filter((id) => id.trim().length > 0)),
-});
+    callTime: nullableText,
+    intent: z.enum(INTENTS),
+    needsHuman: z
+      .boolean()
+      .nullish()
+      .transform((value) => value ?? false),
+    callNow: z
+      .boolean()
+      .nullish()
+      .transform((value) => value ?? false),
+    // Fails safe: anything set (even `true` instead of the topic) counts as flagged.
+    forbiddenTopic: z
+      .union([z.string(), z.boolean()])
+      .nullish()
+      .transform((value) =>
+        value === true
+          ? "(sin especificar)"
+          : typeof value === "string"
+            ? value.trim() || null
+            : null,
+      ),
+    summary: nullableText,
+    sendFileIds: z
+      .array(z.string())
+      .nullish()
+      .transform((ids) => (ids ?? []).filter((id) => id.trim().length > 0)),
+  })
+  .superRefine((value, ctx) => {
+    if (value.replies === undefined && value.reply === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["replies"],
+        message: "Expected replies array or reply string",
+      });
+    }
+  })
+  .transform(({ replies: rawReplies, reply: rawReply, ...rest }) => {
+    const cleaned =
+      rawReplies !== undefined
+        ? rawReplies.map((item) => item.trim()).filter(Boolean)
+        : rawReply?.trim()
+          ? [rawReply.trim()]
+          : [];
+    return {
+      ...rest,
+      replies: cleaned,
+      reply: cleaned.join("\n\n"),
+    };
+  });
 
 /**
  * The submit_turn tool for one company: `collected` has one property per collect item,
@@ -70,14 +95,18 @@ export function submitTurnTool(
   return {
     name: "submit_turn",
     description:
-      "Return the WhatsApp reply for the lead, what their messages told you, and the flags the engine acts on.",
+      "Return the WhatsApp reply bubbles for the lead, what their messages told you, and the flags the engine acts on.",
     input_schema: {
       type: "object",
       additionalProperties: false,
       properties: {
-        reply: {
-          type: "string",
-          description: "The WhatsApp message to send to the lead.",
+        replies: {
+          type: "array",
+          minItems: 1,
+          maxItems: MAX_REPLY_BUBBLES,
+          items: { type: "string" },
+          description:
+            "1 to 3 short, natural WhatsApp messages to send in order, like a real person texting (1 to 2 short sentences each). Split greeting, answer, and next question into separate items instead of one long block. Use 1 item when one short message is enough.",
         },
         collected: {
           type: "object",
@@ -140,7 +169,7 @@ export function submitTurnTool(
           : {}),
       },
       required: [
-        "reply",
+        "replies",
         "collected",
         "callTime",
         "intent",

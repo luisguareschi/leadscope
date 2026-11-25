@@ -44,6 +44,8 @@ export type TestTurnRequest = {
 
 export type TestTurnResponse = {
   reply: string;
+  /** Separate WhatsApp bubbles to send in order. */
+  replies: string[];
   /** The model's own words when the lead would get a fixed line instead. */
   modelReply: string | null;
   /** Public files from Conocimiento that the assistant would send on this turn. */
@@ -170,6 +172,7 @@ export async function runTestTurn(
     output && decision.needsHuman ? output.reply.trim() || null : null;
   return {
     reply: decision.reply,
+    replies: decision.replies,
     modelReply,
     sentFiles,
     lead: {

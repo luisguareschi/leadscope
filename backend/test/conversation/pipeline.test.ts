@@ -896,10 +896,11 @@ describe("after a person changes the stage", () => {
         },
       })
     ).whatsappPhoneNumberId!;
-    ctx = createTestContext();
+    ctx = createTestContext({ now: () => new Date("2026-11-24T17:00:00Z") });
 
     const { threadId } = await receive(
       "Hola, busco 2 dormitorios en Tres Cruces",
+      { sentAt: new Date("2026-11-24T16:55:00Z") },
     );
     ctx.llm.push({
       reply: "¡Hola! Tenemos unidades de 2 dormitorios en Tres Cruces.",
@@ -938,5 +939,115 @@ describe("after a person changes the stage", () => {
     expect(summary).toContain("Estado: Derivado a asesor");
     expect(summary).toContain("Etapa: Por contactar");
     expect(summary).toContain("Contacto preferido: Por mensaje / WhatsApp");
+  });
+});
+
+describe("multi-bubble replies", () => {
+  it("sends each bubble sequentially with a pause between bubbles and stores them in order", async () => {
+    const delays: number[] = [];
+    const fixedNow = new Date("2026-11-25T18:00:00Z");
+    ctx = createTestContext({
+      now: () => fixedNow,
+      sleep: async (ms) => {
+        delays.push(ms);
+      },
+    });
+    const { threadId } = await receive("Hola, qué proyectos tienen?", {
+      sentAt: new Date("2026-11-25T17:59:50Z"),
+    });
+    ctx.llm.push({
+      replies: [
+        "Hola Ana, soy Sofía.",
+        "Tenemos Altamira Tres Cruces y Altamira Libertad.",
+        "¿Cuál zona te interesa más?",
+      ],
+    });
+
+    await expect(processThread(ctx, threadId)).resolves.toBe("replied");
+
+    expect(delays).toHaveLength(2);
+    expect(delays.every((ms) => ms >= 500 && ms <= 1_400)).toBe(true);
+    expect(ctx.integrations.fakes.channel.sent).toMatchObject([
+      { kind: "text", body: "Hola Ana, soy Sofía." },
+      {
+        kind: "text",
+        body: "Tenemos Altamira Tres Cruces y Altamira Libertad.",
+      },
+      { kind: "text", body: "¿Cuál zona te interesa más?" },
+    ]);
+
+    const saved = await thread();
+    const outbound = saved.messages.filter((m) => m.direction === "outbound");
+    expect(outbound.map((m) => m.body)).toEqual([
+      "Hola Ana, soy Sofía.",
+      "Tenemos Altamira Tres Cruces y Altamira Libertad.",
+      "¿Cuál zona te interesa más?",
+    ]);
+    // Strictly increasing timestamps even under a frozen clock.
+    expect(outbound[0]!.sentAt.getTime()).toBeLessThan(
+      outbound[1]!.sentAt.getTime(),
+    );
+    expect(outbound[1]!.sentAt.getTime()).toBeLessThan(
+      outbound[2]!.sentAt.getTime(),
+    );
+    expect(saved.lastMessagePreview).toBe("¿Cuál zona te interesa más?");
+  });
+
+  it("stops sending remaining bubbles and flags needsHuman if a middle bubble fails", async () => {
+    let calls = 0;
+    const flaky = new FakeChannel();
+    const origSendText = flaky.sendText.bind(flaky);
+    flaky.sendText = async (input) => {
+      calls += 1;
+      if (calls === 2) throw new ChannelError("rate limited", 429, 429);
+      return origSendText(input);
+    };
+    ctx = createTestContext({
+      integrations: { channelFor: () => flaky },
+    });
+
+    const { threadId } = await receive("Hola");
+    ctx.llm.push({
+      replies: ["Primera burbuja.", "Segunda que falla.", "Tercera omitida."],
+    });
+
+    await expect(processThread(ctx, threadId)).resolves.toBe("send_failed");
+    expect(flaky.sent).toHaveLength(1);
+    const saved = await thread();
+    const outbound = saved.messages.filter((m) => m.direction === "outbound");
+    expect(outbound).toMatchObject([
+      { body: "Primera burbuja.", status: "sent" },
+      { body: "Segunda que falla.", status: "failed" },
+    ]);
+    expect(saved.needsHuman).toBe(true);
+    expect(saved.needsHumanReason).toContain("send_failed");
+  });
+
+  it("stops sending remaining bubbles if an operator pauses the thread mid-burst", async () => {
+    let threadIdRef = "";
+    ctx = createTestContext({
+      sleep: async () => {
+        await testDb().thread.update({
+          where: { id: threadIdRef },
+          data: { paused: true, pausedAt: new Date() },
+        });
+      },
+    });
+    const { threadId } = await receive("Hola");
+    threadIdRef = threadId;
+    ctx.llm.push({
+      replies: ["Primera burbuja.", "Segunda cancelada por pausa."],
+    });
+
+    await expect(processThread(ctx, threadId)).resolves.toBe("replied");
+    expect(ctx.integrations.fakes.channel.sent).toMatchObject([
+      { kind: "text", body: "Primera burbuja." },
+    ]);
+    const saved = await thread();
+    expect(
+      saved.messages
+        .filter((m) => m.direction === "outbound")
+        .map((m) => m.body),
+    ).toEqual(["Primera burbuja."]);
   });
 });
