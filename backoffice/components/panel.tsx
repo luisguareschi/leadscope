@@ -4,7 +4,19 @@ import type { ReactNode } from "react";
 import { cn } from "cn";
 import { Label } from "@/components/ui/label";
 
-export type Tone = "ok" | "warning" | "error" | "info" | "pending" | "muted";
+export type Tone =
+  | "ok"
+  | "warning"
+  | "error"
+  | "info"
+  | "pending"
+  | "muted"
+  | "purple"
+  | "cyan"
+  | "amber"
+  | "orange"
+  | "pink"
+  | "lime";
 
 /** A titled block of a page: heading, one line of context, and its actions. */
 export function Section({
@@ -136,6 +148,12 @@ const DOT: Record<Tone, string> = {
   info: "bg-status-info",
   pending: "bg-transparent ring-[1.5px] ring-inset ring-primary",
   muted: "bg-muted-foreground/40",
+  purple: "bg-purple-600 dark:bg-purple-400",
+  cyan: "bg-cyan-500 dark:bg-cyan-400",
+  amber: "bg-amber-500 dark:bg-amber-400",
+  orange: "bg-orange-500 dark:bg-orange-400",
+  pink: "bg-pink-500 dark:bg-pink-400",
+  lime: "bg-lime-500 dark:bg-lime-400",
 };
 
 export function StatusDot({
@@ -186,6 +204,12 @@ const TEXT: Record<Tone, string> = {
   info: "text-foreground",
   pending: "text-foreground",
   muted: "text-muted-foreground",
+  purple: "text-purple-600 dark:text-purple-400",
+  cyan: "text-cyan-600 dark:text-cyan-400",
+  amber: "text-amber-600 dark:text-amber-400",
+  orange: "text-orange-600 dark:text-orange-400",
+  pink: "text-pink-600 dark:text-pink-400",
+  lime: "text-lime-600 dark:text-lime-400",
 };
 
 /** A status as coloured words, like the Estado column of Revolut's transaction lists. */

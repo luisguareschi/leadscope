@@ -12,6 +12,15 @@ export type SystemLeadStage = (typeof SYSTEM_STAGE_KEYS)[number];
 /** Pipeline stage key: one of the 6 engine system stages or a company-defined custom stage key. */
 export type LeadStage = string;
 
+export const CUSTOM_STAGE_COLORS = [
+  "purple",
+  "cyan",
+  "amber",
+  "orange",
+  "pink",
+  "lime",
+] as const;
+
 export const STAGE_COLORS = [
   "pending",
   "warning",
@@ -19,6 +28,7 @@ export const STAGE_COLORS = [
   "muted",
   "error",
   "info",
+  ...CUSTOM_STAGE_COLORS,
 ] as const;
 
 export type StageColor = (typeof STAGE_COLORS)[number];

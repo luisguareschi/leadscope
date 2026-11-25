@@ -13,7 +13,18 @@ export type SystemLeadStage =
 export type LeadStage = string;
 
 export type StageColor =
-  "pending" | "warning" | "ok" | "muted" | "error" | "info";
+  | "pending"
+  | "warning"
+  | "ok"
+  | "muted"
+  | "error"
+  | "info"
+  | "purple"
+  | "cyan"
+  | "amber"
+  | "orange"
+  | "pink"
+  | "lime";
 
 export type StageConfig = {
   key: string;

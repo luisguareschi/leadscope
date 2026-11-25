@@ -18,13 +18,21 @@ import { newItemId, type StageConfigDraft } from "./config-draft";
 import { useConfigEditor } from "./config-editor";
 
 const COLOR_OPTIONS: Array<{ value: StageColor; label: string }> = [
-  { value: "pending", label: "Azul claro" },
-  { value: "warning", label: "Ámbar" },
-  { value: "ok", label: "Verde" },
-  { value: "info", label: "Azul" },
-  { value: "error", label: "Rojo" },
-  { value: "muted", label: "Gris" },
+  { value: "purple", label: "Violeta" },
+  { value: "cyan", label: "Celeste" },
+  { value: "amber", label: "Ámbar" },
+  { value: "orange", label: "Naranja" },
+  { value: "pink", label: "Rosa" },
+  { value: "lime", label: "Lima" },
 ];
+
+function nextUnusedColor(existing: readonly StageConfigDraft[]): StageColor {
+  const used = new Set(existing.map((stage) => stage.color));
+  const free = COLOR_OPTIONS.find((option) => !used.has(option.value));
+  return free
+    ? free.value
+    : COLOR_OPTIONS[existing.length % COLOR_OPTIONS.length]!.value;
+}
 
 const SYSTEM_STAGE_HINTS: Record<string, string> = {
   qualifying: "El asistente está recopilando los datos iniciales del lead.",
@@ -331,14 +339,15 @@ export function StagesEditor() {
             disabled={full}
             onClick={() => {
               const id = newItemId();
+              const existing = customEntries.map((entry) => entry.stage);
               setAutoKey((prev) => new Set(prev).add(id));
               updateCustom([
-                ...customEntries.map((entry) => entry.stage),
+                ...existing,
                 {
                   id,
                   key: "",
                   label: "",
-                  color: "info",
+                  color: nextUnusedColor(existing),
                   system: false,
                 },
               ]);

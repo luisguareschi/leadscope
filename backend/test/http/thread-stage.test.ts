@@ -314,7 +314,7 @@ describe("custom pipeline stages, disqualified, and no_response (LUI-15/16/17)",
         {
           key: "visit_scheduled",
           label: "Visita agendada",
-          color: "ok",
+          color: "purple",
           system: false,
         },
       ],
