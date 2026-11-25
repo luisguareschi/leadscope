@@ -92,6 +92,17 @@ describe("normalizeReplies", () => {
     expect(result).not.toContain("Tercer mensaje que no entra.");
   });
 
+  it("keeps a short final bubble that fits verbatim even when remaining budget is under 20 chars", () => {
+    // 32 chars + 2 separator + 10 chars = 44 <= 46 (budget for 2nd bubble is 12 < 20)
+    const result = normalizeReplies(
+      {
+        replies: ["Tenemos opciones en Tres Cruces.", "¿Te sirve?"],
+      },
+      46,
+    );
+    expect(result).toEqual(["Tenemos opciones en Tres Cruces.", "¿Te sirve?"]);
+  });
+
   it("returns an empty array for blank input", () => {
     expect(normalizeReplies({ replies: ["  ", "\n"] }, 600)).toEqual([]);
     expect(normalizeReplies({ reply: "   " }, 600)).toEqual([]);

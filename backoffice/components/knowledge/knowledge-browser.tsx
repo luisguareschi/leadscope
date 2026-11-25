@@ -200,7 +200,7 @@ export function KnowledgeBrowser({
   const downloadFile = async (file: KnowledgeFile) => {
     try {
       const blob = await fetchBlob(
-        `/internal/knowledge/files/${file.id}/download`,
+        `/internal/knowledge/files/${file.id}/download?v=${encodeURIComponent(file.updatedAt)}`,
       );
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");

@@ -442,7 +442,10 @@ async function runTurn(
           company: { select: { assistantPaused: true } },
         },
       });
-      if (!midCheck || midCheck.paused || midCheck.company.assistantPaused) {
+      if (!midCheck) {
+        return "silenced";
+      }
+      if (midCheck.paused || midCheck.company.assistantPaused) {
         interruptedByPause = true;
         break;
       }
@@ -525,9 +528,18 @@ async function runTurn(
         callTime: decision.fields.callTime,
         summary: decision.summary,
         ...(needsHumanReason ? { needsHuman: true, needsHumanReason } : {}),
+        ...(crmAction ? crmRequest(crmAction) : {}),
+      },
+    }),
+    // Conditional so an earlier bubble never clobbers a newer advisor takeover or inbound message.
+    ctx.db.thread.updateMany({
+      where: {
+        id: threadId,
+        OR: [{ lastMessageAt: null }, { lastMessageAt: { lte: sentAt } }],
+      },
+      data: {
         lastMessageAt: sentAt,
         lastMessagePreview: messagePreview("text", lastAttempt.body),
-        ...(crmAction ? crmRequest(crmAction) : {}),
       },
     }),
     // Conditional, so a person who picked a stage during this turn keeps it, with the

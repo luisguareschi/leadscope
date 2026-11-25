@@ -1050,4 +1050,78 @@ describe("multi-bubble replies", () => {
         .map((m) => m.body),
     ).toEqual(["Primera burbuja."]);
   });
+
+  it("does not clobber a newer advisor message preview when takeover happens mid-burst", async () => {
+    let threadIdRef = "";
+    const t0 = new Date("2026-11-25T18:00:00Z");
+    const t1 = new Date("2026-11-25T18:00:05Z");
+    ctx = createTestContext({
+      now: () => t0,
+      sleep: async () => {
+        await testDb().thread.update({
+          where: { id: threadIdRef },
+          data: {
+            paused: true,
+            pausedAt: t1,
+            lastMessageAt: t1,
+            lastMessagePreview: "Hola, te escribe Vicky",
+          },
+        });
+      },
+    });
+    const { threadId } = await receive("Hola", {
+      sentAt: new Date("2026-11-25T17:59:50Z"),
+    });
+    threadIdRef = threadId;
+    ctx.llm.push({
+      replies: ["Primera burbuja.", "Segunda cancelada."],
+    });
+
+    await expect(processThread(ctx, threadId)).resolves.toBe("replied");
+    const saved = await thread();
+    expect(saved.lastMessageAt).toEqual(t1);
+    expect(saved.lastMessagePreview).toBe("Hola, te escribe Vicky");
+  });
+
+  it("stops remaining bubbles and skips sendFileIds if company assistantPaused flips mid-burst", async () => {
+    const company = await testDb().company.findFirstOrThrow();
+    const pub = await testDb().knowledgeFile.create({
+      data: {
+        companyId: company.id,
+        name: "Brochure.pdf",
+        nameKey: "brochure.pdf",
+        format: "pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 100,
+        sha256: "pub",
+        text: "Brochure",
+        charCount: 8,
+        visibility: "public",
+        storagePath: `${company.id}/brochure.pdf`,
+      },
+    });
+    await ctx.storage.upload(
+      pub.storagePath!,
+      Buffer.from("%PDF-1.4"),
+      "application/pdf",
+    );
+    ctx = createTestContext({
+      sleep: async () => {
+        await testDb().company.update({
+          where: { id: company.id },
+          data: { assistantPaused: true },
+        });
+      },
+    });
+    const { threadId } = await receive("Pasame el brochure");
+    ctx.llm.push({
+      replies: ["Te envío el brochure.", "Avisame qué te parece."],
+      sendFileIds: [pub.id],
+    });
+
+    await expect(processThread(ctx, threadId)).resolves.toBe("replied");
+    expect(ctx.integrations.fakes.channel.sent).toMatchObject([
+      { kind: "text", body: "Te envío el brochure." },
+    ]);
+  });
 });

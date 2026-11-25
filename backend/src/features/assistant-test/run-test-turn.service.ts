@@ -168,8 +168,16 @@ export async function runTestTurn(
   const output = input.kind === "model" ? input.output : null;
   // The lead gets a fixed line whenever the turn stops the assistant, even if the model's own
   // text happened to match it.
+  const rawModelReply = output
+    ? output.reply.trim() ||
+      output.replies
+        ?.map((part) => part.trim())
+        .filter(Boolean)
+        .join("\n\n") ||
+      ""
+    : "";
   const modelReply =
-    output && decision.needsHuman ? output.reply.trim() || null : null;
+    output && decision.needsHuman ? rawModelReply || null : null;
   return {
     reply: decision.reply,
     replies: decision.replies,

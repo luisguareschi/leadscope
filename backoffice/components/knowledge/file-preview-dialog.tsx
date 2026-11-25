@@ -74,7 +74,10 @@ export function FilePreviewDialog({
   return (
     <Dialog open={file !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className={cn(isVisualDialog ? "sm:max-w-4xl" : "sm:max-w-3xl")}
+        className={cn(
+          "flex max-h-[calc(100dvh-2rem)] flex-col gap-4 overflow-y-auto",
+          isVisualDialog ? "sm:max-w-4xl" : "sm:max-w-3xl",
+        )}
       >
         {file ? (
           <FilePreviewBody
@@ -86,6 +89,15 @@ export function FilePreviewDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function safeImageMime(file: KnowledgeFile, rawBlob: Blob): string {
+  const candidates = [file.mimeType, rawBlob.type];
+  for (const candidate of candidates) {
+    const base = candidate.split(";")[0]?.trim().toLowerCase() ?? "";
+    if (IMAGE_MIMES.has(base)) return base;
+  }
+  return "image/png";
 }
 
 function FilePreviewBody({
@@ -107,19 +119,20 @@ function FilePreviewBody({
     file.charCount > 0 &&
     (kind === "text" || (kind === "pdf" && activeTab === "text"));
   const needsBlob = kind === "image" || kind === "pdf";
+  const downloadPath = `/internal/knowledge/files/${file.id}/download?v=${encodeURIComponent(file.updatedAt)}`;
 
   useEffect(() => {
     if (!needsBlob) return;
     let active = true;
     let objectUrl: string | null = null;
 
-    void fetchBlob(`/internal/knowledge/files/${file.id}/download`)
+    void fetchBlob(downloadPath)
       .then((rawBlob) => {
         if (!active) return;
         const typedBlob =
           kind === "pdf"
             ? new Blob([rawBlob], { type: "application/pdf" })
-            : rawBlob;
+            : new Blob([rawBlob], { type: safeImageMime(file, rawBlob) });
         objectUrl = URL.createObjectURL(typedBlob);
         setBlobState({ url: objectUrl, blob: typedBlob, error: null });
       })
@@ -139,7 +152,7 @@ function FilePreviewBody({
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [needsBlob, file.id, kind, fetchBlob]);
+  }, [needsBlob, downloadPath, file, kind, fetchBlob]);
 
   const textQuery = useKnowledgeFileText(textActive ? file.id : null);
 
@@ -148,13 +161,18 @@ function FilePreviewBody({
   const blobError = blobState?.error ?? null;
   const isLegacyPdf = file.format === "pdf" && !file.hasFile;
 
+  const openInNewTab = () => {
+    if (!blobState?.blob) return;
+    // Dedicated URL so closing the preview dialog does not revoke the newly opened tab.
+    const tabUrl = URL.createObjectURL(blobState.blob);
+    window.open(tabUrl, "_blank", "noopener,noreferrer");
+  };
+
   const downloadFile = async () => {
     if (!file.hasFile) return;
     setDownloading(true);
     try {
-      const blob =
-        blobState?.blob ??
-        (await fetchBlob(`/internal/knowledge/files/${file.id}/download`));
+      const blob = blobState?.blob ?? (await fetchBlob(downloadPath));
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -221,7 +239,7 @@ function FilePreviewBody({
               <img
                 src={blobUrl}
                 alt={file.name}
-                className="max-h-[65vh] max-w-full rounded-lg object-contain"
+                className="max-h-[min(60vh,calc(100dvh-16rem))] max-w-full rounded-lg object-contain"
               />
             ) : null}
           </div>
@@ -229,7 +247,7 @@ function FilePreviewBody({
           <div className="overflow-hidden rounded-xl bg-muted/60">
             {blobLoading ? (
               <div className="p-4">
-                <Skeleton className="h-[68vh] w-full rounded-lg" />
+                <Skeleton className="h-[min(68vh,calc(100dvh-16rem))] min-h-64 w-full rounded-lg" />
               </div>
             ) : blobError ? (
               <div className="p-4">
@@ -239,13 +257,13 @@ function FilePreviewBody({
               <iframe
                 src={blobUrl}
                 title={file.name}
-                className="h-[68vh] w-full rounded-xl border border-border/60 bg-white"
+                className="h-[min(68vh,calc(100dvh-16rem))] min-h-64 w-full rounded-xl border border-border/60 bg-white"
               />
             ) : null}
           </div>
         )
       ) : textActive ? (
-        <div className="max-h-[60vh] overflow-y-auto rounded-xl bg-muted p-4">
+        <div className="max-h-[min(60vh,calc(100dvh-16rem))] overflow-y-auto rounded-xl bg-muted p-4">
           {textQuery.data ? (
             <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap">
               {textQuery.data.file.text}
@@ -266,14 +284,8 @@ function FilePreviewBody({
 
       {file.hasFile ? (
         <DialogFooter>
-          {blobUrl ? (
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={
-                <a href={blobUrl} target="_blank" rel="noopener noreferrer" />
-              }
-            >
+          {blobState?.blob ? (
+            <Button type="button" variant="outline" onClick={openInNewTab}>
               <ExternalLinkIcon />
               Abrir en nueva pestaña
             </Button>

@@ -68,9 +68,13 @@ export const modelTurnSchema = z
     }
   })
   .transform(({ replies: rawReplies, reply: rawReply, ...rest }) => {
-    const cleaned =
+    const fromArray =
       rawReplies !== undefined
         ? rawReplies.map((item) => item.trim()).filter(Boolean)
+        : [];
+    const cleaned =
+      fromArray.length > 0
+        ? fromArray
         : rawReply?.trim()
           ? [rawReply.trim()]
           : [];

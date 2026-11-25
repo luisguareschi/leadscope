@@ -66,12 +66,13 @@ export function normalizeReplies(
   for (const part of boundedCount) {
     const separatorCost = result.length === 0 ? 0 : 2;
     const budget = remaining - separatorCost;
-    if (result.length > 0 && budget < 20) break;
+    if (budget <= 0) break;
     if (part.length <= budget) {
       result.push(part);
       remaining -= separatorCost + part.length;
     } else {
-      const capped = capReply(part, Math.max(1, budget));
+      if (result.length > 0 && budget < 20) break;
+      const capped = capReply(part, budget);
       if (capped) result.push(capped);
       break;
     }
