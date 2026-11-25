@@ -847,4 +847,46 @@ describe("disqualified, no_response, custom stages, consistency, and sendFileIds
       ).sendFileIds,
     ).toEqual([]);
   });
+
+  it("returns normalized multi-bubble replies for model turns and single-bubble replies on fixed-line paths", () => {
+    const multi = decideTurn(
+      thread({ state: "greeting" }),
+      model({
+        reply: "",
+        replies: [
+          "Hola, soy Sofía.",
+          "Tenemos opciones de 2 dormitorios.",
+          "¿Para vivir o invertir?",
+        ],
+      }),
+      rules,
+    );
+    expect(multi.replies).toEqual([
+      "Hola, soy Sofía.",
+      "Tenemos opciones de 2 dormitorios.",
+      "¿Para vivir o invertir?",
+    ]);
+    expect(multi.reply).toBe(
+      "Hola, soy Sofía.\n\nTenemos opciones de 2 dormitorios.\n\n¿Para vivir o invertir?",
+    );
+
+    expect(
+      decideTurn(thread(), model({ needsHuman: true }), rules).replies,
+    ).toEqual(["NEEDS_HUMAN"]);
+    expect(
+      decideTurn(thread(), model({ forbiddenTopic: "Rentabilidad" }), rules)
+        .replies,
+    ).toEqual(["NEEDS_HUMAN"]);
+    expect(decideTurn(thread(), { kind: "non_text" }, rules).replies).toEqual([
+      "NON_TEXT",
+    ]);
+    expect(
+      decideTurn(thread(), { kind: "model_failure", reason: "timeout" }, rules)
+        .replies,
+    ).toEqual(["FALLBACK"]);
+    expect(
+      decideTurn(thread(), model({ reply: "", replies: ["  "] }), rules)
+        .replies,
+    ).toEqual(["FALLBACK"]);
+  });
 });

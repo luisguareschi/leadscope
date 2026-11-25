@@ -1,4 +1,4 @@
-import { capReply } from "./guardrails.js";
+import { normalizeReplies } from "./guardrails.js";
 import { isClosedStage, isSystemStage } from "./stages.js";
 import type {
   Collected,
@@ -275,6 +275,7 @@ export function decideTurn(
       fields: current,
       summary: keptSummary,
       reply: rules.messages.nonText,
+      replies: [rules.messages.nonText],
       sendFileIds: [],
       needsHuman: null,
       crm: null,
@@ -288,6 +289,7 @@ export function decideTurn(
       fields: current,
       summary: keptSummary,
       reply: rules.messages.fallback,
+      replies: [rules.messages.fallback],
       sendFileIds: [],
       needsHuman: { reason: `model_failure: ${input.reason}` },
       crm: "needs_human",
@@ -307,6 +309,7 @@ export function decideTurn(
       fields,
       summary,
       reply: rules.messages.needsHuman,
+      replies: [rules.messages.needsHuman],
       sendFileIds: [],
       needsHuman: {
         reason: `forbidden_topic: ${forbiddenTopic.slice(0, 200)}`,
@@ -321,25 +324,28 @@ export function decideTurn(
       fields,
       summary,
       reply: rules.messages.needsHuman,
+      replies: [rules.messages.needsHuman],
       sendFileIds: [],
       needsHuman: { reason: "lead_needs_human" },
       crm: "needs_human",
     };
   }
 
-  const reply = capReply(output.reply, rules.maxReplyChars);
-  if (!reply) {
+  const replies = normalizeReplies(output, rules.maxReplyChars);
+  if (replies.length === 0) {
     return {
       state: thread.state,
       stage,
       fields,
       summary,
       reply: rules.messages.fallback,
+      replies: [rules.messages.fallback],
       sendFileIds: [],
       needsHuman: { reason: "empty_reply" },
       crm: "needs_human",
     };
   }
+  const reply = replies.join("\n\n");
 
   const sendFileIds = cleanFileIds(output.sendFileIds);
 
@@ -353,6 +359,7 @@ export function decideTurn(
       fields: { ...fields, callTime: clean(output.callTime) ?? CALL_NOW_TIME },
       summary,
       reply,
+      replies,
       sendFileIds,
       needsHuman: null,
       crm: "handoff",
@@ -369,6 +376,7 @@ export function decideTurn(
         fields,
         summary,
         reply,
+        replies,
         sendFileIds: [],
         needsHuman: null,
         crm: "update",
@@ -380,6 +388,7 @@ export function decideTurn(
       fields,
       summary,
       reply,
+      replies,
       sendFileIds: [],
       needsHuman: null,
       crm: "close",
@@ -393,6 +402,7 @@ export function decideTurn(
     fields,
     summary,
     reply,
+    replies,
     sendFileIds,
     needsHuman: null,
   };

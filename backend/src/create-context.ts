@@ -27,7 +27,11 @@ export type ContextOptions = {
   authAdmin?: AuthAdmin;
   logger?: Logger;
   now?: () => Date;
+  sleep?: (ms: number) => Promise<void>;
 };
+
+const defaultSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 export function createContext(
   env: Env,
@@ -43,6 +47,7 @@ export function createContext(
     authAdmin: options.authAdmin ?? createAuthAdmin(env),
     logger,
     now: options.now ?? (() => new Date()),
+    sleep: options.sleep ?? defaultSleep,
   } as AppContext;
   ctx.replies = new ReplyScheduler(
     async (threadId) => {

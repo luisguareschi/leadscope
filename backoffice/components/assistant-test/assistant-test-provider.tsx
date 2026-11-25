@@ -126,20 +126,31 @@ export function AssistantTestProvider({ children }: { children: ReactNode }) {
             settingsDraft,
           ),
         );
-        const next: TestChat = {
-          ...chat,
-          messages: [
-            ...messages,
-            {
+        const sentAt = new Date().toISOString();
+        const parts = response.replies?.length
+          ? response.replies
+          : [response.reply];
+        const assistantMessages: TestChatMessage[] = parts.map(
+          (part, index) => {
+            const isLast = index === parts.length - 1;
+            return {
               id: newId(),
               role: "assistant",
-              body: response.reply,
-              sentAt: new Date().toISOString(),
-              modelReply: response.modelReply,
-              stoppedReason: response.stoppedReason,
-              sentFiles: response.sentFiles,
-            },
-          ],
+              body: part,
+              sentAt,
+              ...(isLast
+                ? {
+                    modelReply: response.modelReply,
+                    stoppedReason: response.stoppedReason,
+                    sentFiles: response.sentFiles,
+                  }
+                : {}),
+            };
+          },
+        );
+        const next: TestChat = {
+          ...chat,
+          messages: [...messages, ...assistantMessages],
           lead: response.lead,
           stopped: response.stoppedReason !== null,
           lastTurn: { model: response.model, usage: response.usage },

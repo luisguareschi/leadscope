@@ -142,6 +142,7 @@ export function createTestContext(
     integrations?: Partial<Integrations>;
     authAdmin?: AuthAdmin;
     now?: () => Date;
+    sleep?: (ms: number) => Promise<void>;
     env?: Record<string, string>;
   } = {},
 ): TestContext {
@@ -154,6 +155,7 @@ export function createTestContext(
     authAdmin: options.authAdmin,
     logger: pino({ level: "silent" }),
     now: options.now,
+    sleep: options.sleep ?? (async () => undefined),
   });
   return Object.assign(ctx, { llm });
 }

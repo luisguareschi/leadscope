@@ -38,7 +38,10 @@ export type ThreadSnapshot = {
 
 /** What the model returns through the submit_turn tool. */
 export type ModelTurn = {
+  /** Joined reply text (all bubbles joined by `\n\n`). */
   reply: string;
+  /** Separate short WhatsApp bubbles to send in order (1..MAX_REPLY_BUBBLES). */
+  replies?: string[];
   /** By collect item key; null when this turn does not add or change it. */
   collected: Record<string, string | null>;
   callTime: string | null;
@@ -73,7 +76,10 @@ export type TurnDecision = {
   stage: LeadStage;
   fields: LeadFields;
   summary: string | null;
+  /** Joined reply text (`replies.join("\n\n")`). */
   reply: string;
+  /** Non-empty list of WhatsApp text bubbles to send in order. */
+  replies: string[];
   /** Validated IDs of public files to send after the reply (empty when none or on stop paths). */
   sendFileIds: string[];
   /** Set when the bot stops itself and waits for an operator. */

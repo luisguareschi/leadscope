@@ -510,4 +510,25 @@ describe("the panel's test chat (Probar asistente)", () => {
       { id: pub.id, path: "Brochure.pdf", format: "pdf" },
     ]);
   });
+
+  it("returns split replies array matching the WhatsApp bubbles", async () => {
+    ctx.llm.push({
+      replies: [
+        "Hola, soy Sofía.",
+        "Tenemos unidades de 2 dormitorios desde USD 120.000.",
+        "¿Es para vivir o invertir?",
+      ],
+    });
+    const response = await turn({
+      messages: [{ role: "lead", body: "Hola, precios?" }],
+    }).expect(200);
+    expect(response.body.replies).toEqual([
+      "Hola, soy Sofía.",
+      "Tenemos unidades de 2 dormitorios desde USD 120.000.",
+      "¿Es para vivir o invertir?",
+    ]);
+    expect(response.body.reply).toBe(
+      "Hola, soy Sofía.\n\nTenemos unidades de 2 dormitorios desde USD 120.000.\n\n¿Es para vivir o invertir?",
+    );
+  });
 });

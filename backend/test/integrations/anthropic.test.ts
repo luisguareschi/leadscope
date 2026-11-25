@@ -55,7 +55,7 @@ describe("Anthropic client", () => {
   it("caches the static prompt, forces submit_turn, and parses the turn", async () => {
     const fetchImpl = vi.fn(async (..._args: Parameters<typeof fetch>) =>
       messageResponse({
-        reply: "¡Hola! ¿Con qué presupuesto contás?",
+        replies: ["¡Hola!", "¿Con qué presupuesto contás?"],
         collected: {
           interest: "2 dormitorios",
           budget: null,
@@ -75,7 +75,8 @@ describe("Anthropic client", () => {
     const result = await client.complete(input);
 
     expect(result.output).toEqual({
-      reply: "¡Hola! ¿Con qué presupuesto contás?",
+      reply: "¡Hola!\n\n¿Con qué presupuesto contás?",
+      replies: ["¡Hola!", "¿Con qué presupuesto contás?"],
       collected: {
         interest: "2 dormitorios",
         budget: null,
@@ -115,7 +116,7 @@ describe("Anthropic client", () => {
     });
     const schema = body.tools[0].input_schema;
     expect(schema.required).toEqual([
-      "reply",
+      "replies",
       "collected",
       "callTime",
       "intent",
@@ -124,6 +125,7 @@ describe("Anthropic client", () => {
       "forbiddenTopic",
       "summary",
     ]);
+    expect(schema.properties.replies.type).toBe("array");
     expect(schema.properties.callNow.type).toBe("boolean");
     expect(schema.properties.collected.required).toEqual([
       "interest",
