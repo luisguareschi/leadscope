@@ -38,9 +38,7 @@ import { SettingsNav } from "@/components/settings/settings-nav";
 import { VersionsCard } from "@/components/settings/versions-card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/lib/auth";
 import { useMe, useSettings } from "@/lib/queries";
-import { supportCompanyIdFor } from "@/lib/support";
 import type { CompanySettings } from "@/lib/types";
 
 const INTEGRATION_SECTIONS: IntegrationSectionId[] = [
@@ -189,13 +187,12 @@ function SettingsView() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const { email } = useAuth();
   const me = useMe();
   const settings = useSettings();
   const rootRef = useRef<HTMLDivElement>(null);
   // Operators are managed by a platform admin, from Empresas or from here through support access.
   const supportCompanyId = me.data?.supportAccess
-    ? supportCompanyIdFor(email)
+    ? (me.data.company?.id ?? null)
     : null;
   const groups = SECTION_GROUPS.map((group) => ({
     ...group,

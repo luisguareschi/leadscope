@@ -6,6 +6,7 @@ import {
   pausedByDetail,
   useToggleAssistantPaused,
 } from "@/components/assistant-pause-dialog";
+import { MobileCompanySwitcher } from "@/components/company-switcher";
 import { HelpTip } from "@/components/help-tip";
 import { NavUser } from "@/components/nav-user";
 import { StatusDot } from "@/components/panel";
@@ -92,7 +93,9 @@ export function SiteHeader({ className }: { className?: string }) {
             </HelpTip>
           ) : null}
         </div>
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex min-w-0 items-center justify-end gap-2">
+          {/* From md the sidebar's company row is the switcher. */}
+          <MobileCompanySwitcher />
           {company?.assistantPaused ? (
             <AssistantPausedButton
               pausedAt={company.assistantPausedAt}
