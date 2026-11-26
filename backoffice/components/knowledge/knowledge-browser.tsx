@@ -134,6 +134,38 @@ function visibleRows(tree: KnowledgeTree, collapsed: Set<string>): Row[] {
   return rows;
 }
 
+function VisibilityBadge({
+  visibility,
+  className,
+}: {
+  visibility: KnowledgeFile["visibility"];
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-medium",
+        visibility === "public"
+          ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
+          : "bg-muted text-muted-foreground",
+        className,
+      )}
+    >
+      {visibility === "public" ? (
+        <>
+          <GlobeIcon className="size-2.5" />
+          Público
+        </>
+      ) : (
+        <>
+          <LockIcon className="size-2.5" />
+          Interno
+        </>
+      )}
+    </span>
+  );
+}
+
 /** The folder a row drops into: the folder itself, or the one a file (or empty note) sits in. */
 function rowFolder(row: Row): string | null {
   if (row.kind === "folder") return row.folder.id;
@@ -141,8 +173,9 @@ function rowFolder(row: Row): string | null {
   return row.file.folderId;
 }
 
+// Below @3xl the indent stops growing after 4 levels, so deep files keep room for their names.
 const rowGrid =
-  "relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 py-3 pr-5 pl-[calc(1.25rem+var(--depth)*0.75rem)] transition-colors @3xl/content:grid-cols-[auto_minmax(0,1fr)_8rem_11rem_auto] @3xl/content:gap-x-5 @3xl/content:pl-[calc(1.25rem+var(--depth)*1.5rem)]";
+  "relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 py-3 pr-4 pl-[calc(1rem+min(var(--depth),4)*0.75rem)] transition-colors @3xl/content:grid-cols-[auto_minmax(0,1fr)_8rem_11rem_auto] @3xl/content:gap-x-5 @3xl/content:pr-5 @3xl/content:pl-[calc(1.25rem+var(--depth)*1.5rem)]";
 
 export function KnowledgeBrowser({
   data,
@@ -414,7 +447,7 @@ export function KnowledgeBrowser({
         <div
           data-drop-folder=""
           className={cn(
-            "flex min-h-12 items-center justify-between gap-3 px-5 py-2.5 transition-colors",
+            "flex min-h-12 items-center justify-between gap-3 px-4 py-2.5 transition-colors @3xl/content:px-5",
             dropTarget === null && "bg-primary/10",
           )}
         >
@@ -583,6 +616,7 @@ export function KnowledgeBrowser({
                                 <Button
                                   variant="ghost"
                                   size="icon-sm"
+                                  className="max-md:size-9"
                                   aria-label={`Acciones para la carpeta ${folder.name}`}
                                 />
                               }
@@ -665,7 +699,10 @@ export function KnowledgeBrowser({
                       )}
                     >
                       <span className="flex items-center gap-1">
-                        <span aria-hidden className="size-4" />
+                        <span
+                          aria-hidden
+                          className="hidden size-4 @3xl/content:block"
+                        />
                         <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
                           <FormatIcon format={file.format} />
                         </span>
@@ -683,39 +720,30 @@ export function KnowledgeBrowser({
                           className="flex min-w-0 items-center gap-2 text-left text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
                         >
                           <span className="truncate">{file.name}</span>
-                          <span
-                            className={cn(
-                              "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-                              file.visibility === "public"
-                                ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
-                                : "bg-muted text-muted-foreground",
-                            )}
-                          >
-                            {file.visibility === "public" ? (
-                              <>
-                                <GlobeIcon className="size-2.5" />
-                                Público
-                              </>
-                            ) : (
-                              <>
-                                <LockIcon className="size-2.5" />
-                                Interno
-                              </>
-                            )}
-                          </span>
+                          <VisibilityBadge
+                            visibility={file.visibility}
+                            className="hidden py-0.5 @3xl/content:inline-flex"
+                          />
                           {upload.isPending && replacing?.id === file.id ? (
                             <Spinner className="size-3.5 shrink-0" />
                           ) : null}
                         </button>
-                        <span className="truncate text-xs text-muted-foreground tabular-nums">
-                          {file.formatLabel} · {formatBytes(file.sizeBytes)}
-                          {file.description ? ` · ${file.description}` : ""}
-                          {file.charCount > 0 ? (
-                            <span className="@3xl/content:hidden">
-                              {" "}
-                              · {formatNumber(file.charCount)} caracteres
-                            </span>
-                          ) : null}
+                        <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+                          {/* Below @3xl the badge sits here, so the name keeps the whole line. */}
+                          <VisibilityBadge
+                            visibility={file.visibility}
+                            className="inline-flex leading-4 @3xl/content:hidden"
+                          />
+                          <span className="truncate">
+                            {file.formatLabel} · {formatBytes(file.sizeBytes)}
+                            {file.description ? ` · ${file.description}` : ""}
+                            {file.charCount > 0 ? (
+                              <span className="@3xl/content:hidden">
+                                {" "}
+                                · {formatNumber(file.charCount)} caracteres
+                              </span>
+                            ) : null}
+                          </span>
                         </span>
                       </div>
                       <span className="hidden text-right text-sm tabular-nums @3xl/content:block">
@@ -747,6 +775,7 @@ export function KnowledgeBrowser({
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
+                                className="max-md:size-9"
                                 aria-label={`Acciones para ${file.name}`}
                               />
                             }

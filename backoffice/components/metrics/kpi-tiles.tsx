@@ -52,7 +52,7 @@ export function KpiTiles({ metrics }: { metrics: CompanyMetrics }) {
       {tiles.map((tile) => (
         <div
           key={tile.label}
-          className="flex min-w-0 flex-col gap-1 rounded-xl bg-card px-4 py-4 ring-1 ring-border/60 dark:ring-0"
+          className="flex min-w-0 flex-col gap-1 rounded-xl bg-card px-4 py-4 ring-1 ring-border/60 first:col-span-2 md:first:col-span-1 dark:ring-0"
         >
           <p className="text-[13px] leading-snug text-muted-foreground">
             {tile.label}

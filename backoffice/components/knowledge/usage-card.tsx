@@ -6,13 +6,20 @@ import type { KnowledgeList } from "@/lib/types";
 
 function Cell({
   label,
+  className,
   children,
 }: {
   label: string;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 px-5 py-4">
+    <div
+      className={cn(
+        "flex min-w-0 flex-col gap-1.5 @2xl/content:px-5 @2xl/content:py-4",
+        className,
+      )}
+    >
       <span className="text-[13px] text-muted-foreground">{label}</span>
       {children}
     </div>
@@ -35,7 +42,7 @@ export function UsageCard({
   return (
     <Panel>
       <div className="grid grid-cols-1 divide-y @2xl/content:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] @2xl/content:divide-x @2xl/content:divide-y-0">
-        <Cell label="Espacio utilizado">
+        <Cell label="Espacio utilizado" className="px-4 py-3.5">
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-sm tabular-nums">
               <span className="font-heading text-2xl font-medium tracking-tight">
@@ -64,17 +71,26 @@ export function UsageCard({
             )}
           />
         </Cell>
-        <Cell label="Archivos">
-          <span className="font-heading text-2xl font-medium tracking-tight tabular-nums">
-            {formatNumber(fileCount)}
-          </span>
-        </Cell>
-        <Cell label="Máximo por archivo">
-          <span className="truncate text-sm leading-8 tabular-nums">
-            {formatNumber(usage.maxCharsPerFile)} caracteres ·{" "}
-            {formatBytes(usage.maxFileBytes)}
-          </span>
-        </Cell>
+        {/* Below @2xl one strip of two cells; from @2xl up they join the row above. */}
+        <div className="grid grid-cols-2 divide-x @2xl/content:contents">
+          <Cell
+            label="Archivos"
+            className="gap-1 px-4 py-3 @2xl/content:gap-1.5"
+          >
+            <span className="font-heading text-xl font-medium tracking-tight tabular-nums @2xl/content:text-2xl">
+              {formatNumber(fileCount)}
+            </span>
+          </Cell>
+          <Cell
+            label="Máximo por archivo"
+            className="gap-1 px-4 py-3 @2xl/content:gap-1.5"
+          >
+            <span className="text-[13px] leading-snug tabular-nums @2xl/content:truncate @2xl/content:text-sm @2xl/content:leading-8">
+              {formatNumber(usage.maxCharsPerFile)} caracteres ·{" "}
+              {formatBytes(usage.maxFileBytes)}
+            </span>
+          </Cell>
+        </div>
       </div>
     </Panel>
   );
