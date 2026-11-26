@@ -106,7 +106,7 @@ export function CreateCompanyDialog({
               maxLength={48}
               spellCheck={false}
               value={slug}
-              className="font-mono text-xs md:text-xs"
+              className="font-mono text-base md:text-xs"
               onChange={(event) => {
                 setSlugEdited(true);
                 setSlug(event.target.value);

@@ -138,6 +138,8 @@ export function CompaniesTable({
               key={company.id}
               className={cn(
                 "grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 px-5 py-3 @3xl/content:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,16rem)_9rem_auto] @3xl/content:gap-x-5",
+                // Below sm the name gets the full width and the actions drop to a row of their own.
+                "max-sm:grid-cols-[2.25rem_minmax(0,1fr)] max-sm:gap-y-2.5 max-sm:px-4 max-sm:py-3.5",
                 archived && "bg-muted/30",
               )}
             >
@@ -153,7 +155,7 @@ export function CompaniesTable({
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <span
                     className={cn(
-                      "truncate text-sm font-medium",
+                      "min-w-0 text-sm font-medium max-sm:wrap-break-word sm:truncate",
                       archived && "text-muted-foreground",
                     )}
                   >
@@ -188,7 +190,7 @@ export function CompaniesTable({
                   {formatDate(company.createdAt)}
                 </span>
               </span>
-              <div className="flex items-center justify-end gap-1">
+              <div className="flex items-center justify-end gap-1 max-sm:col-start-2">
                 {archived ? (
                   <Button
                     size="sm"
@@ -219,6 +221,7 @@ export function CompaniesTable({
                       <Button
                         variant="ghost"
                         size="icon-sm"
+                        className="max-md:size-9"
                         aria-label={`Más acciones para ${company.name}`}
                       />
                     }

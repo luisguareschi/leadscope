@@ -109,7 +109,7 @@ function ItemRow({
                 maxLength={40}
                 spellCheck={false}
                 placeholder="presupuesto"
-                className="font-mono text-xs md:text-xs"
+                className="font-mono text-base md:text-xs"
                 aria-invalid={error("key") ? true : undefined}
                 onChange={(event) =>
                   onChange({ ...item, key: event.target.value }, true)
@@ -172,6 +172,7 @@ function ItemRow({
               type="button"
               variant="ghost"
               size="icon-sm"
+              className="max-md:size-9"
               aria-label="Subir"
               disabled={index === 0}
               onClick={() => onMove(-1)}
@@ -182,6 +183,7 @@ function ItemRow({
               type="button"
               variant="ghost"
               size="icon-sm"
+              className="max-md:size-9"
               aria-label="Bajar"
               disabled={index === count - 1}
               onClick={() => onMove(1)}
@@ -192,6 +194,7 @@ function ItemRow({
               type="button"
               variant="ghost"
               size="icon-sm"
+              className="max-md:size-9"
               aria-label={`Quitar ${item.name || "dato"}`}
               disabled={count === 1}
               onClick={onRemove}

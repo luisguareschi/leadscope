@@ -105,7 +105,7 @@ function PhoneNumberIdRow({ settings }: { settings: CompanySettings }) {
           spellCheck={false}
           placeholder="Sin configurar"
           aria-invalid={error ? true : undefined}
-          className="font-mono text-xs md:text-xs"
+          className="font-mono text-base md:text-xs"
           onChange={(event) => {
             setDraft(event.target.value);
             setError(null);
@@ -202,7 +202,7 @@ export function WhatsappSetupCard({
         value={webhookUrl}
         copyLabel="Copiar URL del webhook"
       >
-        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13px] text-muted-foreground">
+        <dl className="grid grid-cols-1 gap-x-3 gap-y-1.5 sm:grid-cols-[auto_minmax(0,1fr)] text-[13px] text-muted-foreground">
           <dt>Obligatorio</dt>
           <dd className="flex flex-wrap gap-1">
             <InlineCode>{RECEIVED_EVENT}</InlineCode>

@@ -196,7 +196,7 @@ export function VersionsCard() {
             return (
               <li
                 key={version.id}
-                className="flex items-center gap-4 px-5 py-3.5"
+                className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3.5 sm:flex-nowrap sm:gap-4 sm:px-5"
               >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <Icon className="size-4" />
@@ -232,7 +232,14 @@ export function VersionsCard() {
                     {version.viaSupport ? " · soporte" : ""}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
+                {/* With Restaurar too, a phone moves both actions to their own row under the text. */}
+                <div
+                  className={cn(
+                    "flex shrink-0 items-center gap-1",
+                    !version.current &&
+                      "max-sm:w-full max-sm:justify-end max-sm:pl-11",
+                  )}
+                >
                   <Button
                     variant="ghost"
                     size="sm"
@@ -273,7 +280,7 @@ export function VersionsCard() {
                 : "Versión inicial."}
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto rounded-xl bg-muted p-4">
+          <div className="max-h-[min(60vh,calc(100dvh-16rem))] overflow-y-auto rounded-xl bg-muted p-4">
             <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap">
               {viewing ? contentOf(viewing) : null}
             </pre>

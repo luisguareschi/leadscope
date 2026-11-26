@@ -29,7 +29,7 @@ export default function CompaniesPage() {
   if (me.isPending) {
     return (
       <div className="flex flex-col gap-4 px-4 lg:px-6">
-        <Skeleton className="h-12 w-96" />
+        <Skeleton className="h-12 w-full max-w-96" />
         <Skeleton className="h-64 w-full rounded-xl" />
       </div>
     );
@@ -56,8 +56,10 @@ export default function CompaniesPage() {
 
   return (
     <div className="@container/content flex flex-col gap-4 px-4 lg:px-6">
+      {/* Below md the header already says Empresas, so the heading stays for screen readers only. */}
       <Section
         title="Empresas"
+        className="max-md:[&>header_h2]:sr-only"
         description="Administra empresas, operadores y acceso de soporte."
         actions={
           <>

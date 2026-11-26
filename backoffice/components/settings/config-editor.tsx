@@ -243,11 +243,12 @@ export function ConfigSaveBar() {
   const count = editor.changedKeys.length;
   if (count === 0 && !editor.formError) return null;
   return (
-    <div className="sticky bottom-4 z-10 mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-full bg-popover/95 py-2 pr-2 pl-5 shadow-xl ring-1 shadow-black/10 ring-border/70 backdrop-blur dark:shadow-black/40 dark:ring-white/10 animate-in duration-200 fade-in slide-in-from-bottom-2">
+    // Below sm the status sits above the buttons, which wrap so nothing runs off a phone screen.
+    <div className="sticky bottom-3 z-10 mt-6 flex flex-col gap-2.5 rounded-2xl bg-popover/95 p-3 shadow-xl ring-1 shadow-black/10 ring-border/70 backdrop-blur sm:bottom-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-2 sm:rounded-full sm:py-2 sm:pr-2 sm:pl-5 dark:shadow-black/40 dark:ring-white/10 animate-in duration-200 fade-in slide-in-from-bottom-2">
       <p
         role={editor.formError ? "alert" : undefined}
         className={cn(
-          "min-w-0 flex-1 text-sm",
+          "min-w-0 px-1 text-sm sm:flex-1 sm:px-0",
           editor.formError
             ? "font-medium text-destructive"
             : "text-muted-foreground",
@@ -258,11 +259,12 @@ export function ConfigSaveBar() {
             ? "1 cambio sin guardar."
             : `${count} cambios sin guardar.`)}
       </p>
-      <div className="flex gap-2">
+      <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
         <Button
           type="button"
           variant="ghost"
           size="sm"
+          className="max-sm:grow"
           disabled={count === 0 || editor.saving}
           onClick={editor.discard}
         >
@@ -272,13 +274,19 @@ export function ConfigSaveBar() {
           type="button"
           variant="outline"
           size="sm"
+          className="max-sm:grow"
           disabled={count === 0 || editor.saving}
           onClick={editor.testDraft}
         >
           <FlaskConicalIcon />
           Probar borrador
         </Button>
-        <Button type="submit" size="sm" disabled={count === 0 || editor.saving}>
+        <Button
+          type="submit"
+          size="sm"
+          className="max-sm:grow"
+          disabled={count === 0 || editor.saving}
+        >
           {editor.saving ? <Spinner /> : null}
           Guardar cambios
         </Button>

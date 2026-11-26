@@ -71,7 +71,7 @@ function TextRow({
     spellCheck: mono ? false : undefined,
     "aria-invalid": error ? true : undefined,
   };
-  const monoClass = mono ? "font-mono text-xs md:text-xs" : undefined;
+  const monoClass = mono ? "font-mono text-base md:text-xs" : undefined;
 
   let control: ReactNode;
   if (multiline) {

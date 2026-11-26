@@ -326,7 +326,7 @@ export function InstructionsCard({
                           type="button"
                           variant="ghost"
                           size="icon-xs"
-                          className="max-lg:size-8"
+                          className="max-md:size-9 md:max-lg:size-8"
                           aria-label={
                             shortcut
                               ? `${format.label} (${shortcut})`
@@ -374,7 +374,7 @@ export function InstructionsCard({
               maxLength={maxChars + 200}
               aria-invalid={error ? true : undefined}
               placeholder={PLACEHOLDER}
-              className="field-sizing-content block min-h-80 w-full resize-none bg-transparent px-5 py-4 font-mono text-[13px] leading-relaxed outline-none placeholder:text-muted-foreground"
+              className="field-sizing-content block min-h-80 w-full resize-none bg-transparent px-5 py-4 font-mono text-base leading-relaxed outline-none md:text-[13px] placeholder:text-muted-foreground"
               onChange={(event) => {
                 setDraft(event.target.value);
                 setError(null);
@@ -394,7 +394,7 @@ export function InstructionsCard({
             Aún no hay instrucciones. Cambia a Editar para escribirlas.
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/70 px-5 py-2.5">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/70 px-4 py-2.5 sm:px-5">
           <p
             role={error ? "alert" : undefined}
             className={cn(
@@ -412,11 +412,12 @@ export function InstructionsCard({
           >
             {formatNumber(length)} / {formatNumber(maxChars)}
           </span>
-          <div className="flex gap-2">
+          <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
             <Button
               type="button"
               variant="ghost"
               size="sm"
+              className="max-sm:grow"
               disabled={!dirty || save.isPending}
               onClick={() => {
                 setDraft(instructions);
@@ -430,6 +431,7 @@ export function InstructionsCard({
               type="button"
               variant="outline"
               size="sm"
+              className="max-sm:grow"
               disabled={!dirty || save.isPending}
               onClick={() => {
                 if (owner) {
@@ -441,7 +443,12 @@ export function InstructionsCard({
               <FlaskConicalIcon />
               Probar borrador
             </Button>
-            <Button type="submit" size="sm" disabled={!dirty || save.isPending}>
+            <Button
+              type="submit"
+              size="sm"
+              className="max-sm:grow"
+              disabled={!dirty || save.isPending}
+            >
               {save.isPending ? <Spinner /> : null}
               Guardar
             </Button>
