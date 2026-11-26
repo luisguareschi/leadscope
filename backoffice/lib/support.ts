@@ -186,9 +186,24 @@ export function pinOperatorCompany(companyId: string, email: string): void {
   } satisfies Selection);
 }
 
-/** `includeLast` also forgets the last pick: on sign-out, or when that company is no longer open. */
-export function clearActiveCompany(options?: { includeLast?: boolean }): void {
+/**
+ * Clears this tab's stored company. Pass `includeLast: true` on sign-out, or pass
+ * `onlyIfLastCompanyId` during stale recovery so another tab's valid `lastCompany` is kept.
+ */
+export function clearActiveCompany(options?: {
+  includeLast?: boolean;
+  onlyIfLastCompanyId?: string;
+}): void {
   remove("sessionStorage", SELECTION_KEY);
   remove("sessionStorage", LEGACY_SUPPORT_KEY);
-  if (options?.includeLast) remove("localStorage", LAST_KEY);
+  if (options?.includeLast) {
+    remove("localStorage", LAST_KEY);
+    return;
+  }
+  if (
+    options?.onlyIfLastCompanyId &&
+    readLast()?.companyId === options.onlyIfLastCompanyId
+  ) {
+    remove("localStorage", LAST_KEY);
+  }
 }

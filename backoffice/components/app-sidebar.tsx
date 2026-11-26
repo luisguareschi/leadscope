@@ -103,9 +103,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               </>
             )}
           </SidebarMenuItem>
-          {switcher && !collapsed ? (
+          {switcher ? (
             <SidebarMenuItem className="pt-1">
-              <SidebarCompanySwitcher />
+              <SidebarCompanySwitcher collapsed={collapsed} />
             </SidebarMenuItem>
           ) : null}
         </SidebarMenu>

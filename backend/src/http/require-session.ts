@@ -2,6 +2,7 @@ import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { createRemoteJWKSet, errors, type JWTPayload } from "jose";
 import type { AppContext } from "../context.js";
 import { HttpError } from "../lib/http-error.js";
+import { isUniqueViolation } from "../lib/prisma.js";
 import { verifySupabaseAccessToken } from "./supabase-jwt.js";
 
 /** One company the signed-in login is an operator of: its operator row and that company. */
@@ -180,19 +181,37 @@ export function requireSession(ctx: AppContext): RequestHandler {
           row.supabaseUserId === null && !linkedCompanies.has(row.companyId),
       )
       .map((row) => row.id);
+    let reread = false;
     if (toLinkIds.length > 0) {
-      await ctx.db.operator.updateMany({
-        where: { id: { in: toLinkIds }, supabaseUserId: null },
-        data: { supabaseUserId },
-      });
+      try {
+        const updated = await ctx.db.operator.updateMany({
+          where: { id: { in: toLinkIds }, supabaseUserId: null },
+          data: { supabaseUserId },
+        });
+        if (updated.count < toLinkIds.length) reread = true;
+      } catch (error) {
+        if (!isUniqueViolation(error)) throw error;
+        reread = true;
+      }
     }
-    const linkedIdSet = new Set(toLinkIds);
-    const memberships = rows
-      .filter(
-        (row) =>
-          row.supabaseUserId === supabaseUserId || linkedIdSet.has(row.id),
-      )
-      .map(toMembership);
+    const memberships = reread
+      ? (
+          await ctx.db.operator.findMany({
+            where: { supabaseUserId },
+            select: membershipSelect,
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          })
+        ).map(toMembership)
+      : (() => {
+          const linkedIdSet = new Set(toLinkIds);
+          return rows
+            .filter(
+              (row) =>
+                row.supabaseUserId === supabaseUserId ||
+                linkedIdSet.has(row.id),
+            )
+            .map(toMembership);
+        })();
     const sessionEmail = email ?? memberships[0]?.email ?? null;
     if (!sessionEmail) return null;
     return { sessionEmail, memberships };

@@ -14,11 +14,7 @@ import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { isThreadDetailPath } from "@/lib/nav-items";
 import { useMe } from "@/lib/queries";
-import {
-  clearActiveCompany,
-  companySelectionFor,
-  pinOperatorCompany,
-} from "@/lib/support";
+import { clearActiveCompany, companySelectionFor } from "@/lib/support";
 
 /** The tab's stored company is no longer open to this login: archived, removed, or deleted. */
 const STALE_COMPANY_CODES = new Set([
@@ -67,19 +63,22 @@ export default function PanelLayout({
 
   useEffect(() => {
     if (!staleCompany) return;
-    // Forget it everywhere, or the next load would pick it again; the API then uses another one.
-    const wasSupport = companySelectionFor(email)?.kind === "support";
-    clearActiveCompany({ includeLast: true });
+    const selection = companySelectionFor(email);
+    const wasSupport = selection?.kind === "support";
+    // Forget the stale pick in sessionStorage, and clear localStorage only if it points to the same
+    // stale company (never clobbering a valid lastCompany written by another tab or support access).
+    clearActiveCompany(
+      wasSupport || !selection
+        ? undefined
+        : { onlyIfLastCompanyId: selection.companyId },
+    );
     // A full load drops every cached query of that company.
-    window.location.assign(wasSupport ? "/companies" : "/threads");
-  }, [staleCompany, email]);
-
-  const renderedCompanyId =
-    me.isSuccess && !me.data.supportAccess ? me.data.company?.id : undefined;
-  useEffect(() => {
-    if (renderedCompanyId && email)
-      pinOperatorCompany(renderedCompanyId, email);
-  }, [renderedCompanyId, email]);
+    window.location.assign(
+      wasSupport || pathname.startsWith("/companies")
+        ? "/companies"
+        : "/threads",
+    );
+  }, [staleCompany, email, pathname]);
 
   if (status !== "signed_in" || me.isPending || staleCompany) {
     return (

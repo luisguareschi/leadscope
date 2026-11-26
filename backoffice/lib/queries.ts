@@ -9,7 +9,11 @@ import {
 import { useCallback } from "react";
 import { ApiError, API_URL, apiFetch } from "./api";
 import { useAuth } from "./auth";
-import { activeCompanyIdFor, COMPANY_ID_HEADER } from "./support";
+import {
+  activeCompanyIdFor,
+  COMPANY_ID_HEADER,
+  pinOperatorCompany,
+} from "./support";
 import type {
   Assignee,
   AssistantStatus,
@@ -107,7 +111,12 @@ export function useMe() {
   return useQuery({
     queryKey: ["me", email],
     enabled: status === "signed_in" && Boolean(email),
-    queryFn: () => api<Me>("/internal/me"),
+    queryFn: async () => {
+      const me = await api<Me>("/internal/me");
+      if (!me.supportAccess && me.company && email)
+        pinOperatorCompany(me.company.id, email);
+      return me;
+    },
     staleTime: 15_000,
     refetchInterval: ME_POLL_MS,
     retry: (count, error) =>
@@ -537,7 +546,10 @@ export function useCreateCompany() {
         method: "POST",
         body: JSON.stringify(input),
       }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["companies"] }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["me"] });
+      return client.invalidateQueries({ queryKey: ["companies"] });
+    },
   });
 }
 
@@ -556,7 +568,10 @@ export function useCompanyAction() {
         `/internal/companies/${companyId}/${action}`,
         { method: "POST" },
       ),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["companies"] }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["me"] });
+      return client.invalidateQueries({ queryKey: ["companies"] });
+    },
   });
 }
 
@@ -575,7 +590,10 @@ export function useDeleteCompany() {
         method: "DELETE",
         body: JSON.stringify({ confirmSlug }),
       }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["companies"] }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["me"] });
+      return client.invalidateQueries({ queryKey: ["companies"] });
+    },
   });
 }
 
@@ -590,7 +608,7 @@ export function useOperators(companyId: string) {
   });
 }
 
-/** Operator changes also refresh the company list, which shows each company's operators. */
+/** Operator changes also refresh the company list and /me (so the company switcher stays current). */
 function useOperatorMutation<TInput, TResult>(
   request: (api: ReturnType<typeof useApi>, input: TInput) => Promise<TResult>,
 ) {
@@ -598,7 +616,10 @@ function useOperatorMutation<TInput, TResult>(
   const client = useQueryClient();
   return useMutation({
     mutationFn: (input: TInput) => request(api, input),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["companies"] }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["me"] });
+      return client.invalidateQueries({ queryKey: ["companies"] });
+    },
   });
 }
 

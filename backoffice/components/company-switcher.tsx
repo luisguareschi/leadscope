@@ -12,6 +12,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 import { initials } from "@/lib/format";
 import { useMe } from "@/lib/queries";
@@ -65,24 +66,52 @@ function CompanyBadge({
   );
 }
 
-/** The expanded sidebar's company row: the current company, and the menu to pick another. */
-export function SidebarCompanySwitcher() {
+/** The sidebar's company row: full row when expanded, compact badge icon with tooltip when collapsed. */
+export function SidebarCompanySwitcher({
+  collapsed = false,
+}: {
+  collapsed?: boolean;
+}) {
   const { enabled, companies, active, choose } = useCompanySwitcher();
   if (!enabled || !active) return null;
 
+  const label = `Empresa: ${active.name}. Cambiar empresa`;
+
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label={`Empresa: ${active.name}. Cambiar empresa`}
-        className="flex w-full items-center gap-2.5 rounded-xl bg-card px-2.5 py-2 text-left ring-1 ring-border/60 transition-colors outline-none hover:bg-card/70 focus-visible:ring-3 focus-visible:ring-ring/40 aria-expanded:bg-card/70 dark:bg-white/5 dark:ring-0 dark:hover:bg-white/8 dark:aria-expanded:bg-white/8"
+      {collapsed ? (
+        <DropdownMenuTrigger
+          aria-label={label}
+          render={
+            <SidebarMenuButton
+              tooltip={label}
+              className="justify-center rounded-xl bg-card p-0! ring-1 ring-border/60 dark:bg-white/5 dark:ring-0"
+            />
+          }
+        >
+          <CompanyBadge
+            name={active.name}
+            className="size-7 rounded-lg text-xs"
+          />
+        </DropdownMenuTrigger>
+      ) : (
+        <DropdownMenuTrigger
+          aria-label={label}
+          className="flex w-full items-center gap-2.5 rounded-xl bg-card px-2.5 py-2 text-left ring-1 ring-border/60 transition-colors outline-none hover:bg-card/70 focus-visible:ring-3 focus-visible:ring-ring/40 aria-expanded:bg-card/70 dark:bg-white/5 dark:ring-0 dark:hover:bg-white/8 dark:aria-expanded:bg-white/8"
+        >
+          <CompanyBadge name={active.name} />
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+            {active.name}
+          </span>
+          <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
+        </DropdownMenuTrigger>
+      )}
+      <DropdownMenuContent
+        className="min-w-56"
+        side={collapsed ? "right" : "bottom"}
+        align="start"
+        sideOffset={6}
       >
-        <CompanyBadge name={active.name} />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">
-          {active.name}
-        </span>
-        <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="min-w-56" sideOffset={6}>
         <DropdownMenuGroup>
           <DropdownMenuLabel>Tus empresas</DropdownMenuLabel>
           {companies.map((company) => {

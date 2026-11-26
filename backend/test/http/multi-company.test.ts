@@ -147,6 +147,28 @@ describe("adding one email to several companies", () => {
       await db.operator.count({ where: { email: "vale@example.com" } }),
     ).toBe(3);
   });
+
+  it("allows multiple unlinked operator rows (null supabaseUserId) in the same company", async () => {
+    await db.operator.create({
+      data: {
+        companyId: altamiraId,
+        email: "uno@altamira.uy",
+        supabaseUserId: null,
+      },
+    });
+    await db.operator.create({
+      data: {
+        companyId: altamiraId,
+        email: "dos@altamira.uy",
+        supabaseUserId: null,
+      },
+    });
+    expect(
+      await db.operator.count({
+        where: { companyId: altamiraId, supabaseUserId: null },
+      }),
+    ).toBe(2);
+  });
 });
 
 describe("an operator of several companies", () => {
@@ -275,6 +297,34 @@ describe("an operator of several companies", () => {
     expect(await db.adminAuditEntry.count()).toBe(0);
   });
 
+  it("scopes GET /internal/metrics to the company chosen via X-Company-Id", async () => {
+    await makeThread(bravoId, "Lead de Bravo 1");
+    await makeThread(bravoId, "Lead de Bravo 2");
+    await makeThread(altamiraId, "Lead de Altamira 1");
+
+    const bravoMetrics = await request(app)
+      .get("/internal/metrics")
+      .set(ana)
+      .set(inCompany(bravoId))
+      .expect(200);
+    expect(bravoMetrics.body.company).toMatchObject({
+      id: bravoId,
+      name: "Bravo",
+    });
+    expect(bravoMetrics.body.leads).toBe(2);
+
+    const altamiraMetrics = await request(app)
+      .get("/internal/metrics")
+      .set(ana)
+      .set(inCompany(altamiraId))
+      .expect(200);
+    expect(altamiraMetrics.body.company).toMatchObject({
+      id: altamiraId,
+      name: "Altamira",
+    });
+    expect(altamiraMetrics.body.leads).toBe(1);
+  });
+
   it("keeps the other company open when one membership or one company is archived", async () => {
     const meIn = (companyId?: string) => {
       const call = request(app).get("/internal/me").set(ana);
@@ -385,6 +435,31 @@ describe("removing one membership", () => {
     expect(me.body.companies.map((c: { id: string }) => c.id)).toEqual([
       altamiraId,
     ]);
+  });
+
+  it("keeps the Supabase user when deleting an unlinked row whose login is linked under an older email elsewhere", async () => {
+    const userId = supabase.addConfirmedUser("nueva@example.com");
+    await db.operator.create({
+      data: {
+        companyId: altamiraId,
+        email: "vieja@example.com",
+        supabaseUserId: userId,
+      },
+    });
+    const unlinked = await db.operator.create({
+      data: {
+        companyId: bravoId,
+        email: "nueva@example.com",
+        supabaseUserId: null,
+      },
+    });
+
+    const deleted = await request(app)
+      .delete(`${operatorsOf(bravoId)}/${unlinked.id}`)
+      .set(admin)
+      .expect(200);
+    expect(deleted.body.authUser).toEqual({ status: "kept_operator" });
+    expect(supabase.users.has(userId)).toBe(true);
   });
 });
 
