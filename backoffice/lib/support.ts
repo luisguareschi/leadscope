@@ -155,21 +155,19 @@ export function switchCompany(
   window.location.assign(pageAfterSwitch(currentPathname));
 }
 
-/** Support access from Empresas. Not remembered for new tabs. */
-export function enterCompany(companyId: string, adminEmail: string): void {
+/** Support access from Empresas or the super-admin switcher. Not remembered for new tabs. */
+export function enterCompany(
+  companyId: string,
+  adminEmail: string,
+  currentPathname?: string,
+): void {
   write("sessionStorage", SELECTION_KEY, {
     companyId,
     email: adminEmail.toLowerCase(),
     kind: "support",
   } satisfies Selection);
-  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full load drops every cached query of the previous company
-  window.location.assign("/threads");
-}
-
-export function leaveCompany(): void {
-  clearActiveCompany();
-  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full load drops every cached query of the entered company
-  window.location.assign("/companies");
+  // A full load drops every cached query of the previous company.
+  window.location.assign(pageAfterSwitch(currentPathname));
 }
 
 /**

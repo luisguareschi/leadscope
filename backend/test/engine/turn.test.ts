@@ -325,6 +325,16 @@ describe("decideTurn", () => {
     ).summary!;
     expect(capped.length).toBe(MAX_SUMMARY_CHARS);
     expect(capped.endsWith("…")).toBe(true);
+
+    expect(
+      decideTurn(
+        previous,
+        model({
+          summary: '- Punto uno\\n- Punto dos"',
+        }),
+        rules,
+      ).summary,
+    ).toBe("- Punto uno\n- Punto dos");
   });
 });
 

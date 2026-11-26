@@ -58,6 +58,7 @@ function StatusBadge({ operator }: { operator: Operator }) {
     return <StatusPill tone="muted">Archivado</StatusPill>;
   if (operator.inviteError)
     return <StatusPill tone="error">Invitación fallida</StatusPill>;
+  if (operator.confirmed) return <StatusPill tone="ok">Activo</StatusPill>;
   if (operator.invitedAt)
     return <StatusPill tone="pending">Invitación enviada</StatusPill>;
   if (operator.hasLogin)
@@ -69,8 +70,12 @@ function detailOf(operator: Operator): string | null {
   if (operator.archivedAt)
     return `Sin acceso desde ${formatDateTime(operator.archivedAt)}.`;
   if (operator.inviteError) return operator.inviteError;
+  if (operator.confirmed)
+    return operator.lastSignInAt
+      ? `Último acceso: ${formatDateTime(operator.lastSignInAt)}.`
+      : "Cuenta activa en la plataforma.";
   if (operator.invitedAt)
-    return `Último envío: ${formatDateTime(operator.invitedAt)}.`;
+    return `Invitación enviada el ${formatDateTime(operator.invitedAt)}. Pendiente de aceptar.`;
   if (operator.hasLogin) return "Cuenta vinculada.";
   return "Invitación pendiente. Usa Reenviar invitación.";
 }
@@ -242,7 +247,9 @@ export function OperatorsPanel({
                         }
                       >
                         <MailIcon />
-                        Reenviar invitación
+                        {operator.confirmed
+                          ? "Enviar enlace de contraseña"
+                          : "Reenviar invitación"}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem

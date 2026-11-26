@@ -1,5 +1,6 @@
 import type { CompanyConfig } from "../companies/company-config.js";
 import { stageLabel } from "../engine/stages.js";
+import { normalizeSummary } from "../engine/summary.js";
 import { collectedOf } from "../engine/turn.js";
 import type { LeadStage, ThreadState } from "../engine/types.js";
 import { senderLabel } from "../lib/operator-name.js";
@@ -159,7 +160,7 @@ export function buildCrmSummary(input: {
     ...header,
     "",
     "Resumen:",
-    thread.summary?.trim() || "—",
+    normalizeSummary(thread.summary) ?? "—",
     "",
     "Datos del lead:",
     ...fields,

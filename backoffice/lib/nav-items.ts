@@ -33,12 +33,10 @@ const METRICS: NavItem = {
 export function buildNavItems({
   hasCompany,
   platformAdmin,
-  supportAccess,
   unassignedToContact,
 }: {
   hasCompany: boolean;
   platformAdmin: boolean;
-  supportAccess: boolean;
   unassignedToContact?: number;
 }): NavItem[] {
   const items: NavItem[] = [];
@@ -73,8 +71,7 @@ export function buildNavItems({
       },
     );
   }
-  // Inside a company, the support bar (or the header pill on a phone) is the way back to Empresas.
-  if (platformAdmin && !supportAccess) {
+  if (platformAdmin) {
     if (!hasCompany) items.push(METRICS);
     items.push({
       title: "Empresas",
@@ -94,7 +91,6 @@ export function useNavItems(): NavItem[] {
   return buildNavItems({
     hasCompany,
     platformAdmin: me.data?.platformAdmin === true,
-    supportAccess: me.data?.supportAccess === true,
     unassignedToContact: summary.data?.unassignedToContact,
   });
 }

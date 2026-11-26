@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -26,7 +25,6 @@ import {
 } from "@/components/ui/tooltip";
 import { useNavItems } from "@/lib/nav-items";
 import { useMe } from "@/lib/queries";
-import { SupportBar } from "./support-bar";
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const me = useMe();
@@ -113,11 +111,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain items={items} />
       </SidebarContent>
-      <SidebarFooter>
-        {me.data?.supportAccess && me.data?.company && (
-          <SupportBar companyName={me.data?.company.name} />
-        )}
-      </SidebarFooter>
     </Sidebar>
   );
 }

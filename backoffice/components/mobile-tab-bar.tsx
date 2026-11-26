@@ -9,10 +9,15 @@ import {
 } from "@/lib/nav-items";
 import { cn } from "cn";
 
-/** Below `md`: the iPhone-style tab bar that replaces the sidebar. */
+/** Below `md`: the iPhone-style tab bar that replaces the sidebar (capped at 5 tabs). */
 export function MobileTabBar() {
   const pathname = usePathname();
-  const items = useNavItems();
+  const allItems = useNavItems();
+  // On phones, keep the tab bar to 5 tabs: platform admins reach Empresas from the header switcher.
+  const items =
+    allItems.length > 5
+      ? allItems.filter((item) => item.url !== "/companies")
+      : allItems;
 
   if (isThreadDetailPath(pathname) || items.length === 0) return null;
 

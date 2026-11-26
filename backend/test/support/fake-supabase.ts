@@ -3,7 +3,12 @@ import { createSupabaseAuthAdmin } from "../../src/integrations/auth/auth-admin.
 export const SUPABASE_URL = "https://example.supabase.co";
 export const SERVICE_ROLE_KEY = "service-role-test-key";
 
-type StoredUser = { id: string; email: string; confirmed: boolean };
+type StoredUser = {
+  id: string;
+  email: string;
+  confirmed: boolean;
+  lastSignInAt: string | null;
+};
 
 export type SupabaseCall = {
   method: string;
@@ -62,6 +67,7 @@ export function fakeSupabase() {
         id: `sb-user-${(counter += 1)}`,
         email: email.toLowerCase(),
         confirmed: false,
+        lastSignInAt: null,
       };
       users.set(user.id, user);
       return json(200, { id: user.id, email: user.email });
@@ -77,12 +83,24 @@ export function fakeSupabase() {
             id: user.id,
             email: user.email,
             email_confirmed_at: user.confirmed ? "2026-01-01T00:00:00Z" : null,
+            last_sign_in_at: user.lastSignInAt,
           })),
       });
     }
-    const deleting = /^\/admin\/users\/(.+)$/.exec(call.path);
-    if (call.method === "DELETE" && deleting) {
-      const id = decodeURIComponent(deleting[1] ?? "");
+    const byId = /^\/admin\/users\/(.+)$/.exec(call.path);
+    if (call.method === "GET" && byId) {
+      const id = decodeURIComponent(byId[1] ?? "");
+      const user = users.get(id);
+      if (!user) return json(404, { msg: "User not found" });
+      return json(200, {
+        id: user.id,
+        email: user.email,
+        email_confirmed_at: user.confirmed ? "2026-01-01T00:00:00Z" : null,
+        last_sign_in_at: user.lastSignInAt,
+      });
+    }
+    if (call.method === "DELETE" && byId) {
+      const id = decodeURIComponent(byId[1] ?? "");
       if (!users.delete(id)) return json(404, { msg: "User not found" });
       return json(200, {});
     }
@@ -98,10 +116,28 @@ export function fakeSupabase() {
       fetch: fetchImpl,
     }),
     /** A user who already signed up and set a password. */
-    addConfirmedUser(email: string): string {
+    addConfirmedUser(
+      email: string,
+      lastSignInAt: string | null = "2026-11-20T12:00:00Z",
+    ): string {
       const id = `sb-existing-${(counter += 1)}`;
-      users.set(id, { id, email: email.toLowerCase(), confirmed: true });
+      users.set(id, {
+        id,
+        email: email.toLowerCase(),
+        confirmed: true,
+        lastSignInAt,
+      });
       return id;
+    },
+    confirmUser(
+      userId: string,
+      lastSignInAt: string | null = "2026-11-26T15:00:00Z",
+    ) {
+      const user = users.get(userId);
+      if (user) {
+        user.confirmed = true;
+        user.lastSignInAt = lastSignInAt;
+      }
     },
     failNextWith(status: number, body: unknown) {
       failNext = { status, body };

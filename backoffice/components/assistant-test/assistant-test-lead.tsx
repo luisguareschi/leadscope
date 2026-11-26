@@ -4,6 +4,7 @@ import { cn } from "cn";
 import { Panel, StatusDot } from "@/components/panel";
 import { Detail, Group } from "@/components/threads/lead-details";
 import { formatNumber } from "@/lib/format";
+import { parseSummaryBullets } from "@/lib/summary";
 import { stageMetaOf } from "@/lib/thread-status";
 import type { CompanyConfig, TestLead, TestTurnResponse } from "@/lib/types";
 
@@ -91,11 +92,20 @@ export function AssistantTestLead({
         </Group>
       ) : null}
       <Group title="Resumen">
-        <p className="text-sm whitespace-pre-wrap text-pretty">
-          {lead?.summary ?? (
-            <span className="text-muted-foreground/70">Sin resumen aún.</span>
-          )}
-        </p>
+        {(() => {
+          const bullets = parseSummaryBullets(lead?.summary);
+          return bullets.length > 0 ? (
+            <ul className="flex list-disc flex-col gap-1.5 pl-4 text-sm leading-relaxed marker:text-muted-foreground/60">
+              {bullets.map((bullet, index) => (
+                <li key={index} className="wrap-break-word">
+                  {bullet}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground/70">Sin resumen aún.</p>
+          );
+        })()}
       </Group>
       {lastTurn ? (
         <Group title="Último turno">

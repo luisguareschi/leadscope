@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { ArrowLeftIcon } from "lucide-react";
 import {
   pausedByDetail,
   useToggleAssistantPaused,
@@ -18,7 +17,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useMe } from "@/lib/queries";
-import { leaveCompany } from "@/lib/support";
 import { cn } from "cn";
 
 function titleFor(pathname: string, platformAdmin: boolean): string {
@@ -103,19 +101,6 @@ export function SiteHeader({ className }: { className?: string }) {
               pausedAt={company.assistantPausedAt}
               pausedByEmail={company.assistantPausedByEmail}
             />
-          ) : null}
-          {/* From md the sidebar's support bar is the way back. */}
-          {supportAccess ? (
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-9 rounded-full bg-primary/12 px-3 text-primary hover:bg-primary/18 md:hidden"
-              aria-label={`Viendo como administrador: ${company?.name ?? ""}. Volver a Empresas`}
-              onClick={leaveCompany}
-            >
-              <ArrowLeftIcon />
-              Empresas
-            </Button>
           ) : null}
           {/* A 44px touch target on phones around the 36px avatar. */}
           <div className="flex max-md:*:data-[slot=dropdown-menu-trigger]:-m-1 max-md:*:data-[slot=dropdown-menu-trigger]:p-1">

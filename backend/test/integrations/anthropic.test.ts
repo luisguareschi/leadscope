@@ -65,7 +65,7 @@ describe("Anthropic client", () => {
         intent: "continue",
         needsHuman: false,
         forbiddenTopic: null,
-        summary: "- Busca 2 dormitorios.",
+        summary: ["Busca 2 dormitorios."],
       }),
     );
     const client = createAnthropicClient("sk-test", {
@@ -126,6 +126,7 @@ describe("Anthropic client", () => {
       "summary",
     ]);
     expect(schema.properties.replies.type).toBe("array");
+    expect(schema.properties.summary.type).toBe("array");
     expect(schema.properties.callNow.type).toBe("boolean");
     expect(schema.properties.collected.required).toEqual([
       "interest",
@@ -297,5 +298,47 @@ describe("Anthropic client", () => {
     expect(
       body.tools[0].input_schema.properties.sendFileIds.items.enum,
     ).toEqual(["file-pub-1"]);
+  });
+
+  it("normalizes summary arrays and double-escaped \\n strings with stray quotes", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        messageResponse({
+          replies: ["Ok."],
+          collected: { interest: null, budget: null, knowsProjects: null },
+          callTime: null,
+          intent: "continue",
+          needsHuman: false,
+          callNow: false,
+          forbiddenTopic: null,
+          summary: ["- Busca 1 dormitorio", "Presupuesto USD 150.000"],
+        }),
+      )
+      .mockResolvedValueOnce(
+        messageResponse({
+          replies: ["Ok."],
+          collected: { interest: null, budget: null, knowsProjects: null },
+          callTime: null,
+          intent: "continue",
+          needsHuman: false,
+          callNow: false,
+          forbiddenTopic: null,
+          summary:
+            '- Busca 1 dormitorio\\n- Presupuesto: 50.000 pesos\\n- Listo para que un asesor lo contacte"',
+        }),
+      );
+    const client = createAnthropicClient("sk-test", {
+      fetch: fetchImpl as unknown as typeof fetch,
+      maxRetries: 0,
+    });
+    const fromArray = await client.complete(input);
+    expect(fromArray.output.summary).toBe(
+      "- Busca 1 dormitorio\n- Presupuesto USD 150.000",
+    );
+    const fromEscaped = await client.complete(input);
+    expect(fromEscaped.output.summary).toBe(
+      "- Busca 1 dormitorio\n- Presupuesto: 50.000 pesos\n- Listo para que un asesor lo contacte",
+    );
   });
 });

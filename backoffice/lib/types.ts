@@ -233,6 +233,10 @@ export type Operator = {
   archivedAt: string | null;
   /** Linked to a Supabase user (invited or already existing). */
   hasLogin: boolean;
+  /** The Supabase user confirmed their account / accepted the invitation. */
+  confirmed: boolean;
+  /** Last sign-in reported by Supabase Auth, when available. */
+  lastSignInAt: string | null;
   invitedAt: string | null;
   /** Why the last invitation failed. Null once one succeeds. */
   inviteError: string | null;

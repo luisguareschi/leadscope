@@ -180,7 +180,7 @@ Always call the submit_turn tool exactly once.
 - needsHuman: true for complaints, existing purchases/orders, or anything only a person from ${company} can answer; otherwise false. A lead who just wants an advisor to call or message them is callNow or intent "qualified", not needsHuman.
 - callNow: true when the lead's latest messages explicitly ask to talk to a person now or to be called or messaged by an advisor right away; otherwise false. The engine sends the lead to an advisor right away, even with items still unknown.
 - forbiddenTopic: ${forbidden.length > 0 ? "the topic, copied from the list of topics you must never discuss, when the lead asks about one or your reply would touch one; otherwise null" : "always null"}.
-- summary: 2 to 5 short bullets, each starting with "- ", written in ${config.language} for the advisor who will follow up: what has happened in the conversation and what the lead wants. Rewrite it every turn from the whole conversation, starting from the summary in <turn_context>. Facts the lead stated only; no guesses.`,
+- summary: 2 to 5 short bullets (one fact per array item, plain text without leading "- " or newlines), written in ${config.language} for the advisor who will follow up: what has happened in the conversation and what the lead wants. Rewrite it every turn from the whole conversation, starting from the summary in <turn_context>. Facts the lead stated only; no guesses.`,
   ];
   return sections.filter(Boolean).join("\n\n");
 }

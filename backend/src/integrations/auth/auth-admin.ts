@@ -1,6 +1,11 @@
 import type { Env } from "../../config/env.js";
 
-export type AuthUser = { id: string; email: string; confirmed: boolean };
+export type AuthUser = {
+  id: string;
+  email: string;
+  confirmed: boolean;
+  lastSignInAt: string | null;
+};
 
 /** `existing`: that email already had a confirmed account, so no invitation was sent. */
 export type InviteResult = {
@@ -21,6 +26,7 @@ export interface AuthAdmin {
   /** Sends the password-reset email. Its link lands on the same page as the invitation. */
   sendPasswordReset(email: string, redirectTo: string): Promise<void>;
   findUserByEmail(email: string): Promise<AuthUser | null>;
+  getUserById(userId: string): Promise<AuthUser | null>;
   /** A user that no longer exists is not an error. */
   deleteUser(userId: string): Promise<void>;
 }
@@ -40,6 +46,7 @@ type GoTrueUser = {
   email?: string;
   email_confirmed_at?: string | null;
   confirmed_at?: string | null;
+  last_sign_in_at?: string | null;
 };
 
 function toAuthUser(user: GoTrueUser): AuthUser {
@@ -47,6 +54,7 @@ function toAuthUser(user: GoTrueUser): AuthUser {
     id: user.id,
     email: (user.email ?? "").toLowerCase(),
     confirmed: Boolean(user.email_confirmed_at ?? user.confirmed_at),
+    lastSignInAt: user.last_sign_in_at ?? null,
   };
 }
 
@@ -146,8 +154,24 @@ export function createSupabaseAuthAdmin(options: {
     return null;
   }
 
+  async function getUserById(userId: string): Promise<AuthUser | null> {
+    const result = await call(`/admin/users/${encodeURIComponent(userId)}`, {
+      method: "GET",
+    });
+    if (result.status === 404) return null;
+    if (!result.ok)
+      throw spanishFailure(
+        "la consulta del usuario",
+        result.status,
+        result.json as GoTrueError | null,
+      );
+    const body = result.json as GoTrueUser | null;
+    return body?.id ? toAuthUser(body) : null;
+  }
+
   return {
     findUserByEmail,
+    getUserById,
 
     async invite(email, redirectTo) {
       const result = await call(
@@ -207,6 +231,7 @@ export class FakeAuthAdmin implements AuthAdmin {
       id: `fake-user-${(this.counter += 1)}`,
       email: email.toLowerCase(),
       confirmed: false,
+      lastSignInAt: null,
     };
     this.users.set(user.id, user);
     this.sent.push({ kind: "invite", email: user.email, redirectTo });
@@ -220,6 +245,10 @@ export class FakeAuthAdmin implements AuthAdmin {
   async findUserByEmail(email: string): Promise<AuthUser | null> {
     const wanted = email.toLowerCase();
     return [...this.users.values()].find((u) => u.email === wanted) ?? null;
+  }
+
+  async getUserById(userId: string): Promise<AuthUser | null> {
+    return this.users.get(userId) ?? null;
   }
 
   async deleteUser(userId: string): Promise<void> {
@@ -241,6 +270,9 @@ class UnconfiguredAuthAdmin implements AuthAdmin {
   }
   async findUserByEmail(): Promise<AuthUser | null> {
     this.fail();
+  }
+  async getUserById(): Promise<AuthUser | null> {
+    return null;
   }
   async deleteUser(): Promise<void> {
     this.fail();

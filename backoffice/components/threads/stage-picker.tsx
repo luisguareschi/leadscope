@@ -62,6 +62,7 @@ export function PickerSheet<T>({
   trigger,
   triggerLabel,
   triggerTitle,
+  footer,
   children,
 }: {
   title: string;
@@ -77,6 +78,8 @@ export function PickerSheet<T>({
   trigger: ReactElement;
   triggerLabel: string;
   triggerTitle?: string;
+  /** Optional pinned action below the list (e.g. "Ver todas en Empresas"). */
+  footer?: (close: () => void) => ReactNode;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -166,6 +169,11 @@ export function PickerSheet<T>({
             </ul>
           )}
         </div>
+        {footer ? (
+          <div className="shrink-0 border-t border-border/70 px-2 pt-2">
+            {footer(() => setOpen(false))}
+          </div>
+        ) : null}
       </SheetContent>
     </Sheet>
   );

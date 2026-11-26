@@ -1,6 +1,10 @@
 import type { AppContext } from "../../context.js";
 import { findOperator } from "./find-operator.js";
-import { operatorSelect, toOperatorDto } from "./operator-dto.js";
+import {
+  lookupOperatorAuth,
+  operatorSelect,
+  toOperatorDto,
+} from "./operator-dto.js";
 
 export async function restoreOperator(
   ctx: AppContext,
@@ -13,5 +17,6 @@ export async function restoreOperator(
     data: { archivedAt: null },
     select: operatorSelect,
   });
-  return toOperatorDto(ctx.env, operator);
+  const auth = await lookupOperatorAuth(ctx, operator.supabaseUserId);
+  return toOperatorDto(ctx.env, operator, auth);
 }
