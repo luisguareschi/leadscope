@@ -8,6 +8,7 @@ import {
   useSyncExternalStore,
   type KeyboardEvent,
 } from "react";
+import { Button as LiquidButton, Glass } from "@onlymoein/liquidglass";
 import { toast } from "sonner";
 import {
   ALargeSmallIcon,
@@ -328,11 +329,11 @@ export function MessageComposer({ thread }: { thread: Thread }) {
 
   return (
     // Below lg the composer sits on the bottom edge of the screen: clear the home indicator.
-    <div className="flex flex-col gap-2 bg-card px-4 py-3 max-lg:gap-1.5 max-lg:px-3 max-lg:pt-2 max-lg:pb-[max(0.75rem,var(--safe-bottom))]">
+    <div className="flex flex-col gap-2 bg-transparent px-4 py-3 max-lg:gap-1.5 max-lg:px-3 max-lg:pt-2 max-lg:pb-[max(0.75rem,var(--safe-bottom))]">
       {!open ? (
         <p
           role="status"
-          className="flex items-start gap-2 rounded-xl bg-muted px-3.5 py-2.5 text-[13px] leading-relaxed text-muted-foreground max-lg:px-3 max-lg:py-2 max-lg:text-xs"
+          className="flex items-start gap-2 rounded-2xl bg-muted/90 px-3.5 py-2.5 text-[13px] leading-relaxed text-muted-foreground max-lg:px-3 max-lg:py-2 max-lg:text-xs"
         >
           <TimerOffIcon className="mt-0.5 size-4 shrink-0" />
           <span>
@@ -342,9 +343,9 @@ export function MessageComposer({ thread }: { thread: Thread }) {
           </span>
         </p>
       ) : null}
-      <div
+      <Glass
         className={cn(
-          "flex flex-col rounded-2xl border border-transparent bg-input transition-[color,box-shadow,border-color] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/20",
+          "flex flex-col rounded-[24px] transition-opacity",
           !open && "opacity-60",
         )}
       >
@@ -447,18 +448,24 @@ export function MessageComposer({ thread }: { thread: Thread }) {
             }
             className="max-h-40 min-h-9 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 max-lg:max-h-28 max-lg:min-h-10 max-lg:px-1.5 max-lg:py-2"
           />
-          <Button
+          <LiquidButton
             type="button"
-            size="icon-sm"
-            className="max-lg:size-10"
+            variant="filled"
+            size="small"
+            className="!size-9 !rounded-full max-lg:!size-10"
+            icon={
+              send.isPending ? (
+                <Spinner className="size-4" />
+              ) : (
+                <SendHorizontalIcon className="size-4" />
+              )
+            }
             aria-label="Enviar"
             disabled={!canSend}
             onClick={submit}
-          >
-            {send.isPending ? <Spinner /> : <SendHorizontalIcon />}
-          </Button>
+          />
         </div>
-      </div>
+      </Glass>
       <input
         ref={fileInput}
         type="file"

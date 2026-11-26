@@ -1,17 +1,7 @@
 "use client";
 
+import { Alert as LiquidAlert } from "@onlymoein/liquidglass";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime } from "@/lib/format";
 import { useSetAssistantPaused } from "@/lib/queries";
 
@@ -59,28 +49,27 @@ export function PauseAssistantDialog({
   onConfirm: () => void;
 }) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {companyName
-              ? `¿Pausar el asistente de ${companyName}?`
-              : "¿Pausar el asistente para toda la empresa?"}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            El asistente dejará de responder mensajes de WhatsApp y de enviar
-            bienvenidas de formularios. Los mensajes se seguirán guardando y
-            podrás responder manualmente.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
-          <Button disabled={pending} onClick={onConfirm}>
-            {pending ? <Spinner /> : null}
-            Pausar asistente
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <LiquidAlert
+      open={open}
+      onOpenChange={(next) => {
+        if (!pending) onOpenChange(next);
+      }}
+      title={
+        companyName
+          ? `¿Pausar el asistente de ${companyName}?`
+          : "¿Pausar el asistente para toda la empresa?"
+      }
+      message="El asistente dejará de responder mensajes de WhatsApp y de enviar bienvenidas de formularios. Los mensajes se seguirán guardando y podrás responder manualmente."
+      actions={[
+        { label: "Cancelar", role: "cancel" },
+        {
+          label: pending ? "Pausando…" : "Pausar",
+          role: "destructive",
+          onSelect: () => {
+            if (!pending) onConfirm();
+          },
+        },
+      ]}
+    />
   );
 }

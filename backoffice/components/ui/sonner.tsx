@@ -34,7 +34,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }
       toastOptions={{
         classNames: {
-          toast: "cn-toast",
+          toast: "cn-toast glass-surface !rounded-[20px]",
         },
       }}
       {...props}

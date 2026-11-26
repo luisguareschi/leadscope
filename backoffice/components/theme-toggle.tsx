@@ -22,7 +22,7 @@ const THEMES = [
 ] as const;
 
 /** Must match `--background` in globals.css. */
-const THEME_COLOR = { light: "#f2f3f7", dark: "#03040b" } as const;
+const THEME_COLOR = { light: "#edf0f7", dark: "#02040a" } as const;
 
 /** The theme choices, for any dropdown menu (the header's and the user menu). */
 export function ThemeMenuItems() {
@@ -68,11 +68,12 @@ export function ThemeToggle({ className }: { className?: string }) {
   );
 }
 
-/** Keeps the browser and PWA chrome on the chosen theme, not only the system's. */
+/** Keeps the browser, PWA chrome, and Liquid Glass `data-theme` locked to the chosen theme. */
 export function ThemeColorSync() {
   const { resolvedTheme } = useTheme();
   useEffect(() => {
     if (resolvedTheme !== "light" && resolvedTheme !== "dark") return;
+    document.documentElement.dataset.theme = resolvedTheme;
     for (const meta of document.querySelectorAll<HTMLMetaElement>(
       'meta[name="theme-color"]',
     )) {

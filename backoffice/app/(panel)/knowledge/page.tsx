@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button as LiquidButton } from "@onlymoein/liquidglass";
 import { GlobeIcon, LockIcon, UploadIcon } from "lucide-react";
 import { FilePreviewDialog } from "@/components/knowledge/file-preview-dialog";
 import { KnowledgeBrowser } from "@/components/knowledge/knowledge-browser";
@@ -8,9 +9,8 @@ import { useUploadQueue } from "@/components/knowledge/upload-dropzone";
 import { UsageCard } from "@/components/knowledge/usage-card";
 import { Panel, Section } from "@/components/panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { LiquidSegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useKnowledgeFiles } from "@/lib/queries";
 import type { KnowledgeFile, KnowledgeVisibility } from "@/lib/types";
 
@@ -29,29 +29,47 @@ export default function KnowledgePage() {
         title="Archivos del asistente"
         description="Sube documentos internos (solo conocimiento para responder) o archivos públicos (brochures, PDFs e imágenes que el asistente y los asesores pueden enviar al lead)."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Tabs
+          <div className="flex flex-wrap items-center gap-2.5">
+            <LiquidSegmentedControl
+              aria-label="Visibilidad al subir"
+              size="sm"
               value={uploadVisibility}
               onValueChange={(value) => {
                 if (value === "internal" || value === "public")
                   setUploadVisibility(value);
               }}
+              className="w-fit min-w-56"
+              items={[
+                {
+                  value: "internal",
+                  label: (
+                    <span className="inline-flex items-center gap-1.5">
+                      <LockIcon className="size-3.5" />
+                      Interno
+                    </span>
+                  ),
+                },
+                {
+                  value: "public",
+                  label: (
+                    <span className="inline-flex items-center gap-1.5">
+                      <GlobeIcon className="size-3.5" />
+                      Público
+                    </span>
+                  ),
+                },
+              ]}
+            />
+            <LiquidButton
+              variant="filled"
+              size="regular"
+              icon={<UploadIcon className="size-4" />}
+              className="!h-9 !px-4 !text-sm !font-semibold"
+              onClick={() => queue.pick()}
+              disabled={!query.data}
             >
-              <TabsList aria-label="Visibilidad al subir" className="h-9">
-                <TabsTrigger value="internal" className="px-2.5 text-xs">
-                  <LockIcon className="size-3.5" />
-                  Interno
-                </TabsTrigger>
-                <TabsTrigger value="public" className="px-2.5 text-xs">
-                  <GlobeIcon className="size-3.5" />
-                  Público (enviable)
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Button onClick={() => queue.pick()} disabled={!query.data}>
-              <UploadIcon />
               Subir archivos
-            </Button>
+            </LiquidButton>
           </div>
         }
       >

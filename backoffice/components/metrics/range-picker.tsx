@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { LiquidSegmentedControl } from "@/components/ui/segmented-control";
 import { RANGE_PRESETS, type RangePreset } from "@/lib/metrics-format";
 
 export function RangePicker({
@@ -36,28 +37,42 @@ export function RangePicker({
   }, [value]);
 
   return (
-    <div
-      ref={stripRef}
-      role="group"
-      aria-label="Período"
-      className="scrollbar-none scroll-fade-x -mx-4 flex flex-nowrap gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
-    >
-      {RANGE_PRESETS.map((preset) => {
-        const selected = preset.id === value;
-        return (
-          <Button
-            key={preset.id}
-            type="button"
-            size="sm"
-            variant={selected ? "default" : "outline"}
-            aria-pressed={selected}
-            className="shrink-0"
-            onClick={() => onChange(preset.id)}
-          >
-            {preset.label}
-          </Button>
-        );
-      })}
-    </div>
+    <>
+      <div className="hidden sm:block">
+        <LiquidSegmentedControl
+          aria-label="Período"
+          value={value}
+          onValueChange={(next) => onChange(next as RangePreset)}
+          className="w-fit min-w-[26rem]"
+          items={RANGE_PRESETS.map((preset) => ({
+            value: preset.id,
+            label: preset.label,
+          }))}
+        />
+      </div>
+      <div
+        ref={stripRef}
+        role="group"
+        aria-label="Período"
+        className="scrollbar-none scroll-fade-x -mx-4 flex flex-nowrap gap-1.5 overflow-x-auto px-4 sm:hidden"
+      >
+        {RANGE_PRESETS.map((preset) => {
+          const selected = preset.id === value;
+          return (
+            <Button
+              key={preset.id}
+              type="button"
+              size="sm"
+              variant={selected ? "default" : "glass"}
+              aria-pressed={selected}
+              className="shrink-0"
+              onClick={() => onChange(preset.id)}
+            >
+              {preset.label}
+            </Button>
+          );
+        })}
+      </div>
+    </>
   );
 }

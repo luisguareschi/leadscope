@@ -170,12 +170,12 @@ function ThreadsView() {
                   key={filter.value}
                   aria-pressed={selected}
                   size="sm"
-                  variant={selected ? "secondary" : "ghost"}
+                  variant={selected ? "default" : "ghost"}
                   className={cn(
                     "shrink-0",
                     selected
-                      ? "text-foreground hover:bg-secondary"
-                      : "text-muted-foreground",
+                      ? "shadow-xs"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                   onClick={() => setParams({ stage: filter.value })}
                 >
@@ -184,9 +184,11 @@ function ThreadsView() {
                     <span
                       className={cn(
                         "rounded-full px-1.5 text-xs tabular-nums",
-                        attention
-                          ? "bg-primary/12 font-medium text-primary"
-                          : "text-muted-foreground",
+                        selected
+                          ? "bg-background/20 text-background"
+                          : attention
+                            ? "bg-primary/14 font-semibold text-primary"
+                            : "text-muted-foreground",
                       )}
                     >
                       {count}

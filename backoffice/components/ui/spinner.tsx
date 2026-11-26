@@ -1,13 +1,19 @@
-import { cn } from "cn";
-import { Loader2Icon } from "lucide-react";
+"use client";
 
-function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
+import type { ComponentProps } from "react";
+import { Spinner as LiquidSpinner } from "@onlymoein/liquidglass";
+import { cn } from "cn";
+
+function Spinner({
+  className,
+  "aria-label": ariaLabel = "Cargando",
+  ...props
+}: ComponentProps<typeof LiquidSpinner>) {
   return (
-    <Loader2Icon
+    <LiquidSpinner
       data-slot="spinner"
-      role="status"
-      aria-label="Loading"
-      className={cn("size-4 animate-spin", className)}
+      aria-label={ariaLabel}
+      className={cn("ls-spinner size-4 shrink-0", className)}
       {...props}
     />
   );

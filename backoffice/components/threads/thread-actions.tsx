@@ -2,6 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+  Alert as LiquidAlert,
+  Button as LiquidButton,
+} from "@onlymoein/liquidglass";
 import { toast } from "sonner";
 import {
   EllipsisVerticalIcon,
@@ -9,16 +13,6 @@ import {
   PlayIcon,
   Trash2Icon,
 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,32 +37,44 @@ export function ThreadActions({ thread }: { thread: Thread }) {
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1.5">
       {thread.paused ? (
-        <Button
-          variant="outline"
-          size="sm"
-          className="max-lg:hidden"
+        <LiquidButton
+          variant="glass"
+          size="small"
+          className="!h-9 !gap-1.5 !px-3.5 !text-[13px] !font-semibold max-lg:!hidden"
           onClick={() => run("resume")}
           disabled={pending !== null}
+          icon={
+            pending === "resume" ? (
+              <Spinner className="size-3.5" />
+            ) : (
+              <PlayIcon className="size-3.5" />
+            )
+          }
         >
-          {pending === "resume" ? <Spinner /> : <PlayIcon />}
           Reanudar asistente
-        </Button>
+        </LiquidButton>
       ) : (
         <Tooltip>
           <TooltipTrigger
             render={
-              <Button
-                variant="outline"
-                size="sm"
-                className="max-lg:hidden"
+              <LiquidButton
+                variant="glass"
+                size="small"
+                className="!h-9 !gap-1.5 !px-3.5 !text-[13px] !font-semibold max-lg:!hidden"
                 onClick={() => run("pause")}
                 disabled={pending !== null}
+                icon={
+                  pending === "pause" ? (
+                    <Spinner className="size-3.5" />
+                  ) : (
+                    <PauseIcon className="size-3.5" />
+                  )
+                }
               />
             }
           >
-            {pending === "pause" ? <Spinner /> : <PauseIcon />}
             Pausar asistente
           </TooltipTrigger>
           <TooltipContent className="max-w-64">
@@ -79,16 +85,15 @@ export function ThreadActions({ thread }: { thread: Thread }) {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="max-lg:-mr-1.5 max-lg:size-10"
+            <LiquidButton
+              variant="glass"
+              size="small"
+              icon={<EllipsisVerticalIcon className="size-4.5" />}
+              className="!size-9 !rounded-full max-lg:!size-10"
               aria-label="Más acciones"
             />
           }
-        >
-          <EllipsisVerticalIcon />
-        </DropdownMenuTrigger>
+        />
         <DropdownMenuContent align="end" className="min-w-52">
           {/* Below lg the pause button lives here instead of in the header. */}
           <DropdownMenuItem
@@ -110,36 +115,31 @@ export function ThreadActions({ thread }: { thread: Thread }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={confirming} onOpenChange={setConfirming}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta conversación?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará la conversación y todos sus mensajes en LeadScope. El
-              contacto en HubSpot no se modifica.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={() =>
-                remove.mutate(thread.id, {
-                  onSuccess: () => {
-                    toast.success("Conversación eliminada.");
-                    router.replace("/threads");
-                  },
-                  onError: (error) => toast.error(error.message),
-                })
-              }
-            >
-              {remove.isPending ? <Spinner /> : null}
-              Eliminar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <LiquidAlert
+        open={confirming}
+        onOpenChange={(next) => {
+          if (!remove.isPending) setConfirming(next);
+        }}
+        title="¿Eliminar esta conversación?"
+        message="Se eliminará la conversación y todos sus mensajes en LeadScope. El contacto en HubSpot no se modifica."
+        actions={[
+          { label: "Cancelar", role: "cancel" },
+          {
+            label: remove.isPending ? "Eliminando…" : "Eliminar",
+            role: "destructive",
+            onSelect: () => {
+              if (remove.isPending) return;
+              remove.mutate(thread.id, {
+                onSuccess: () => {
+                  toast.success("Conversación eliminada.");
+                  router.replace("/threads");
+                },
+                onError: (error) => toast.error(error.message),
+              });
+            },
+          },
+        ]}
+      />
     </div>
   );
 }

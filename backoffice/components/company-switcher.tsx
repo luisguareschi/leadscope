@@ -178,7 +178,7 @@ export function SidebarCompanySwitcher({
       ) : (
         <DropdownMenuTrigger
           aria-label={label}
-          className="flex w-full items-center gap-2.5 rounded-xl bg-card px-2.5 py-2 text-left ring-1 ring-border/60 transition-colors outline-none hover:bg-card/70 focus-visible:ring-3 focus-visible:ring-ring/40 aria-expanded:bg-card/70 dark:bg-white/5 dark:ring-0 dark:hover:bg-white/8 dark:aria-expanded:bg-white/8"
+          className="flex w-full items-center gap-2.5 rounded-2xl bg-white/75 px-2.5 py-2 text-left ring-1 ring-border/70 transition-colors outline-none hover:bg-white/95 focus-visible:ring-3 focus-visible:ring-ring/40 aria-expanded:bg-white/95 dark:bg-white/8 dark:ring-white/10 dark:hover:bg-white/12 dark:aria-expanded:bg-white/12"
         >
           {active ? <CompanyBadge name={active.name} /> : <PlatformBadge />}
           <span className="flex min-w-0 flex-1 flex-col">
@@ -359,7 +359,7 @@ export function MobileCompanySwitcher() {
       trigger={
         <button
           type="button"
-          className="-ml-1.5 inline-flex max-w-full min-w-0 items-center gap-1.5 self-start rounded-lg px-1.5 py-0.5 text-left text-[13px] font-medium text-muted-foreground transition-colors outline-none [-webkit-tap-highlight-color:transparent] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 active:bg-accent md:hidden"
+          className="-ml-0.5 inline-flex max-w-full min-w-0 items-center gap-1.5 self-start rounded-full bg-white/70 px-2.5 py-1 text-left text-xs font-medium text-foreground/85 ring-1 ring-black/6 backdrop-blur-md transition-colors outline-none [-webkit-tap-highlight-color:transparent] hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-ring/40 active:scale-[0.98] md:hidden dark:bg-white/10 dark:text-foreground/90 dark:ring-white/12"
         />
       }
       triggerLabel={triggerLabel}

@@ -17,6 +17,7 @@ import {
   UserRoundIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { Button as LiquidButton, Glass } from "@onlymoein/liquidglass";
 import { toast } from "sonner";
 import { cn } from "cn";
 import {
@@ -286,7 +287,7 @@ export function AssistantTestChat({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-border/60 dark:ring-0",
+        "revolut-card flex min-h-0 flex-col overflow-hidden rounded-[22px]",
         className,
       )}
     >
@@ -339,9 +340,9 @@ export function AssistantTestChat({
             </Button>
           </div>
         ) : null}
-        <div
+        <Glass
           className={cn(
-            "flex items-end gap-2 rounded-2xl border border-transparent bg-input p-1.5 pl-0 transition-[color,box-shadow,border-color] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/20",
+            "flex items-end gap-2 rounded-[24px] p-1.5 pl-0 transition-opacity",
             disabled && "opacity-60",
           )}
         >
@@ -359,21 +360,23 @@ export function AssistantTestChat({
             }
             className="max-h-40 min-h-9 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 max-lg:max-h-28"
           />
-          <Button
+          <LiquidButton
             type="button"
-            size="icon-sm"
-            className="max-lg:size-9"
+            variant="filled"
+            size="small"
+            className="!size-9 !rounded-full max-lg:!size-9"
+            icon={
+              pending ? (
+                <Spinner className="size-4" aria-label="Enviando" />
+              ) : (
+                <SendHorizontalIcon className="size-4" />
+              )
+            }
             aria-label="Enviar"
             disabled={!canSend}
             onClick={submit}
-          >
-            {pending ? (
-              <Spinner aria-label="Enviando" />
-            ) : (
-              <SendHorizontalIcon />
-            )}
-          </Button>
-        </div>
+          />
+        </Glass>
         {/* On touch there is no hint, so the row only shows when the message is too long. */}
         {touch && !tooLong ? null : (
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">

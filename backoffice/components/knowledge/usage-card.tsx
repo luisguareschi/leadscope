@@ -65,10 +65,12 @@ export function UsageCard({
           <Progress
             value={percent}
             aria-label="Espacio usado"
-            className={cn(
-              "mt-1",
-              high && "**:data-[slot=progress-indicator]:bg-primary",
-            )}
+            className="mt-1"
+            style={
+              high
+                ? ({ "--lg-fill": "var(--destructive)" } as React.CSSProperties)
+                : undefined
+            }
           />
         </Cell>
         {/* Below @2xl one strip of two cells; from @2xl up they join the row above. */}

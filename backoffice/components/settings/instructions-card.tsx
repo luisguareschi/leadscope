@@ -27,8 +27,8 @@ import { cn } from "cn";
 import { Markdown } from "@/components/markdown";
 import { Section } from "@/components/panel";
 import { Button } from "@/components/ui/button";
+import { LiquidSegmentedControl } from "@/components/ui/segmented-control";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -280,38 +280,41 @@ export function InstructionsCard({
       <form
         onSubmit={onSubmit}
         className={cn(
-          "overflow-hidden rounded-xl bg-card ring-1 ring-border/60 transition-shadow focus-within:ring-2 focus-within:ring-ring/50 dark:ring-0",
+          "revolut-card overflow-hidden rounded-[22px] transition-shadow focus-within:ring-2 focus-within:ring-ring/50",
           error &&
             "ring-2 ring-destructive focus-within:ring-destructive/60 dark:ring-2",
         )}
       >
-        <div className="flex flex-wrap items-center gap-2 border-b border-border/70 px-3 py-2">
-          <Tabs
+        <div className="flex flex-wrap items-center gap-2 border-b border-border/70 px-3 py-2.5">
+          <LiquidSegmentedControl
+            aria-label="Modo de las instrucciones"
+            size="sm"
             value={mode}
             onValueChange={(value) => {
               if (value === "edit" || value === "preview") changeMode(value);
             }}
-            className="w-fit shrink-0"
-          >
-            <TabsList aria-label="Modo de las instrucciones" className="h-8!">
-              <TabsTrigger
-                value="edit"
-                type="button"
-                className="px-2.5 text-[13px]"
-              >
-                <PencilIcon />
-                Editar
-              </TabsTrigger>
-              <TabsTrigger
-                value="preview"
-                type="button"
-                className="px-2.5 text-[13px]"
-              >
-                <EyeIcon />
-                Vista previa
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+            className="w-fit min-w-56 shrink-0"
+            items={[
+              {
+                value: "edit",
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    <PencilIcon className="size-3.5" />
+                    Editar
+                  </span>
+                ),
+              },
+              {
+                value: "preview",
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    <EyeIcon className="size-3.5" />
+                    Vista previa
+                  </span>
+                ),
+              },
+            ]}
+          />
           {mode === "edit" ? (
             <div className="ml-auto flex max-w-full flex-wrap items-center gap-0.5">
               {FORMATS.map((format) => {

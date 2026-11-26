@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { Button as LiquidButton, Toolbar } from "@onlymoein/liquidglass";
 import {
   pausedByDetail,
   useToggleAssistantPaused,
@@ -9,7 +10,6 @@ import { MobileCompanySwitcher } from "@/components/company-switcher";
 import { HelpTip } from "@/components/help-tip";
 import { NavUser } from "@/components/nav-user";
 import { StatusDot } from "@/components/panel";
-import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Tooltip,
@@ -43,16 +43,22 @@ function AssistantPausedButton({
     <Tooltip>
       <TooltipTrigger
         render={
-          <Button
-            size="sm"
-            variant="destructive"
+          <LiquidButton
+            size="small"
+            variant="filled"
+            destructive
             disabled={isPending}
             onClick={() => toggle(false)}
             aria-label="Asistente pausado. Reanudar asistente"
+            className="!h-8 !gap-1.5 !px-3 !text-xs !font-semibold"
           />
         }
       >
-        {isPending ? <Spinner /> : <StatusDot tone="error" />}
+        {isPending ? (
+          <Spinner className="size-3.5" />
+        ) : (
+          <StatusDot tone="error" className="bg-white" />
+        )}
         <span className="hidden sm:inline">Asistente pausado</span>
         <span className="sm:hidden">Pausado</span>
       </TooltipTrigger>
@@ -63,13 +69,71 @@ function AssistantPausedButton({
   );
 }
 
-export function SiteHeader({ className }: { className?: string }) {
+export function SiteHeader({
+  className,
+  sticky = true,
+}: {
+  className?: string;
+  /** When true (default), sticks to the top of the scrolling container and frosts on scroll. */
+  sticky?: boolean;
+}) {
   const pathname = usePathname();
   const me = useMe();
   const company = me.data?.company;
   const hasCompany = Boolean(company);
   const supportAccess = me.data?.supportAccess === true;
   const title = titleFor(pathname, me.data?.platformAdmin === true);
+
+  const inner = (
+    <div className="mx-auto grid min-h-14 w-full max-w-350 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 md:h-(--header-height) lg:px-6">
+      <div className="flex min-w-0 flex-col justify-center gap-0.5 py-1.5 md:py-0">
+        <div className="flex min-w-0 items-center gap-1">
+          <h1 className="truncate font-heading text-[26px] leading-tight font-bold tracking-[-0.03em] lg:text-[28px]">
+            {title}
+          </h1>
+          {pathname.startsWith("/metrics") ? (
+            <HelpTip label="Cómo se cuentan las métricas">
+              Cada lead se cuenta el día de su primer mensaje, con su etapa
+              actual. &quot;Ahora mismo&quot; muestra el estado actual sin
+              filtro de fechas.
+            </HelpTip>
+          ) : null}
+        </div>
+        {/* From md the sidebar's company row is the switcher. */}
+        <MobileCompanySwitcher />
+      </div>
+      <div className="flex min-w-0 items-center justify-end gap-2">
+        {company?.assistantPaused ? (
+          <AssistantPausedButton
+            pausedAt={company.assistantPausedAt}
+            pausedByEmail={company.assistantPausedByEmail}
+          />
+        ) : null}
+        {/* A 44px touch target on phones around the 36px avatar. */}
+        <div className="flex max-md:*:data-[slot=dropdown-menu-trigger]:-m-1 max-md:*:data-[slot=dropdown-menu-trigger]:p-1">
+          <NavUser
+            email={me.data?.operator?.email ?? ""}
+            label={hasCompany && !supportAccess ? "Operador" : "Administración"}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (sticky) {
+    return (
+      <Toolbar
+        edge="soft"
+        aria-label="Encabezado"
+        className={cn(
+          "!z-20 !block !w-full !p-0 pt-[var(--header-safe-top)]!",
+          className,
+        )}
+      >
+        {inner}
+      </Toolbar>
+    );
+  }
 
   return (
     <header
@@ -78,41 +142,7 @@ export function SiteHeader({ className }: { className?: string }) {
         className,
       )}
     >
-      <div className="mx-auto grid min-h-14 w-full max-w-350 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 md:h-(--header-height) lg:px-6">
-        <div className="flex min-w-0 flex-col justify-center py-1.5 md:py-0">
-          <div className="flex min-w-0 items-center gap-0.5">
-            <h1 className="truncate font-heading text-[22px] leading-tight font-medium tracking-tight lg:text-2xl">
-              {title}
-            </h1>
-            {pathname.startsWith("/metrics") ? (
-              <HelpTip label="Cómo se cuentan las métricas">
-                Cada lead se cuenta el día de su primer mensaje, con su etapa
-                actual. &quot;Ahora mismo&quot; muestra el estado actual sin
-                filtro de fechas.
-              </HelpTip>
-            ) : null}
-          </div>
-          {/* From md the sidebar's company row is the switcher. */}
-          <MobileCompanySwitcher />
-        </div>
-        <div className="flex min-w-0 items-center justify-end gap-2">
-          {company?.assistantPaused ? (
-            <AssistantPausedButton
-              pausedAt={company.assistantPausedAt}
-              pausedByEmail={company.assistantPausedByEmail}
-            />
-          ) : null}
-          {/* A 44px touch target on phones around the 36px avatar. */}
-          <div className="flex max-md:*:data-[slot=dropdown-menu-trigger]:-m-1 max-md:*:data-[slot=dropdown-menu-trigger]:p-1">
-            <NavUser
-              email={me.data?.operator?.email ?? ""}
-              label={
-                hasCompany && !supportAccess ? "Operador" : "Administración"
-              }
-            />
-          </div>
-        </div>
-      </div>
+      {inner}
     </header>
   );
 }

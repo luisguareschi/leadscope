@@ -2,10 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button as LiquidButton } from "@onlymoein/liquidglass";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -101,15 +101,16 @@ export default function LoginPage() {
             </Field>
           ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button
+          <LiquidButton
             type="submit"
-            size="lg"
-            className="h-12 w-full"
+            variant="filled"
+            size="large"
+            className="!h-12 w-full !text-[15px] !font-semibold"
             disabled={pending}
           >
-            {pending ? <Spinner /> : null}
+            {pending ? <Spinner className="size-4" /> : null}
             Iniciar sesión
-          </Button>
+          </LiquidButton>
         </FieldGroup>
       </form>
     </AuthCard>

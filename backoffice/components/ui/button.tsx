@@ -3,23 +3,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-full border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/40 active:not-aria-[haspopup]:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-full border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/40 active:not-aria-[haspopup]:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default:
-          "bg-foreground font-semibold text-background hover:bg-foreground/85",
+          "bg-foreground font-semibold text-background shadow-xs hover:bg-foreground/88",
+        glass:
+          "border-white/45 bg-white/70 font-semibold text-foreground shadow-xs backdrop-blur-md hover:bg-white/85 dark:border-white/14 dark:bg-white/10 dark:hover:bg-white/16",
         outline:
-          "border-border bg-card font-semibold hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground dark:border-transparent dark:bg-secondary dark:hover:bg-accent",
+          "border-border/80 bg-card/90 font-semibold shadow-[0_1px_2px_rgb(16_24_40/0.03)] hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground dark:border-white/10 dark:bg-white/7 dark:hover:bg-white/12",
         secondary:
           "bg-secondary font-semibold text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_7%)] aria-expanded:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_7%)] aria-expanded:text-secondary-foreground",
         accent:
-          "bg-primary font-semibold text-primary-foreground hover:bg-primary/88",
-        soft: "bg-primary/10 font-semibold text-primary hover:bg-primary/16 aria-expanded:bg-primary/16 dark:bg-primary/14 dark:hover:bg-primary/22",
+          "bg-primary font-semibold text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.24),0_2px_8px_rgb(73_79_223/0.28)] hover:bg-primary/90",
+        soft: "bg-primary/12 font-semibold text-primary hover:bg-primary/18 aria-expanded:bg-primary/18 dark:bg-primary/18 dark:hover:bg-primary/26",
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-accent dark:aria-expanded:bg-accent",
+          "hover:bg-foreground/6 hover:text-foreground aria-expanded:bg-foreground/6 aria-expanded:text-foreground dark:hover:bg-white/10 dark:aria-expanded:bg-white/10",
         destructive:
-          "bg-destructive/10 font-semibold text-destructive hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:bg-destructive/15 dark:hover:bg-destructive/25 dark:focus-visible:ring-destructive/40",
+          "bg-destructive/12 font-semibold text-destructive hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:bg-destructive/18 dark:hover:bg-destructive/28 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

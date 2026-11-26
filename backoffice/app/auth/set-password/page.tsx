@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button as LiquidButton } from "@onlymoein/liquidglass";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth-card";
-import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
@@ -60,13 +60,14 @@ export default function SetPasswordPage() {
         title="El enlace expiró"
         description="Solicita uno nuevo desde el inicio de sesión."
       >
-        <Button
-          size="lg"
-          className="h-12 w-full"
+        <LiquidButton
+          variant="filled"
+          size="large"
+          className="!h-12 w-full !text-[15px] !font-semibold"
           onClick={() => router.replace("/login")}
         >
           Ir al inicio de sesión
-        </Button>
+        </LiquidButton>
       </AuthCard>
     );
   }
@@ -91,15 +92,16 @@ export default function SetPasswordPage() {
             <FieldDescription>Mínimo 8 caracteres.</FieldDescription>
           </Field>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button
+          <LiquidButton
             type="submit"
-            size="lg"
-            className="h-12 w-full"
+            variant="filled"
+            size="large"
+            className="!h-12 w-full !text-[15px] !font-semibold"
             disabled={pending}
           >
-            {pending ? <Spinner /> : null}
+            {pending ? <Spinner className="size-4" /> : null}
             Guardar y continuar
-          </Button>
+          </LiquidButton>
         </FieldGroup>
       </form>
     </AuthCard>

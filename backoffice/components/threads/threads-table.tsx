@@ -101,17 +101,17 @@ function ThreadRowSkeleton() {
   );
 }
 
-/** Below lg: the same columns as the table, stacked; the whole row opens the thread. */
+/** Below lg: Revolut transaction-list style stacked rows; the whole row opens the thread. */
 function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
   return (
-    <li className="relative flex gap-3 px-4 py-3.5 has-[a[data-row-link]:active]:bg-accent">
-      <LeadAvatar thread={thread} className="size-10" />
+    <li className="relative flex gap-3.5 px-4 py-3.5 transition-colors has-[a[data-row-link]:active]:bg-foreground/[0.04] dark:has-[a[data-row-link]:active]:bg-white/[0.05]">
+      <LeadAvatar thread={thread} className="size-11" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 items-center gap-1.5">
           <Link
             href={`/threads/${thread.id}`}
             data-row-link
-            className="truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+            className="truncate text-[15px] font-semibold tracking-[-0.01em] outline-none after:absolute after:inset-0 focus-visible:underline"
           >
             {thread.name ?? "Sin nombre"}
           </Link>
