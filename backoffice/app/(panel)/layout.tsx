@@ -4,12 +4,15 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AssistantTestProvider } from "@/components/assistant-test/assistant-test-provider";
+import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "cn";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { isThreadDetailPath } from "@/lib/nav-items";
 import { useMe } from "@/lib/queries";
 import {
   clearSupportCompany,
@@ -26,6 +29,7 @@ export default function PanelLayout({
   const me = useMe();
   const router = useRouter();
   const pathname = usePathname();
+  const isThreadDetail = isThreadDetailPath(pathname);
   const adminWithoutCompany =
     me.data?.platformAdmin === true && me.data.company == null;
   // Empresas is the admin home. Métricas is the other page they can open from there.
@@ -99,6 +103,7 @@ export default function PanelLayout({
 
   return (
     <SidebarProvider
+      className="max-md:h-dvh max-md:overflow-hidden"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 64)",
@@ -110,12 +115,24 @@ export default function PanelLayout({
     >
       <AppSidebar variant="inset" />
       <AssistantTestProvider>
-        <SidebarInset>
-          <SiteHeader />
-          {/* Below md the inset has no outer margin to leave room for. */}
-          <div className="@container/main max-h-[calc(100svh-var(--header-height))] md:max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] overflow-y-auto flex flex-1 flex-col gap-4 pt-2 pb-4 md:gap-6 md:pb-6 *:mx-auto *:w-full *:max-w-350">
+        {/* Below md the shell is exactly one screen: header, the page's own scroll, tab bar. */}
+        <SidebarInset className="max-md:min-h-0 max-md:overflow-hidden">
+          {/* Below lg the thread page draws its own compact header. */}
+          <SiteHeader
+            className={isThreadDetail ? "max-lg:hidden" : undefined}
+          />
+          <div
+            className={cn(
+              "@container/main flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pt-2 max-md:min-h-0 md:gap-6 *:mx-auto *:w-full *:max-w-350",
+              // From md the inset has an outer margin (spacing * 4 in total) to leave room for.
+              isThreadDetail
+                ? "pb-0 md:max-h-[calc(100svh-var(--spacing)*4)] lg:max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] lg:pb-6"
+                : "pb-4 md:max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] md:pb-6",
+            )}
+          >
             {children}
           </div>
+          <MobileTabBar />
         </SidebarInset>
       </AssistantTestProvider>
     </SidebarProvider>

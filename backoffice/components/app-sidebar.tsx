@@ -1,16 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  BookOpenTextIcon,
-  Building2Icon,
-  ChartColumnIcon,
-  FlaskConicalIcon,
-  MessagesSquareIcon,
-  PanelLeftCloseIcon,
-  PanelLeftOpenIcon,
-  SlidersHorizontalIcon,
-} from "lucide-react";
+import { PanelLeftCloseIcon, PanelLeftOpenIcon } from "lucide-react";
 import { AppLogoTile } from "@/components/app-logo";
 import { NavMain } from "@/components/nav-main";
 import { Button } from "@/components/ui/button";
@@ -29,69 +20,20 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useMe, useThreadsSummary } from "@/lib/queries";
+import { useNavItems } from "@/lib/nav-items";
+import { useMe } from "@/lib/queries";
 import { SupportBar } from "./support-bar";
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const me = useMe();
   const hasCompany = Boolean(me.data?.company);
-  const supportAccess = me.data?.supportAccess === true;
-  const summary = useThreadsSummary(hasCompany);
   const { state, isMobile, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
 
-  const items = [
-    ...(hasCompany
-      ? [
-          {
-            title: "Conversaciones",
-            url: "/threads",
-            icon: <MessagesSquareIcon />,
-            badge: summary.data?.unassignedToContact || undefined,
-            badgeLabel: "leads por contactar sin asesor",
-          },
-          {
-            title: "Métricas",
-            url: "/metrics",
-            icon: <ChartColumnIcon />,
-          },
-          {
-            title: "Conocimiento",
-            url: "/knowledge",
-            icon: <BookOpenTextIcon />,
-          },
-          {
-            title: "Probar asistente",
-            url: "/probar",
-            icon: <FlaskConicalIcon />,
-          },
-          {
-            title: "Configuración",
-            url: "/settings",
-            icon: <SlidersHorizontalIcon />,
-          },
-        ]
-      : []),
-    // Inside a company, the support bar is the way back to Empresas.
-    ...(me.data?.platformAdmin && !supportAccess
-      ? [
-          ...(!hasCompany
-            ? [
-                {
-                  title: "Métricas",
-                  url: "/metrics",
-                  icon: <ChartColumnIcon />,
-                },
-              ]
-            : []),
-          {
-            title: "Empresas",
-            url: "/companies",
-            icon: <Building2Icon />,
-          },
-        ]
-      : []),
-  ];
+  const items = useNavItems().map(({ icon: Icon, ...item }) => ({
+    ...item,
+    icon: <Icon />,
+  }));
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -131,7 +73,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                     </span>
                   </div>
                 </SidebarMenuButton>
-                {/* Shown while the pointer is over the sidebar. Phones use the header's sheet button. */}
+                {/* Shown while the pointer is over the sidebar. Phones use the tab bar instead. */}
                 {isMobile ? null : (
                   <Tooltip>
                     <TooltipTrigger

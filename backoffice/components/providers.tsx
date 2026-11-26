@@ -10,7 +10,28 @@ import { useEffect, useRef, useState } from "react";
 import { ThemeColorSync } from "@/components/theme-toggle";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AuthProvider, useAuth } from "@/lib/auth";
+
+const MOBILE_TOAST_TOP = "calc(0.75rem + env(safe-area-inset-top, 0px))";
+
+/** On phones toasts drop from the top, clear of the notch, so they never cover the composer. */
+function ResponsiveToaster() {
+  const isMobile = useIsMobile();
+  return (
+    <Toaster
+      richColors
+      position={isMobile ? "top-center" : "bottom-right"}
+      offset={isMobile ? { top: MOBILE_TOAST_TOP } : undefined}
+      // Sonner switches to these below 600px wide.
+      mobileOffset={{
+        top: MOBILE_TOAST_TOP,
+        left: "max(1rem, env(safe-area-inset-left, 0px))",
+        right: "max(1rem, env(safe-area-inset-right, 0px))",
+      }}
+    />
+  );
+}
 
 /** A new login must not keep the previous operator's panel data, including who is an admin. */
 function AuthQueryCache() {
@@ -54,7 +75,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <AuthQueryCache />
           <TooltipProvider>
             {children}
-            <Toaster richColors position="bottom-right" />
+            <ResponsiveToaster />
           </TooltipProvider>
         </AuthProvider>
       </QueryClientProvider>
