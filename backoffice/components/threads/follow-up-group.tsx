@@ -20,7 +20,7 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid min-h-7 grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-2 text-[13px]">
+    <div className="grid min-h-7 grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-2 text-[13px] sm:grid-cols-[7.5rem_minmax(0,1fr)]">
       <span className="text-muted-foreground">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>

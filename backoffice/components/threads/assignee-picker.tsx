@@ -16,6 +16,7 @@ import {
   ComboboxTrigger,
 } from "@/components/ui/combobox";
 import { Spinner } from "@/components/ui/spinner";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { initials } from "@/lib/format";
 import {
   useAssignees,
@@ -25,6 +26,7 @@ import {
 } from "@/lib/queries";
 import { operatorName } from "@/lib/thread-status";
 import type { Thread } from "@/lib/types";
+import { PickerSheet } from "./stage-picker";
 
 type Option =
   | { kind: "me"; value: string; label: string; email: string }
@@ -126,6 +128,91 @@ export function AssigneePicker({
 
   const compact = size === "compact";
   const assignee = thread.assignee;
+  const isMobile = useIsMobile();
+
+  const label = assignee
+    ? `Asignada a ${assignee.email}. Cambiar asignación`
+    : "Sin asignar. Asignar";
+  const button = (
+    <Button
+      variant={compact ? "ghost" : "outline"}
+      size="sm"
+      disabled={pending}
+      className={cn(
+        "max-w-full min-w-0 justify-start gap-1.5 font-normal",
+        compact
+          ? "-ml-2 h-7 px-2 max-md:-ml-2.5 max-md:h-8 max-md:px-2.5"
+          : "font-medium",
+      )}
+    />
+  );
+  const value = (
+    <>
+      {pending ? (
+        <Spinner className="size-4" />
+      ) : assignee ? (
+        <Initials email={assignee.email} />
+      ) : (
+        <UserRoundXIcon className="text-muted-foreground" />
+      )}
+      <span
+        className={cn(
+          "truncate text-[13px]",
+          !assignee && "text-muted-foreground",
+        )}
+      >
+        {assignee
+          ? mine
+            ? "Tú"
+            : operatorName(assignee.email)
+          : "Sin asignar"}
+      </span>
+      {assignee?.archived ? (
+        <span className="shrink-0 text-[11px] text-muted-foreground">
+          (archivado)
+        </span>
+      ) : null}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <PickerSheet
+        title="Asignar conversación"
+        options={options}
+        getKey={(option) => `${option.kind}-${option.value}`}
+        isSelected={(option) => option.value === current}
+        filter={matches}
+        renderOption={(option) => (
+          <>
+            {option.kind === "none" ? (
+              <span className="flex size-7 shrink-0 items-center justify-center">
+                <UserRoundXIcon className="size-5 text-muted-foreground" />
+              </span>
+            ) : (
+              <Initials email={option.email} className="size-7" />
+            )}
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate">{option.label}</span>
+              {option.kind === "none" ? null : (
+                <span className="truncate text-xs font-normal text-muted-foreground">
+                  {option.email}
+                </span>
+              )}
+            </span>
+          </>
+        )}
+        onSelect={choose}
+        searchPlaceholder="Buscar operador…"
+        emptyText={assignees.isPending ? "Cargando…" : "No hay coincidencias."}
+        trigger={button}
+        triggerLabel={label}
+        triggerTitle={assignee?.email}
+      >
+        {value}
+      </PickerSheet>
+    );
+  }
 
   return (
     <Combobox
@@ -139,48 +226,11 @@ export function AssigneePicker({
       autoHighlight
     >
       <ComboboxTrigger
-        aria-label={
-          assignee
-            ? `Asignada a ${assignee.email}. Cambiar asignación`
-            : "Sin asignar. Asignar"
-        }
+        aria-label={label}
         title={assignee?.email}
-        render={
-          <Button
-            variant={compact ? "ghost" : "outline"}
-            size="sm"
-            disabled={pending}
-            className={cn(
-              "max-w-full min-w-0 justify-start gap-1.5 font-normal",
-              compact ? "-ml-2 h-7 px-2" : "font-medium",
-            )}
-          />
-        }
+        render={button}
       >
-        {pending ? (
-          <Spinner className="size-4" />
-        ) : assignee ? (
-          <Initials email={assignee.email} />
-        ) : (
-          <UserRoundXIcon className="text-muted-foreground" />
-        )}
-        <span
-          className={cn(
-            "truncate text-[13px]",
-            !assignee && "text-muted-foreground",
-          )}
-        >
-          {assignee
-            ? mine
-              ? "Tú"
-              : operatorName(assignee.email)
-            : "Sin asignar"}
-        </span>
-        {assignee?.archived ? (
-          <span className="shrink-0 text-[11px] text-muted-foreground">
-            (archivado)
-          </span>
-        ) : null}
+        {value}
       </ComboboxTrigger>
       <ComboboxContent className="w-72 min-w-72" align="start">
         <ComboboxInput showTrigger={false} placeholder="Buscar operador…" />
