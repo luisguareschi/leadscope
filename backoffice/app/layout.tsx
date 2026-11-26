@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "LeadScope",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
 };
 

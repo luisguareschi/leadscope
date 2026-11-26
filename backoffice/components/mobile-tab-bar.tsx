@@ -53,7 +53,7 @@ export function MobileTabBar() {
   const tabWidth = `min(76px, calc((100vw - 44px) / ${items.length}))`;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[max(0.625rem,var(--safe-bottom))] z-30 flex justify-center px-3 md:hidden">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[max(0.75rem,calc(var(--safe-bottom)-0.75rem))] z-30 flex justify-center px-3 md:hidden">
       <TabBar
         aria-label="Navegación principal"
         items={tabItems}
