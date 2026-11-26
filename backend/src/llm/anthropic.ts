@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { CompanyConfig } from "../companies/company-config.js";
 import { MAX_REPLY_BUBBLES } from "../engine/guardrails.js";
 import type { ChatTurn } from "../engine/history.js";
+import { normalizeSummary } from "../engine/summary.js";
 import { MAX_FILES_PER_TURN } from "../engine/turn.js";
 import { INTENTS } from "../engine/types.js";
 import type { CompleteInput, CompleteResult, LlmClient } from "./types.js";
@@ -52,7 +53,10 @@ export const modelTurnSchema = z
             ? value.trim() || null
             : null,
       ),
-    summary: nullableText,
+    summary: z
+      .union([z.array(z.string()), z.string()])
+      .nullish()
+      .transform((value) => normalizeSummary(value)),
     sendFileIds: z
       .array(z.string())
       .nullish()
@@ -156,9 +160,12 @@ export function submitTurnTool(
           ...(topics.length > 0 ? { enum: [...topics, null] } : {}),
         },
         summary: {
-          type: "string",
+          type: "array",
+          minItems: 1,
+          maxItems: 6,
+          items: { type: "string" },
           description:
-            'Two to five short bullets, each starting with "- ": the conversation so far and what the lead wants.',
+            "Two to five short bullet strings (plain text, no leading dash or newlines): the conversation so far and what the lead wants.",
         },
         ...(hasSendable
           ? {

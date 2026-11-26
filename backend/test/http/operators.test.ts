@@ -93,9 +93,28 @@ describe("adding an operator", () => {
       .get(operatorsOf(otraId))
       .set(admin)
       .expect(200);
-    expect(
-      listed.body.operators.map((o: { email: string }) => o.email),
-    ).toEqual(["nueva@otra.uy"]);
+    expect(listed.body.operators).toMatchObject([
+      {
+        email: "nueva@otra.uy",
+        hasLogin: true,
+        confirmed: false,
+        lastSignInAt: null,
+      },
+    ]);
+
+    supabase.confirmUser(row.supabaseUserId!, "2026-11-26T15:30:00Z");
+    const afterAccept = await request(app)
+      .get(operatorsOf(otraId))
+      .set(admin)
+      .expect(200);
+    expect(afterAccept.body.operators).toMatchObject([
+      {
+        email: "nueva@otra.uy",
+        hasLogin: true,
+        confirmed: true,
+        lastSignInAt: "2026-11-26T15:30:00Z",
+      },
+    ]);
   });
 
   it("links a Supabase user that already exists instead of failing", async () => {

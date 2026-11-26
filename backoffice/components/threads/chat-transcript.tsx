@@ -8,6 +8,7 @@ import {
   CircleAlertIcon,
   ContactIcon,
   DownloadIcon,
+  EyeIcon,
   FileIcon,
   ImageIcon,
   LayoutTemplateIcon,
@@ -18,6 +19,11 @@ import {
   VideoIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  MediaPreviewDialog,
+  mediaPreviewKind,
+  type MediaPreviewItem,
+} from "@/components/knowledge/file-preview-dialog";
 import { formatDayLabel, formatTime } from "@/lib/format";
 import { useFetchBlob } from "@/lib/queries";
 import { operatorName } from "@/lib/thread-status";
@@ -36,29 +42,24 @@ const TYPE_META: Record<string, { label: string; icon: React.ReactNode }> = {
   template: { label: "Plantilla de bienvenida", icon: <LayoutTemplateIcon /> },
 };
 
-const SAFE_INLINE_IMAGE_MIMES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
-
 function MessageMedia({
   threadId,
   message,
   right,
+  onPreview,
 }: {
   threadId: string;
   message: ChatMessage;
   right: boolean;
+  onPreview: (item: MediaPreviewItem) => void;
 }) {
   const fetchBlob = useFetchBlob();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const media = message.media;
   const hasMedia = Boolean(media);
-  const mime = media?.mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
-  const isImage = SAFE_INLINE_IMAGE_MIMES.has(mime);
+  const previewKind = media ? mediaPreviewKind(media) : null;
+  const isImage = previewKind === "image";
   const path = `/internal/threads/${threadId}/messages/${message.id}/media`;
 
   useEffect(() => {
@@ -79,6 +80,18 @@ function MessageMedia({
   }, [hasMedia, isImage, fetchBlob, path]);
 
   if (!media) return null;
+
+  const openPreview = () => {
+    onPreview({
+      id: message.id,
+      name:
+        media.fileName ??
+        (previewKind === "pdf" ? "Documento.pdf" : "Imagen adjunta"),
+      mimeType: previewKind === "pdf" ? "application/pdf" : media.mimeType,
+      downloadPath: path,
+      description: previewKind === "pdf" ? "Documento PDF" : "Imagen",
+    });
+  };
 
   const download = async () => {
     setDownloading(true);
@@ -106,20 +119,20 @@ function MessageMedia({
   if (isImage && imageUrl) {
     return (
       <div className="mb-1.5 overflow-hidden rounded-xl">
-        <a
-          href={imageUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="block"
-          title={media.fileName ?? "Abrir imagen"}
+        <button
+          type="button"
+          onClick={openPreview}
+          className="block cursor-pointer rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+          title={`Ver ${media.fileName ?? "imagen"}`}
+          aria-label={`Ver vista previa de ${media.fileName ?? "imagen adjunta"}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl}
             alt={media.fileName ?? "Imagen adjunta"}
-            className="max-h-64 max-w-full rounded-xl object-contain"
+            className="max-h-64 max-w-full rounded-xl object-contain transition-opacity hover:opacity-90"
           />
-        </a>
+        </button>
       </div>
     );
   }
@@ -127,10 +140,15 @@ function MessageMedia({
   return (
     <button
       type="button"
-      onClick={() => void download()}
-      disabled={downloading}
+      onClick={() => (previewKind ? openPreview() : void download())}
+      disabled={!previewKind && downloading}
+      aria-label={
+        previewKind
+          ? `Ver vista previa de ${media.fileName ?? "archivo"}`
+          : `Descargar ${media.fileName ?? "archivo"}`
+      }
       className={cn(
-        "mb-1.5 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium transition-opacity hover:opacity-85",
+        "mb-1.5 flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium transition-opacity hover:opacity-85",
         right
           ? "bg-white/15 text-bubble-foreground"
           : "bg-muted text-foreground",
@@ -140,7 +158,11 @@ function MessageMedia({
       <span className="min-w-0 flex-1 truncate">
         {media.fileName ?? "Archivo adjunto"}
       </span>
-      <DownloadIcon className="size-3.5 shrink-0 opacity-75" />
+      {previewKind ? (
+        <EyeIcon className="size-3.5 shrink-0 opacity-80" />
+      ) : (
+        <DownloadIcon className="size-3.5 shrink-0 opacity-75" />
+      )}
     </button>
   );
 }
@@ -169,6 +191,7 @@ function Bubble({
   continued,
   showDelivery,
   rightSide,
+  onPreview,
 }: {
   threadId?: string;
   message: ChatMessage;
@@ -176,6 +199,7 @@ function Bubble({
   continued: boolean;
   showDelivery: boolean;
   rightSide: ChatMessage["direction"];
+  onPreview: (item: MediaPreviewItem) => void;
 }) {
   const outbound = message.direction === "outbound";
   // The right side is "ours": the accent bubble. The panel's own messages, or the lead's in the test chat.
@@ -217,7 +241,12 @@ function Bubble({
           </div>
         ) : null}
         {threadId && message.media ? (
-          <MessageMedia threadId={threadId} message={message} right={right} />
+          <MessageMedia
+            threadId={threadId}
+            message={message}
+            right={right}
+            onPreview={onPreview}
+          />
         ) : null}
         {message.body ? (
           <p className="wrap-break-word whitespace-pre-wrap">
@@ -299,6 +328,7 @@ export function ChatTranscript({
   children?: React.ReactNode;
 }) {
   const bottom = useRef<HTMLDivElement>(null);
+  const [preview, setPreview] = useState<MediaPreviewItem | null>(null);
   const count = messages.length;
   // A reply can replace "Escribiendo…" in the same render that adds it, leaving the count as is.
   const trailing = Boolean(children);
@@ -311,34 +341,38 @@ export function ChatTranscript({
 
   const days = messages.map((message) => formatDayLabel(message.sentAt));
   return (
-    <div className="flex flex-col px-3 pt-2 pb-5 lg:px-5">
-      {messages.map((message, index) => {
-        const day = days[index]!;
-        const showDay = index === 0 || days[index - 1] !== day;
-        const continued =
-          !showDay && messages[index - 1]?.direction === message.direction;
-        return (
-          <Fragment key={message.id}>
-            {showDay ? (
-              <div className="mt-5 mb-1 flex justify-center">
-                <span className="rounded-full bg-card px-3 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border/60 dark:bg-secondary dark:ring-0">
-                  {day}
-                </span>
-              </div>
-            ) : null}
-            <Bubble
-              threadId={threadId}
-              message={message}
-              continued={continued}
-              showDelivery={showDelivery}
-              rightSide={rightSide}
-            />
-            {after?.(message)}
-          </Fragment>
-        );
-      })}
-      {children}
-      <div ref={bottom} />
-    </div>
+    <>
+      <div className="flex flex-col px-3 pt-2 pb-5 lg:px-5">
+        {messages.map((message, index) => {
+          const day = days[index]!;
+          const showDay = index === 0 || days[index - 1] !== day;
+          const continued =
+            !showDay && messages[index - 1]?.direction === message.direction;
+          return (
+            <Fragment key={message.id}>
+              {showDay ? (
+                <div className="mt-5 mb-1 flex justify-center">
+                  <span className="rounded-full bg-card px-3 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border/60 dark:bg-secondary dark:ring-0">
+                    {day}
+                  </span>
+                </div>
+              ) : null}
+              <Bubble
+                threadId={threadId}
+                message={message}
+                continued={continued}
+                showDelivery={showDelivery}
+                rightSide={rightSide}
+                onPreview={setPreview}
+              />
+              {after?.(message)}
+            </Fragment>
+          );
+        })}
+        {children}
+        <div ref={bottom} />
+      </div>
+      <MediaPreviewDialog item={preview} onClose={() => setPreview(null)} />
+    </>
   );
 }

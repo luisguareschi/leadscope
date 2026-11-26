@@ -24,5 +24,11 @@ export async function resendInvite(
     where: { id: found.id },
     select: operatorSelect,
   });
-  return { operator: toOperatorDto(ctx.env, operator), invite };
+  return {
+    operator: toOperatorDto(ctx.env, operator, {
+      confirmed: invite.status === "reset_sent",
+      lastSignInAt: null,
+    }),
+    invite,
+  };
 }

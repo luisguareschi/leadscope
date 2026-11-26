@@ -14,6 +14,7 @@ import { Panel, StatusPill, type Tone } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime, formatPhone } from "@/lib/format";
+import { parseSummaryBullets } from "@/lib/summary";
 import { needsHumanReasonLabel } from "@/lib/thread-status";
 import type { CrmStatus, LeadField, Thread } from "@/lib/types";
 import { FollowUpGroup } from "./follow-up-group";
@@ -250,10 +251,7 @@ function HubSpotGroup({
 
 /** The assistant's bullets, rewritten every turn. */
 function SummaryGroup({ summary }: { summary: string | null }) {
-  const bullets = (summary ?? "")
-    .split("\n")
-    .map((line) => line.replace(/^\s*[-•*]\s*/, "").trim())
-    .filter(Boolean);
+  const bullets = parseSummaryBullets(summary);
   return (
     <Group
       title="Resumen"

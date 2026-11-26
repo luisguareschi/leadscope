@@ -1,5 +1,6 @@
 import { normalizeReplies } from "./guardrails.js";
 import { isClosedStage, isSystemStage } from "./stages.js";
+import { normalizeSummary } from "./summary.js";
 import type {
   Collected,
   CollectRule,
@@ -134,8 +135,8 @@ function summaryOf(
   thread: ThreadSnapshot,
   update: string | null | undefined,
 ): string | null {
-  const next = clean(update);
-  if (!next) return clean(thread.summary);
+  const next = normalizeSummary(update);
+  if (!next) return normalizeSummary(thread.summary);
   return next.length > MAX_SUMMARY_CHARS
     ? `${next.slice(0, MAX_SUMMARY_CHARS - 1).trimEnd()}…`
     : next;

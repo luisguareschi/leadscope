@@ -3,11 +3,13 @@
 import {
   useEffect,
   useRef,
+  useState,
   useSyncExternalStore,
   type KeyboardEvent,
 } from "react";
 import {
   CircleAlertIcon,
+  EyeIcon,
   OctagonPauseIcon,
   MessagesSquareIcon,
   PaperclipIcon,
@@ -15,15 +17,22 @@ import {
   UserRoundIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { cn } from "cn";
+import {
+  FilePreviewDialog,
+  MediaPreviewDialog,
+  type MediaPreviewItem,
+} from "@/components/knowledge/file-preview-dialog";
 import { ChatTranscript } from "@/components/threads/chat-transcript";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import type { TestChatMessage } from "@/lib/assistant-test-storage";
+import { useKnowledgeFiles } from "@/lib/queries";
 import { needsHumanReasonLabel } from "@/lib/thread-status";
-import type { ChatMessage } from "@/lib/types";
+import type { ChatMessage, KnowledgeFile } from "@/lib/types";
 
 /** WhatsApp's limit for one text message. Mirrors the backend. */
 const MAX_CHARS = 4096;
@@ -158,6 +167,11 @@ export function AssistantTestChat({
   className?: string;
 }) {
   const input = useRef<HTMLTextAreaElement>(null);
+  const knowledge = useKnowledgeFiles();
+  const [previewFile, setPreviewFile] = useState<KnowledgeFile | null>(null);
+  const [previewMedia, setPreviewMedia] = useState<MediaPreviewItem | null>(
+    null,
+  );
   // A phone keyboard has no Shift+Enter: there Enter is a new line and the button sends.
   const touch = useSyncExternalStore(
     subscribeTouch,
@@ -169,7 +183,40 @@ export function AssistantTestChat({
   const disabled = pending || stopped;
   const canSend = !disabled && text.length > 0 && !tooLong;
   const byId = new Map(messages.map((message) => [message.id, message]));
+  const knowledgeById = new Map(
+    (knowledge.data?.files ?? []).map((file) => [file.id, file]),
+  );
   const scroller = useRef<HTMLDivElement>(null);
+
+  const openSentFile = (file: { id: string; path: string; format: string }) => {
+    const matched = knowledgeById.get(file.id);
+    if (matched) {
+      setPreviewFile(matched);
+      return;
+    }
+    if (knowledge.data) {
+      toast.error("Este archivo ya no está disponible en Conocimiento.");
+      return;
+    }
+    const name = file.path.split(" / ").at(-1) ?? file.path;
+    const fmt = file.format.toLowerCase();
+    const mimeType =
+      fmt === "pdf"
+        ? "application/pdf"
+        : fmt === "jpg" || fmt === "jpeg"
+          ? "image/jpeg"
+          : fmt === "png"
+            ? "image/png"
+            : fmt === "webp"
+              ? "image/webp"
+              : "application/octet-stream";
+    setPreviewMedia({
+      id: file.id,
+      name,
+      mimeType,
+      downloadPath: `/internal/knowledge/files/${file.id}/download`,
+    });
+  };
 
   // The stop buttons and an error take room from the transcript: keep its end in view.
   useEffect(() => {
@@ -205,14 +252,18 @@ export function AssistantTestChat({
         {test.sentFiles && test.sentFiles.length > 0 ? (
           <div className="mt-1.5 flex max-w-[85%] flex-wrap gap-1.5 self-start sm:max-w-[70%]">
             {test.sentFiles.map((file) => (
-              <span
+              <button
                 key={file.id}
-                className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs text-muted-foreground ring-1 ring-border/60 dark:bg-secondary dark:ring-0"
+                type="button"
+                onClick={() => openSentFile(file)}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs text-muted-foreground ring-1 ring-border/60 transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 dark:bg-secondary dark:ring-0 dark:hover:bg-secondary/80"
+                title={`Ver vista previa de ${file.path}`}
               >
                 <PaperclipIcon className="size-3 shrink-0" />
                 Enviaría:{" "}
                 <span className="font-medium text-foreground">{file.path}</span>
-              </span>
+                <EyeIcon className="size-3 shrink-0 opacity-75" />
+              </button>
             ))}
           </div>
         ) : null}
@@ -337,6 +388,14 @@ export function AssistantTestChat({
           </div>
         )}
       </div>
+      <FilePreviewDialog
+        file={previewFile}
+        onClose={() => setPreviewFile(null)}
+      />
+      <MediaPreviewDialog
+        item={previewMedia}
+        onClose={() => setPreviewMedia(null)}
+      />
     </div>
   );
 }

@@ -41,5 +41,11 @@ export async function addOperator(
     where: { id: created.id },
     select: operatorSelect,
   });
-  return { operator: toOperatorDto(ctx.env, operator), invite };
+  return {
+    operator: toOperatorDto(ctx.env, operator, {
+      confirmed: invite.status === "linked",
+      lastSignInAt: null,
+    }),
+    invite,
+  };
 }

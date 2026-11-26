@@ -1,5 +1,9 @@
 import type { AppContext } from "../../context.js";
-import { operatorSelect, toOperatorDto } from "./operator-dto.js";
+import {
+  lookupOperatorAuth,
+  operatorSelect,
+  toOperatorDto,
+} from "./operator-dto.js";
 
 export async function listOperators(ctx: AppContext, companyId: string) {
   const operators = await ctx.db.operator.findMany({
@@ -7,5 +11,12 @@ export async function listOperators(ctx: AppContext, companyId: string) {
     select: operatorSelect,
     orderBy: { createdAt: "asc" },
   });
-  return operators.map((operator) => toOperatorDto(ctx.env, operator));
+  const authStates = await Promise.all(
+    operators.map((operator) =>
+      lookupOperatorAuth(ctx, operator.supabaseUserId),
+    ),
+  );
+  return operators.map((operator, index) =>
+    toOperatorDto(ctx.env, operator, authStates[index]),
+  );
 }
