@@ -137,9 +137,7 @@ export function CompaniesTable({
             <li
               key={company.id}
               className={cn(
-                "grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 px-5 py-3 @3xl/content:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,16rem)_9rem_auto] @3xl/content:gap-x-5",
-                // Below sm the name gets the full width and the actions drop to a row of their own.
-                "max-sm:grid-cols-[2.25rem_minmax(0,1fr)] max-sm:gap-y-2.5 max-sm:px-4 max-sm:py-3.5",
+                "grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 px-5 py-3 max-sm:gap-x-2.5 max-sm:px-4 max-sm:py-3.5 @3xl/content:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,16rem)_9rem_auto] @3xl/content:gap-x-5",
                 archived && "bg-muted/30",
               )}
             >
@@ -152,19 +150,23 @@ export function CompaniesTable({
                 {initials(company.name)}
               </span>
               <div className="flex min-w-0 flex-col gap-0.5">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                   <span
                     className={cn(
-                      "min-w-0 text-sm font-medium max-sm:wrap-break-word sm:truncate",
+                      "truncate text-sm font-medium",
                       archived && "text-muted-foreground",
                     )}
                   >
                     {company.name}
                   </span>
                   {archived ? (
-                    <StatusPill tone="muted">Archivada</StatusPill>
+                    <StatusPill tone="muted" className="max-w-full min-w-0">
+                      <span className="truncate">Archivada</span>
+                    </StatusPill>
                   ) : company.assistantPaused ? (
-                    <StatusPill tone="error">Asistente pausado</StatusPill>
+                    <StatusPill tone="error" className="max-w-full min-w-0">
+                      <span className="truncate">Asistente pausado</span>
+                    </StatusPill>
                   ) : null}
                 </div>
                 <span className="truncate font-mono text-xs text-muted-foreground">
@@ -190,7 +192,7 @@ export function CompaniesTable({
                   {formatDate(company.createdAt)}
                 </span>
               </span>
-              <div className="flex items-center justify-end gap-1 max-sm:col-start-2">
+              <div className="flex shrink-0 items-center justify-end gap-1">
                 {archived ? (
                   <Button
                     size="sm"
