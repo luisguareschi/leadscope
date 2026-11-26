@@ -163,14 +163,17 @@ export function LeadsPerDayChart({
       className="aspect-auto h-72 w-full"
       initialDimension={{ width: 640, height: 288 }}
     >
-      <BarChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <BarChart
+        data={series}
+        margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+      >
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey="date"
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          minTickGap={28}
+          minTickGap={36}
           tickFormatter={(value: string) => formatDay(value)}
         />
         <YAxis
@@ -180,7 +183,11 @@ export function LeadsPerDayChart({
           allowDecimals={false}
         />
         <ChartTooltip content={<LeadsTooltip weekly={weekly} />} />
-        <ChartLegend content={<ChartLegendContent className="flex-wrap" />} />
+        <ChartLegend
+          content={
+            <ChartLegendContent className="flex-wrap gap-x-3 gap-y-1.5" />
+          }
+        />
         {STAGE_ORDER.map((stage) => (
           <Bar
             key={stage}

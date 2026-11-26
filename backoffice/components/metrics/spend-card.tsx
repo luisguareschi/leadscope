@@ -18,6 +18,15 @@ import type { CompanyMetrics } from "@/lib/types";
 
 const KAPSO_FREE_TIER_WARNING = 1800;
 
+function ModelStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="text-sm break-words tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
 export function SpendCard({ spend }: { spend: CompanyMetrics["spend"] }) {
   const [open, setOpen] = useState(false);
   const { anthropic, whatsapp } = spend;
@@ -141,46 +150,87 @@ export function SpendCard({ spend }: { spend: CompanyMetrics["spend"] }) {
               Sin llamadas a Anthropic en este período.
             </p>
           ) : (
-            <Table className="min-w-[40rem]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Modelo</TableHead>
-                  <TableHead className="text-right">Llamadas</TableHead>
-                  <TableHead className="text-right">Entrada</TableHead>
-                  <TableHead className="text-right">Salida</TableHead>
-                  <TableHead className="text-right">Caché leída</TableHead>
-                  <TableHead className="text-right">Caché escrita</TableHead>
-                  <TableHead className="text-right">USD</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div>
+              <ul className="divide-y divide-border/70 md:hidden">
                 {anthropic.byModel.map((row) => (
-                  <TableRow key={row.model}>
-                    <TableCell className="font-mono text-xs">
-                      {row.model}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCount(row.calls)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCount(row.inputTokens)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCount(row.outputTokens)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCount(row.cacheReadTokens)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCount(row.cacheWriteTokens)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatUsd(row.usd)}
-                    </TableCell>
-                  </TableRow>
+                  <li
+                    key={row.model}
+                    className="flex flex-col gap-2.5 py-3 first:pt-0 last:pb-0"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="min-w-0 font-mono text-xs break-all">
+                        {row.model}
+                      </span>
+                      <span className="shrink-0 text-sm font-medium tabular-nums">
+                        {formatUsd(row.usd)}
+                      </span>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      <ModelStat
+                        label="Llamadas"
+                        value={formatCount(row.calls)}
+                      />
+                      <ModelStat
+                        label="Entrada"
+                        value={formatCount(row.inputTokens)}
+                      />
+                      <ModelStat
+                        label="Salida"
+                        value={formatCount(row.outputTokens)}
+                      />
+                      <ModelStat
+                        label="Caché leída / escrita"
+                        value={`${formatCount(row.cacheReadTokens)} / ${formatCount(row.cacheWriteTokens)}`}
+                      />
+                    </dl>
+                  </li>
                 ))}
-              </TableBody>
-            </Table>
+              </ul>
+              <div className="max-md:hidden">
+                <Table className="min-w-[40rem]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Modelo</TableHead>
+                      <TableHead className="text-right">Llamadas</TableHead>
+                      <TableHead className="text-right">Entrada</TableHead>
+                      <TableHead className="text-right">Salida</TableHead>
+                      <TableHead className="text-right">Caché leída</TableHead>
+                      <TableHead className="text-right">
+                        Caché escrita
+                      </TableHead>
+                      <TableHead className="text-right">USD</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {anthropic.byModel.map((row) => (
+                      <TableRow key={row.model}>
+                        <TableCell className="font-mono text-xs">
+                          {row.model}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCount(row.calls)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCount(row.inputTokens)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCount(row.outputTokens)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCount(row.cacheReadTokens)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCount(row.cacheWriteTokens)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatUsd(row.usd)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           )
         ) : null}
       </div>

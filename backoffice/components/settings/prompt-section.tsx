@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CopyIcon, LockIcon, ScrollTextIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -133,6 +133,25 @@ export function PromptSection({ rules }: { rules: string }) {
   const preview = query.data;
   const [open, setOpen] = useState(false);
   const [block, setBlock] = useState<Block>("system");
+  const tabList = useRef<HTMLDivElement>(null);
+
+  // On a phone the tabs scroll sideways: keep the chosen one in view, also when the sheet opens on it.
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => {
+      const list = tabList.current;
+      const tab = list?.querySelector<HTMLElement>("[data-active]");
+      if (!list || !tab) return;
+      const bounds = list.getBoundingClientRect();
+      const rect = tab.getBoundingClientRect();
+      const margin = 24;
+      if (rect.left < bounds.left + margin)
+        list.scrollLeft -= bounds.left + margin - rect.left;
+      else if (rect.right > bounds.right - margin)
+        list.scrollLeft += rect.right - (bounds.right - margin);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [block, open]);
 
   const texts: Record<Block, string> = {
     rules,
@@ -205,7 +224,7 @@ export function PromptSection({ rules }: { rules: string }) {
             </Alert>
           </div>
         ) : !preview ? (
-          <div className="grid grid-cols-5 gap-4 p-5">
+          <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-5">
             <Skeleton className="h-9" />
             <Skeleton className="h-9" />
             <Skeleton className="h-9" />
@@ -233,7 +252,7 @@ export function PromptSection({ rules }: { rules: string }) {
       </Panel>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-3xl">
+        <SheetContent className="w-full gap-0 data-[side=right]:w-full data-[side=right]:pb-0 data-[side=right]:sm:max-w-3xl">
           <SheetHeader className="border-b pr-12">
             <SheetTitle>Prompt completo</SheetTitle>
             <SheetDescription>
@@ -247,8 +266,9 @@ export function PromptSection({ rules }: { rules: string }) {
           >
             <div className="flex items-center justify-between gap-2 border-b px-4 py-2">
               <TabsList
+                ref={tabList}
                 variant="line"
-                className="min-w-0 justify-start overflow-x-auto overflow-y-hidden pb-1.75 scrollbar-none group-data-horizontal/tabs:h-11"
+                className="min-w-0 justify-start overflow-x-auto overflow-y-hidden pb-1.75 scrollbar-none group-data-horizontal/tabs:h-11 max-md:scroll-fade-x"
               >
                 <TabsTrigger value="system">Bloque fijo</TabsTrigger>
                 <TabsTrigger value="knowledge">Conocimiento</TabsTrigger>
@@ -272,7 +292,7 @@ export function PromptSection({ rules }: { rules: string }) {
               <TabsContent
                 key={key}
                 value={key}
-                className="min-h-0 overflow-y-auto"
+                className="min-h-0 overflow-y-auto pb-[var(--safe-bottom)]"
               >
                 {key === "knowledge" && preview ? (
                   <KnowledgeOrder documents={preview.knowledge.documents} />

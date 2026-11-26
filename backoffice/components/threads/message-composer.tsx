@@ -10,6 +10,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import {
+  ALargeSmallIcon,
   BoldIcon,
   ClockIcon,
   FileTextIcon,
@@ -105,6 +106,76 @@ function useNow(intervalMs: number): number {
   return now;
 }
 
+type PublicFile = { file: KnowledgeFile; folderPath: string };
+
+/** The paperclip: upload from the device, or pick a public Conocimiento file. */
+function AttachMenu({
+  publicFiles,
+  disabled,
+  size,
+  className,
+  onUpload,
+  onPick,
+}: {
+  publicFiles: PublicFile[];
+  disabled: boolean;
+  size: "icon-xs" | "icon-sm";
+  className: string;
+  onUpload: () => void;
+  onPick: (file: KnowledgeFile) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size={size}
+            className={className}
+            aria-label="Adjuntar archivo"
+            disabled={disabled}
+          />
+        }
+      >
+        <PaperclipIcon />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-56">
+        <DropdownMenuItem onClick={onUpload}>
+          <UploadIcon />
+          Subir desde tu equipo
+        </DropdownMenuItem>
+        {publicFiles.length > 0 ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <FolderOpenIcon className="size-3.5" />
+                Archivos públicos de Conocimiento
+              </DropdownMenuLabel>
+              <div className="max-h-64 overflow-y-auto">
+                {publicFiles.map(({ file, folderPath }) => (
+                  <DropdownMenuItem key={file.id} onClick={() => onPick(file)}>
+                    <FileTextIcon className="shrink-0" />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate">{file.name}</span>
+                      {folderPath ? (
+                        <span className="truncate text-[11px] text-muted-foreground">
+                          {folderPath}
+                        </span>
+                      ) : null}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            </DropdownMenuGroup>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /**
  * Writes text or sends files (direct upload or public Conocimiento files) to the lead from the
  * company's WhatsApp number. Sending pauses the assistant and assigns an unassigned thread.
@@ -115,6 +186,8 @@ export function MessageComposer({ thread }: { thread: Thread }) {
   const send = useSendMessage(thread.id);
   const [draft, setDraft] = useState("");
   const [attachment, setAttachment] = useState<PendingAttachment | null>(null);
+  // Below lg the format buttons hide behind Aa, so the chat keeps the height.
+  const [formatting, setFormatting] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const isMac = useSyncExternalStore(
     noSubscription,
@@ -130,7 +203,7 @@ export function MessageComposer({ thread }: { thread: Thread }) {
   const input = useRef<HTMLTextAreaElement>(null);
   const now = useNow(30_000);
 
-  const publicFiles = useMemo(() => {
+  const publicFiles = useMemo<PublicFile[]>(() => {
     const foldersById = new Map(
       (knowledge.data?.folders ?? []).map((folder) => [folder.id, folder]),
     );
@@ -240,13 +313,26 @@ export function MessageComposer({ thread }: { thread: Thread }) {
     : thread.paused && !thread.needsHuman
       ? "Asistente pausado en esta conversación."
       : `Al enviar, el asistente se pausa${takesAssignee ? " y se te asigna la conversación" : ""}.`;
+  const shortHint =
+    thread.paused && !thread.needsHuman ? "Pausado" : "Pausa al enviar";
+  const attachMenu = (size: "icon-xs" | "icon-sm", className: string) => (
+    <AttachMenu
+      publicFiles={publicFiles}
+      disabled={!open || send.isPending}
+      size={size}
+      className={className}
+      onUpload={() => fileInput.current?.click()}
+      onPick={(file) => setAttachment({ kind: "knowledge", file })}
+    />
+  );
 
   return (
-    <div className="flex flex-col gap-2 bg-card px-4 py-3">
+    // Below lg the composer sits on the bottom edge of the screen: clear the home indicator.
+    <div className="flex flex-col gap-2 bg-card px-4 py-3 max-lg:gap-1.5 max-lg:px-3 max-lg:pt-2 max-lg:pb-[max(0.75rem,var(--safe-bottom))]">
       {!open ? (
         <p
           role="status"
-          className="flex items-start gap-2 rounded-xl bg-muted px-3.5 py-2.5 text-[13px] leading-relaxed text-muted-foreground"
+          className="flex items-start gap-2 rounded-xl bg-muted px-3.5 py-2.5 text-[13px] leading-relaxed text-muted-foreground max-lg:px-3 max-lg:py-2 max-lg:text-xs"
         >
           <TimerOffIcon className="mt-0.5 size-4 shrink-0" />
           <span>
@@ -262,7 +348,13 @@ export function MessageComposer({ thread }: { thread: Thread }) {
           !open && "opacity-60",
         )}
       >
-        <div className="flex items-center gap-0.5 border-b border-border/70 px-2 py-1">
+        <div
+          id={`composer-format-${thread.id}`}
+          className={cn(
+            "flex items-center gap-0.5 border-b border-border/70 px-2 py-1",
+            !formatting && "max-lg:hidden",
+          )}
+        >
           {FORMATS.map((format) => (
             <Tooltip key={format.marker}>
               <TooltipTrigger
@@ -289,59 +381,8 @@ export function MessageComposer({ thread }: { thread: Thread }) {
               </TooltipContent>
             </Tooltip>
           ))}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="max-lg:size-8"
-                  aria-label="Adjuntar archivo"
-                  disabled={!open || send.isPending}
-                />
-              }
-            >
-              <PaperclipIcon />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-56">
-              <DropdownMenuItem onClick={() => fileInput.current?.click()}>
-                <UploadIcon />
-                Subir desde tu equipo
-              </DropdownMenuItem>
-              {publicFiles.length > 0 ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <FolderOpenIcon className="size-3.5" />
-                      Archivos públicos de Conocimiento
-                    </DropdownMenuLabel>
-                    <div className="max-h-64 overflow-y-auto">
-                      {publicFiles.map(({ file, folderPath }) => (
-                        <DropdownMenuItem
-                          key={file.id}
-                          onClick={() =>
-                            setAttachment({ kind: "knowledge", file })
-                          }
-                        >
-                          <FileTextIcon className="shrink-0" />
-                          <span className="flex min-w-0 flex-col">
-                            <span className="truncate">{file.name}</span>
-                            {folderPath ? (
-                              <span className="truncate text-[11px] text-muted-foreground">
-                                {folderPath}
-                              </span>
-                            ) : null}
-                          </span>
-                        </DropdownMenuItem>
-                      ))}
-                    </div>
-                  </DropdownMenuGroup>
-                </>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Below lg the paperclip sits next to the text field instead. */}
+          {attachMenu("icon-xs", "max-lg:hidden")}
           {touch ? null : (
             <span className="ml-auto px-1.5 text-[11px] text-muted-foreground max-sm:hidden">
               Enter para enviar · Shift+Enter nueva línea
@@ -372,7 +413,22 @@ export function MessageComposer({ thread }: { thread: Thread }) {
             </Button>
           </div>
         ) : null}
-        <div className="flex items-end gap-2 p-1.5 pl-0">
+        <div className="flex items-end gap-2 p-1.5 pl-0 max-lg:gap-0.5 max-lg:pl-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="size-10 lg:hidden"
+            aria-label="Formato"
+            aria-expanded={formatting}
+            aria-controls={`composer-format-${thread.id}`}
+            disabled={!open}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => setFormatting((shown) => !shown)}
+          >
+            <ALargeSmallIcon className={cn(formatting && "text-primary")} />
+          </Button>
+          {attachMenu("icon-sm", "size-10 lg:hidden")}
           <Textarea
             ref={input}
             value={draft}
@@ -389,12 +445,12 @@ export function MessageComposer({ thread }: { thread: Thread }) {
                   ? "Agrega un comentario (opcional)…"
                   : "Escribe un mensaje…"
             }
-            className="max-h-40 min-h-9 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 max-lg:max-h-28"
+            className="max-h-40 min-h-9 resize-none border-0 bg-transparent py-1.5 shadow-none focus-visible:ring-0 max-lg:max-h-28 max-lg:min-h-10 max-lg:px-1.5 max-lg:py-2"
           />
           <Button
             type="button"
             size="icon-sm"
-            className="max-lg:size-9"
+            className="max-lg:size-10"
             aria-label="Enviar"
             disabled={!canSend}
             onClick={submit}
@@ -420,7 +476,25 @@ export function MessageComposer({ thread }: { thread: Thread }) {
         }}
       />
       {open ? (
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        // Below lg, one short line instead of a hint that wraps over two or three.
+        <p className="flex min-w-0 items-center gap-1 px-1 text-xs text-muted-foreground lg:hidden">
+          <span className="truncate">{shortHint}</span>
+          <span aria-hidden>·</span>
+          <span
+            className={cn(
+              "shrink-0 tabular-nums",
+              left < 60 * 60_000 && "text-primary",
+              tooLong && "text-destructive",
+            )}
+          >
+            {tooLong
+              ? `${text.length} / ${maxChars} caracteres`
+              : `Quedan ${remaining(left)}`}
+          </span>
+        </p>
+      ) : null}
+      {open ? (
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground max-lg:hidden">
           <span>{hint}</span>
           <span
             className={cn(

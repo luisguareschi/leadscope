@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import {
   BotIcon,
   ChevronDownIcon,
@@ -103,6 +103,22 @@ function ThreadsView() {
     });
   };
 
+  // The strip scrolls sideways once it overflows: keep the chosen stage in view, even from a link.
+  const stageStrip = useRef<HTMLDivElement>(null);
+  const stageCount = stageFilters.length;
+  useEffect(() => {
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    stageStrip.current
+      ?.querySelector<HTMLElement>('[aria-pressed="true"]')
+      ?.scrollIntoView({
+        behavior: reduceMotion ? "auto" : "smooth",
+        inline: "nearest",
+        block: "nearest",
+      });
+  }, [stage, stageCount]);
+
   const rows = threads.data?.pages.flatMap((page) => page.threads) ?? [];
   const counts = summary.data;
   const waiting = counts?.bot.needs_human ?? 0;
@@ -137,11 +153,12 @@ function ThreadsView() {
       ) : null}
 
       <Panel className="divide-y-0">
-        <div className="flex flex-col gap-2 px-3 pt-3 pb-1">
+        <div className="flex flex-col gap-2 px-3 pt-3 pb-1 max-sm:gap-1.5 max-sm:pt-2">
           <div
+            ref={stageStrip}
             role="group"
             aria-label="Filtrar por etapa"
-            className="-mx-3 flex gap-1 overflow-x-auto px-3 scrollbar-none"
+            className="-mx-3 flex scroll-px-8 gap-1 overflow-x-auto px-3 scroll-fade-x scrollbar-none"
           >
             {stageFilters.map((filter) => {
               const count = countFor(counts, filter.value);
@@ -179,19 +196,23 @@ function ThreadsView() {
               );
             })}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          {/* One row on a phone: both shrink (and truncate) rather than wrap. */}
+          <div className="flex items-center gap-2 max-sm:gap-1.5 sm:flex-wrap">
             {canBeAssigned ? (
               <Button
                 size="sm"
                 variant={mine ? "secondary" : "outline"}
                 aria-pressed={mine}
-                className={cn(mine && "text-foreground")}
+                className={cn(
+                  "min-w-0 max-sm:gap-1 max-sm:px-2.5 max-sm:text-xs",
+                  mine && "text-foreground",
+                )}
                 onClick={() => setParams({ mine: !mine })}
               >
                 <UserRoundCheckIcon />
-                Asignadas a mí
+                <span className="truncate">Asignadas a mí</span>
                 {counts?.mine ? (
-                  <span className="rounded px-1 text-xs text-muted-foreground tabular-nums">
+                  <span className="rounded px-1 text-xs text-muted-foreground tabular-nums max-sm:px-0.5">
                     {stage === "to_contact"
                       ? counts.mine.toContact
                       : counts.mine.all}
@@ -206,11 +227,12 @@ function ThreadsView() {
                     size="sm"
                     variant={bot === "all" ? "outline" : "secondary"}
                     aria-label="Filtrar por asistente"
+                    className="min-w-0 max-sm:gap-1 max-sm:px-2.5 max-sm:text-xs"
                   />
                 }
               >
                 <BotIcon />
-                {botLabel}
+                <span className="truncate">{botLabel}</span>
                 <ChevronDownIcon className="text-muted-foreground" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-48">

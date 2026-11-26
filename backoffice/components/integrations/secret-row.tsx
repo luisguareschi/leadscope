@@ -106,9 +106,9 @@ export function SecretRow({
                 onKeyDown={(event) => {
                   if (event.key === "Escape") close();
                 }}
-                className={cn(generated && "font-mono text-xs md:text-xs")}
+                className={cn(generated && "font-mono text-base md:text-xs")}
               />
-              <div className="flex shrink-0 gap-2">
+              <div className="flex shrink-0 flex-wrap gap-2">
                 {generate && !draft ? (
                   <Button
                     type="button"

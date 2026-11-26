@@ -6,6 +6,7 @@ import {
   ExternalLinkIcon,
   EyeIcon,
   FileTextIcon,
+  FileTypeIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsIOS } from "@/hooks/use-is-ios-pwa";
 import { formatBytes, formatNumber } from "@/lib/format";
 import { useFetchBlob, useKnowledgeFileText } from "@/lib/queries";
 import type { KnowledgeFile } from "@/lib/types";
@@ -75,7 +77,7 @@ export function FilePreviewDialog({
     <Dialog open={file !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         className={cn(
-          "flex max-h-[calc(100dvh-2rem)] flex-col gap-4 overflow-y-auto",
+          "flex max-h-[calc(100dvh-2rem-var(--safe-top)-var(--safe-bottom))] flex-col gap-4 overflow-y-auto",
           isVisualDialog ? "sm:max-w-4xl" : "sm:max-w-3xl",
         )}
       >
@@ -108,6 +110,8 @@ function FilePreviewBody({
   kind: FilePreviewKind;
 }) {
   const fetchBlob = useFetchBlob();
+  // WebKit shows only the first page of a PDF in an iframe, with no scroll or zoom.
+  const isIOS = useIsIOS();
   const [activeTab, setActiveTab] = useState<PreviewTab>("visual");
   const [blobState, setBlobState] = useState<BlobState | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -252,6 +256,23 @@ function FilePreviewBody({
             ) : blobError ? (
               <div className="p-4">
                 <p className="text-sm text-destructive">{blobError}</p>
+              </div>
+            ) : blobUrl && isIOS ? (
+              <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+                <span className="flex size-12 items-center justify-center rounded-full bg-primary/10">
+                  <FileTypeIcon className="size-5 text-red-600" />
+                </span>
+                <p className="max-w-full truncate text-sm font-medium">
+                  {file.name}
+                </p>
+                <p className="max-w-xs text-[13px] text-pretty text-muted-foreground">
+                  En iOS, abre el PDF en el visor del sistema para ver todas las
+                  páginas y hacer zoom.
+                </p>
+                <Button type="button" onClick={openInNewTab}>
+                  <ExternalLinkIcon />
+                  Abrir PDF
+                </Button>
               </div>
             ) : blobUrl ? (
               <iframe

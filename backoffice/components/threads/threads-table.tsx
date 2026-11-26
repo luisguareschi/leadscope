@@ -138,18 +138,27 @@ function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
             {thread.lastMessagePreview}
           </p>
         ) : null}
-        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-          {/* The pickers sit above the row's link, so their taps do not open the thread. */}
-          <span className="relative z-10 flex max-w-full shrink-0 [&>button]:max-w-[calc(100%+0.5rem)]">
-            <StagePicker thread={thread} size="compact" />
-          </span>
-          <BotBadge activity={thread.botActivity} />
-          <span className="relative z-10 flex max-w-full shrink-0 [&>button]:max-w-[calc(100%+0.5rem)]">
-            <AssigneePicker thread={thread} size="compact" />
-          </span>
-          {thread.crm && thread.crm.status !== "none" ? (
-            <CrmIndicator crm={thread.crm} />
-          ) : null}
+        {/*
+          Two groups: stage and assistant, then assignee and HubSpot. Side by side when they fit;
+          otherwise the second group wraps under the first, flush left. The compact pickers' negative
+          margin lines their text up with the rows above. The pickers sit above the row's link, so
+          their taps do not open the thread.
+        */}
+        <div className="mt-0.5 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
+          <div className="flex max-w-full min-w-0 items-center gap-1.5">
+            <span className="relative z-10 flex min-w-0 [&>button]:max-w-[calc(100%+0.5rem)] max-md:[&>button]:max-w-[calc(100%+0.625rem)]">
+              <StagePicker thread={thread} size="compact" />
+            </span>
+            <BotBadge activity={thread.botActivity} />
+          </div>
+          <div className="flex max-w-full min-w-0 items-center gap-1">
+            <span className="relative z-10 flex min-w-0 [&>button]:max-w-[calc(100%+0.5rem)] max-md:[&>button]:max-w-[calc(100%+0.625rem)]">
+              <AssigneePicker thread={thread} size="compact" />
+            </span>
+            {thread.crm && thread.crm.status !== "none" ? (
+              <CrmIndicator crm={thread.crm} />
+            ) : null}
+          </div>
         </div>
       </div>
     </li>

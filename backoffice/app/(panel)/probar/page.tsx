@@ -51,7 +51,7 @@ export default function AssistantTestPage() {
 
   return (
     // Fills the panel's scroll area: each column scrolls inside itself, like a conversation.
-    <div className="@container/content flex min-h-0 flex-1 flex-col gap-4 px-4 lg:px-6">
+    <div className="@container/content flex min-h-0 flex-1 flex-col gap-2.5 px-4 lg:gap-4 lg:px-6">
       <header className="flex min-h-8 flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <p className="flex items-center gap-2 text-[13px] text-muted-foreground">
           <InfoIcon className="size-4 shrink-0" />
@@ -83,7 +83,7 @@ export default function AssistantTestPage() {
               no afecta a leads reales.
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               size="sm"
@@ -123,8 +123,9 @@ export default function AssistantTestPage() {
         </TabsList>
       </Tabs>
 
-      {/* A basis taller than any screen, so the row always shrinks to the space that is left. */}
-      <div className="grid min-h-0 flex-[1_1_100svh] grid-cols-1 grid-rows-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      {/* Below md the shell is exactly one screen, so the row takes what is left above the tab
+          bar. From md a basis taller than any screen, so it always shrinks to the space left. */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-2.5 md:flex-[1_1_100svh] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-4">
         {config ? (
           <>
             <AssistantTestChat

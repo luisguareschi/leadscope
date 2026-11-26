@@ -119,7 +119,7 @@ function EmptyState({
               autoComplete="off"
               placeholder="Lead de prueba"
               onChange={(event) => onLeadNameChange(event.target.value)}
-              className="w-full min-w-0 bg-transparent text-sm font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground/70"
+              className="w-full min-w-0 bg-transparent text-base font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground/70 md:text-sm"
             />
           </span>
         </label>
@@ -258,7 +258,7 @@ export function AssistantTestChat({
         )}
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-border/70 px-4 py-3">
+      <div className="flex flex-col gap-2 border-t border-border/70 px-3 py-2.5 lg:px-4 lg:py-3">
         {error ? (
           <Alert variant="destructive">
             <CircleAlertIcon />
@@ -323,16 +323,19 @@ export function AssistantTestChat({
             )}
           </Button>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span>
-            {touch ? null : "Enter para enviar · Shift+Enter nueva línea"}
-          </span>
-          {tooLong ? (
-            <span className="text-destructive tabular-nums">
-              {text.length} / {MAX_CHARS} caracteres
+        {/* On touch there is no hint, so the row only shows when the message is too long. */}
+        {touch && !tooLong ? null : (
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span>
+              {touch ? null : "Enter para enviar · Shift+Enter nueva línea"}
             </span>
-          ) : null}
-        </div>
+            {tooLong ? (
+              <span className="text-destructive tabular-nums">
+                {text.length} / {MAX_CHARS} caracteres
+              </span>
+            ) : null}
+          </div>
+        )}
       </div>
     </div>
   );

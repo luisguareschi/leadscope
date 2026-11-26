@@ -32,7 +32,7 @@ import {
   formatPhone,
   formatTime,
 } from "@/lib/format";
-import { useThread } from "@/lib/queries";
+import { useMe, useThread } from "@/lib/queries";
 import type { Thread } from "@/lib/types";
 
 function windowClosed(closesAt: Thread["replyWindowClosesAt"]): boolean {
@@ -77,12 +77,16 @@ function attentionTone(thread: Thread | undefined): Tone | null {
 export default function ThreadPage() {
   const { id } = useParams<{ id: string }>();
   const query = useThread(id);
+  const me = useMe();
   const [view, setView] = useState<MobileView>("chat");
+  // Below lg this page hides the site header, and with it the company-wide pause button.
+  const companyPaused = me.data?.company?.assistantPaused === true;
 
   const back = (
     <Button
       variant="ghost"
       size="icon-sm"
+      className="max-lg:-ml-1.5 max-lg:size-10"
       aria-label="Volver a Conversaciones"
       nativeButton={false}
       render={<Link href="/threads" />}
@@ -95,7 +99,7 @@ export default function ThreadPage() {
     const missing =
       query.error instanceof ApiError && query.error.status === 404;
     return (
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 px-4 max-lg:px-3 max-lg:pt-[max(0.5rem,var(--header-safe-top))] lg:px-6">
         <div>{back}</div>
         <Alert variant={missing ? "default" : "destructive"}>
           <AlertTitle>
@@ -116,8 +120,9 @@ export default function ThreadPage() {
   const attention = attentionTone(thread);
   return (
     // Fills the panel's scroll area exactly: each column scrolls inside itself, never the page.
-    <div className="@container/content flex min-h-0 flex-1 flex-col gap-4 px-4 lg:px-6">
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
+    // Below lg there is no site header above, so this page clears the notch itself.
+    <div className="@container/content flex min-h-0 flex-1 flex-col gap-2.5 pt-[max(0.5rem,var(--header-safe-top))] lg:gap-4 lg:px-6 lg:pt-0">
+      <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5 max-lg:px-3 lg:gap-x-3 lg:gap-y-2">
         {back}
         {thread ? (
           <>
@@ -127,7 +132,7 @@ export default function ThreadPage() {
             />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <h2 className="truncate font-heading text-xl leading-tight font-semibold tracking-tight">
+                <h2 className="truncate font-heading text-lg leading-tight font-semibold tracking-tight lg:text-xl">
                   {thread.name ?? formatPhone(thread.phone)}
                 </h2>
                 <span className="contents max-lg:hidden">
@@ -143,6 +148,14 @@ export default function ThreadPage() {
             </div>
             <ThreadActions thread={thread} />
             <div className="flex w-full flex-wrap items-center gap-1.5 lg:hidden">
+              {companyPaused ? (
+                <StatusPill
+                  tone="error"
+                  className="bg-destructive/10 text-destructive"
+                >
+                  Asistente pausado en la empresa
+                </StatusPill>
+              ) : null}
               <StageBadge stage={thread.stage} />
               <BotBadge activity={thread.botActivity} />
               <WroteAgainBadge thread={thread} />
@@ -162,7 +175,7 @@ export default function ThreadPage() {
       <Tabs
         value={view}
         onValueChange={(value) => setView(value as MobileView)}
-        className="lg:hidden"
+        className="max-lg:px-3 lg:hidden"
       >
         <TabsList className="w-full">
           <TabsTrigger value="chat">Conversación</TabsTrigger>
@@ -179,11 +192,14 @@ export default function ThreadPage() {
         </TabsList>
       </Tabs>
 
-      {/* A basis taller than any screen, so the row always shrinks to the space that is left. */}
-      <div className="grid min-h-0 flex-[1_1_100svh] grid-cols-1 grid-rows-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
+      {/*
+        Below md the shell is exactly one screen, so the row takes what is left. From md the shell
+        only has a max height: a basis taller than any screen makes the row shrink to fit it.
+      */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-4 md:flex-[1_1_100svh] lg:grid-cols-2">
         <Panel
           className={cn(
-            "flex min-h-0 flex-col",
+            "flex min-h-0 flex-col max-lg:rounded-none max-lg:border-t max-lg:border-border/70 max-lg:ring-0",
             view !== "chat" && "max-lg:hidden",
           )}
           headerClassName="max-lg:hidden"
@@ -224,12 +240,15 @@ export default function ThreadPage() {
           <LeadDetails
             thread={thread}
             fields={data.fields}
-            className={cn(view !== "lead" && "max-lg:hidden")}
+            className={cn(
+              "max-lg:mx-3 max-lg:mb-[max(1rem,var(--safe-bottom))]",
+              view !== "lead" && "max-lg:hidden",
+            )}
           />
         ) : (
           <Skeleton
             className={cn(
-              "h-full w-full rounded-xl",
+              "h-full w-full rounded-xl max-lg:mx-3 max-lg:mb-[max(1rem,var(--safe-bottom))] max-lg:w-auto",
               view !== "lead" && "max-lg:hidden",
             )}
           />

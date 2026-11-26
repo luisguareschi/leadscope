@@ -28,6 +28,8 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#f2f3f7" },
     { media: "(prefers-color-scheme: dark)", color: "#03040b" },
   ],
+  // Draw under the notch and home indicator; the shell pads itself with the safe-area insets.
+  viewportFit: "cover",
   // The on-screen keyboard shrinks the layout, so the thread composer stays above it.
   interactiveWidget: "resizes-content",
 };

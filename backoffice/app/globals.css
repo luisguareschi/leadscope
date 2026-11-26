@@ -107,6 +107,22 @@
   --sidebar-accent-foreground: #191c1f;
   --sidebar-border: #e5e7ee;
   --sidebar-ring: #494fdf;
+  /* iPhone notch, home indicator and rounded corners (needs viewport-fit=cover). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  /* Extra top clearance for iOS standalone PWA's native status-bar progressive blur. */
+  --pwa-top-offset: 0px;
+  --header-safe-top: calc(var(--safe-top) + var(--pwa-top-offset));
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) {
+    :root {
+      --pwa-top-offset: 1.5rem;
+    }
+  }
 }
 
 .dark {
@@ -179,6 +195,11 @@
   html.dark {
     color-scheme: dark;
   }
+  /* No rubber-band past the fixed header and tab bar in the iOS home-screen app. */
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
   body {
     @apply bg-background text-foreground;
     background-image: radial-gradient(
@@ -187,5 +208,15 @@
       transparent 70%
     );
     background-attachment: fixed;
+  }
+}
+
+/*
+ * Tailwind's scrollbar-none only sets scrollbar-width, which Safari before 18.2 ignores.
+ * no-scrollbar and scroll-fade-x come from shadcn/tailwind.css.
+ */
+@layer utilities {
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }

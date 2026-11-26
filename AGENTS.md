@@ -132,7 +132,7 @@ The panel has a thread list, a way to pause the assistant when a person takes ov
 
 **Thread view.** The same split (Etapa, Asistente, Asignado) with both pickers and the last stage change. A composer under the conversation writes to the lead (see Handoff). Every bubble renders WhatsApp's markup, and outbound bubbles say "Asistente" or `Enviado por <name>`. With HubSpot on, the Lead panel shows its status and Abrir en HubSpot; with it off, neither the thread nor the list shows HubSpot.
 
-**On a phone.** Below the `lg` breakpoint, Conversaciones is a list of stacked rows with the same pickers, and the thread view has Conversación / Lead tabs with Pausar in the ⋯ menu. From `lg` up the desktop layout is unchanged. Luis asked for this on 23 Oct 2026.
+**On a phone.** Below `md`, navigation moves to a bottom tab bar with iOS safe-area insets (`viewport-fit=cover`, `env(safe-area-inset-*)`), toasts appear at top-center, Stage/Assignee pickers and Configuración section navigation open as bottom sheets, and wide Métricas tables render as stacked cards. Below `lg`, Conversaciones uses stacked rows and the thread view hides the global header in favor of a compact thread bar, Conversación / Lead tabs, and a compact composer with collapsible formatting controls. From `lg` up the desktop layout is unchanged.
 
 **Métricas.** Read-only, built from existing tables (no new data). Any operator sees their own company; a platform admin picks a company and also gets a comparison table of every company.
 

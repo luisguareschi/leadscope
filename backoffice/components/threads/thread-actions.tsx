@@ -79,7 +79,12 @@ export function ThreadActions({ thread }: { thread: Thread }) {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="icon-sm" aria-label="Más acciones" />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="max-lg:-mr-1.5 max-lg:size-10"
+              aria-label="Más acciones"
+            />
           }
         >
           <EllipsisVerticalIcon />

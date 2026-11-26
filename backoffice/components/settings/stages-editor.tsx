@@ -195,7 +195,7 @@ export function StagesEditor() {
                           value={stage.key}
                           maxLength={40}
                           spellCheck={false}
-                          className="font-mono text-xs md:text-xs"
+                          className="font-mono text-base md:text-xs"
                           aria-invalid={err("key") ? true : undefined}
                           onChange={(event) => {
                             if (autoKey.has(stage.id)) {
@@ -219,7 +219,7 @@ export function StagesEditor() {
                       <div
                         role="radiogroup"
                         aria-label={`Color para ${stage.label || "etapa"}`}
-                        className="flex h-9 items-center gap-1 rounded-lg bg-muted/60 px-2"
+                        className="flex h-11 items-center gap-1 rounded-lg bg-muted/60 px-2 sm:h-9"
                       >
                         {COLOR_OPTIONS.map((option) => {
                           const selected = stage.color === option.value;
@@ -241,7 +241,7 @@ export function StagesEditor() {
                                 )
                               }
                               className={cn(
-                                "flex size-6 items-center justify-center rounded-full transition-shadow",
+                                "flex size-8 items-center justify-center rounded-full transition-shadow sm:size-6",
                                 selected
                                   ? "bg-card shadow-xs ring-2 ring-ring"
                                   : "hover:bg-card/60",
@@ -261,6 +261,7 @@ export function StagesEditor() {
                         type="button"
                         variant="ghost"
                         size="icon-sm"
+                        className="max-md:size-9"
                         aria-label="Subir"
                         disabled={customIndex === 0}
                         onClick={() => {
@@ -276,6 +277,7 @@ export function StagesEditor() {
                         type="button"
                         variant="ghost"
                         size="icon-sm"
+                        className="max-md:size-9"
                         aria-label="Bajar"
                         disabled={customIndex === customList.length - 1}
                         onClick={() => {
@@ -291,6 +293,7 @@ export function StagesEditor() {
                         type="button"
                         variant="ghost"
                         size="icon-sm"
+                        className="max-md:size-9"
                         aria-label={`Quitar ${stage.label || "etapa"}`}
                         title="Eliminar etapa"
                         onClick={() =>
