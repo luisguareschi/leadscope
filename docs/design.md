@@ -194,7 +194,7 @@ Entrar on Empresas lets a platform admin work inside one company's panel, for se
 One login (one email, one Supabase user) can be an operator of several companies, with one `Operator` row per company. Email and Supabase user are unique per company, not globally (`20261126120000_multi_company_operators`, indexes only). On a Supabase login, rows created by email in other companies get the Supabase user, except in a company where it is already linked to a row.
 
 - `GET /internal/me` lists the login's active companies (`companies`: id, name, slug, `assistantPaused`, by name). Without `X-Company-Id` the API uses the oldest active membership.
-- With more than one, the panel shows a company switcher: the company row under the logo in the sidebar, and a pill in the header below `md` that opens a bottom sheet. It is hidden inside support access, where the support bar stays.
+- With more than one, the panel shows a company switcher: the company row under the logo in the sidebar, and a tappable subtitle under the page title below `md` that opens a bottom sheet. It is hidden inside support access, where the support bar stays.
 - The pick is kept per tab (sessionStorage) and as the login's last pick (localStorage), so a new tab opens in it. A tab keeps the company it rendered, so a switch in another tab does not move it. Switching reloads the page on the same company page (Conversaciones for a thread or anything else), so no cached data from one company shows under another.
 - An archived row, or an archived company, blocks only that company. If the tab's company is no longer open, the panel forgets it and reloads in the next one; with none left, it shows the reason.
 - Signing out forgets the pick.

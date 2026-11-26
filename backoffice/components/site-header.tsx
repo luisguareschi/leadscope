@@ -81,21 +81,23 @@ export function SiteHeader({ className }: { className?: string }) {
       )}
     >
       <div className="mx-auto grid min-h-14 w-full max-w-350 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 md:h-(--header-height) lg:px-6">
-        <div className="flex min-w-0 items-center gap-0.5">
-          <h1 className="truncate font-heading text-[22px] font-medium tracking-tight lg:text-2xl">
-            {title}
-          </h1>
-          {pathname.startsWith("/metrics") ? (
-            <HelpTip label="Cómo se cuentan las métricas">
-              Cada lead se cuenta el día de su primer mensaje, con su etapa
-              actual. &quot;Ahora mismo&quot; muestra el estado actual sin
-              filtro de fechas.
-            </HelpTip>
-          ) : null}
-        </div>
-        <div className="flex min-w-0 items-center justify-end gap-2">
+        <div className="flex min-w-0 flex-col justify-center py-1.5 md:py-0">
+          <div className="flex min-w-0 items-center gap-0.5">
+            <h1 className="truncate font-heading text-[22px] leading-tight font-medium tracking-tight lg:text-2xl">
+              {title}
+            </h1>
+            {pathname.startsWith("/metrics") ? (
+              <HelpTip label="Cómo se cuentan las métricas">
+                Cada lead se cuenta el día de su primer mensaje, con su etapa
+                actual. &quot;Ahora mismo&quot; muestra el estado actual sin
+                filtro de fechas.
+              </HelpTip>
+            ) : null}
+          </div>
           {/* From md the sidebar's company row is the switcher. */}
           <MobileCompanySwitcher />
+        </div>
+        <div className="flex min-w-0 items-center justify-end gap-2">
           {company?.assistantPaused ? (
             <AssistantPausedButton
               pausedAt={company.assistantPausedAt}

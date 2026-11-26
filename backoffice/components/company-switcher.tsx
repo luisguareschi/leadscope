@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import { cn } from "cn";
 import { PickerSheet } from "@/components/threads/stage-picker";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,7 +112,7 @@ export function SidebarCompanySwitcher() {
   );
 }
 
-/** Below md: a pill in the header that opens the companies as a bottom sheet. */
+/** Below md: a tappable subtitle under the page title that opens the companies as a bottom sheet. */
 export function MobileCompanySwitcher() {
   const { enabled, companies, active, choose } = useCompanySwitcher();
   if (!enabled || !active) return null;
@@ -141,15 +140,17 @@ export function MobileCompanySwitcher() {
       searchPlaceholder="Buscar empresa…"
       emptyText="No hay coincidencias."
       trigger={
-        <Button
-          variant="secondary"
-          size="sm"
-          className="h-9 max-w-36 min-w-0 gap-1.5 rounded-full pr-2.5 pl-1.5 md:hidden"
+        <button
+          type="button"
+          className="-ml-1.5 inline-flex max-w-full min-w-0 items-center gap-1.5 self-start rounded-lg px-1.5 py-0.5 text-left text-[13px] font-medium text-muted-foreground transition-colors outline-none [-webkit-tap-highlight-color:transparent] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 active:bg-accent md:hidden"
         />
       }
       triggerLabel={`Empresa: ${active.name}. Cambiar empresa`}
     >
-      <CompanyBadge name={active.name} className="size-6 rounded-full" />
+      <CompanyBadge
+        name={active.name}
+        className="size-4.5 rounded-[5px] text-[9px]"
+      />
       <span className="min-w-0 truncate">{active.name}</span>
     </PickerSheet>
   );
