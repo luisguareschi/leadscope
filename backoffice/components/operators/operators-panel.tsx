@@ -87,7 +87,7 @@ function removalToast(email: string, removal: AuthUserRemoval) {
       return;
     case "kept_operator":
       toast.success(
-        `Operador ${email} eliminado. Su cuenta se mantiene porque sigue activo en otra empresa.`,
+        `Operador ${email} eliminado. Su cuenta se mantiene porque sigue siendo operador de otra empresa.`,
       );
       return;
     case "none":
@@ -298,7 +298,7 @@ export function OperatorsPanel({
               Perderá acceso a {companyName}.{" "}
               {deleting?.platformAdmin
                 ? "Su cuenta se mantiene porque administra la plataforma."
-                : "También se eliminará su cuenta de acceso."}{" "}
+                : "Si no pertenece a otra empresa, también se eliminará su cuenta de acceso."}{" "}
               Si prefieres conservar su historial, archívalo.
             </AlertDialogDescription>
           </AlertDialogHeader>

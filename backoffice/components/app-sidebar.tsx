@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { PanelLeftCloseIcon, PanelLeftOpenIcon } from "lucide-react";
 import { AppLogoTile } from "@/components/app-logo";
+import {
+  SidebarCompanySwitcher,
+  useCompanySwitcher,
+} from "@/components/company-switcher";
 import { NavMain } from "@/components/nav-main";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +31,8 @@ import { SupportBar } from "./support-bar";
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const me = useMe();
   const hasCompany = Boolean(me.data?.company);
+  // An operator of several companies gets the company row below; the brand row then drops its name.
+  const switcher = useCompanySwitcher().enabled;
   const { state, isMobile, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
 
@@ -67,10 +73,12 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                     <span className="truncate font-heading text-[21px] font-semibold tracking-tight">
                       LeadScope
                     </span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {me.data?.company?.name ??
-                        (me.data?.platformAdmin ? "Plataforma" : " ")}
-                    </span>
+                    {switcher ? null : (
+                      <span className="truncate text-xs text-muted-foreground">
+                        {me.data?.company?.name ??
+                          (me.data?.platformAdmin ? "Plataforma" : " ")}
+                      </span>
+                    )}
                   </div>
                 </SidebarMenuButton>
                 {/* Shown while the pointer is over the sidebar. Phones use the tab bar instead. */}
@@ -95,6 +103,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               </>
             )}
           </SidebarMenuItem>
+          {switcher ? (
+            <SidebarMenuItem className="pt-1">
+              <SidebarCompanySwitcher collapsed={collapsed} />
+            </SidebarMenuItem>
+          ) : null}
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>

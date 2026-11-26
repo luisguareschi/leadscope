@@ -68,7 +68,7 @@ export async function inviteOperator(
     outcome = {
       status: "failed",
       message:
-        "Ese usuario de Supabase ya está vinculado a otro operador, así que no se vinculó a este.",
+        "Ese usuario de Supabase ya está vinculado a otro operador de esta empresa, así que no se vinculó a este.",
     };
     await ctx.db.operator.update({
       where: { id: operator.id },

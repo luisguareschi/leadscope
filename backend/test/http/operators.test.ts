@@ -84,7 +84,7 @@ describe("adding an operator", () => {
     );
 
     const row = await db.operator.findUniqueOrThrow({
-      where: { email: "nueva@otra.uy" },
+      where: { companyId_email: { companyId: otraId, email: "nueva@otra.uy" } },
     });
     expect(row.companyId).toBe(otraId);
     expect(row.supabaseUserId).toBe([...supabase.users.keys()][0]);
@@ -111,7 +111,9 @@ describe("adding an operator", () => {
       ["POST /invite", "GET /admin/users"],
     );
     const row = await db.operator.findUniqueOrThrow({
-      where: { email: "ya.tenia@otra.uy" },
+      where: {
+        companyId_email: { companyId: otraId, email: "ya.tenia@otra.uy" },
+      },
     });
     expect(row.supabaseUserId).toBe(existingId);
     expect(row.inviteError).toBeNull();
@@ -188,9 +190,9 @@ describe("adding an operator", () => {
     expect(added.body.invite.message).toMatch(/SUPABASE_SERVICE_ROLE_KEY/);
   });
 
-  it("refuses an email that is already an operator somewhere", async () => {
+  it("refuses an email that is already an operator of that company", async () => {
     const response = await request(app)
-      .post(operatorsOf(otraId))
+      .post(operatorsOf(altamiraId))
       .set(admin)
       .send({ email: "operador@altamira.uy" })
       .expect(409);
@@ -206,7 +208,7 @@ describe("adding an operator", () => {
       .expect(201);
     expect(created.body.invite).toEqual({ status: "sent" });
     expect(
-      (await db.operator.findUniqueOrThrow({ where: { email: "a@cs.uy" } }))
+      (await db.operator.findFirstOrThrow({ where: { email: "a@cs.uy" } }))
         .supabaseUserId,
     ).toBeTruthy();
   });
@@ -229,7 +231,12 @@ const adminToken = () => supabaseToken("sb-admin", "admin@example.com");
 describe("archiving an operator", () => {
   it("blocks that login on every panel route until it is restored", async () => {
     const row = await db.operator.findUniqueOrThrow({
-      where: { email: "operador@altamira.uy" },
+      where: {
+        companyId_email: {
+          companyId: altamiraId,
+          email: "operador@altamira.uy",
+        },
+      },
     });
     await request(app).get("/internal/me").set(operator).expect(200);
 
@@ -267,7 +274,12 @@ describe("archiving an operator", () => {
       }),
     );
     await db.operator.update({
-      where: { email: "operador@altamira.uy" },
+      where: {
+        companyId_email: {
+          companyId: altamiraId,
+          email: "operador@altamira.uy",
+        },
+      },
       data: { supabaseUserId: "sb-op-1", archivedAt: new Date() },
     });
     const token = await supabaseToken("sb-op-1", "operador@altamira.uy");
@@ -312,7 +324,7 @@ describe("deleting an operator", () => {
     expect(deleted.body.authUser).toEqual({ status: "removed" });
     expect(supabase.users.size).toBe(0);
     expect(
-      await db.operator.findUnique({ where: { email: "baja@otra.uy" } }),
+      await db.operator.findFirst({ where: { email: "baja@otra.uy" } }),
     ).toBeNull();
   });
 
@@ -336,7 +348,12 @@ describe("deleting an operator", () => {
 
   it("answers 404 for an operator of another company", async () => {
     const row = await db.operator.findUniqueOrThrow({
-      where: { email: "operador@altamira.uy" },
+      where: {
+        companyId_email: {
+          companyId: altamiraId,
+          email: "operador@altamira.uy",
+        },
+      },
     });
     await request(app)
       .delete(`${operatorsOf(otraId)}/${row.id}`)
@@ -400,7 +417,12 @@ describe("deleting an operator", () => {
 describe("operator routes for non-admins", () => {
   it("answer 403 to operators and strangers, with or without support headers", async () => {
     const row = await db.operator.findUniqueOrThrow({
-      where: { email: "operador@altamira.uy" },
+      where: {
+        companyId_email: {
+          companyId: altamiraId,
+          email: "operador@altamira.uy",
+        },
+      },
     });
     const attempts = [
       () => request(app).get(operatorsOf(altamiraId)),

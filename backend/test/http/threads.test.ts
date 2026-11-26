@@ -66,6 +66,14 @@ describe("backoffice auth", () => {
         assistantPausedAt: null,
         assistantPausedByEmail: null,
       },
+      companies: [
+        {
+          id: companyId,
+          name: "altamira",
+          slug: "altamira",
+          assistantPaused: false,
+        },
+      ],
       platformAdmin: false,
       supportAccess: false,
     });

@@ -152,7 +152,7 @@ describe("platform admin companies", () => {
     expect(threads.body.threads).toEqual([]);
   });
 
-  it("refuses a duplicate slug or an email that already belongs to a company", async () => {
+  it("refuses a duplicate slug", async () => {
     const slug = await request(app)
       .post("/internal/companies")
       .set(adminAuth)
@@ -163,19 +163,8 @@ describe("platform admin companies", () => {
       })
       .expect(409);
     expect(slug.body.error.code).toBe("slug_taken");
-
-    const email = await request(app)
-      .post("/internal/companies")
-      .set(adminAuth)
-      .send({
-        name: "Nueva",
-        slug: "nueva",
-        operatorEmail: "operador@test.com",
-      })
-      .expect(409);
-    expect(email.body.error.code).toBe("email_taken");
     expect(
-      await db.company.findUnique({ where: { slug: "nueva" } }),
+      await db.operator.findFirst({ where: { email: "nuevo@example.com" } }),
     ).toBeNull();
   });
 
@@ -206,7 +195,7 @@ describe("platform admin companies", () => {
       await db.company.findUnique({ where: { slug: "no-deberia" } }),
     ).toBeNull();
     expect(
-      await db.operator.findUnique({ where: { email: "intruso@example.com" } }),
+      await db.operator.findFirst({ where: { email: "intruso@example.com" } }),
     ).toBeNull();
   });
 });
@@ -229,6 +218,7 @@ describe("empty database", () => {
     expect(me.body).toEqual({
       operator: null,
       company: null,
+      companies: [],
       platformAdmin: true,
       supportAccess: false,
     });
@@ -257,7 +247,7 @@ describe("empty database", () => {
     expect(listed.body.companies).toHaveLength(1);
     expect(listed.body.companies[0].slug).toBe("altamira");
     expect(
-      await db.operator.findUnique({ where: { email: "admin@example.com" } }),
+      await db.operator.findFirst({ where: { email: "admin@example.com" } }),
     ).toBeNull();
 
     const operatorAuth = {
@@ -277,6 +267,14 @@ describe("empty database", () => {
         assistantPausedAt: null,
         assistantPausedByEmail: null,
       },
+      companies: [
+        {
+          id: created.body.company.id,
+          name: "Altamira",
+          slug: "altamira",
+          assistantPaused: false,
+        },
+      ],
       platformAdmin: false,
       supportAccess: false,
     });

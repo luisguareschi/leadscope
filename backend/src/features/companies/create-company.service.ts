@@ -26,8 +26,8 @@ function uniqueFields(error: unknown): string {
 /**
  * Company row, slug, name, starter config and instructions, no WhatsApp number yet (each saved as its
  * first version), HubSpot off until the company turns it on, and the first operator, who gets the Supabase invitation like any operator added
- * later. Secrets stay empty; that company's operator sets them later from Configuración. Does not
- * move an email that already belongs to a company.
+ * later. Secrets stay empty; that company's operator sets them later from Configuración. An email
+ * that is already an operator elsewhere keeps that membership and is linked to its login.
  */
 export async function createCompany(
   ctx: AppContext,
@@ -44,13 +44,6 @@ export async function createCompany(
       "Ya existe una empresa con ese identificador.",
       "slug_taken",
     );
-
-  const emailTaken = await ctx.db.operator.findUnique({
-    where: { email: input.operatorEmail },
-    select: { id: true },
-  });
-  if (emailTaken)
-    throw conflict("Ese email ya es operador de una empresa.", "email_taken");
 
   const config = parseCompanyConfig(starterCompanyConfig(input.name));
   const instructions = starterInstructions(input.name);
@@ -94,8 +87,6 @@ export async function createCompany(
         "Ya existe una empresa con ese identificador.",
         "slug_taken",
       );
-    if (fields.includes("email"))
-      throw conflict("Ese email ya es operador de una empresa.", "email_taken");
     if (isUniqueViolation(error))
       throw conflict(
         "Esa empresa o ese operador ya existen.",

@@ -10,7 +10,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { clearSupportCompany } from "./support";
+import { clearActiveCompany } from "./support";
 
 const DEV_TOKEN_KEY = "leadscope.devToken";
 
@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    clearSupportCompany();
+    clearActiveCompany({ includeLast: true });
     if (AUTH_MODE === "dev") {
       writeDevToken(null);
       return;

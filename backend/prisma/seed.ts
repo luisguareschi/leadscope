@@ -149,7 +149,7 @@ async function main() {
   });
 
   const operator = await db.operator.upsert({
-    where: { email: operatorEmail },
+    where: { companyId_email: { companyId: company.id, email: operatorEmail } },
     create: { email: operatorEmail, companyId: company.id },
     update: {},
   });

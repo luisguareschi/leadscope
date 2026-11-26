@@ -185,7 +185,7 @@ export type AssistantStatus = {
 
 export type Me = {
   operator: { email: string } | null;
-  /** The company the panel works in: the operator's own, or the one a platform admin entered. */
+  /** The company the panel works in: the operator's pick, or the one a platform admin entered. */
   /** `id` never changes and is never reused; a deleted company's slug can be. */
   company: {
     id: string;
@@ -195,9 +195,18 @@ export type Me = {
     assistantPausedAt: string | null;
     assistantPausedByEmail: string | null;
   } | null;
+  /** The login's active operator companies, by name. More than one shows the company switcher. */
+  companies: MeCompany[];
   platformAdmin: boolean;
-  /** A platform admin entered this company from Empresas. */
+  /** A platform admin entered a company they are not an operator of. */
   supportAccess: boolean;
+};
+
+export type MeCompany = {
+  id: string;
+  name: string;
+  slug: string;
+  assistantPaused: boolean;
 };
 
 export type CompanySummary = {

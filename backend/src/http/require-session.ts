@@ -2,48 +2,97 @@ import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { createRemoteJWKSet, errors, type JWTPayload } from "jose";
 import type { AppContext } from "../context.js";
 import { HttpError } from "../lib/http-error.js";
+import { isUniqueViolation } from "../lib/prisma.js";
 import { verifySupabaseAccessToken } from "./supabase-jwt.js";
 
-export type OperatorAuth = {
+/** One company the signed-in login is an operator of: its operator row and that company. */
+export type OperatorMembership = {
   operatorId: string;
   companyId: string;
+  companyName: string;
+  companySlug: string;
+  companyAssistantPaused: boolean;
+  companyAssistantPausedAt: Date | null;
+  companyAssistantPausedByEmail: string | null;
   /** Email stored on the operator row. */
   email: string;
-  /** Email on the signed-in session: the Supabase JWT, or the `dev:` token. */
-  sessionEmail: string;
   /** The operator row is archived. */
   archived: boolean;
-  /** The operator's company is archived. */
+  /** The company is archived. */
   companyArchived: boolean;
+  createdAt: Date;
 };
 
-const operatorInclude = { company: { select: { archivedAt: true } } } as const;
+const membershipSelect = {
+  id: true,
+  companyId: true,
+  email: true,
+  archivedAt: true,
+  createdAt: true,
+  company: {
+    select: {
+      name: true,
+      slug: true,
+      archivedAt: true,
+      assistantPaused: true,
+      assistantPausedAt: true,
+      assistantPausedByEmail: true,
+    },
+  },
+} as const;
 
-function toOperatorAuth(
-  operator: {
-    id: string;
-    companyId: string;
-    email: string;
+type MembershipRow = {
+  id: string;
+  companyId: string;
+  email: string;
+  archivedAt: Date | null;
+  createdAt: Date;
+  company: {
+    name: string;
+    slug: string;
     archivedAt: Date | null;
-    company: { archivedAt: Date | null };
-  } | null,
-  sessionEmail: string,
-): OperatorAuth | null {
-  if (!operator) return null;
+    assistantPaused: boolean;
+    assistantPausedAt: Date | null;
+    assistantPausedByEmail: string | null;
+  };
+};
+
+function toMembership(row: MembershipRow): OperatorMembership {
   return {
-    operatorId: operator.id,
-    companyId: operator.companyId,
-    email: operator.email,
-    sessionEmail,
-    archived: operator.archivedAt !== null,
-    companyArchived: operator.company.archivedAt !== null,
+    operatorId: row.id,
+    companyId: row.companyId,
+    companyName: row.company.name,
+    companySlug: row.company.slug,
+    companyAssistantPaused: row.company.assistantPaused,
+    companyAssistantPausedAt: row.company.assistantPausedAt,
+    companyAssistantPausedByEmail: row.company.assistantPausedByEmail,
+    email: row.email,
+    archived: row.archivedAt !== null,
+    companyArchived: row.company.archivedAt !== null,
+    createdAt: row.createdAt,
   };
 }
 
-/** A verified panel login. `operator` is null when that email has no operator row yet. */
+async function findMembershipsByEmail(
+  ctx: AppContext,
+  email: string,
+): Promise<OperatorMembership[]> {
+  const rows = await ctx.db.operator.findMany({
+    where: { email },
+    select: membershipSelect,
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
+  return rows.map(toMembership);
+}
+
+/**
+ * A verified panel login and every company it is an operator of, oldest membership first. Empty
+ * when it has no operator row (a platform admin may have none).
+ */
 export type PanelSession = {
+  /** Email on the signed-in session: the Supabase JWT, or the `dev:` token. */
   sessionEmail: string;
-  operator: OperatorAuth | null;
+  memberships: OperatorMembership[];
 };
 
 type RequestWithSession = Request & { session?: PanelSession };
@@ -102,36 +151,70 @@ export function requireSession(ctx: AppContext): RequestHandler {
       if (!token.startsWith("dev:")) return null;
       const sessionEmail = token.slice(4).trim().toLowerCase();
       if (!sessionEmail) return null;
-      const operator = await ctx.db.operator.findUnique({
-        where: { email: sessionEmail },
-        include: operatorInclude,
-      });
-      return { sessionEmail, operator: toOperatorAuth(operator, sessionEmail) };
+      return {
+        sessionEmail,
+        memberships: await findMembershipsByEmail(ctx, sessionEmail),
+      };
     }
     const payload = await verifySupabase(token);
     if (!payload.sub) return null;
-    let operator = await ctx.db.operator.findUnique({
-      where: { supabaseUserId: payload.sub },
-      include: operatorInclude,
-    });
+    const supabaseUserId = payload.sub;
     const email =
       typeof payload.email === "string"
         ? payload.email.trim().toLowerCase()
         : null;
-    if (!operator && email) {
-      // First login of an operator created by email: link the Supabase user to that row.
-      const invited = await ctx.db.operator.findUnique({ where: { email } });
-      if (invited && !invited.supabaseUserId) {
-        operator = await ctx.db.operator.update({
-          where: { id: invited.id },
-          data: { supabaseUserId: payload.sub },
-          include: operatorInclude,
+    const rows = await ctx.db.operator.findMany({
+      where: email
+        ? { OR: [{ supabaseUserId }, { email, supabaseUserId: null }] }
+        : { supabaseUserId },
+      select: { ...membershipSelect, supabaseUserId: true },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    const linkedCompanies = new Set(
+      rows
+        .filter((row) => row.supabaseUserId === supabaseUserId)
+        .map((row) => row.companyId),
+    );
+    const toLinkIds = rows
+      .filter(
+        (row) =>
+          row.supabaseUserId === null && !linkedCompanies.has(row.companyId),
+      )
+      .map((row) => row.id);
+    let reread = false;
+    if (toLinkIds.length > 0) {
+      try {
+        const updated = await ctx.db.operator.updateMany({
+          where: { id: { in: toLinkIds }, supabaseUserId: null },
+          data: { supabaseUserId },
         });
+        if (updated.count < toLinkIds.length) reread = true;
+      } catch (error) {
+        if (!isUniqueViolation(error)) throw error;
+        reread = true;
       }
     }
-    const sessionEmail = email ?? operator?.email ?? null;
+    const memberships = reread
+      ? (
+          await ctx.db.operator.findMany({
+            where: { supabaseUserId },
+            select: membershipSelect,
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          })
+        ).map(toMembership)
+      : (() => {
+          const linkedIdSet = new Set(toLinkIds);
+          return rows
+            .filter(
+              (row) =>
+                row.supabaseUserId === supabaseUserId ||
+                linkedIdSet.has(row.id),
+            )
+            .map(toMembership);
+        })();
+    const sessionEmail = email ?? memberships[0]?.email ?? null;
     if (!sessionEmail) return null;
-    return { sessionEmail, operator: toOperatorAuth(operator, sessionEmail) };
+    return { sessionEmail, memberships };
   }
 
   return async (req: Request, res: Response, next: NextFunction) => {

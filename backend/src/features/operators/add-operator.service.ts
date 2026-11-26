@@ -5,10 +5,11 @@ import { inviteOperator } from "./invite-operator.js";
 import { operatorSelect, toOperatorDto } from "./operator-dto.js";
 
 const emailTaken = () =>
-  conflict("Ese email ya es operador de una empresa.", "email_taken");
+  conflict("Ese email ya es operador de esta empresa.", "email_taken");
 
 /**
- * Saves the operator row, then creates their Supabase user and emails the invitation. If the
+ * Saves the operator row, then creates their Supabase user and emails the invitation. An email
+ * that already has a login (an operator of another company) is linked to it with no email. If the
  * invitation fails the row stays (so it can be resent) and the reason comes back with it.
  */
 export async function addOperator(
@@ -18,7 +19,7 @@ export async function addOperator(
   panelOrigin: string,
 ) {
   const taken = await ctx.db.operator.findUnique({
-    where: { email },
+    where: { companyId_email: { companyId, email } },
     select: { id: true },
   });
   if (taken) throw emailTaken();

@@ -224,7 +224,7 @@ describe("deleting a company", () => {
       },
     });
     const userId = supabase.addConfirmedUser("operador@altamira.uy");
-    await db.operator.update({
+    await db.operator.updateMany({
       where: { email: "operador@altamira.uy" },
       data: { supabaseUserId: userId },
     });

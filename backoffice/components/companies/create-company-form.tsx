@@ -132,7 +132,8 @@ export function CreateCompanyDialog({
               onChange={(event) => setOperatorEmail(event.target.value)}
             />
             <FieldDescription>
-              Recibirá un enlace por correo para crear su contraseña.
+              Recibirá un enlace por correo para crear su contraseña. Si ya
+              tiene cuenta, se vinculará automáticamente.
             </FieldDescription>
           </Field>
         </form>

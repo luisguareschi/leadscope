@@ -14,11 +14,14 @@ import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { isThreadDetailPath } from "@/lib/nav-items";
 import { useMe } from "@/lib/queries";
-import {
-  clearSupportCompany,
-  leaveCompany,
-  supportCompanyIdFor,
-} from "@/lib/support";
+import { clearActiveCompany, companySelectionFor } from "@/lib/support";
+
+/** The tab's stored company is no longer open to this login: archived, removed, or deleted. */
+const STALE_COMPANY_CODES = new Set([
+  "company_archived",
+  "operator_archived",
+  "company_not_accessible",
+]);
 
 export default function PanelLayout({
   children,
@@ -35,15 +38,16 @@ export default function PanelLayout({
   // Empresas is the admin home. Métricas is the other page they can open from there.
   const adminPlatformPage =
     pathname.startsWith("/companies") || pathname.startsWith("/metrics");
-  // The company this admin entered no longer exists, or was archived.
-  const enteredCompanyGone =
+  const staleCompany =
     me.error instanceof ApiError &&
-    (me.error.status === 404 || me.error.code === "company_archived") &&
-    supportCompanyIdFor(email) !== null;
+    (me.error.status === 404 ||
+      (me.error.code !== undefined &&
+        STALE_COMPANY_CODES.has(me.error.code))) &&
+    companySelectionFor(email) !== null;
   const blockedMessage =
     me.error instanceof ApiError &&
-    (me.error.code === "operator_archived" ||
-      me.error.code === "company_archived")
+    me.error.code !== undefined &&
+    STALE_COMPANY_CODES.has(me.error.code)
       ? me.error.message
       : "Este usuario no tiene acceso al panel.";
 
@@ -58,16 +62,25 @@ export default function PanelLayout({
   }, [adminWithoutCompany, adminPlatformPage, router]);
 
   useEffect(() => {
-    if (enteredCompanyGone) leaveCompany();
-  }, [enteredCompanyGone]);
+    if (!staleCompany) return;
+    const selection = companySelectionFor(email);
+    const wasSupport = selection?.kind === "support";
+    // Forget the stale pick in sessionStorage, and clear localStorage only if it points to the same
+    // stale company (never clobbering a valid lastCompany written by another tab or support access).
+    clearActiveCompany(
+      wasSupport || !selection
+        ? undefined
+        : { onlyIfLastCompanyId: selection.companyId },
+    );
+    // A full load drops every cached query of that company.
+    window.location.assign(
+      wasSupport || pathname.startsWith("/companies")
+        ? "/companies"
+        : "/threads",
+    );
+  }, [staleCompany, email, pathname]);
 
-  useEffect(() => {
-    // The API ignored the header (this login is not a platform admin): stop sending it.
-    if (me.data && !me.data.supportAccess && supportCompanyIdFor(email))
-      clearSupportCompany();
-  }, [me.data, email]);
-
-  if (status !== "signed_in" || me.isPending || enteredCompanyGone) {
+  if (status !== "signed_in" || me.isPending || staleCompany) {
     return (
       <div className="flex min-h-svh items-center justify-center">
         <Spinner className="size-6 text-muted-foreground" />

@@ -71,7 +71,7 @@ beforeEach(async () => {
 });
 
 describe("access", () => {
-  it("gives an operator their own company and ignores companyId", async () => {
+  it("gives an operator their own company, ignores companyId, and refuses another company's header", async () => {
     await makeThread(companyId, {
       createdAt: new Date("2026-11-03T15:00:00.000Z"),
     });
@@ -79,10 +79,16 @@ describe("access", () => {
       createdAt: new Date("2026-11-03T15:00:00.000Z"),
     });
 
-    const response = await metrics(`${RANGE}&companyId=${otherCompanyId}`, {
+    const refused = await metrics(RANGE, {
       ...asAna,
       "X-Company-Id": otherCompanyId,
-    }).expect(200);
+    }).expect(403);
+    expect(refused.body.error.code).toBe("company_not_accessible");
+
+    const response = await metrics(
+      `${RANGE}&companyId=${otherCompanyId}`,
+      asAna,
+    ).expect(200);
 
     expect(response.body.company).toMatchObject({
       id: companyId,

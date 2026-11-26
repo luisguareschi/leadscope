@@ -33,6 +33,12 @@ export async function removeAuthUserIfUnused(
       operator.supabaseUserId ??
       (await ctx.authAdmin.findUserByEmail(operator.email))?.id;
     if (!userId) return { status: "none" };
+    if (!operator.supabaseUserId) {
+      const linkedElsewhere = await ctx.db.operator.count({
+        where: { supabaseUserId: userId },
+      });
+      if (linkedElsewhere > 0) return { status: "kept_operator" };
+    }
     await ctx.authAdmin.deleteUser(userId);
     return { status: "removed" };
   } catch (error) {
