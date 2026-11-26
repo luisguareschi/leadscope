@@ -306,8 +306,7 @@ export function LeadDetails({
       className={cn("flex min-h-0 flex-col", className)}
       headerClassName="max-lg:hidden"
     >
-      {/* Below lg the panel reaches the bottom of the screen: clear the home indicator. */}
-      <div className="min-h-0 flex-1 divide-y overflow-y-auto max-lg:pb-[max(1rem,var(--safe-bottom))]">
+      <div className="min-h-0 flex-1 divide-y overflow-y-auto">
         <AssistantGroup thread={thread} />
         <FollowUpGroup thread={thread} />
         {crm && crmFailed ? <HubSpotGroup thread={thread} crm={crm} /> : null}

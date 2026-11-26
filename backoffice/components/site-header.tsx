@@ -75,7 +75,7 @@ export function SiteHeader({ className }: { className?: string }) {
   return (
     <header
       className={cn(
-        "flex shrink-0 flex-col justify-center pt-[var(--safe-top)] transition-[width,height] ease-linear",
+        "flex shrink-0 flex-col justify-center pt-[var(--header-safe-top)] transition-[width,height] ease-linear",
         className,
       )}
     >

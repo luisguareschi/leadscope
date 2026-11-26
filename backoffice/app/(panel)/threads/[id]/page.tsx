@@ -99,7 +99,7 @@ export default function ThreadPage() {
     const missing =
       query.error instanceof ApiError && query.error.status === 404;
     return (
-      <div className="flex flex-col gap-4 px-4 max-lg:px-3 max-lg:pt-[max(0.5rem,var(--safe-top))] lg:px-6">
+      <div className="flex flex-col gap-4 px-4 max-lg:px-3 max-lg:pt-[max(0.5rem,var(--header-safe-top))] lg:px-6">
         <div>{back}</div>
         <Alert variant={missing ? "default" : "destructive"}>
           <AlertTitle>
@@ -121,8 +121,8 @@ export default function ThreadPage() {
   return (
     // Fills the panel's scroll area exactly: each column scrolls inside itself, never the page.
     // Below lg there is no site header above, so this page clears the notch itself.
-    <div className="@container/content flex min-h-0 flex-1 flex-col gap-2.5 px-3 pt-[max(0.5rem,var(--safe-top))] lg:gap-4 lg:px-6 lg:pt-0">
-      <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5 lg:gap-x-3 lg:gap-y-2">
+    <div className="@container/content flex min-h-0 flex-1 flex-col gap-2.5 pt-[max(0.5rem,var(--header-safe-top))] lg:gap-4 lg:px-6 lg:pt-0">
+      <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5 max-lg:px-3 lg:gap-x-3 lg:gap-y-2">
         {back}
         {thread ? (
           <>
@@ -175,7 +175,7 @@ export default function ThreadPage() {
       <Tabs
         value={view}
         onValueChange={(value) => setView(value as MobileView)}
-        className="lg:hidden"
+        className="max-lg:px-3 lg:hidden"
       >
         <TabsList className="w-full">
           <TabsTrigger value="chat">Conversación</TabsTrigger>
@@ -199,7 +199,7 @@ export default function ThreadPage() {
       <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-4 md:flex-[1_1_100svh] lg:grid-cols-2">
         <Panel
           className={cn(
-            "flex min-h-0 flex-col",
+            "flex min-h-0 flex-col max-lg:rounded-none max-lg:border-t max-lg:border-border/70 max-lg:ring-0",
             view !== "chat" && "max-lg:hidden",
           )}
           headerClassName="max-lg:hidden"
@@ -240,12 +240,15 @@ export default function ThreadPage() {
           <LeadDetails
             thread={thread}
             fields={data.fields}
-            className={cn(view !== "lead" && "max-lg:hidden")}
+            className={cn(
+              "max-lg:mx-3 max-lg:mb-[max(1rem,var(--safe-bottom))]",
+              view !== "lead" && "max-lg:hidden",
+            )}
           />
         ) : (
           <Skeleton
             className={cn(
-              "h-full w-full rounded-xl",
+              "h-full w-full rounded-xl max-lg:mx-3 max-lg:mb-[max(1rem,var(--safe-bottom))] max-lg:w-auto",
               view !== "lead" && "max-lg:hidden",
             )}
           />

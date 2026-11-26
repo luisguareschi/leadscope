@@ -13,7 +13,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AuthProvider, useAuth } from "@/lib/auth";
 
-const MOBILE_TOAST_TOP = "calc(0.75rem + env(safe-area-inset-top, 0px))";
+const MOBILE_TOAST_TOP = "calc(0.75rem + var(--header-safe-top))";
 
 /** On phones toasts drop from the top, clear of the notch, so they never cover the composer. */
 function ResponsiveToaster() {
