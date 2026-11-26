@@ -56,17 +56,14 @@ async function main() {
     supabaseUserId = invited.userId;
   }
   const operator = await db.operator.upsert({
-    where: { email },
+    where: { companyId_email: { companyId: company.id, email } },
     create: {
       email,
       companyId: company.id,
       supabaseUserId,
       ...(supabaseUserId ? { invitedAt: new Date() } : {}),
     },
-    update: {
-      companyId: company.id,
-      ...(supabaseUserId ? { supabaseUserId, invitedAt: new Date() } : {}),
-    },
+    update: supabaseUserId ? { supabaseUserId, invitedAt: new Date() } : {},
   });
   console.log(
     `Operator ${operator.email} can now use the ${company.name} backoffice${values.invite ? " (invitation sent)" : ""}.`,

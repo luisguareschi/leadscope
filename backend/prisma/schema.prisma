@@ -54,11 +54,13 @@ model Company {
 }
 
 /// Maps a backoffice login to the one company it belongs to.
+/// One login (email / Supabase user) can be an operator of several companies, with one row per
+/// company. A row's email and Supabase user are unique within its company only.
 model Operator {
   id                  String            @id @default(cuid())
   companyId           String
-  email               String            @unique
-  supabaseUserId      String?           @unique
+  email               String
+  supabaseUserId      String?
   /// Set while archived: this login cannot use the panel.
   archivedAt          DateTime?
   /// Last time Supabase accepted an invitation (or password-reset) email for this operator.
@@ -74,7 +76,11 @@ model Operator {
   stageChanges        LeadStageChange[]
   sentMessages        Message[]
 
+  @@unique([companyId, email])
+  @@unique([companyId, supabaseUserId])
   @@index([companyId])
+  @@index([email])
+  @@index([supabaseUserId])
 }
 
 /// A folder operators make in Conocimiento to organize files, nested to any depth. The prompt

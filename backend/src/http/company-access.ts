@@ -2,10 +2,17 @@ import type { Request, RequestHandler } from "express";
 import type { AppContext } from "../context.js";
 import { HttpError, notFound } from "../lib/http-error.js";
 import { isPlatformAdmin } from "./platform-admin.js";
-import { noPanelAccess, sessionOf } from "./require-session.js";
+import {
+  noPanelAccess,
+  sessionOf,
+  type OperatorMembership,
+} from "./require-session.js";
 import { auditSupportWrite } from "./admin-audit.js";
 
-/** Sent by the panel after a platform admin clicks Entrar on a company in Empresas. */
+/**
+ * The company the panel tab works in: one the operator picked in the company switcher, or one a
+ * platform admin entered from Empresas.
+ */
 export const COMPANY_ID_HEADER = "X-Company-Id";
 
 /** The company a request acts on, and who is acting. */
@@ -15,7 +22,7 @@ export type CompanyAccess = {
   operatorId: string | null;
   /** Signed-in email of whoever is acting. */
   actorEmail: string;
-  /** A platform admin entered this company from Empresas. Their writes are audited. */
+  /** A platform admin entered a company they are not an operator of. Their writes are audited. */
   support: boolean;
 };
 
@@ -35,12 +42,24 @@ export const operatorArchived = () =>
     "operator_archived",
   );
 
+export const companyNotAccessible = () =>
+  new HttpError(
+    403,
+    "No tienes acceso a esta empresa.",
+    "company_not_accessible",
+  );
+
+const isActive = (membership: OperatorMembership) =>
+  !membership.archived && !membership.companyArchived;
+
 /**
- * `X-Company-Id` is honored only when the signed-in email is on `PLATFORM_ADMIN_EMAILS`, and that
- * admin needs no operator row in the company. For everyone else the company is their operator
- * row's and the header is ignored. Null when the login has neither. An archived operator, or one
- * whose company is archived, gets 403; a platform admin in that situation is treated as having no
- * operator row, so Empresas stays open to them.
+ * With `X-Company-Id`, the request acts on that company: as its operator when the login has an
+ * active operator row there (even a platform admin), otherwise as a platform admin through support
+ * access. Anyone else gets 403 `company_not_accessible`; an explicit header never falls back to
+ * another company, so a stale tab cannot write to the wrong one. Without it, the oldest active
+ * membership is used. Null when there is none and the login is a platform admin or has no
+ * operator row at all. An archived company is 403 for everyone; an archived operator row is 403
+ * unless the login is a platform admin, who then works through support access.
  */
 export async function resolveCompanyAccess(
   ctx: AppContext,
@@ -48,8 +67,22 @@ export async function resolveCompanyAccess(
 ): Promise<CompanyAccess | null> {
   const session = sessionOf(req);
   const platformAdmin = isPlatformAdmin(ctx.env, session.sessionEmail);
+  const asOperator = (membership: OperatorMembership): CompanyAccess => ({
+    companyId: membership.companyId,
+    operatorId: membership.operatorId,
+    actorEmail: session.sessionEmail,
+    support: false,
+  });
   const requested = req.header(COMPANY_ID_HEADER)?.trim();
-  if (requested && platformAdmin) {
+
+  if (requested) {
+    const membership = session.memberships.find(
+      (m) => m.companyId === requested,
+    );
+    if (membership?.companyArchived) throw companyArchived();
+    if (membership && !membership.archived) return asOperator(membership);
+    if (!platformAdmin)
+      throw membership ? operatorArchived() : companyNotAccessible();
     const company = await ctx.db.company.findUnique({
       where: { id: requested },
       select: { id: true, archivedAt: true },
@@ -63,17 +96,13 @@ export async function resolveCompanyAccess(
       support: true,
     };
   }
-  if (!session.operator) return null;
-  if (session.operator.archived || session.operator.companyArchived) {
-    if (platformAdmin) return null;
-    throw session.operator.archived ? operatorArchived() : companyArchived();
-  }
-  return {
-    companyId: session.operator.companyId,
-    operatorId: session.operator.operatorId,
-    actorEmail: session.sessionEmail,
-    support: false,
-  };
+
+  const active = session.memberships.find(isActive);
+  if (active) return asOperator(active);
+  if (platformAdmin || session.memberships.length === 0) return null;
+  throw session.memberships.some((m) => m.archived && !m.companyArchived)
+    ? operatorArchived()
+    : companyArchived();
 }
 
 /**

@@ -129,7 +129,6 @@ describe("company settings", () => {
     const saved = await request(app)
       .put("/internal/settings/config")
       .set(operator)
-      .set(enter(otraId))
       .send(next)
       .expect(200);
     expect(saved.body.changed).toBe(true);
@@ -337,16 +336,16 @@ describe("company settings", () => {
     });
   });
 
-  it("keeps an operator inside their own company, even with another company's header", async () => {
-    await request(app)
+  it("keeps an operator inside their own company, and refuses another company's header", async () => {
+    const before = (await settingsOf(altamiraId)).instructions;
+    const refused = await request(app)
       .put("/internal/settings/instructions")
       .set(operator)
       .set(enter(otraId))
       .send({ instructions: "Solo para Altamira." })
-      .expect(200);
-    expect((await settingsOf(altamiraId)).instructions).toBe(
-      "Solo para Altamira.",
-    );
+      .expect(403);
+    expect(refused.body.error.code).toBe("company_not_accessible");
+    expect((await settingsOf(altamiraId)).instructions).toBe(before);
     expect((await settingsOf(otraId)).instructions).toBe("");
 
     const otraVersion = await db.companySettingsVersion.findFirstOrThrow({

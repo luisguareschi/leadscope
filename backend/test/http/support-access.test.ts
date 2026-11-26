@@ -89,6 +89,7 @@ describe("support access", () => {
         assistantPausedAt: null,
         assistantPausedByEmail: null,
       },
+      companies: [],
       platformAdmin: true,
       supportAccess: true,
     });
@@ -138,7 +139,7 @@ describe("support access", () => {
     );
 
     expect(
-      await db.operator.findUnique({ where: { email: "admin@example.com" } }),
+      await db.operator.findFirst({ where: { email: "admin@example.com" } }),
     ).toBeNull();
     expect(
       (await db.thread.findUniqueOrThrow({ where: { id: altamiraThreadId } }))
@@ -205,64 +206,61 @@ describe("support access", () => {
     expect(JSON.stringify(entries)).not.toContain("never-in-the-log");
   });
 
-  it("ignores the header for a normal operator, who still gets only their own company", async () => {
+  it("refuses a normal operator's header for a company they are not an operator of", async () => {
+    const attempts = [
+      () => request(app).get("/internal/me"),
+      () => request(app).get("/internal/threads"),
+      () => request(app).get(`/internal/threads/${otraThreadId}`),
+      () => request(app).post(`/internal/threads/${otraThreadId}/pause`),
+      () => request(app).post(`/internal/threads/${altamiraThreadId}/pause`),
+      () =>
+        request(app)
+          .put("/internal/secrets/anthropicApiKey")
+          .send({ value: "sk-ant-operator-own-11aa" }),
+    ];
+    for (const companyId of [otraId, "does-not-exist"]) {
+      for (const attempt of attempts) {
+        const refused = await attempt()
+          .set(altamiraOperator)
+          .set(enter(companyId))
+          .expect(403);
+        expect(refused.body.error.code).toBe("company_not_accessible");
+      }
+    }
+    for (const threadId of [altamiraThreadId, otraThreadId]) {
+      expect(
+        (await db.thread.findUniqueOrThrow({ where: { id: threadId } })).paused,
+      ).toBe(false);
+    }
+    expect(await anthropicKeyOf(altamiraId)).toBeUndefined();
+    expect(await anthropicKeyOf(otraId)).toBeUndefined();
+    expect(await db.adminAuditEntry.count()).toBe(0);
+
     const me = await request(app)
       .get("/internal/me")
       .set(altamiraOperator)
-      .set(enter(otraId))
       .expect(200);
     expect(me.body).toEqual({
       operator: { email: "operador@altamira.uy" },
       company: {
-        id: expect.any(String),
+        id: altamiraId,
         name: "altamira",
         slug: "altamira",
         assistantPaused: false,
         assistantPausedAt: null,
         assistantPausedByEmail: null,
       },
+      companies: [
+        {
+          id: altamiraId,
+          name: "altamira",
+          slug: "altamira",
+          assistantPaused: false,
+        },
+      ],
       platformAdmin: false,
       supportAccess: false,
     });
-
-    const threads = await request(app)
-      .get("/internal/threads")
-      .set(altamiraOperator)
-      .set(enter(otraId))
-      .expect(200);
-    expect(
-      threads.body.threads.map((thread: { name: string }) => thread.name),
-    ).toEqual(["Lead de Altamira"]);
-    await request(app)
-      .get(`/internal/threads/${otraThreadId}`)
-      .set(altamiraOperator)
-      .set(enter(otraId))
-      .expect(404);
-    await request(app)
-      .post(`/internal/threads/${otraThreadId}/pause`)
-      .set(altamiraOperator)
-      .set(enter(otraId))
-      .expect(404);
-    expect(
-      (await db.thread.findUniqueOrThrow({ where: { id: otraThreadId } }))
-        .paused,
-    ).toBe(false);
-
-    await request(app)
-      .put("/internal/secrets/anthropicApiKey")
-      .set(altamiraOperator)
-      .set(enter(otraId))
-      .send({ value: "sk-ant-operator-own-11aa" })
-      .expect(200);
-    expect(await anthropicKeyOf(altamiraId)).toBe("sk-ant-operator-own-11aa");
-    expect(await anthropicKeyOf(otraId)).toBeUndefined();
-
-    await request(app)
-      .post(`/internal/threads/${altamiraThreadId}/pause`)
-      .set(altamiraOperator)
-      .set(enter("does-not-exist"))
-      .expect(200);
-    expect(await db.adminAuditEntry.count()).toBe(0);
   });
 
   it("keeps an admin who is also an operator in their own company until they send the header", async () => {
