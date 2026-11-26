@@ -156,11 +156,7 @@ export function SidebarCompanySwitcher({
           render={
             <SidebarMenuButton
               tooltip={label}
-              className={cn(
-                "relative justify-center rounded-xl bg-card p-0! ring-1 ring-border/60 dark:bg-white/5 dark:ring-0",
-                supportAccess &&
-                  "ring-primary/45 dark:ring-1 dark:ring-primary/45",
-              )}
+              className="relative justify-center rounded-xl bg-card p-0! ring-1 ring-border/60 dark:bg-white/5 dark:ring-0"
             />
           }
         >
@@ -182,10 +178,7 @@ export function SidebarCompanySwitcher({
       ) : (
         <DropdownMenuTrigger
           aria-label={label}
-          className={cn(
-            "flex w-full items-center gap-2.5 rounded-xl bg-card px-2.5 py-2 text-left ring-1 ring-border/60 transition-colors outline-none hover:bg-card/70 focus-visible:ring-3 focus-visible:ring-ring/40 aria-expanded:bg-card/70 dark:bg-white/5 dark:ring-0 dark:hover:bg-white/8 dark:aria-expanded:bg-white/8",
-            supportAccess && "ring-primary/40 dark:ring-1 dark:ring-primary/40",
-          )}
+          className="flex w-full items-center gap-2.5 rounded-xl bg-card px-2.5 py-2 text-left ring-1 ring-border/60 transition-colors outline-none hover:bg-card/70 focus-visible:ring-3 focus-visible:ring-ring/40 aria-expanded:bg-card/70 dark:bg-white/5 dark:ring-0 dark:hover:bg-white/8 dark:aria-expanded:bg-white/8"
         >
           {active ? <CompanyBadge name={active.name} /> : <PlatformBadge />}
           <span className="flex min-w-0 flex-1 flex-col">
@@ -294,7 +287,8 @@ export function SidebarCompanySwitcher({
 
 /** Below md: a tappable subtitle under the page title that opens the companies as a bottom sheet. */
 export function MobileCompanySwitcher() {
-  const { enabled, supportAccess, companies, active, choose } =
+  const router = useRouter();
+  const { enabled, isAdmin, supportAccess, companies, active, choose } =
     useCompanySwitcher();
   if (!enabled) return null;
 
@@ -338,6 +332,30 @@ export function MobileCompanySwitcher() {
       onSelect={choose}
       searchPlaceholder="Buscar empresa…"
       emptyText="No hay coincidencias."
+      footer={
+        isAdmin
+          ? (close) => (
+              <button
+                type="button"
+                className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[15px] text-muted-foreground outline-none select-none focus-visible:bg-accent active:bg-accent"
+                onClick={() => {
+                  close();
+                  router.push("/companies");
+                }}
+              >
+                <span
+                  aria-hidden
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"
+                >
+                  <Building2Icon className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+                  Ver todas en Empresas
+                </span>
+              </button>
+            )
+          : undefined
+      }
       trigger={
         <button
           type="button"
