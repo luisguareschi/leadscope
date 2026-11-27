@@ -191,7 +191,7 @@ function LandingHeader() {
       <div className="pr-[max(0.75rem,var(--safe-right))] pl-[max(0.75rem,var(--safe-left))] sm:pr-[max(1.5rem,var(--safe-right))] sm:pl-[max(1.5rem,var(--safe-left))]">
         <div
           className={cn(
-            "pointer-events-auto mx-auto flex items-center justify-between gap-2 transition-all duration-300 motion-reduce:transition-none",
+            "pointer-events-auto mx-auto flex items-center justify-between gap-2 transition-all duration-300 motion-reduce:transition-none md:grid md:grid-cols-[1fr_auto_1fr]",
             scrolled
               ? "mt-3 h-13 max-w-4xl rounded-full border border-border/80 bg-card/90 px-3.5 shadow-[0_14px_40px_-14px_rgb(15_23_42/0.22)] backdrop-blur-xl sm:px-5 dark:shadow-[0_16px_42px_-12px_rgb(0_0_0/0.7)]"
               : "h-16 max-w-6xl rounded-full border border-transparent bg-transparent px-1 sm:px-2",
@@ -200,7 +200,7 @@ function LandingHeader() {
           <Link
             href="/"
             className={cn(
-              "flex items-center gap-2 rounded-full px-1 py-1 font-heading text-[15px] font-semibold tracking-tight transition-colors outline-none focus-visible:ring-3",
+              "flex items-center gap-2 justify-self-start rounded-full px-1 py-1 font-heading text-[15px] font-semibold tracking-tight transition-colors outline-none focus-visible:ring-3",
               scrolled
                 ? "text-foreground focus-visible:ring-ring/40"
                 : "text-white focus-visible:ring-white/40",
@@ -220,7 +220,7 @@ function LandingHeader() {
           <nav
             aria-label="Secciones"
             className={cn(
-              "hidden items-center gap-7 text-[13px] font-medium md:flex",
+              "hidden items-center justify-self-center gap-7 text-[13px] font-medium md:flex",
               scrolled ? "text-muted-foreground" : "text-white/85",
             )}
           >
@@ -241,7 +241,7 @@ function LandingHeader() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center justify-self-end gap-1 sm:gap-2">
             <ThemeToggle
               className={
                 scrolled
