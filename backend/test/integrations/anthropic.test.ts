@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { parseCompanyConfig } from "../../src/companies/company-config.js";
 import { createAnthropicClient } from "../../src/llm/anthropic.js";
+import {
+  FALLBACK_CLAUDE_MODELS,
+  listClaudeModels,
+} from "../../src/llm/claude-models.js";
 import type { CompleteInput } from "../../src/llm/types.js";
 import { baseConfig } from "../support/harness.js";
 
@@ -340,5 +344,102 @@ describe("Anthropic client", () => {
     expect(fromEscaped.output.summary).toBe(
       "- Busca 1 dormitorio\n- Presupuesto: 50.000 pesos\n- Listo para que un asesor lo contacte",
     );
+  });
+
+  it("omits temperature for models released after Claude 4.6 and sends it for older models", async () => {
+    const fetchImpl = vi.fn(async (..._args: Parameters<typeof fetch>) =>
+      messageResponse({
+        replies: ["Hola."],
+        collected: { interest: null, budget: null, knowsProjects: null },
+        callTime: null,
+        intent: "continue",
+        needsHuman: false,
+        callNow: false,
+        forbiddenTopic: null,
+        summary: ["Saludo inicial."],
+      }),
+    );
+    const client = createAnthropicClient("sk-test", {
+      fetch: fetchImpl as unknown as typeof fetch,
+      maxRetries: 0,
+    });
+
+    for (const model of [
+      "claude-haiku-5-5",
+      "claude-haiku-5-5-20261101",
+      "claude-sonnet-5-5",
+      "claude-opus-4-7",
+      "claude-opus-4-8",
+      "claude-fable-5-1",
+    ]) {
+      await client.complete({ ...input, model, temperature: 0.4 });
+      const body = JSON.parse(String(fetchImpl.mock.calls.at(-1)![1]?.body));
+      expect(body).not.toHaveProperty("temperature");
+    }
+
+    for (const model of [
+      "claude-haiku-4-5",
+      "claude-haiku-4-5-20251001",
+      "claude-sonnet-4-6",
+      "claude-opus-4-6",
+      "claude-3-5-haiku-20241022",
+    ]) {
+      await client.complete({ ...input, model, temperature: 0.4 });
+      const body = JSON.parse(String(fetchImpl.mock.calls.at(-1)![1]?.body));
+      expect(body.temperature).toBe(0.4);
+    }
+  });
+
+  it("exposes supportsTemperature on fallback and listed Claude models", async () => {
+    const byId = new Map(
+      FALLBACK_CLAUDE_MODELS.map((m) => [m.value, m.supportsTemperature]),
+    );
+    expect(byId.get("claude-haiku-5-5")).toBe(false);
+    expect(byId.get("claude-sonnet-5-5")).toBe(false);
+    expect(byId.get("claude-opus-5-5")).toBe(false);
+    expect(byId.get("claude-fable-5-1")).toBe(false);
+    expect(byId.get("claude-opus-4-8")).toBe(false);
+    expect(byId.get("claude-haiku-4-5")).toBe(true);
+    expect(byId.get("claude-sonnet-4-6")).toBe(true);
+
+    const fetchImpl = vi.fn(async () =>
+      Response.json({
+        data: [
+          {
+            id: "claude-haiku-5-5",
+            display_name: "Claude Haiku 5.5",
+            created_at: "2026-11-01T00:00:00Z",
+            type: "model",
+          },
+          {
+            id: "claude-haiku-4-5-20251001",
+            display_name: "Claude Haiku 4.5",
+            created_at: "2025-10-01T00:00:00Z",
+            type: "model",
+          },
+        ],
+        has_more: false,
+        first_id: "claude-haiku-5-5",
+        last_id: "claude-haiku-4-5-20251001",
+      }),
+    );
+    const listed = await listClaudeModels(
+      "sk-test",
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(listed).toEqual([
+      {
+        value: "claude-haiku-5-5",
+        label: "Claude Haiku 5.5",
+        legacy: false,
+        supportsTemperature: false,
+      },
+      {
+        value: "claude-haiku-4-5-20251001",
+        label: "Claude Haiku 4.5",
+        legacy: true,
+        supportsTemperature: true,
+      },
+    ]);
   });
 });

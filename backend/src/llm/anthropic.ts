@@ -6,6 +6,7 @@ import type { ChatTurn } from "../engine/history.js";
 import { normalizeSummary } from "../engine/summary.js";
 import { MAX_FILES_PER_TURN } from "../engine/turn.js";
 import { INTENTS } from "../engine/types.js";
+import { modelSupportsTemperature } from "./claude-models.js";
 import type { CompleteInput, CompleteResult, LlmClient } from "./types.js";
 
 const nullableText = z
@@ -238,7 +239,9 @@ export function createAnthropicClient(
       {
         model: input.model,
         max_tokens: 1024,
-        temperature: input.temperature,
+        ...(modelSupportsTemperature(input.model)
+          ? { temperature: input.temperature }
+          : {}),
         system: [
           {
             type: "text",

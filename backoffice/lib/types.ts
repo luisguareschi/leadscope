@@ -274,7 +274,9 @@ export type SettingsOptions = {
   models: {
     /** `anthropic`: listed with the company's key. `fallback`: the fixed list. */
     source: "anthropic" | "fallback";
-    options: Array<SelectOption & { legacy: boolean }>;
+    options: Array<
+      SelectOption & { legacy: boolean; supportsTemperature: boolean }
+    >;
   };
 };
 
