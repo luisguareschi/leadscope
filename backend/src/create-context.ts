@@ -17,6 +17,7 @@ import {
   type FileStorage,
 } from "./integrations/storage/storage.js";
 import { parseEncryptionKey } from "./lib/crypto.js";
+import { createLoggedFetch } from "./lib/logged-fetch.js";
 import { logger as defaultLogger, type Logger } from "./lib/logger.js";
 import { createPrisma, type Db } from "./lib/prisma.js";
 
@@ -42,9 +43,13 @@ export function createContext(
     env,
     db: options.db ?? createPrisma(env.DATABASE_URL),
     encryptionKey: parseEncryptionKey(env.SECRETS_ENCRYPTION_KEY),
-    integrations: options.integrations ?? createIntegrations(env),
-    storage: options.storage ?? createFileStorage(env),
-    authAdmin: options.authAdmin ?? createAuthAdmin(env),
+    integrations: options.integrations ?? createIntegrations(env, { logger }),
+    storage:
+      options.storage ??
+      createFileStorage(env, createLoggedFetch(logger, "supabase-storage")),
+    authAdmin:
+      options.authAdmin ??
+      createAuthAdmin(env, createLoggedFetch(logger, "supabase-auth")),
     logger,
     now: options.now ?? (() => new Date()),
     sleep: options.sleep ?? defaultSleep,

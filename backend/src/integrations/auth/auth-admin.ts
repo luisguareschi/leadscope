@@ -279,12 +279,13 @@ class UnconfiguredAuthAdmin implements AuthAdmin {
   }
 }
 
-export function createAuthAdmin(env: Env): AuthAdmin {
+export function createAuthAdmin(env: Env, fetchImpl?: Fetch): AuthAdmin {
   if (env.AUTH_MODE === "dev") return new FakeAuthAdmin();
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY)
     return new UnconfiguredAuthAdmin();
   return createSupabaseAuthAdmin({
     url: env.SUPABASE_URL,
     serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    fetch: fetchImpl,
   });
 }

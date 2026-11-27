@@ -24,8 +24,16 @@ const CURRENT = new Set(
 );
 
 /** The models this key can call, newest first, from Anthropic's Models API. */
-export async function listClaudeModels(apiKey: string): Promise<ModelOption[]> {
-  const client = new Anthropic({ apiKey, maxRetries: 0, timeout: 5_000 });
+export async function listClaudeModels(
+  apiKey: string,
+  fetchImpl?: typeof fetch,
+): Promise<ModelOption[]> {
+  const client = new Anthropic({
+    apiKey,
+    fetch: fetchImpl,
+    maxRetries: 0,
+    timeout: 5_000,
+  });
   const models: ModelOption[] = [];
   for await (const model of client.models.list({ limit: 100 })) {
     models.push({
