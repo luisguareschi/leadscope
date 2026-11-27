@@ -10,6 +10,7 @@ import {
   MicIcon,
   MinusIcon,
   PlusIcon,
+  SearchIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,16 +18,22 @@ import { useEffect, useId, useState } from "react";
 import { cn } from "cn";
 import { AppLogo } from "@/components/app-logo";
 import {
+  CONVERSATIONS_PREVIEW_ROWS,
   FAQ_ITEMS,
-  FORBIDDEN_TOPIC_EXAMPLES,
+  FEATURE_BLOCKS,
   HERO_SCENARIOS,
+  OPERATIONAL_HIGHLIGHTS,
   OWNER_CONTACT,
-  PRODUCT_TABS,
   WHATSAPP_DEMO_URL,
+  type BotTone,
+  type ConversationPreviewRow,
+  type FeatureBlock,
+  type FeaturePreviewRow,
   type HeroMessage,
   type HeroScenario,
-  type ProductRowTone,
-  type ProductTab,
+  type HeroScenarioId,
+  type PreviewRowTone,
+  type StageTone,
 } from "@/components/landing/landing-data";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
@@ -45,11 +52,33 @@ const TRUST_CHECKS = [
   "Demo con tus archivos",
 ];
 
-const TONE_CLASS: Record<ProductRowTone, string> = {
+type PreviewFilter = "all" | "to_contact" | "needs_human";
+type HeroWindowTab = "conversations" | HeroScenarioId;
+
+const TONE_CLASS: Record<PreviewRowTone, string> = {
   accent: "bg-primary/10 text-primary dark:bg-primary/15",
   ok: "bg-status-ok/12 text-[color:color-mix(in_oklch,var(--status-ok),black_32%)] dark:bg-status-ok/15 dark:text-status-ok",
   neutral: "bg-secondary text-muted-foreground",
   danger: "bg-destructive/10 text-destructive dark:bg-destructive/15",
+};
+
+const STAGE_DOT_CLASS: Record<StageTone, string> = {
+  primary: "bg-primary",
+  califying: "bg-[#8b96ff]",
+  ok: "bg-status-ok",
+};
+
+const STAGE_PILL_CLASS: Record<StageTone, string> = {
+  primary: "bg-primary/10 text-primary dark:bg-primary/15",
+  califying:
+    "bg-[#8b96ff]/15 text-[#3b42c4] dark:bg-[#8b96ff]/15 dark:text-[#c5cbff]",
+  ok: "bg-status-ok/12 text-[color:color-mix(in_oklch,var(--status-ok),black_32%)] dark:bg-status-ok/15 dark:text-status-ok",
+};
+
+const BOT_DOT_CLASS: Record<BotTone, string> = {
+  ok: "bg-status-ok",
+  neutral: "bg-muted-foreground/60",
+  danger: "bg-destructive",
 };
 
 const EXTERNAL_LINK = {
@@ -57,10 +86,6 @@ const EXTERNAL_LINK = {
   target: "_blank",
   rel: "noopener noreferrer",
 } as const;
-
-const SECTION_SPACING = "scroll-mt-16 py-16 outline-none sm:py-24";
-/** Bands alternate: the page surface (white, or the dark canvas), then this grey one. */
-const GREY_BAND = "bg-background dark:bg-card/40";
 
 /** Smooth in-page scroll that respects reduced motion and moves focus to the section. */
 function scrollToSection(event: React.MouseEvent<HTMLAnchorElement>) {
@@ -96,42 +121,11 @@ function Container({
   return (
     <div
       className={cn(
-        "mx-auto w-full max-w-5xl pr-[max(1rem,var(--safe-right))] pl-[max(1rem,var(--safe-left))] sm:pr-[max(1.5rem,var(--safe-right))] sm:pl-[max(1.5rem,var(--safe-left))]",
+        "mx-auto w-full max-w-6xl pr-[max(1rem,var(--safe-right))] pl-[max(1rem,var(--safe-left))] sm:pr-[max(1.5rem,var(--safe-right))] sm:pl-[max(1.5rem,var(--safe-left))]",
         className,
       )}
     >
       {children}
-    </div>
-  );
-}
-
-function SectionHeading({
-  id,
-  kicker,
-  title,
-  description,
-}: {
-  id: string;
-  kicker: string;
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div className="max-w-2xl">
-      <p className="text-xs font-semibold tracking-[0.08em] text-primary uppercase">
-        {kicker}
-      </p>
-      <h2
-        id={id}
-        className="mt-3 font-heading text-[1.75rem] leading-[1.15] font-semibold tracking-tight text-balance sm:text-4xl"
-      >
-        {title}
-      </h2>
-      {description ? (
-        <p className="mt-3 text-base leading-relaxed text-pretty text-muted-foreground sm:text-[17px]">
-          {description}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -141,14 +135,14 @@ function Tag({
   className,
   children,
 }: {
-  tone: ProductRowTone;
+  tone: PreviewRowTone;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
+        "inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap",
         TONE_CLASS[tone],
         className,
       )}
@@ -180,88 +174,107 @@ function CheckList({
   );
 }
 
-/** A row the way the panel lists threads, files, and metrics. */
-function UiRow({ row }: { row: ProductTab["rows"][number] }) {
-  return (
-    <li className="flex items-center justify-between gap-3 rounded-xl border bg-card px-3.5 py-3">
-      <div className="min-w-0">
-        <p className="text-[13px] font-semibold break-words">{row.title}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{row.detail}</p>
-      </div>
-      <Tag tone={row.tone}>{row.tag}</Tag>
-    </li>
-  );
-}
-
-function UiPreview({
-  rows,
-  className,
-  children,
-}: {
-  rows: ProductTab["rows"];
-  className?: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-2xl border bg-background/60 p-3 sm:p-4 dark:bg-background/50",
-        className,
-      )}
-    >
-      {children}
-      <ul className="flex flex-col gap-2">
-        {rows.map((row) => (
-          <UiRow key={row.title} row={row} />
-        ))}
-      </ul>
-    </div>
-  );
-}
-
+/** Morphs from transparent full-width over the cobalt hero into a centered floating pill bar. */
 function LandingHeader() {
   const panel = usePanelLink();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-card/80 pt-[var(--header-safe-top)] backdrop-blur-xl dark:bg-background/75">
-      <Container className="flex h-14 items-center justify-between gap-3">
-        <Link
-          href="/"
-          className="flex items-center gap-2 rounded-lg font-heading text-[15px] font-semibold tracking-tight outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 pt-[var(--header-safe-top)]">
+      <div className="pr-[max(0.75rem,var(--safe-right))] pl-[max(0.75rem,var(--safe-left))] sm:pr-[max(1.5rem,var(--safe-right))] sm:pl-[max(1.5rem,var(--safe-left))]">
+        <div
+          className={cn(
+            "pointer-events-auto mx-auto flex items-center justify-between gap-2 transition-all duration-300 motion-reduce:transition-none",
+            scrolled
+              ? "mt-3 h-13 max-w-4xl rounded-full border border-border/80 bg-card/90 px-3.5 shadow-[0_14px_40px_-14px_rgb(15_23_42/0.22)] backdrop-blur-xl sm:px-5 dark:shadow-[0_16px_42px_-12px_rgb(0_0_0/0.7)]"
+              : "h-16 max-w-6xl rounded-full border border-transparent bg-transparent px-1 sm:px-2",
+          )}
         >
-          <AppLogo className="size-6" />
-          LeadScope
-        </Link>
-        <nav
-          aria-label="Secciones"
-          className="hidden items-center gap-7 text-[13px] font-medium text-muted-foreground md:flex"
-        >
-          {SECTION_LINKS.map((link) => (
-            <a
-              key={link.id}
-              href={`#${link.id}`}
-              onClick={scrollToSection}
-              className="rounded-md transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
-        <div className="flex items-center gap-1 sm:gap-2">
-          <ThemeToggle />
           <Link
-            href={panel.href}
+            href="/"
             className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "px-2.5 text-muted-foreground sm:px-3.5",
+              "flex items-center gap-2 rounded-full px-1 py-1 font-heading text-[15px] font-semibold tracking-tight transition-colors outline-none focus-visible:ring-3",
+              scrolled
+                ? "text-foreground focus-visible:ring-ring/40"
+                : "text-white focus-visible:ring-white/40",
             )}
           >
-            {panel.label}
+            <AppLogo
+              className={cn(
+                "size-6 transition-colors",
+                scrolled
+                  ? "text-foreground"
+                  : "text-white [&_path:last-of-type]:fill-[#c5cbff]",
+              )}
+            />
+            LeadScope
           </Link>
-          <a {...EXTERNAL_LINK} className={buttonVariants({ size: "sm" })}>
-            Pedir demo
-          </a>
+
+          <nav
+            aria-label="Secciones"
+            className={cn(
+              "hidden items-center gap-7 text-[13px] font-medium md:flex",
+              scrolled ? "text-muted-foreground" : "text-white/85",
+            )}
+          >
+            {SECTION_LINKS.map((link) => (
+              <a
+                key={link.id}
+                href={`#${link.id}`}
+                onClick={scrollToSection}
+                className={cn(
+                  "rounded-md transition-colors outline-none focus-visible:ring-3",
+                  scrolled
+                    ? "hover:text-foreground focus-visible:ring-ring/40"
+                    : "hover:text-white focus-visible:ring-white/40",
+                )}
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-1 sm:gap-2">
+            <ThemeToggle
+              className={
+                scrolled
+                  ? undefined
+                  : "text-white/85 hover:bg-white/15 hover:text-white aria-expanded:bg-white/15 aria-expanded:text-white dark:hover:bg-white/15"
+              }
+            />
+            <Link
+              href={panel.href}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "px-2.5 sm:px-3.5",
+                scrolled
+                  ? "text-muted-foreground hover:text-foreground"
+                  : "text-white/90 hover:bg-white/15 hover:text-white focus-visible:ring-white/40 dark:hover:bg-white/15",
+              )}
+            >
+              {panel.label}
+            </Link>
+            <a
+              {...EXTERNAL_LINK}
+              className={cn(
+                buttonVariants({ size: "sm" }),
+                scrolled
+                  ? "bg-foreground text-background hover:bg-foreground/85"
+                  : "bg-white text-[#0b0d17] shadow-sm hover:bg-white/92 focus-visible:ring-white/50",
+              )}
+            >
+              Pedir demo
+            </a>
+          </div>
         </div>
-      </Container>
+      </div>
     </header>
   );
 }
@@ -299,14 +312,25 @@ function ChatBubble({ message }: { message: HeroMessage }) {
 function LeadPanel({ scenario }: { scenario: HeroScenario }) {
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary dark:bg-primary/15">
-          <span aria-hidden className="size-1.5 rounded-full bg-primary" />
-          {scenario.stage}
-        </span>
+      <div className="flex items-start justify-between gap-3 border-b pb-3.5">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{scenario.leadName}</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {scenario.leadMeta}
+          </p>
+        </div>
         <Tag tone="ok" className="px-2.5 py-1">
           {scenario.status}
         </Tag>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+          Etapa
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary dark:bg-primary/15">
+          <span aria-hidden className="size-1.5 rounded-full bg-primary" />
+          {scenario.stage}
+        </span>
       </div>
       <div>
         <p className="mb-2 text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
@@ -336,57 +360,342 @@ function LeadPanel({ scenario }: { scenario: HeroScenario }) {
   );
 }
 
-function HeroDemo({ className }: { className?: string }) {
+function ConversationsTablePreview({
+  onSelectScenario,
+}: {
+  onSelectScenario: (id: HeroScenarioId) => void;
+}) {
+  const [filter, setFilter] = useState<PreviewFilter>("all");
+
+  const rows = CONVERSATIONS_PREVIEW_ROWS.filter((row) => {
+    if (filter === "to_contact") return row.stage === "Por contactar";
+    if (filter === "needs_human") return row.assistant === "Requiere asesor";
+    return true;
+  });
+
+  const filters: { id: PreviewFilter; label: string }[] = [
+    { id: "all", label: "Todos" },
+    { id: "to_contact", label: "Por contactar · 4" },
+    { id: "needs_human", label: "Requiere asesor · 1" },
+  ];
+
   return (
-    <Tabs.Root
-      defaultValue={HERO_SCENARIOS[0].id}
+    <div className="relative bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 border-b px-4 py-3 sm:px-5">
+        <div
+          role="group"
+          aria-label="Filtros de ejemplo"
+          className="flex flex-wrap items-center gap-1.5"
+        >
+          {filters.map((item) => {
+            const active = filter === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setFilter(item.id)}
+                className={cn(
+                  "cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
+                  active
+                    ? "bg-foreground text-background"
+                    : "bg-secondary text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+        <div
+          aria-hidden
+          className="hidden items-center gap-2 rounded-full border bg-muted/70 px-3 py-1.5 text-xs text-muted-foreground sm:flex sm:w-56"
+        >
+          <SearchIcon className="size-3.5 shrink-0 opacity-70" />
+          <span className="truncate">Buscar lead o teléfono...</span>
+        </div>
+      </div>
+
+      {/* Desktop table matching LeadScope's real Conversaciones columns */}
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full border-collapse text-left text-[13px]">
+          <thead>
+            <tr className="border-b text-[11px] font-medium text-muted-foreground">
+              <th className="py-2.5 pr-3 pl-5 font-medium">Lead</th>
+              <th className="px-3 py-2.5 font-medium">Etapa</th>
+              <th className="px-3 py-2.5 font-medium">Asistente</th>
+              <th className="px-3 py-2.5 font-medium">Asignado</th>
+              <th className="px-3 py-2.5 font-medium">HubSpot</th>
+              <th className="py-2.5 pr-5 pl-3 text-right font-medium">
+                Último mensaje
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/70">
+            {rows.map((row) => (
+              <ConversationTableRow
+                key={row.id}
+                row={row}
+                onSelectScenario={onSelectScenario}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Compact stacked rows below md */}
+      <ul className="divide-y divide-border/70 md:hidden">
+        {rows.map((row) => (
+          <li key={row.id} className="px-4 py-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span
+                  aria-hidden
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary"
+                >
+                  {row.initials}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-semibold">
+                    {row.name}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {row.detail}
+                  </p>
+                </div>
+              </div>
+              <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                {row.time}
+              </span>
+            </div>
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pl-10">
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                  STAGE_PILL_CLASS[row.stageTone],
+                )}
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    STAGE_DOT_CLASS[row.stageTone],
+                  )}
+                />
+                {row.stage}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <span
+                  aria-hidden
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    BOT_DOT_CLASS[row.assistantTone],
+                  )}
+                />
+                {row.assistant}
+              </span>
+              {row.scenarioId ? (
+                <button
+                  type="button"
+                  onClick={() => onSelectScenario(row.scenarioId!)}
+                  className="ml-auto cursor-pointer text-[11px] font-semibold text-primary hover:underline"
+                >
+                  Ver chat →
+                </button>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {/* Gentle bottom fade echoing Firstlight when all 6 rows are visible */}
+      {filter === "all" ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-card via-card/75 to-transparent"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ConversationTableRow({
+  row,
+  onSelectScenario,
+}: {
+  row: ConversationPreviewRow;
+  onSelectScenario: (id: HeroScenarioId) => void;
+}) {
+  return (
+    <tr
       className={cn(
-        "overflow-hidden rounded-[1.25rem] border bg-card text-left shadow-[0_24px_60px_-24px_rgb(25_28_31/0.22)] dark:shadow-[0_24px_60px_-24px_rgb(0_0_0/0.7)]",
+        "transition-colors",
+        row.scenarioId ? "hover:bg-muted/50" : undefined,
+      )}
+    >
+      <td className="py-3 pr-3 pl-5">
+        <div className="flex items-center gap-2.5">
+          <span
+            aria-hidden
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary"
+          >
+            {row.initials}
+          </span>
+          <div className="min-w-0">
+            {row.scenarioId ? (
+              <button
+                type="button"
+                onClick={() => onSelectScenario(row.scenarioId!)}
+                className="cursor-pointer text-left font-semibold text-foreground transition-colors outline-none hover:text-primary focus-visible:underline"
+              >
+                {row.name}
+              </button>
+            ) : (
+              <p className="font-semibold text-foreground">{row.name}</p>
+            )}
+            <p className="truncate text-xs text-muted-foreground">
+              {row.detail}
+            </p>
+          </div>
+        </div>
+      </td>
+      <td className="px-3 py-3 whitespace-nowrap">
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold",
+            STAGE_PILL_CLASS[row.stageTone],
+          )}
+        >
+          <span
+            aria-hidden
+            className={cn(
+              "size-1.5 rounded-full",
+              STAGE_DOT_CLASS[row.stageTone],
+            )}
+          />
+          {row.stage}
+        </span>
+      </td>
+      <td className="px-3 py-3 whitespace-nowrap">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <span
+            aria-hidden
+            className={cn(
+              "size-1.5 rounded-full",
+              BOT_DOT_CLASS[row.assistantTone],
+            )}
+          />
+          {row.assistant}
+        </span>
+      </td>
+      <td className="px-3 py-3 whitespace-nowrap">
+        <span
+          className={cn(
+            "text-xs",
+            row.assignee === "Sin asignar"
+              ? "text-muted-foreground"
+              : "font-medium text-foreground",
+          )}
+        >
+          {row.assignee}
+        </span>
+      </td>
+      <td className="px-3 py-3 whitespace-nowrap">
+        {row.hubspot === "Sincronizado" ? (
+          <Tag tone="ok">{row.hubspot}</Tag>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </td>
+      <td className="py-3 pr-5 pl-3 text-right text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+        {row.time}
+      </td>
+    </tr>
+  );
+}
+
+function HeroPlatformWindow({ className }: { className?: string }) {
+  const [activeTab, setActiveTab] = useState<HeroWindowTab>("conversations");
+
+  return (
+    <div
+      className={cn(
+        "relative mx-auto max-w-5xl rounded-[1.5rem] bg-white/25 p-2 ring-1 ring-white/40 backdrop-blur-md shadow-[0_30px_80px_-20px_rgba(12,18,56,0.45)] sm:p-3 dark:bg-white/10 dark:ring-white/20 dark:shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85)]",
         className,
       )}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/60 px-4 py-3 sm:px-5">
-        <p className="inline-flex items-center gap-2 text-[13px] font-semibold">
-          <span aria-hidden className="relative flex size-2">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-status-ok opacity-60 motion-reduce:hidden" />
-            <span className="relative inline-flex size-2 rounded-full bg-status-ok" />
-          </span>
-          Así trabaja LeadScope en tiempo real
-        </p>
-        <Tabs.List
-          aria-label="Elegir rubro"
-          activateOnFocus
-          className="flex w-full rounded-full bg-secondary p-1 sm:w-auto"
-        >
-          {HERO_SCENARIOS.map((scenario) => (
-            <Tabs.Tab
-              key={scenario.id}
-              value={scenario.id}
-              className="flex-1 cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 data-active:bg-card data-active:text-foreground data-active:shadow-xs sm:flex-none dark:data-active:bg-white/12"
+      <Tabs.Root
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as HeroWindowTab)}
+        className="overflow-hidden rounded-[1.1rem] border bg-card text-left text-foreground"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/60 px-4 py-2.5 sm:px-5">
+          <div className="flex items-center gap-2 text-[13px] font-semibold">
+            <AppLogo className="size-4.5" />
+            <span className="font-heading tracking-tight">LeadScope</span>
+            <span
+              aria-hidden
+              className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-status-ok/12 px-2 py-0.5 text-[11px] font-medium text-[color:color-mix(in_oklch,var(--status-ok),black_32%)] dark:text-status-ok"
             >
-              {scenario.label}
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-status-ok opacity-60 motion-reduce:hidden" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-status-ok" />
+              </span>
+              En vivo
+            </span>
+          </div>
+          <Tabs.List
+            aria-label="Vistas del panel LeadScope"
+            activateOnFocus
+            className="grid w-full grid-cols-2 gap-1 rounded-2xl bg-secondary p-1 sm:flex sm:w-auto sm:gap-0 sm:rounded-full"
+          >
+            <Tabs.Tab
+              value="conversations"
+              className="cursor-pointer rounded-xl px-3 py-1.5 text-center text-xs font-semibold whitespace-nowrap text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 data-active:bg-card data-active:text-foreground data-active:shadow-xs sm:rounded-full dark:data-active:bg-white/12"
+            >
+              Conversaciones
             </Tabs.Tab>
-          ))}
-        </Tabs.List>
-      </div>
-      {HERO_SCENARIOS.map((scenario) => (
+            {HERO_SCENARIOS.map((scenario) => (
+              <Tabs.Tab
+                key={scenario.id}
+                value={scenario.id}
+                className="cursor-pointer rounded-xl px-3 py-1.5 text-center text-xs font-semibold whitespace-nowrap text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 data-active:bg-card data-active:text-foreground data-active:shadow-xs sm:rounded-full dark:data-active:bg-white/12"
+              >
+                {scenario.label}
+              </Tabs.Tab>
+            ))}
+          </Tabs.List>
+        </div>
+
         <Tabs.Panel
-          key={scenario.id}
-          value={scenario.id}
+          value="conversations"
           keepMounted
           className="outline-none focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:ring-inset"
         >
-          <div className="grid motion-safe:animate-in motion-safe:duration-300 motion-safe:fade-in md:min-h-[22rem] md:grid-cols-[1.3fr_1fr]">
-            <div className="flex flex-col gap-2.5 border-b bg-background/60 p-4 sm:p-5 md:border-r md:border-b-0">
-              {scenario.messages.map((message, index) => (
-                <ChatBubble key={index} message={message} />
-              ))}
-            </div>
-            <LeadPanel scenario={scenario} />
-          </div>
+          <ConversationsTablePreview
+            onSelectScenario={(id) => setActiveTab(id)}
+          />
         </Tabs.Panel>
-      ))}
-    </Tabs.Root>
+
+        {HERO_SCENARIOS.map((scenario) => (
+          <Tabs.Panel
+            key={scenario.id}
+            value={scenario.id}
+            keepMounted
+            className="outline-none focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:ring-inset"
+          >
+            <div className="grid motion-safe:animate-in motion-safe:duration-300 motion-safe:fade-in md:min-h-[23rem] md:grid-cols-[1.3fr_1fr]">
+              <div className="flex flex-col gap-2.5 border-b bg-background/60 p-4 sm:p-5 md:border-r md:border-b-0">
+                {scenario.messages.map((message, index) => (
+                  <ChatBubble key={index} message={message} />
+                ))}
+              </div>
+              <LeadPanel scenario={scenario} />
+            </div>
+          </Tabs.Panel>
+        ))}
+      </Tabs.Root>
+    </div>
   );
 }
 
@@ -394,34 +703,68 @@ function Hero() {
   return (
     <section
       aria-labelledby="hero-title"
-      className="pt-12 pb-16 sm:pt-20 sm:pb-24"
+      className="relative isolate overflow-hidden pt-[calc(var(--header-safe-top)+5.5rem)] pb-14 sm:pt-[calc(var(--header-safe-top)+6.75rem)] sm:pb-20"
     >
+      {/* Full-bleed cobalt atmospheric sky canvas */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-20 bg-gradient-to-b from-[#2d33b8] via-[#494fdf] via-[62%] to-[#5d6bf5] dark:from-[#10154d] dark:via-[#22298c] dark:via-[62%] dark:to-[#313bb5]"
+      />
+      {/* Subtle 80px translucent architectural grid */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 opacity-100"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, rgb(255 255 255 / 0.07) 1px, transparent 1px), linear-gradient(to bottom, rgb(255 255 255 / 0.07) 1px, transparent 1px)",
+          backgroundSize: "80px 80px",
+          maskImage:
+            "linear-gradient(to bottom, black 0%, black 68%, transparent 100%)",
+        }}
+      />
+      {/* Soft atmospheric radial cloud glows (CSS only) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 52rem 28rem at 50% -4rem, rgb(175 186 255 / 0.34), transparent 72%), radial-gradient(ellipse 40rem 20rem at 12% 76%, rgb(255 255 255 / 0.28), transparent 70%), radial-gradient(ellipse 44rem 22rem at 88% 80%, rgb(255 255 255 / 0.25), transparent 72%)",
+        }}
+      />
+      {/* Soft bottom transition into the page surface (#ffffff in light, #03040b in dark) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-44 bg-gradient-to-b from-transparent via-card/65 to-card sm:h-52 dark:via-background/65 dark:to-background"
+      />
+
       <Container>
-        <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-[11px] font-semibold text-primary sm:text-xs dark:bg-card">
-            <span
-              aria-hidden
-              className="size-1.5 shrink-0 rounded-full bg-status-ok"
-            />
-            Agente IA en WhatsApp oficial para equipos de ventas
+        <div className="mx-auto flex max-w-4xl flex-col items-center text-center text-white">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/15 py-1 pr-3.5 pl-1.5 text-xs font-medium text-white ring-1 ring-white/25 backdrop-blur-md">
+            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold tracking-tight text-white">
+              WhatsApp Oficial
+            </span>
+            <span>Agente IA entrenado con tus archivos</span>
           </span>
+
           <h1
             id="hero-title"
-            className="mt-5 font-heading text-[2.125rem] leading-[1.06] font-semibold tracking-tight text-balance sm:text-5xl lg:text-[3.5rem]"
+            className="mt-6 font-heading text-4xl leading-[1.03] font-semibold tracking-tight text-balance text-white sm:text-6xl lg:text-[4.25rem]"
           >
             Convierte tus chats de WhatsApp en clientes listos para cerrar
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">
-            LeadScope responde en segundos usando tus propios PDFs y listas de
-            precios, califica cada lead 24/7 y le entrega a tus vendedores un
-            resumen listo para llamar.
+
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-pretty text-white/85 sm:text-lg">
+            LeadScope responde en segundos con tus propios PDFs y listas de
+            precios, califica cada lead 24/7 y le entrega a tu equipo un resumen
+            listo para llamar.
           </p>
+
           <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-center">
             <a
               {...EXTERNAL_LINK}
               className={cn(
-                buttonVariants({ variant: "accent", size: "lg" }),
-                "shadow-lg shadow-primary/25",
+                buttonVariants({ size: "lg" }),
+                "bg-[#0b0d17] text-white shadow-xl shadow-black/25 hover:bg-[#191c1f] focus-visible:ring-white/50",
               )}
             >
               <MessageCircleIcon data-icon="inline-start" />
@@ -430,189 +773,202 @@ function Hero() {
             <a
               href="#producto"
               onClick={scrollToSection}
-              className={buttonVariants({ variant: "outline", size: "lg" })}
+              className={cn(
+                buttonVariants({ size: "lg" }),
+                "bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-md hover:bg-white/25 focus-visible:ring-white/50",
+              )}
             >
               Ver cómo funciona
               <ArrowDownIcon data-icon="inline-end" />
             </a>
           </div>
-          <ul className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground">
+
+          <ul className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[13px] text-white/80">
             {TRUST_CHECKS.map((check) => (
               <li key={check} className="inline-flex items-center gap-1.5">
-                <CheckIcon aria-hidden className="size-4 text-status-ok" />
+                <CheckIcon aria-hidden className="size-4 text-white/95" />
                 {check}
               </li>
             ))}
           </ul>
         </div>
-        <HeroDemo className="mt-12 sm:mt-16" />
+
+        <HeroPlatformWindow className="mt-12 sm:mt-14" />
       </Container>
     </section>
   );
 }
 
-function ProductSection() {
+function FeatureRowItem({ row }: { row: FeaturePreviewRow }) {
+  return (
+    <li className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-[13px] font-semibold break-words text-foreground">
+          {row.title}
+        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{row.detail}</p>
+      </div>
+      <Tag tone={row.tone}>{row.tag}</Tag>
+    </li>
+  );
+}
+
+function CheckerboardVisual({ block }: { block: FeatureBlock }) {
+  return (
+    <div className="relative isolate flex h-full min-h-[22rem] items-center justify-center overflow-hidden bg-gradient-to-br from-[#3f46d6] via-[#535ef0] to-[#8f9aff] p-6 sm:min-h-[28rem] sm:p-10 lg:p-12 dark:from-[#151a57] dark:via-[#232b8d] dark:to-[#3b47bd]">
+      {/* Subtle architectural grid + soft cloud glow inside the cobalt panel */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 26rem 18rem at 15% 15%, rgb(255 255 255 / 0.24), transparent 70%), radial-gradient(ellipse 24rem 16rem at 85% 88%, rgb(255 255 255 / 0.22), transparent 72%)",
+        }}
+      />
+      <div className="w-full max-w-md rounded-[1.25rem] bg-white/25 p-2 ring-1 ring-white/40 backdrop-blur-md shadow-[0_24px_60px_-20px_rgba(12,18,56,0.45)] sm:p-2.5 dark:bg-white/10 dark:ring-white/20">
+        <div className="overflow-hidden rounded-[0.95rem] border bg-card text-card-foreground">
+          <div className="flex items-center justify-between gap-2 border-b bg-muted/60 px-4 py-2.5">
+            <span className="text-xs font-semibold tracking-tight text-foreground">
+              {block.cardTitle}
+            </span>
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/15">
+              {block.cardBadge}
+            </span>
+          </div>
+          {block.chips ? (
+            <ul
+              aria-label="Ejemplos de temas prohibidos"
+              className="flex flex-wrap gap-1.5 border-b bg-background/60 px-4 py-3"
+            >
+              {block.chips.map((topic) => (
+                <li key={topic}>
+                  <Tag tone="danger">{topic}</Tag>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <ul className="divide-y divide-border/70">
+            {block.rows.map((row) => (
+              <FeatureRowItem key={row.title} row={row} />
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CheckerboardCopy({ block }: { block: FeatureBlock }) {
+  return (
+    <div className="flex h-full flex-col justify-center bg-card px-6 py-10 sm:px-10 sm:py-14 lg:px-16 lg:py-16 dark:bg-background">
+      <p className="text-xs font-semibold tracking-[0.08em] text-primary uppercase">
+        {block.kicker}
+      </p>
+      <h3 className="mt-3 font-heading text-2xl leading-[1.15] font-semibold tracking-tight text-balance sm:text-[2rem]">
+        {block.title}
+      </h3>
+      <p className="mt-4 text-[15px] leading-relaxed text-pretty text-muted-foreground sm:text-base">
+        {block.description}
+      </p>
+      <CheckList items={block.points} className="mt-6" />
+      <div className="mt-7">
+        <a
+          {...EXTERNAL_LINK}
+          className="inline-flex items-center gap-1.5 rounded-md text-sm font-semibold text-foreground transition-colors outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/40"
+        >
+          Pedir demo
+          <ArrowRightIcon aria-hidden className="size-4" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function ProductCheckerboard() {
   return (
     <section
       id="producto"
       tabIndex={-1}
       aria-labelledby="producto-title"
-      className={cn(SECTION_SPACING, GREY_BAND)}
+      className="scroll-mt-20 pt-14 pb-16 outline-none sm:pt-20 sm:pb-24"
     >
       <Container>
-        <SectionHeading
-          id="producto-title"
-          kicker="Producto"
-          title="Un solo panel para tu asistente y tu equipo comercial"
-          description="Explora las cuatro piezas que reemplazan a los chatbots rígidos de opciones."
-        />
-        <Tabs.Root defaultValue={PRODUCT_TABS[0].id} className="mt-8">
-          <Tabs.List
-            aria-label="Piezas del producto"
-            activateOnFocus
-            className="flex flex-wrap gap-2"
+        <div className="max-w-2xl">
+          <p className="text-xs font-semibold tracking-[0.08em] text-primary uppercase">
+            Producto
+          </p>
+          <h2
+            id="producto-title"
+            className="mt-3 font-heading text-[1.85rem] leading-[1.12] font-semibold tracking-tight text-balance sm:text-4xl lg:text-[2.65rem]"
           >
-            {PRODUCT_TABS.map((tab) => (
-              <Tabs.Tab
-                key={tab.id}
-                value={tab.id}
-                className="cursor-pointer rounded-full border bg-card px-4 py-2 text-[13px] font-semibold text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 data-active:border-foreground data-active:bg-foreground data-active:text-background"
+            Un solo panel para tu asistente y tu equipo comercial
+          </h2>
+          <p className="mt-4 text-base leading-relaxed text-pretty text-muted-foreground sm:text-[17px]">
+            Conversaciones naturales en WhatsApp, archivos siempre vigentes y
+            control humano total en un flujo pensado para vender.
+          </p>
+        </div>
+
+        {/* Alternating 50/50 editorial + frosted-glass checkerboard */}
+        <div className="mt-12 overflow-hidden rounded-[1.5rem] border border-border/80 sm:mt-16">
+          {FEATURE_BLOCKS.map((block, index) => {
+            const visualRight = block.visualSide === "right";
+            return (
+              <div
+                key={block.id}
+                id={block.anchorId}
+                tabIndex={block.anchorId ? -1 : undefined}
+                className={cn(
+                  "grid outline-none md:grid-cols-2",
+                  block.anchorId ? "scroll-mt-24" : undefined,
+                  index > 0 ? "border-t border-border/80" : undefined,
+                )}
               >
-                {tab.label}
-              </Tabs.Tab>
-            ))}
-          </Tabs.List>
-          {PRODUCT_TABS.map((tab) => (
-            <Tabs.Panel
-              key={tab.id}
-              value={tab.id}
-              keepMounted
-              className="mt-5 rounded-[1.25rem] border bg-card outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
-            >
-              <div className="grid items-center gap-8 p-5 motion-safe:animate-in motion-safe:duration-300 motion-safe:fade-in sm:p-8 md:grid-cols-[1fr_1.25fr] md:gap-10">
-                <div>
-                  <h3 className="font-heading text-xl font-semibold tracking-tight sm:text-2xl">
-                    {tab.title}
-                  </h3>
-                  <p className="mt-3 text-[15px] leading-relaxed text-pretty text-muted-foreground">
-                    {tab.description}
-                  </p>
-                  <CheckList items={tab.points} className="mt-5" />
+                <div className={visualRight ? "md:order-2" : undefined}>
+                  <CheckerboardVisual block={block} />
                 </div>
-                <UiPreview rows={tab.rows} />
+                <div className={visualRight ? "md:order-1" : undefined}>
+                  <CheckerboardCopy block={block} />
+                </div>
               </div>
-            </Tabs.Panel>
-          ))}
-        </Tabs.Root>
-      </Container>
-    </section>
-  );
-}
+            );
+          })}
+        </div>
 
-function BentoCard({
-  title,
-  body,
-  className,
-  children,
-}: {
-  title: string;
-  body: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col justify-between gap-6 rounded-[1.25rem] border bg-background/60 p-5 sm:p-6 dark:bg-card",
-        className,
-      )}
-    >
-      <div>
-        <h3 className="font-heading text-lg font-semibold tracking-tight">
-          {title}
-        </h3>
-        <p className="mt-2 text-[15px] leading-relaxed text-pretty text-muted-foreground">
-          {body}
-        </p>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function ControlSection() {
-  return (
-    <section
-      id="control"
-      tabIndex={-1}
-      aria-labelledby="control-title"
-      className={SECTION_SPACING}
-    >
-      <Container>
-        <SectionHeading
-          id="control-title"
-          kicker="Control y confianza"
-          title="IA con límites claros. Nunca inventa precios ni interrumpe a tus asesores."
-          description="Diseñado para equipos que cuidan su reputación en cada conversación."
-        />
-        <div className="mt-10 grid gap-4 md:grid-cols-[1.25fr_1fr]">
-          <BentoCard
-            title="Temas prohibidos y desvío automático"
-            body="Escribes en español normal qué temas no debe responder (por ejemplo, garantías de rentabilidad o reclamos). Si el cliente pregunta por uno, el bot se detiene al instante y marca el hilo para tu equipo."
-            className="md:col-span-2 md:grid md:grid-cols-[1.2fr_1fr] md:items-center md:gap-10"
-          >
-            <UiPreview
-              rows={[
-                {
-                  title: "Tema prohibido detectado",
-                  detail: "Asistente detenido · Requiere asesor",
-                  tag: "Requiere asesor",
-                  tone: "accent",
-                },
-              ]}
+        {/* Compact operational capabilities strip (Métricas y HubSpot opcional) */}
+        <div className="mt-12 rounded-[1.5rem] border bg-background/70 p-6 sm:mt-16 sm:p-8 dark:bg-card/50">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.08em] text-primary uppercase">
+                Métricas y HubSpot opcional
+              </p>
+              <h3 className="mt-2 font-heading text-xl font-semibold tracking-tight sm:text-2xl">
+                Operación medible desde el primer día
+              </h3>
+            </div>
+            <a
+              {...EXTERNAL_LINK}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/40"
             >
-              <ul
-                aria-label="Ejemplos de temas prohibidos"
-                className="mb-3 flex flex-wrap gap-1.5"
-              >
-                {FORBIDDEN_TOPIC_EXAMPLES.map((topic) => (
-                  <li key={topic}>
-                    <Tag tone="danger">{topic}</Tag>
-                  </li>
-                ))}
-              </ul>
-            </UiPreview>
-          </BentoCard>
-          <BentoCard
-            title="Un asesor escribe, el bot se pausa solo"
-            body="Tu equipo puede responder desde LeadScope con el número de la empresa. Al enviar un mensaje, el bot se pausa automáticamente en ese chat."
-          >
-            <UiPreview
-              rows={[
-                {
-                  title: "Enviado por Sofía",
-                  detail: "Asistente pausado en este hilo",
-                  tag: "Pausado",
-                  tone: "neutral",
-                },
-              ]}
-            />
-          </BentoCard>
-          <BentoCard
-            title="Prueba cambios antes de salir en vivo"
-            body="En Probar asistente simulas un cliente contra tus borradores de instrucciones sin escribirle a nadie ni tocar tu WhatsApp real."
-          >
-            <UiPreview
-              rows={[
-                {
-                  title: "Probar borrador",
-                  detail: "Sin impacto en producción",
-                  tag: "Activo",
-                  tone: "ok",
-                },
-              ]}
-            />
-          </BentoCard>
+              Ver una demo guiada
+              <ArrowRightIcon aria-hidden className="size-4" />
+            </a>
+          </div>
+          <div className="mt-6 grid gap-6 border-t pt-6 md:grid-cols-3 md:gap-8">
+            {OPERATIONAL_HIGHLIGHTS.map((item) => (
+              <div key={item.title} className="flex flex-col">
+                <p className="font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                  {item.value}
+                </p>
+                <h4 className="mt-2.5 text-[15px] font-semibold text-foreground">
+                  {item.title}
+                </h4>
+                <p className="mt-1.5 text-sm leading-relaxed text-pretty text-muted-foreground">
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </Container>
     </section>
@@ -725,14 +1081,20 @@ function FaqSection() {
       id="faq"
       tabIndex={-1}
       aria-labelledby="faq-title"
-      className={cn(SECTION_SPACING, GREY_BAND)}
+      className="scroll-mt-20 bg-background py-16 outline-none sm:py-24 dark:bg-card/40"
     >
       <Container>
-        <SectionHeading
-          id="faq-title"
-          kicker="Preguntas frecuentes"
-          title="Lo que todo dueño pregunta antes de empezar"
-        />
+        <div className="max-w-2xl">
+          <p className="text-xs font-semibold tracking-[0.08em] text-primary uppercase">
+            Preguntas frecuentes
+          </p>
+          <h2
+            id="faq-title"
+            className="mt-3 font-heading text-[1.75rem] leading-[1.15] font-semibold tracking-tight text-balance sm:text-4xl"
+          >
+            Lo que todo dueño pregunta antes de empezar
+          </h2>
+        </div>
         <FaqList className="mt-8" />
         <ClosingBanner className="mt-14 sm:mt-16" />
       </Container>
@@ -745,7 +1107,7 @@ function LandingFooter() {
   const linkClass =
     "rounded-md transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40";
   return (
-    <footer className="border-t">
+    <footer className="border-t bg-card dark:bg-background">
       <Container className="flex flex-col gap-4 pt-8 pb-[max(2rem,var(--safe-bottom))] text-[13px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1">
           <span className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight text-foreground">
@@ -792,20 +1154,11 @@ export function LandingPage() {
   }, [standalone, router]);
 
   return (
-    <div className="relative isolate min-h-dvh bg-card text-foreground [--landing-glow:color-mix(in_oklch,var(--primary)_13%,transparent)] dark:bg-background dark:[--landing-glow:color-mix(in_oklch,var(--primary)_22%,transparent)]">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[44rem]"
-        style={{
-          backgroundImage:
-            "radial-gradient(ellipse 64rem 28rem at 50% -6rem, var(--landing-glow), transparent 70%)",
-        }}
-      />
+    <div className="relative isolate min-h-dvh bg-card text-foreground dark:bg-background">
       <LandingHeader />
       <main>
         <Hero />
-        <ProductSection />
-        <ControlSection />
+        <ProductCheckerboard />
         <FaqSection />
       </main>
       <LandingFooter />
