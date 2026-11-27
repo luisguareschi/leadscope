@@ -246,7 +246,10 @@
 
 .instructions-editor .tiptap h1,
 .instructions-editor .tiptap h2,
-.instructions-editor .tiptap h3 {
+.instructions-editor .tiptap h3,
+.instructions-editor .tiptap h4,
+.instructions-editor .tiptap h5,
+.instructions-editor .tiptap h6 {
   font-family: var(--font-display), var(--font-sans), sans-serif;
   font-weight: 600;
   letter-spacing: -0.025em;
@@ -268,6 +271,13 @@
 .instructions-editor .tiptap h3 {
   font-size: 1rem;
   line-height: 1.45;
+}
+
+.instructions-editor .tiptap h4,
+.instructions-editor .tiptap h5,
+.instructions-editor .tiptap h6 {
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 .instructions-editor .tiptap p {
@@ -372,6 +382,61 @@
   margin-bottom: 1.25rem;
   border: 0;
   border-top: 1px solid var(--border);
+}
+
+.instructions-editor .tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.instructions-editor .tiptap ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.instructions-editor .tiptap ul[data-type="taskList"] li > label {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.instructions-editor .tiptap ul[data-type="taskList"] li > label input {
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.instructions-editor .tiptap ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.instructions-editor .tiptap table {
+  width: 100%;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.instructions-editor .tiptap th,
+.instructions-editor .tiptap td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.instructions-editor .tiptap th {
+  background-color: var(--muted);
+  font-weight: 500;
+}
+
+.instructions-editor .tiptap th > p,
+.instructions-editor .tiptap td > p {
+  margin: 0;
 }
 
 .instructions-editor .tiptap p.is-editor-empty:first-child::before,

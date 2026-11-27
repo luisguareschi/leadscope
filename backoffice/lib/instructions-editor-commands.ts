@@ -119,7 +119,7 @@ const ALLOWED_PROTOCOLS = new Set(["https:", "http:", "mailto:", "tel:"]);
 
 export function normalizeLinkUrl(raw: string): string | null {
   const trimmed = raw.trim();
-  if (!trimmed || /\s/.test(trimmed)) return null;
+  if (!trimmed || /\s/.test(trimmed) || trimmed.startsWith("//")) return null;
 
   const hasScheme = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed);
   let candidate = trimmed;
@@ -140,6 +140,12 @@ export function normalizeLinkUrl(raw: string): string | null {
   if (
     (parsed.protocol === "https:" || parsed.protocol === "http:") &&
     !parsed.hostname
+  ) {
+    return null;
+  }
+  if (
+    (parsed.protocol === "mailto:" || parsed.protocol === "tel:") &&
+    !parsed.pathname.trim()
   ) {
     return null;
   }

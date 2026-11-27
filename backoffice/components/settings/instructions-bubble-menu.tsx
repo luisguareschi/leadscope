@@ -37,6 +37,31 @@ type BubbleCoords = {
   side: "top" | "bottom";
 };
 
+function findScrollContainer(element: HTMLElement): HTMLElement | null {
+  let current = element.parentElement;
+  while (current) {
+    const overflowY = getComputedStyle(current).overflowY;
+    if (
+      overflowY === "auto" ||
+      overflowY === "scroll" ||
+      overflowY === "clip"
+    ) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return null;
+}
+
+function isRectVisible(rect: DOMRect, editorDom: HTMLElement): boolean {
+  if (rect.bottom <= 0 || rect.top >= window.innerHeight) return false;
+  if (rect.right <= 0 || rect.left >= window.innerWidth) return false;
+  const scrollContainer = findScrollContainer(editorDom);
+  if (!scrollContainer) return true;
+  const bounds = scrollContainer.getBoundingClientRect();
+  return rect.bottom > bounds.top && rect.top < bounds.bottom;
+}
+
 function canShowBubble(editor: Editor, menuEl: HTMLDivElement | null): boolean {
   if (editor.isDestroyed || !editor.isEditable) return false;
   const { selection } = editor.state;
@@ -75,12 +100,23 @@ export function InstructionsBubbleMenu({
     }),
   });
 
+  const safeLinkHref = normalizeLinkUrl(active.linkHref);
+
   const updatePosition = useCallback(() => {
     const menuEl = menuRef.current;
     if (!menuEl || editor.isDestroyed) return;
     const { from, to } = editor.state.selection;
+    const selRect = posToDOMRect(editor.view, from, to);
+    if (!isRectVisible(selRect, editor.view.dom)) {
+      visibleRef.current = false;
+      setVisible(false);
+      setView((current) =>
+        current.kind === "format" ? current : { kind: "format" },
+      );
+      return;
+    }
     const virtualAnchor = {
-      getBoundingClientRect: () => posToDOMRect(editor.view, from, to),
+      getBoundingClientRect: () => selRect,
     };
     void computePosition(virtualAnchor, menuEl, {
       strategy: "fixed",
@@ -103,6 +139,10 @@ export function InstructionsBubbleMenu({
     setVisible(nextVisible);
     if (nextVisible) {
       requestAnimationFrame(updatePosition);
+    } else {
+      setView((current) =>
+        current.kind === "format" ? current : { kind: "format" },
+      );
     }
   }, [editor, updatePosition]);
 
@@ -112,7 +152,7 @@ export function InstructionsBubbleMenu({
     const onPointerDown = () => {
       pointerDownRef.current = true;
     };
-    const onPointerUp = () => {
+    const onPointerRelease = () => {
       if (!pointerDownRef.current) return;
       pointerDownRef.current = false;
       requestAnimationFrame(syncVisibility);
@@ -129,7 +169,9 @@ export function InstructionsBubbleMenu({
     };
 
     dom.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointerup", onPointerRelease);
+    window.addEventListener("pointercancel", onPointerRelease);
+    window.addEventListener("blur", onPointerRelease);
     editor.on("selectionUpdate", onSelectionUpdate);
     editor.on("transaction", syncVisibility);
     editor.on("focus", syncVisibility);
@@ -137,7 +179,9 @@ export function InstructionsBubbleMenu({
 
     return () => {
       dom.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointerup", onPointerRelease);
+      window.removeEventListener("pointercancel", onPointerRelease);
+      window.removeEventListener("blur", onPointerRelease);
       editor.off("selectionUpdate", onSelectionUpdate);
       editor.off("transaction", syncVisibility);
       editor.off("focus", syncVisibility);
@@ -167,11 +211,12 @@ export function InstructionsBubbleMenu({
   }, [view.kind]);
 
   const mod = isMac ? "⌘" : "Ctrl+";
+  const shiftKey = isMac ? "⇧" : "Shift+";
 
   const openLinkView = () => {
     setView({
       kind: "link",
-      url: active.linkHref,
+      url: safeLinkHref ?? "",
       error: null,
     });
   };
@@ -231,6 +276,8 @@ export function InstructionsBubbleMenu({
           <motion.div
             key="instructions-bubble-menu"
             ref={menuRef}
+            role="toolbar"
+            aria-label="Formato de selección"
             initial={{ opacity: 0, scale: 0.94, y: slideOffset }}
             animate={
               coords
@@ -239,6 +286,11 @@ export function InstructionsBubbleMenu({
             }
             exit={{ opacity: 0, scale: 0.94, y: slideOffset }}
             transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
+            onMouseDown={(event) => {
+              if (!(event.target instanceof HTMLInputElement)) {
+                event.preventDefault();
+              }
+            }}
             onBlur={() => requestAnimationFrame(syncVisibility)}
             style={{
               left: coords?.x ?? 0,
@@ -246,7 +298,7 @@ export function InstructionsBubbleMenu({
               visibility: coords ? "visible" : "hidden",
             }}
             className={cn(
-              "fixed z-50 flex flex-col gap-1 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-xl shadow-black/10 ring-1 ring-black/5 dark:shadow-black/40 dark:ring-white/10",
+              "fixed z-50 flex max-w-[calc(100vw-1rem)] flex-col gap-1 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-xl shadow-black/10 ring-1 ring-black/5 dark:shadow-black/40 dark:ring-white/10",
               side === "top" ? "origin-bottom" : "origin-top",
             )}
           >
@@ -267,7 +319,7 @@ export function InstructionsBubbleMenu({
                   <ItalicIcon className="size-3.5" />
                 </BubbleButton>
                 <BubbleButton
-                  label={`Tachado (${mod}⇧X)`}
+                  label={`Tachado (${mod}${shiftKey}S)`}
                   active={active.strike}
                   onClick={() => editor.chain().focus().toggleStrike().run()}
                 >
@@ -301,7 +353,7 @@ export function InstructionsBubbleMenu({
                     value={view.url}
                     placeholder="https://ejemplo.com"
                     aria-label="URL del enlace"
-                    className="h-7 w-52 rounded-md bg-muted/70 px-2 text-xs text-foreground outline-none ring-1 ring-transparent focus:ring-ring/60"
+                    className="h-7 w-44 max-w-[calc(100vw-8rem)] rounded-md bg-muted/70 px-2 text-base text-foreground outline-none ring-1 ring-transparent focus:ring-ring/60 sm:w-52 md:text-xs"
                     onChange={(event) =>
                       setView({
                         kind: "link",
@@ -320,27 +372,27 @@ export function InstructionsBubbleMenu({
                   >
                     <CheckIcon className="size-3.5" />
                   </Button>
-                  {active.linkHref ? (
-                    <>
-                      <a
-                        href={active.linkHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Abrir enlace"
-                        className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-                      >
-                        <ExternalLinkIcon className="size-3.5" />
-                      </a>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label="Quitar enlace"
-                        onClick={removeLink}
-                      >
-                        <UnlinkIcon className="size-3.5" />
-                      </Button>
-                    </>
+                  {safeLinkHref ? (
+                    <a
+                      href={safeLinkHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Abrir enlace"
+                      className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      <ExternalLinkIcon className="size-3.5" />
+                    </a>
+                  ) : null}
+                  {active.link ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="Quitar enlace"
+                      onClick={removeLink}
+                    >
+                      <UnlinkIcon className="size-3.5" />
+                    </Button>
                   ) : null}
                   <Button
                     type="button"
@@ -393,7 +445,6 @@ function BubbleButton({
         "size-7 rounded-lg",
         active && "bg-accent text-foreground hover:bg-accent",
       )}
-      onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
     >
       {children}

@@ -8,7 +8,12 @@ import {
   useState,
   type ComponentType,
 } from "react";
-import { Extension, type Editor, type Range } from "@tiptap/core";
+import {
+  Extension,
+  type ChainedCommands,
+  type Editor,
+  type Range,
+} from "@tiptap/core";
 import { PluginKey } from "@tiptap/pm/state";
 import { ReactRenderer } from "@tiptap/react";
 import Suggestion, {
@@ -55,36 +60,20 @@ const SLASH_ICONS: Record<
   codeBlock: SquareCodeIcon,
 };
 
-const SLASH_COMMAND_ACTIONS: Record<SlashCommandId, (editor: Editor) => void> =
-  {
-    paragraph: (editor) => {
-      editor.chain().focus().setParagraph().run();
-    },
-    heading1: (editor) => {
-      editor.chain().focus().setHeading({ level: 1 }).run();
-    },
-    heading2: (editor) => {
-      editor.chain().focus().setHeading({ level: 2 }).run();
-    },
-    heading3: (editor) => {
-      editor.chain().focus().setHeading({ level: 3 }).run();
-    },
-    bulletList: (editor) => {
-      editor.chain().focus().toggleBulletList().run();
-    },
-    orderedList: (editor) => {
-      editor.chain().focus().toggleOrderedList().run();
-    },
-    blockquote: (editor) => {
-      editor.chain().focus().toggleBlockquote().run();
-    },
-    horizontalRule: (editor) => {
-      editor.chain().focus().setHorizontalRule().run();
-    },
-    codeBlock: (editor) => {
-      editor.chain().focus().toggleCodeBlock().run();
-    },
-  };
+const SLASH_COMMAND_ACTIONS: Record<
+  SlashCommandId,
+  (chain: ChainedCommands) => ChainedCommands
+> = {
+  paragraph: (chain) => chain.setParagraph(),
+  heading1: (chain) => chain.setHeading({ level: 1 }),
+  heading2: (chain) => chain.setHeading({ level: 2 }),
+  heading3: (chain) => chain.setHeading({ level: 3 }),
+  bulletList: (chain) => chain.toggleBulletList(),
+  orderedList: (chain) => chain.toggleOrderedList(),
+  blockquote: (chain) => chain.toggleBlockquote(),
+  horizontalRule: (chain) => chain.setHorizontalRule(),
+  codeBlock: (chain) => chain.toggleCodeBlock(),
+};
 
 type SlashMenuHandle = {
   onKeyDown: (props: SuggestionKeyDownProps) => boolean;
@@ -113,6 +102,7 @@ const SlashMenuList = forwardRef<SlashMenuHandle, SlashMenuListProps>(
     const activeIndex = items.length > 0 ? selectedIndex % items.length : 0;
 
     useEffect(() => {
+      itemRefs.current.length = items.length;
       listRef.current?.scrollTo({ top: 0 });
     }, [items]);
 
@@ -125,12 +115,7 @@ const SlashMenuList = forwardRef<SlashMenuHandle, SlashMenuListProps>(
     useImperativeHandle(
       ref,
       () => ({
-        onKeyDown: ({ event, view }) => {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            exitSuggestion(view, SLASH_PLUGIN_KEY);
-            return true;
-          }
+        onKeyDown: ({ event }) => {
           if (items.length === 0) return false;
           if (event.key === "ArrowUp") {
             event.preventDefault();
@@ -268,8 +253,9 @@ export function createSlashCommandsExtension() {
             range: Range;
             props: SlashCommandItem;
           }) => {
-            editor.chain().focus().deleteRange(range).run();
-            SLASH_COMMAND_ACTIONS[props.id](editor);
+            SLASH_COMMAND_ACTIONS[props.id](
+              editor.chain().focus().deleteRange(range),
+            ).run();
           },
           render: () => {
             let component: ReactRenderer<
@@ -278,6 +264,7 @@ export function createSlashCommandsExtension() {
             > | null = null;
             let unmount: (() => void) | null = null;
             let exitTimer: ReturnType<typeof setTimeout> | null = null;
+            let exiting = false;
             let lastProps: Omit<SlashMenuListProps, "open"> | null = null;
 
             const teardown = () => {
@@ -285,6 +272,7 @@ export function createSlashCommandsExtension() {
                 clearTimeout(exitTimer);
                 exitTimer = null;
               }
+              exiting = false;
               unmount?.();
               unmount = null;
               component?.destroy();
@@ -307,14 +295,27 @@ export function createSlashCommandsExtension() {
                   },
                   editor: props.editor,
                 });
-                unmount = props.mount(component.element);
+                const element = component.element;
+                unmount = props.mount(element, {
+                  onPosition: ({ x, y, placement, strategy }) => {
+                    if (exiting || !component || !lastProps) return;
+                    element.style.position = strategy;
+                    element.style.left = `${x}px`;
+                    element.style.top = `${y}px`;
+                    element.style.zIndex = "50";
+                    if (lastProps.placement !== placement) {
+                      lastProps = { ...lastProps, placement };
+                      component.updateProps({ ...lastProps, open: true });
+                    }
+                  },
+                });
               },
               onUpdate: (props: SuggestionProps<SlashCommandItem>) => {
-                if (!component) return;
+                if (!component || exiting) return;
                 lastProps = {
                   items: props.items,
                   command: props.command,
-                  placement: props.placement,
+                  placement: lastProps?.placement ?? props.placement,
                 };
                 component.updateProps({
                   ...lastProps,
@@ -323,13 +324,14 @@ export function createSlashCommandsExtension() {
               },
               onKeyDown: (props: SuggestionKeyDownProps) => {
                 if (props.event.key === "Escape") {
+                  props.event.preventDefault();
                   exitSuggestion(props.view, SLASH_PLUGIN_KEY);
                   return true;
                 }
                 return component?.ref?.onKeyDown(props) ?? false;
               },
-              onExit: () => {
-                if (!component || !lastProps) {
+              onExit: (props: SuggestionProps<SlashCommandItem>) => {
+                if (!component || !lastProps || props.editor.isDestroyed) {
                   teardown();
                   return;
                 }
@@ -339,6 +341,10 @@ export function createSlashCommandsExtension() {
                 if (reducedMotion) {
                   teardown();
                   return;
+                }
+                exiting = true;
+                if (exitTimer !== null) {
+                  clearTimeout(exitTimer);
                 }
                 component.updateProps({
                   ...lastProps,

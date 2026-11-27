@@ -10,6 +10,8 @@ import {
   type ReactNode,
 } from "react";
 import type { Editor } from "@tiptap/core";
+import { TaskItem, TaskList } from "@tiptap/extension-list";
+import { TableKit } from "@tiptap/extension-table";
 import { Placeholder } from "@tiptap/extensions";
 import { Markdown } from "@tiptap/markdown";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
@@ -77,19 +79,23 @@ export function InstructionsRichEditor({
   const extensions = useMemo(
     () => [
       StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
+        heading: { levels: [1, 2, 3, 4, 5, 6] },
         underline: false,
         link: {
           openOnClick: false,
           autolink: true,
           linkOnPaste: true,
           defaultProtocol: "https",
+          isAllowedUri: (url) => normalizeLinkUrl(url) !== null,
           HTMLAttributes: {
             rel: "noopener noreferrer",
             target: "_blank",
           },
         },
       }),
+      TableKit,
+      TaskList,
+      TaskItem.configure({ nested: true }),
       Markdown.configure({
         markedOptions: {
           gfm: true,
@@ -133,6 +139,16 @@ export function InstructionsRichEditor({
         const plain = event.clipboardData?.getData("text/plain");
         if (!plain || !looksLikeMarkdown(plain)) return false;
         event.preventDefault();
+        const parsed = current.markdown?.parse(plain);
+        if (
+          parsed?.type === "doc" &&
+          Array.isArray(parsed.content) &&
+          parsed.content.length === 1 &&
+          parsed.content[0]?.type === "paragraph"
+        ) {
+          current.commands.insertContent(parsed.content[0].content ?? []);
+          return true;
+        }
         current.commands.insertContent(plain, { contentType: "markdown" });
         return true;
       },
@@ -146,6 +162,17 @@ export function InstructionsRichEditor({
 
   useEffect(() => {
     editorRef.current = editor;
+  }, [editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const closeLinkBar = () => {
+      setLinkBar((current) => (current.open ? { open: false } : current));
+    };
+    editor.on("selectionUpdate", closeLinkBar);
+    return () => {
+      editor.off("selectionUpdate", closeLinkBar);
+    };
   }, [editor]);
 
   useEffect(() => {
@@ -181,8 +208,10 @@ export function InstructionsRichEditor({
       editor.commands.focus();
       return;
     }
-    const existingHref = String(editor.getAttributes("link").href ?? "");
-    setLinkBar({ open: true, url: existingHref, error: null });
+    const existingHref = normalizeLinkUrl(
+      String(editor.getAttributes("link").href ?? ""),
+    );
+    setLinkBar({ open: true, url: existingHref ?? "", error: null });
   };
 
   const applyToolbarLink = () => {
@@ -243,6 +272,10 @@ export function InstructionsRichEditor({
     }
   };
 
+  const safeToolbarLinkHref = editor
+    ? normalizeLinkUrl(String(editor.getAttributes("link").href ?? ""))
+    : null;
+
   return (
     <>
       <div className="flex flex-wrap items-center gap-2 border-b border-border/70 px-3 py-2">
@@ -266,7 +299,7 @@ export function InstructionsRichEditor({
             value={linkBar.url}
             placeholder="https://ejemplo.com"
             aria-label="URL del enlace"
-            className="h-8 min-w-0 flex-1 rounded-lg bg-background px-2.5 text-sm text-foreground outline-none ring-1 ring-border focus:ring-2 focus:ring-ring/60 md:text-[13px]"
+            className="h-8 min-w-0 flex-1 rounded-lg bg-background px-2.5 text-base text-foreground outline-none ring-1 ring-border focus:ring-2 focus:ring-ring/60 md:text-[13px]"
             onChange={(event) =>
               setLinkBar({ open: true, url: event.target.value, error: null })
             }
@@ -282,36 +315,36 @@ export function InstructionsRichEditor({
               <CheckIcon className="size-3.5" />
               Aplicar
             </Button>
+            {safeToolbarLinkHref ? (
+              <a
+                href={safeToolbarLinkHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Abrir enlace"
+                className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <ExternalLinkIcon className="size-3.5" />
+              </a>
+            ) : null}
             {editor.isActive("link") ? (
-              <>
-                <a
-                  href={String(editor.getAttributes("link").href ?? "")}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Abrir enlace"
-                  className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
-                >
-                  <ExternalLinkIcon className="size-3.5" />
-                </a>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="size-8"
-                  aria-label="Quitar enlace"
-                  onClick={() => {
-                    editor
-                      .chain()
-                      .focus()
-                      .extendMarkRange("link")
-                      .unsetLink()
-                      .run();
-                    setLinkBar({ open: false });
-                  }}
-                >
-                  <UnlinkIcon className="size-3.5" />
-                </Button>
-              </>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="size-8"
+                aria-label="Quitar enlace"
+                onClick={() => {
+                  editor
+                    .chain()
+                    .focus()
+                    .extendMarkRange("link")
+                    .unsetLink()
+                    .run();
+                  setLinkBar({ open: false });
+                }}
+              >
+                <UnlinkIcon className="size-3.5" />
+              </Button>
             ) : null}
             <Button
               type="button"
@@ -381,9 +414,14 @@ function RichToolbar({
   });
 
   const mod = isMac ? "⌘" : "Ctrl+";
+  const shift = isMac ? "⇧" : "Shift+";
 
   return (
-    <div className="ml-auto flex max-w-full flex-wrap items-center gap-0.5">
+    <div
+      role="toolbar"
+      aria-label="Formato de instrucciones"
+      className="ml-auto flex max-w-full flex-wrap items-center gap-0.5"
+    >
       <ToolbarButton
         label="Título 1"
         hint="#"
@@ -429,7 +467,7 @@ function RichToolbar({
       </ToolbarButton>
       <ToolbarButton
         label="Tachado"
-        shortcut={`${mod}⇧X`}
+        shortcut={`${mod}${shift}S`}
         active={state.strike}
         onClick={() => editor.chain().focus().toggleStrike().run()}
       >
@@ -502,7 +540,7 @@ function RichToolbar({
       </ToolbarButton>
       <ToolbarButton
         label="Rehacer"
-        shortcut={`${mod}⇧Z`}
+        shortcut={`${mod}${shift}Z`}
         active={false}
         disabled={!state.canRedo}
         onClick={() => editor.chain().focus().redo().run()}
