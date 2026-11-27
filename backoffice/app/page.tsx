@@ -8,12 +8,21 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
+    url: "/",
     siteName: "LeadScope",
     locale: "es_ES",
     type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: TITLE,
+    description: DESCRIPTION,
   },
 };
 
