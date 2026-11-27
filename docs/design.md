@@ -2,7 +2,7 @@
 
 Internal design for Luis. The commercial contract with Altamira is the HTML proposal. This file is how we build it.
 
-**Status.** Altamira accepted. Kickoff is on and the v1 build exists (backend, backoffice, tests, Docker image, CI). Live HubSpot, production WhatsApp, and their Anthropic key are still week-1 access. Until then, a company with no key for an integration runs on an in-process fake (development only). v1 knowledge is files operators upload in the backoffice. Google Drive / Sheets sync is later.
+**Status (Nov 2026).** Altamira is launching to production in late November or early December 2026. Software ownership is settled. Luis owns LeadScope and Altamira is a licensed client. A second client, Paso Real Logistics, is starting onboarding. The build exists (backend, backoffice, tests, Docker image, CI). A company with no key for an integration runs on an in-process fake in development only. v1 knowledge is files operators upload in the backoffice. Google Drive / Sheets sync is later.
 
 ## Goal
 
@@ -10,7 +10,7 @@ Qualify WhatsApp leads, answer the questions that repeat, and hand a clean summa
 
 Altamira Uruguay is the first client. Volume they reported: about 15 to 20 leads a day and about 60 conversations a day. About 70% write outside office hours.
 
-**Product goal.** The same system should later be sold to other companies with the same problem (real-estate developers first). Version 1 ships only what Altamira needs, but the code is built as a multi-company product from day one. See [Multi-company](#multi-company).
+**Product goal.** Luis owns LeadScope and licenses it across industries as a multi-company product (Altamira Uruguay first, Paso Real Logistics second). One shared deployment serves all companies, with every row scoped by company and behavior driven by company config and instructions. See [Multi-company](#multi-company).
 
 ## Repo layout
 
@@ -707,5 +707,5 @@ Google Drive / Sheets sync and a Connect Google OAuth flow are later, not v1. MC
 - WhatsApp number connected in Altamira's Kapso project (Altamira's own number, its own Meta Business portfolio, Meta paid by card), Meta business verification, welcome template approval.
 - Allowlist of public URLs for site notes.
 - Hosting account for the backend.
-- Software ownership with Altamira in the signed contract (needed for resale).
+- Software ownership with Altamira was settled in Nov 2026. Luis owns LeadScope and Altamira is a licensed client.
 - Partnership terms with José Daniel and Luis's father, if the product is sold together.

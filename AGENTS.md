@@ -8,9 +8,8 @@ WhatsApp assistant for Altamira, a real-estate developer in Uruguay (not Altamir
 
 **Client side.** Fabio Tombion runs Uruguay operations. José Daniel Guzmán consults on HubSpot and marketing every two weeks. Luis's father was on the 30 Sep 2026 call. Victoria (Vicky) is Altamira's only advisor for now. She sends the project documents and is the main panel user. Fabio gives the HubSpot access code when Luis connects it.
 
-**Status (Oct 2026).** Altamira accepted the v1 proposal and kickoff is on. Implementation has started in this repo (`https://github.com/luisguareschi/leadscope`).
+**Status (Nov 2026).** Altamira is going live in production in late November or early December 2026. Software ownership is settled. Luis owns LeadScope and Altamira is a licensed client. Onboarding for the second client, Paso Real Logistics, is starting. Implementation lives in this repo (`https://github.com/luisguareschi/leadscope`).
 
-- Week-1 access is still pending for live HubSpot, production WhatsApp (Altamira's own number connected in a Kapso project; Luis has no Kapso account yet), and their Anthropic key. Until then the apps run on env examples and fakes.
 - v1 knowledge is operator uploads. Google Drive / Sheets comes later.
 - `README.md` explains how to run the apps locally and has the go-live checklist.
 - On 20 Oct 2026 Luis demoed the sandbox to Fabio (`docs/resources/reunion-2026-10-20.md`). They agreed that every lead goes to HubSpot from its first message, and that a lead who wants to talk to a person now skips the questions. Both are built. They also agreed on an email alert to all active operators when a lead wants a call now. That alert is not built yet.
@@ -38,7 +37,7 @@ WhatsApp assistant for Altamira, a real-estate developer in Uruguay (not Altamir
   - **Chat & Probar asistente media preview:** clicking PDFs or images in a conversation bubble opens `MediaPreviewDialog` inline (matching Conocimiento's viewer, with iOS PDF fallback, open-in-new-tab, and download); `Probar asistente` `Enviaría:` file chips also open the preview dialog.
   - **Unified super-admin company switcher:** platform admins use the same company switcher across their own companies and all other active companies (labeled `Acceso de soporte` while in support access, with `Empresas` always visible in the nav), replacing the old sidebar footer `SupportBar` and mobile `← Empresas` pill.
 
-**Product goal.** Altamira is the first client. The system is a multi-company product so it can be sold to other developers later: one shared deployment, every row scoped by company, and company-specific behavior in config. Version 1 still ships only Altamira's scope, with no resale features yet (signup, billing, a customer admin for their own company). Software ownership must be settled in Altamira's signed contract before resale.
+**Product goal.** Luis owns LeadScope and licenses it to clients. Altamira (Uruguay, real estate) is the first client, and Paso Real Logistics is the second. The system is an industry-agnostic, multi-company product with one shared deployment, every row scoped by company, and company-specific behavior in config and instructions. There are no self-serve resale features yet (signup, billing, or a customer admin for their own company).
 
 A platform admin is allowlisted by `PLATFORM_ADMIN_EMAILS`. That admin can open Empresas and create a company and its first operator, even when the database has no companies and they have no operator row. That is how the first company is created. From Empresas the same admin archives companies (reversible), restores them, and deletes them (permanent, after typing the slug). The admin also adds, invites, archives, and deletes their operators. Company operators cannot see or call that screen. The admin can click Entrar on a company to work inside its panel without an operator row there (support access). Every write made that way is recorded. `db:seed` and `operator:add` are local fixtures only, and a production setup does not run them.
 
@@ -206,9 +205,9 @@ The panel has a thread list, a way to pause the assistant when a person takes ov
 
 Quote these only if asked.
 
-- USD 2,000 setup plus USD 950 a month from go-live, with a 6-month minimum, then month to month. The monthly fee covers running the assistant, bug fixes, and small adjustments. Future versions are quoted separately.
-- Timeline is about 6 weeks, with no week-by-week breakdown in the proposal, aiming to test from mid-November 2026. If kickoff slips, launch moves to early February 2027, so as not to go live into the year-end holidays.
-- Altamira pays Anthropic usage on their own account, Meta/WhatsApp fees, and the HubSpot license. José estimated the WhatsApp platform cost at USD 120 to 250 a month, separate from this quote.
+- **Altamira (agreed terms, Nov 2026).** Luis owns the software and Altamira is a client using LeadScope. Altamira pays about USD 2,000 to 2,500 for the initial build plus about USD 250 to 300 a month for the license. The original 2 Oct 2026 proposal quoted USD 2,000 setup plus USD 950 a month with a 6-month minimum.
+- Altamira is going to production in late November or early December 2026.
+- Clients pay their own Anthropic usage, Meta/WhatsApp fees, Kapso plan, and CRM license. For Altamira, José estimated the WhatsApp platform cost at USD 120 to 250 a month, separate from LeadScope's license.
 - Meta pricing from 1 Oct 2026 in Uruguay (Meta's "Rest of Latin America"): a marketing template costs about USD 0.085 per send. A service reply inside the 24-hour window costs about USD 0.0113, after 1,000 free service messages per number per month. Utility templates cost the same USD 0.0113. There is also a 72-hour pricing window. That pricing window is separate from the product rule: free-form replies only within 24 hours of the lead's last message, and v1 does not follow up after that.
 - Kapso is billed separately. Free (2,000 messages a month, 1 number) is for testing. Pro at USD 25 a month (100,000 messages, 3 numbers) is for production. Altamira pays Kapso (settled 9 Nov 2026), like Anthropic and Meta.
 - The proposal is dated 2 Oct 2026 and was valid for 1 week.

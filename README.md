@@ -1,6 +1,6 @@
 # LeadScope
 
-WhatsApp lead assistant for real-estate developers. It greets leads and, in a natural conversation, finds out what each company asks for (for Altamira: interest, budget, and whether they know the projects). It answers repeated questions from the company's own files, asks when an advisor can call, and keeps every lead in HubSpot from its first message. The first client is Altamira (Uruguay). The build plan is [`docs/design.md`](docs/design.md).
+Multi-company WhatsApp lead assistant. It greets leads and, in a natural conversation, finds out what each company asks for (for Altamira: interest, budget, and whether they know the projects). It answers repeated questions from the company's own files, asks when an advisor can call, and optionally syncs every lead to HubSpot from its first message. The first client is Altamira (Uruguay), with Paso Real Logistics onboarding next. The build plan is [`docs/design.md`](docs/design.md).
 
 | Folder | What it is |
 | --- | --- |
