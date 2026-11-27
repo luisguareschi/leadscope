@@ -2,7 +2,9 @@
 
 import {
   forwardRef,
+  useEffect,
   useImperativeHandle,
+  useRef,
   useState,
   type ComponentType,
 } from "react";
@@ -12,8 +14,10 @@ import { ReactRenderer } from "@tiptap/react";
 import Suggestion, {
   exitSuggestion,
   type SuggestionKeyDownProps,
+  type SuggestionPlacement,
   type SuggestionProps,
 } from "@tiptap/suggestion";
+import { MotionConfig, motion } from "motion/react";
 import {
   Heading1Icon,
   Heading2Icon,
@@ -34,6 +38,7 @@ import {
 } from "@/lib/instructions-editor-commands";
 
 const SLASH_PLUGIN_KEY = new PluginKey("instructionsSlashCommands");
+const EXIT_DURATION_MS = 130;
 
 const SLASH_ICONS: Record<
   SlashCommandId,
@@ -88,12 +93,17 @@ type SlashMenuHandle = {
 type SlashMenuListProps = {
   items: SlashCommandItem[];
   command: (item: SlashCommandItem) => void;
+  open: boolean;
+  placement: SuggestionPlacement;
 };
 
 const SlashMenuList = forwardRef<SlashMenuHandle, SlashMenuListProps>(
-  function SlashMenuList({ items, command }, ref) {
+  function SlashMenuList({ items, command, open, placement }, ref) {
     const [prevItems, setPrevItems] = useState(items);
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const listRef = useRef<HTMLDivElement>(null);
+    const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+    const scrollOnSelectRef = useRef(false);
 
     if (items !== prevItems) {
       setPrevItems(items);
@@ -101,6 +111,16 @@ const SlashMenuList = forwardRef<SlashMenuHandle, SlashMenuListProps>(
     }
 
     const activeIndex = items.length > 0 ? selectedIndex % items.length : 0;
+
+    useEffect(() => {
+      listRef.current?.scrollTo({ top: 0 });
+    }, [items]);
+
+    useEffect(() => {
+      if (!scrollOnSelectRef.current) return;
+      scrollOnSelectRef.current = false;
+      itemRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
+    }, [activeIndex, items]);
 
     useImperativeHandle(
       ref,
@@ -114,6 +134,7 @@ const SlashMenuList = forwardRef<SlashMenuHandle, SlashMenuListProps>(
           if (items.length === 0) return false;
           if (event.key === "ArrowUp") {
             event.preventDefault();
+            scrollOnSelectRef.current = true;
             setSelectedIndex((current) =>
               current <= 0 ? items.length - 1 : current - 1,
             );
@@ -121,6 +142,7 @@ const SlashMenuList = forwardRef<SlashMenuHandle, SlashMenuListProps>(
           }
           if (event.key === "ArrowDown") {
             event.preventDefault();
+            scrollOnSelectRef.current = true;
             setSelectedIndex((current) => (current + 1) % items.length);
             return true;
           }
@@ -136,55 +158,85 @@ const SlashMenuList = forwardRef<SlashMenuHandle, SlashMenuListProps>(
       [activeIndex, command, items],
     );
 
+    const opensAbove = placement.startsWith("top");
+    const slideOffset = opensAbove ? 4 : -4;
+
     return (
-      <div
-        role="listbox"
-        aria-label="Insertar bloque"
-        className="z-50 max-h-72 w-72 overflow-y-auto rounded-xl border border-border/80 bg-popover p-1.5 text-popover-foreground shadow-lg ring-1 ring-black/5 dark:ring-white/10"
-        onMouseDown={(event) => event.preventDefault()}
-      >
-        {items.length === 0 ? (
-          <p className="px-2.5 py-2 text-xs text-muted-foreground">
-            Sin resultados
-          </p>
-        ) : (
-          items.map((item, index) => {
-            const Icon = SLASH_ICONS[item.id];
-            const selected = index === activeIndex;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                onMouseEnter={() => setSelectedIndex(index)}
-                onClick={() => command(item)}
-                className={cn(
-                  "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors",
-                  selected
-                    ? "bg-accent text-accent-foreground"
-                    : "text-popover-foreground hover:bg-accent/60",
-                )}
-              >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/70 bg-background text-muted-foreground">
-                  <Icon className="size-3.5" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-medium leading-tight">
-                    {item.label}
-                  </span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
-                    {item.description}
-                  </span>
-                </span>
-                <span className="shrink-0 font-mono text-[11px] text-muted-foreground/80">
-                  {item.shortcut}
-                </span>
-              </button>
-            );
-          })
-        )}
-      </div>
+      <MotionConfig reducedMotion="user">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: slideOffset }}
+          animate={
+            open
+              ? { opacity: 1, scale: 1, y: 0 }
+              : { opacity: 0, scale: 0.96, y: slideOffset }
+          }
+          transition={{
+            duration: open ? 0.14 : 0.11,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+          className={cn(
+            "z-50 w-72 overflow-hidden rounded-xl border border-border/80 bg-popover text-popover-foreground shadow-xl shadow-black/10 ring-1 ring-black/5 dark:shadow-black/40 dark:ring-white/10",
+            opensAbove ? "origin-bottom-left" : "origin-top-left",
+            !open && "pointer-events-none",
+          )}
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          <div
+            ref={listRef}
+            role="listbox"
+            aria-label="Insertar bloque"
+            className="no-scrollbar scrollbar-none max-h-[min(19rem,calc(100dvh-6rem))] overflow-y-auto overscroll-contain scroll-py-1.5 p-1.5"
+          >
+            {items.length === 0 ? (
+              <p className="px-2.5 py-2 text-xs text-muted-foreground">
+                Sin resultados
+              </p>
+            ) : (
+              items.map((item, index) => {
+                const Icon = SLASH_ICONS[item.id];
+                const selected = index === activeIndex;
+                return (
+                  <button
+                    key={item.id}
+                    ref={(node) => {
+                      itemRefs.current[index] = node;
+                    }}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onMouseEnter={() => {
+                      scrollOnSelectRef.current = false;
+                      setSelectedIndex(index);
+                    }}
+                    onClick={() => command(item)}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors",
+                      selected
+                        ? "bg-accent text-accent-foreground"
+                        : "text-popover-foreground hover:bg-accent/60",
+                    )}
+                  >
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/70 bg-background text-muted-foreground">
+                      <Icon className="size-3.5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-medium leading-tight">
+                        {item.label}
+                      </span>
+                      <span className="block truncate text-[11px] text-muted-foreground">
+                        {item.description}
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-mono text-[11px] text-muted-foreground/80">
+                      {item.shortcut}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </motion.div>
+      </MotionConfig>
     );
   },
 );
@@ -201,6 +253,8 @@ export function createSlashCommandsExtension() {
           char: "/",
           startOfLine: false,
           allowedPrefixes: [" "],
+          placement: "bottom-start",
+          offset: { mainAxis: 6, crossAxis: 0 },
           initialItems: [...SLASH_COMMANDS],
           dismissOnOutsideClick: true,
           allow: ({ state }) => !state.selection.$from.parent.type.spec.code,
@@ -223,22 +277,48 @@ export function createSlashCommandsExtension() {
               SlashMenuListProps
             > | null = null;
             let unmount: (() => void) | null = null;
+            let exitTimer: ReturnType<typeof setTimeout> | null = null;
+            let lastProps: Omit<SlashMenuListProps, "open"> | null = null;
+
+            const teardown = () => {
+              if (exitTimer !== null) {
+                clearTimeout(exitTimer);
+                exitTimer = null;
+              }
+              unmount?.();
+              unmount = null;
+              component?.destroy();
+              component = null;
+              lastProps = null;
+            };
 
             return {
               onStart: (props: SuggestionProps<SlashCommandItem>) => {
+                teardown();
+                lastProps = {
+                  items: props.items,
+                  command: props.command,
+                  placement: props.placement,
+                };
                 component = new ReactRenderer(SlashMenuList, {
                   props: {
-                    items: props.items,
-                    command: props.command,
+                    ...lastProps,
+                    open: true,
                   },
                   editor: props.editor,
                 });
                 unmount = props.mount(component.element);
               },
               onUpdate: (props: SuggestionProps<SlashCommandItem>) => {
-                component?.updateProps({
+                if (!component) return;
+                lastProps = {
                   items: props.items,
                   command: props.command,
+                  placement: props.placement,
+                };
+                component.updateProps({
+                  ...lastProps,
+                  open: true,
                 });
               },
               onKeyDown: (props: SuggestionKeyDownProps) => {
@@ -249,10 +329,22 @@ export function createSlashCommandsExtension() {
                 return component?.ref?.onKeyDown(props) ?? false;
               },
               onExit: () => {
-                unmount?.();
-                unmount = null;
-                component?.destroy();
-                component = null;
+                if (!component || !lastProps) {
+                  teardown();
+                  return;
+                }
+                const reducedMotion =
+                  typeof window !== "undefined" &&
+                  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                if (reducedMotion) {
+                  teardown();
+                  return;
+                }
+                component.updateProps({
+                  ...lastProps,
+                  open: false,
+                });
+                exitTimer = setTimeout(teardown, EXIT_DURATION_MS);
               },
             };
           },
