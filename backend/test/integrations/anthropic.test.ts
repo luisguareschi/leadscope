@@ -341,4 +341,48 @@ describe("Anthropic client", () => {
       "- Busca 1 dormitorio\n- Presupuesto: 50.000 pesos\n- Listo para que un asesor lo contacte",
     );
   });
+
+  it("omits temperature for models released after Claude 4.6 and sends it for older models", async () => {
+    const fetchImpl = vi.fn(async (..._args: Parameters<typeof fetch>) =>
+      messageResponse({
+        replies: ["Hola."],
+        collected: { interest: null, budget: null, knowsProjects: null },
+        callTime: null,
+        intent: "continue",
+        needsHuman: false,
+        callNow: false,
+        forbiddenTopic: null,
+        summary: ["Saludo inicial."],
+      }),
+    );
+    const client = createAnthropicClient("sk-test", {
+      fetch: fetchImpl as unknown as typeof fetch,
+      maxRetries: 0,
+    });
+
+    for (const model of [
+      "claude-haiku-5-5",
+      "claude-haiku-5-5-20261101",
+      "claude-sonnet-5-5",
+      "claude-opus-4-7",
+      "claude-opus-4-8",
+      "claude-fable-5-1",
+    ]) {
+      await client.complete({ ...input, model, temperature: 0.4 });
+      const body = JSON.parse(String(fetchImpl.mock.calls.at(-1)![1]?.body));
+      expect(body).not.toHaveProperty("temperature");
+    }
+
+    for (const model of [
+      "claude-haiku-4-5",
+      "claude-haiku-4-5-20251001",
+      "claude-sonnet-4-6",
+      "claude-opus-4-6",
+      "claude-3-5-haiku-20241022",
+    ]) {
+      await client.complete({ ...input, model, temperature: 0.4 });
+      const body = JSON.parse(String(fetchImpl.mock.calls.at(-1)![1]?.body));
+      expect(body.temperature).toBe(0.4);
+    }
+  });
 });
