@@ -107,9 +107,9 @@ export function ColumnHelp({ column }: { column: "stage" | "bot" }) {
   return (
     <HelpTip
       label={help.label}
-      className="flex-col items-start gap-2.5 leading-normal"
+      className="flex flex-col items-start gap-2.5 leading-normal"
     >
-      <p className="leading-relaxed text-background/80">{help.intro}</p>
+      <p className="leading-relaxed text-muted-foreground">{help.intro}</p>
       <ul className="flex flex-col gap-2">
         {Object.entries(help.items).map(([key, meta]) => (
           <li key={key} className="flex flex-col gap-0.5">
@@ -117,7 +117,7 @@ export function ColumnHelp({ column }: { column: "stage" | "bot" }) {
               <StatusDot tone={meta.tone} className="size-1.5" />
               {meta.label}
             </span>
-            <span className="leading-relaxed text-background/70">
+            <span className="leading-relaxed text-muted-foreground">
               {meta.description}
             </span>
           </li>
