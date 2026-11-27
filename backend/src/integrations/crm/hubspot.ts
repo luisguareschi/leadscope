@@ -36,7 +36,12 @@ export function fitHubSpotText(
 }
 
 function firstName(name: string | null): string | null {
-  return name?.trim().split(/\s+/)[0] ?? null;
+  return name?.trim().split(/\s+/)[0] || null;
+}
+
+function handleOf(username: string | null | undefined): string | null {
+  const clean = username?.trim().replace(/^@+/, "");
+  return clean ? `@${clean}` : null;
 }
 
 export function createHubSpotCrm(options: HubSpotOptions): Crm {
@@ -108,6 +113,20 @@ export function createHubSpotCrm(options: HubSpotOptions): Crm {
       : {};
   }
 
+  async function fetchContactProperties(
+    contactId: string,
+  ): Promise<ContactResult["properties"] | null> {
+    try {
+      const contact = await request<ContactResult>(
+        "GET",
+        `/crm/v3/objects/contacts/${contactId}?properties=firstname,email,phone`,
+      );
+      return contact.properties ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async function update(
     contactId: string,
     lead: CrmLead,
@@ -117,8 +136,14 @@ export function createHubSpotCrm(options: HubSpotOptions): Crm {
       ...summaryProperties(lead.summary),
     };
     if (current && !current.phone && lead.phone) properties.phone = lead.phone;
-    if (current && !current.firstname && firstName(lead.name))
-      properties.firstname = firstName(lead.name)!;
+    const realFirst = firstName(lead.name);
+    const placeholderName =
+      current?.firstname &&
+      (current.firstname === handleOf(lead.username) ||
+        current.firstname === lead.bsuid);
+    if (current && (!current.firstname || placeholderName) && realFirst) {
+      properties.firstname = realFirst;
+    }
     if (current && !current.email && lead.email) properties.email = lead.email;
     if (Object.keys(properties).length > 0) {
       await request("PATCH", `/crm/v3/objects/contacts/${contactId}`, {
@@ -131,8 +156,15 @@ export function createHubSpotCrm(options: HubSpotOptions): Crm {
   return {
     kind: "hubspot",
     async upsertLead(lead) {
-      if (lead.existingContactId)
-        return update(lead.existingContactId, lead, null);
+      if (lead.existingContactId) {
+        // BSUID contacts may have been created before a phone number or real name arrived:
+        // read current properties once so we backfill empty fields without clobbering manual edits.
+        const current =
+          lead.bsuid && (lead.phone || firstName(lead.name))
+            ? await fetchContactProperties(lead.existingContactId)
+            : null;
+        return update(lead.existingContactId, lead, current);
+      }
 
       if (lead.phone) {
         const existing = await findByPhone(lead.phone);
@@ -145,7 +177,7 @@ export function createHubSpotCrm(options: HubSpotOptions): Crm {
       if (lead.phone) properties.phone = lead.phone;
       const name =
         firstName(lead.name) ??
-        (lead.username ? `@${lead.username.replace(/^@+/, "")}` : null) ??
+        handleOf(lead.username) ??
         (!lead.phone && lead.bsuid ? lead.bsuid : null);
       if (name) properties.firstname = name;
       if (lead.email) properties.email = lead.email;

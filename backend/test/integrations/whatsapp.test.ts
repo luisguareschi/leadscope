@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { ChannelError } from "../../src/integrations/whatsapp/channel.js";
+import {
+  ChannelError,
+  whatsappRecipientFor,
+} from "../../src/integrations/whatsapp/channel.js";
 import {
   createKapsoChannel,
   downloadKapsoMedia,
@@ -204,6 +207,28 @@ describe("parseKapsoWebhook", () => {
     expect(parseKapsoWebhook(RECEIVED, emptyFrom).messages[0]?.from).toBe(
       "16315551181",
     );
+
+    // A BSUID placed in `from` or `phone_number` is never misparsed as phone digits.
+    const bsuidInFrom = receivedEvent({
+      from: "CO.573001234567",
+      from_user_id: "CO.573001234567",
+    });
+    bsuidInFrom.conversation.phone_number = "CO.573001234567";
+    expect(parseKapsoWebhook(RECEIVED, bsuidInFrom).messages[0]).toMatchObject({
+      from: null,
+      bsuid: "CO.573001234567",
+    });
+
+    // Falls back to parent_business_scoped_user_id when primary BSUID is absent.
+    const parentBsuid = receivedEvent({
+      from: undefined,
+      from_parent_user_id: "US.ENT.1234567890",
+    });
+    parentBsuid.conversation.phone_number = undefined as unknown as string;
+    expect(parseKapsoWebhook(RECEIVED, parentBsuid).messages[0]).toMatchObject({
+      from: null,
+      bsuid: "US.ENT.1234567890",
+    });
   });
 
   it("maps status events to receipts and ignores other events and junk", () => {
@@ -543,6 +568,10 @@ describe("Kapso channel", () => {
       type: "image",
       image: { id: "media-bsuid" },
     });
+
+    expect(() => whatsappRecipientFor({ waId: null, bsuid: null })).toThrow(
+      ChannelError,
+    );
   });
 
   it("blocks SSRF hosts, prevents X-API-Key exfiltration, and caps streaming downloads (Critical #3)", async () => {

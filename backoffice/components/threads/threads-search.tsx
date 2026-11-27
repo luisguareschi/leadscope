@@ -12,8 +12,8 @@ const noSubscription = () => () => {};
 const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform);
 
 /**
- * Conversaciones' search by name or phone (the `q` param): it filters as you type,
- * ⌘K / Ctrl+K focuses it, and Escape clears it.
+ * Conversaciones' search by name, username, BSUID, or phone (the `q` param): it filters as you
+ * type, ⌘K / Ctrl+K focuses it, and Escape clears it.
  */
 export function ThreadsSearch({
   search,

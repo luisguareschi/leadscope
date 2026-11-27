@@ -23,9 +23,9 @@ export class FakeCrm implements Crm {
   readonly contacts = new Map<string, { id: string; lead: CrmLead }>();
 
   async upsertLead(lead: CrmLead) {
-    const existingById = lead.existingContactId
-      ? [...this.contacts.values()].find(
-          (entry) => entry.id === lead.existingContactId,
+    const existingEntry = lead.existingContactId
+      ? [...this.contacts.entries()].find(
+          ([, entry]) => entry.id === lead.existingContactId,
         )
       : undefined;
     const key =
@@ -33,7 +33,10 @@ export class FakeCrm implements Crm {
       (lead.bsuid ? `bsuid:${lead.bsuid}` : null) ??
       lead.existingContactId ??
       `anon-${this.contacts.size + 1}`;
-    const existing = existingById ?? this.contacts.get(key);
+    const existing = existingEntry?.[1] ?? this.contacts.get(key);
+    if (existingEntry && existingEntry[0] !== key) {
+      this.contacts.delete(existingEntry[0]);
+    }
     const id =
       existing?.id ??
       lead.existingContactId ??

@@ -8,7 +8,7 @@ import type {
   InboundMessage,
   StatusUpdate,
 } from "../integrations/whatsapp/messages.js";
-import { waIdToE164 } from "../lib/phone.js";
+import { e164ToWaId, waIdToE164 } from "../lib/phone.js";
 import { isUniqueViolation } from "../lib/prisma.js";
 import { crmRequest } from "./crm-sync.js";
 
@@ -105,7 +105,7 @@ async function recordOnce(
   // Archived: the number is ignored, as if it belonged to no company. Nothing is stored.
   if (company.archivedAt) return { status: "archived_company" };
   const phone = message.from ? waIdToE164(message.from) : null;
-  const waId = phone ? message.from : null;
+  const waId = phone ? e164ToWaId(phone) : null;
   const bsuid = message.bsuid?.trim() || null;
   const username = message.username?.trim().replace(/^@+/, "") || null;
   if (!phone && !bsuid) return { status: "invalid_phone" };
@@ -134,7 +134,7 @@ async function recordOnce(
   } as const;
   const recorded = await ctx.db.$transaction(async (tx) => {
     // Match by BSUID first, then by phone (Kapso/Meta recommendation). Reconcile missing
-    // identifiers when a lead sends both, without colliding with another existing thread.
+    // identifiers (or phone number changes for the same BSUID) without colliding with another thread.
     const byBsuid = bsuid
       ? await tx.thread.findUnique({
           where: { companyId_bsuid: { companyId: company.id, bsuid } },
@@ -148,26 +148,39 @@ async function recordOnce(
         })
       : null;
 
+    if (byBsuid && byPhone && byBsuid.id !== byPhone.id) {
+      ctx.logger.warn(
+        {
+          companyId: company.id,
+          bsuidThreadId: byBsuid.id,
+          phoneThreadId: byPhone.id,
+        },
+        "kapso inbound matched separate BSUID and phone threads; keeping BSUID thread",
+      );
+    }
+
     const existing = byBsuid ?? byPhone;
+    const canSetPhone = Boolean(
+      existing &&
+      phone &&
+      existing.phone !== phone &&
+      (!byPhone || byPhone.id === existing.id),
+    );
+    const canSetBsuid = Boolean(
+      existing &&
+      bsuid &&
+      !existing.bsuid &&
+      (!byBsuid || byBsuid.id === existing.id),
+    );
     const thread = existing
       ? await tx.thread.update({
           where: { id: existing.id },
           data: {
-            ...(phone &&
-            !existing.phone &&
-            (!byPhone || byPhone.id === existing.id)
-              ? { phone }
-              : {}),
-            ...(waId &&
-            (existing.phone === phone ||
-              (!existing.phone && (!byPhone || byPhone.id === existing.id)))
+            ...(canSetPhone ? { phone, waId } : {}),
+            ...(!canSetPhone && waId && existing.phone === phone
               ? { waId }
               : {}),
-            ...(bsuid &&
-            !existing.bsuid &&
-            (!byBsuid || byBsuid.id === existing.id)
-              ? { bsuid }
-              : {}),
+            ...(canSetBsuid ? { bsuid } : {}),
             ...(username ? { username } : {}),
             ...(message.profileName ? { name: message.profileName } : {}),
             lastInboundAt: message.sentAt,
@@ -195,12 +208,11 @@ async function recordOnce(
           select: threadSelect,
         });
     // Every lead goes to the CRM from their first message, even one who is disqualified later.
-    // With HubSpot off nothing is queued; once it is on, a lead it never had is written on their
-    // next message.
+    // Also re-sync when a previously phone-less (or changed-number) BSUID thread gains a phone.
     const crmRequested =
       company.hubspotEnabled === true &&
-      thread.crmSyncedAt === null &&
-      thread.crmPendingAction === null;
+      ((thread.crmSyncedAt === null && thread.crmPendingAction === null) ||
+        canSetPhone);
     if (crmRequested) {
       await tx.thread.update({
         where: { id: thread.id },
@@ -242,21 +254,26 @@ async function recordOnce(
   return recorded.result;
 }
 
+const MAX_UNIQUE_RETRIES = 3;
+
 /** Stores one inbound WhatsApp message. Safe to call twice with the same delivery. */
 export async function recordInboundMessage(
   ctx: AppContext,
   message: InboundMessage,
 ): Promise<RecordResult> {
-  try {
-    return await recordOnce(ctx, message);
-  } catch (error) {
-    if (!isUniqueViolation(error)) throw error;
-    const existing = await ctx.db.message.findUnique({
-      where: { waMessageId: message.waMessageId },
-    });
-    if (existing) return { status: "duplicate" };
-    // Two first messages from the same new lead raced on the thread insert. The thread exists now.
-    return recordOnce(ctx, message);
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await recordOnce(ctx, message);
+    } catch (error) {
+      if (!isUniqueViolation(error) || attempt >= MAX_UNIQUE_RETRIES) {
+        throw error;
+      }
+      const existing = await ctx.db.message.findUnique({
+        where: { waMessageId: message.waMessageId },
+      });
+      if (existing) return { status: "duplicate" };
+      // Concurrent first messages from the same new lead raced on the thread insert. Retry now.
+    }
   }
 }
 

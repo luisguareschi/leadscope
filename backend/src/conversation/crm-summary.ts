@@ -147,7 +147,9 @@ export function buildCrmSummary(input: {
     thread.phone
       ? `Teléfono: ${thread.phone}`
       : "Teléfono: No compartido (usuario de WhatsApp)",
-    thread.username ? `Usuario de WhatsApp: @${thread.username}` : null,
+    thread.username
+      ? `Usuario de WhatsApp: @${thread.username.replace(/^@+/, "")}`
+      : null,
     !thread.phone && thread.bsuid
       ? `ID de WhatsApp (BSUID): ${thread.bsuid}`
       : null,

@@ -34,6 +34,7 @@ const messageSchema = z
     type: z.string(),
     from: z.string().nullish(),
     from_user_id: z.string().nullish(),
+    from_parent_user_id: z.string().nullish(),
     text: z.object({ body: z.string() }).optional(),
     button: z.object({ text: z.string() }).optional(),
     interactive: z
@@ -84,6 +85,7 @@ const messageSchema = z
         phone_number: z.string().nullish(),
         phone_number_id: z.string().nullish(),
         business_scoped_user_id: z.string().nullish(),
+        parent_business_scoped_user_id: z.string().nullish(),
         username: z.string().nullish(),
         transcript: transcriptSchema,
         media_url: z.string().nullish(),
@@ -110,6 +112,7 @@ const eventSchema = z
         phone_number: z.string().nullish(),
         phone_number_id: z.string().nullish(),
         business_scoped_user_id: z.string().nullish(),
+        parent_business_scoped_user_id: z.string().nullish(),
         username: z.string().nullish(),
       })
       .loose()
@@ -242,8 +245,9 @@ function contentOf(message: KapsoMessage): {
   }
 }
 
+/** Extracts digits from a phone-like string; rejects strings with letters (e.g. BSUIDs like CO.123…). */
 const digitsOf = (value: string | null | undefined) =>
-  value ? value.replace(/\D/g, "") : "";
+  value && !/[a-zA-Z]/.test(value) ? value.replace(/\D/g, "") : "";
 
 const cleanText = (value: string | null | undefined): string | null =>
   value?.trim() || null;
@@ -307,7 +311,10 @@ export function parseKapsoWebhook(
     const bsuid =
       cleanText(message.data.from_user_id) ??
       cleanText(kapso?.business_scoped_user_id) ??
-      cleanText(conversation?.business_scoped_user_id);
+      cleanText(conversation?.business_scoped_user_id) ??
+      cleanText(message.data.from_parent_user_id) ??
+      cleanText(kapso?.parent_business_scoped_user_id) ??
+      cleanText(conversation?.parent_business_scoped_user_id);
     const username =
       cleanUsername(conversation?.username) ?? cleanUsername(kapso?.username);
     if (!from && !bsuid) {

@@ -115,7 +115,9 @@ describe("inbound messages", () => {
       },
     ]);
 
-    // Later the same BSUID lead also provides a phone number: reconciles into the same thread.
+    // Later the same BSUID lead also provides a phone number: reconciles into the same thread
+    // and re-syncs HubSpot with the new phone number.
+    await settle(ctx);
     const reconciled = await receive("Te paso mi número", {
       from: "573001234567",
       bsuid: "CO.1602439504987482",
@@ -123,6 +125,7 @@ describe("inbound messages", () => {
       profileName: "Nicolás",
     });
     expect(reconciled.threadId).toBe(first.threadId);
+    await settle(ctx);
     const updated = await testDb().thread.findUniqueOrThrow({
       where: { id: first.threadId },
     });
@@ -132,6 +135,27 @@ describe("inbound messages", () => {
       bsuid: "CO.1602439504987482",
       username: "n.c__17",
       name: "Nicolás",
+    });
+    expect(
+      ctx.integrations.fakes.crm.contacts.get("+573001234567")?.lead,
+    ).toMatchObject({
+      phone: "+573001234567",
+      bsuid: "CO.1602439504987482",
+    });
+
+    // If the same BSUID changes phone number later, phone and waId update to the new number.
+    const changed = await receive("Cambié de chip", {
+      from: "573009876543",
+      bsuid: "CO.1602439504987482",
+    });
+    expect(changed.threadId).toBe(first.threadId);
+    expect(
+      await testDb().thread.findUniqueOrThrow({
+        where: { id: first.threadId },
+      }),
+    ).toMatchObject({
+      phone: "+573009876543",
+      waId: "573009876543",
     });
 
     // Legacy phone-only thread later receives a BSUID: reconciles without creating a second thread.
@@ -154,6 +178,29 @@ describe("inbound messages", () => {
       bsuid: "UY.1112223334445556",
       username: "ana.uy",
     });
+
+    // If separate phone-only and BSUID-only threads already exist, arriving with both does not crash.
+    const separatePhone = await receive("Hola desde tel", {
+      from: "59899777888",
+      profileName: "Split",
+    });
+    const separateBsuid = await receive("Hola desde bsuid", {
+      from: null,
+      bsuid: "UY.7777888899990000",
+    });
+    const mergedAttempt = await receive("Ambos ahora", {
+      from: "59899777888",
+      bsuid: "UY.7777888899990000",
+    });
+    expect(mergedAttempt.threadId).toBe(separateBsuid.threadId);
+    expect(separatePhone.threadId).not.toBe(separateBsuid.threadId);
+
+    // Concurrent first messages for a new BSUID lead land on one thread.
+    const race = await Promise.all([
+      receive("Uno", { from: null, bsuid: "CO.5555666677778888" }),
+      receive("Dos", { from: null, bsuid: "CO.5555666677778888" }),
+    ]);
+    expect(new Set(race.map((r) => r.threadId)).size).toBe(1);
   });
 });
 
