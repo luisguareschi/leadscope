@@ -1,5 +1,5 @@
 import cors from "cors";
-import express, { type Express } from "express";
+import express, { type Express, type RequestHandler } from "express";
 import type { AppContext } from "./context.js";
 import { assistantTestRoutes } from "./features/assistant-test/assistant-test.routes.js";
 import { companiesRoutes } from "./features/companies/companies.routes.js";
@@ -22,12 +22,8 @@ import { backofficeCors } from "./http/panel-origin.js";
 import { requirePlatformAdmin } from "./http/platform-admin.js";
 import { requireSession } from "./http/require-session.js";
 
-export function createApp(ctx: AppContext): Express {
-  const app = express();
-  app.disable("x-powered-by");
-  app.set("trust proxy", 1);
-
-  app.use((req, res, next) => {
+export function requestLogger(logger: AppContext["logger"]): RequestHandler {
+  return (req, res, next) => {
     const started = Date.now();
     res.on("finish", () => {
       const path = req.originalUrl.split("?")[0];
@@ -38,17 +34,25 @@ export function createApp(ctx: AppContext): Express {
         ms: Date.now() - started,
       };
       if (res.statusCode >= 500) {
-        ctx.logger.error(fields, "request");
+        logger.error(fields, "request");
       } else if (res.statusCode >= 400) {
-        ctx.logger.warn(fields, "request");
-      } else if (path === "/health") {
-        ctx.logger.debug(fields, "request");
+        logger.warn(fields, "request");
+      } else if (path === "/health" || path === "/health/") {
+        logger.debug(fields, "request");
       } else {
-        ctx.logger.info(fields, "request");
+        logger.info(fields, "request");
       }
     });
     next();
-  });
+  };
+}
+
+export function createApp(ctx: AppContext): Express {
+  const app = express();
+  app.disable("x-powered-by");
+  app.set("trust proxy", 1);
+
+  app.use(requestLogger(ctx.logger));
 
   app.get("/health", async (_req, res) => {
     await ctx.db.$queryRaw`SELECT 1`;

@@ -14,8 +14,20 @@ function parseUrl(input: Parameters<typeof fetch>[0]): {
     const parsed = new URL(raw);
     return { host: parsed.host, path: parsed.pathname };
   } catch {
-    return { host: "unknown", path: raw.split("?")[0] ?? raw };
+    const safePath = raw.startsWith("/")
+      ? raw.split(/[?#]/)[0] || "/"
+      : "unknown";
+    return { host: "unknown", path: safePath };
   }
+}
+
+function sanitizeFetchError(err: unknown): unknown {
+  if (err instanceof Error && /Failed to parse URL/i.test(err.message)) {
+    const sanitized = new TypeError("Failed to parse URL");
+    sanitized.stack = undefined;
+    return sanitized;
+  }
+  return err;
 }
 
 /**
@@ -25,7 +37,7 @@ function parseUrl(input: Parameters<typeof fetch>[0]): {
 export function createLoggedFetch(
   logger: Pick<Logger, "info" | "warn" | "error">,
   service: string,
-  baseFetch: typeof fetch = fetch,
+  baseFetch: typeof fetch = (input, init) => fetch(input, init),
 ): typeof fetch {
   return async (input, init) => {
     const started = Date.now();
@@ -53,7 +65,14 @@ export function createLoggedFetch(
       return response;
     } catch (err) {
       logger.error(
-        { service, method, host, path, ms: Date.now() - started, err },
+        {
+          service,
+          method,
+          host,
+          path,
+          ms: Date.now() - started,
+          err: sanitizeFetchError(err),
+        },
         "outbound request failed",
       );
       throw err;

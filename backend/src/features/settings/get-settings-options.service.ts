@@ -97,7 +97,10 @@ export async function getSettingsOptions(ctx: AppContext, companyId: string) {
   const apiKey = company.secrets.anthropicApiKey;
   if (apiKey) {
     try {
-      const listed = await listClaudeModels(apiKey);
+      const listed = await listClaudeModels(
+        apiKey,
+        ctx.integrations.anthropicFetch,
+      );
       if (listed.length > 0) {
         models = listed;
         modelsSource = "anthropic";

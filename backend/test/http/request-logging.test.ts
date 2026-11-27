@@ -2,7 +2,14 @@ import express from "express";
 import pino from "pino";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createApp } from "../../src/app.js";
+
+const reportErrorMock = vi.hoisted(() => vi.fn());
+vi.mock("../../src/lib/monitoring.js", () => ({
+  initMonitoring: vi.fn(),
+  reportError: reportErrorMock,
+}));
+
+import { createApp, requestLogger } from "../../src/app.js";
 import { errorHandler } from "../../src/http/error-handler.js";
 import { HttpError } from "../../src/lib/http-error.js";
 import {
@@ -26,7 +33,10 @@ function memoryLogger() {
 }
 
 describe("HTTP request and error logging", () => {
-  beforeEach(() => resetDb());
+  beforeEach(async () => {
+    reportErrorMock.mockClear();
+    await resetDb();
+  });
 
   it("logs 200 requests at info, healthy /health at debug, and 4xx at warn", async () => {
     const db = testDb();
@@ -79,36 +89,29 @@ describe("HTTP request and error logging", () => {
       }),
     );
     expect(entries.filter((entry) => entry.level === 50)).toHaveLength(0);
+    expect(reportErrorMock).not.toHaveBeenCalled();
     expect(JSON.stringify(entries)).not.toContain("secret=ignore");
   });
 
-  it("logs 5xx HttpErrors and unhandled errors at error, but not 4xx HttpErrors", async () => {
+  it("logs and reports 5xx HttpErrors and unhandled errors, but not 4xx HttpErrors", async () => {
     const { logger, entries } = memoryLogger();
     const ctx = createTestContext({ logger });
     const app = express();
-    app.use((req, res, next) => {
-      const started = Date.now();
-      res.on("finish", () => {
-        const fields = {
-          method: req.method,
-          path: req.originalUrl.split("?")[0],
-          status: res.statusCode,
-          ms: Date.now() - started,
-        };
-        if (res.statusCode >= 500) ctx.logger.error(fields, "request");
-        else if (res.statusCode >= 400) ctx.logger.warn(fields, "request");
-        else ctx.logger.info(fields, "request");
-      });
-      next();
-    });
+    app.use(requestLogger(ctx.logger));
+    const upstreamError = new HttpError(
+      502,
+      "Upstream failed",
+      "upstream_failed",
+    );
+    const crashError = new Error("boom");
     app.get("/bad", () => {
       throw new HttpError(400, "Bad input", "bad_input");
     });
     app.get("/upstream", () => {
-      throw new HttpError(502, "Upstream failed", "upstream_failed");
+      throw upstreamError;
     });
     app.get("/crash", () => {
-      throw new Error("boom");
+      throw crashError;
     });
     app.use(errorHandler(ctx));
 
@@ -151,6 +154,9 @@ describe("HTTP request and error logging", () => {
       }),
     );
     expect(errors.some((entry) => entry.path === "/bad")).toBe(false);
+    expect(reportErrorMock).toHaveBeenCalledTimes(2);
+    expect(reportErrorMock).toHaveBeenNthCalledWith(1, upstreamError);
+    expect(reportErrorMock).toHaveBeenNthCalledWith(2, crashError);
     expect(JSON.stringify(entries)).not.toContain("phone=123");
     expect(JSON.stringify(entries)).not.toContain("a@b.com");
   });
@@ -158,9 +164,8 @@ describe("HTTP request and error logging", () => {
   it("logs failing /health requests at error in createApp", async () => {
     const { logger, entries } = memoryLogger();
     const ctx = createTestContext({ logger });
-    const spy = vi
-      .spyOn(ctx.db, "$queryRaw")
-      .mockRejectedValueOnce(new Error("db down"));
+    const dbError = new Error("db down");
+    const spy = vi.spyOn(ctx.db, "$queryRaw").mockRejectedValueOnce(dbError);
     const app = createApp(ctx);
 
     try {
@@ -188,5 +193,6 @@ describe("HTTP request and error logging", () => {
         status: 500,
       }),
     );
+    expect(reportErrorMock).toHaveBeenCalledWith(dbError);
   });
 });

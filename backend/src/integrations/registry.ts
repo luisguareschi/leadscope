@@ -47,20 +47,16 @@ export function createIntegrations(
     crm: new FakeCrm(),
   };
   const anthropicClients = new Map<string, LlmClient>();
-  const kapsoFetch = createLoggedFetch(
-    logger,
-    "kapso",
-    overrides.kapsoFetch ?? ((input, init) => fetch(input, init)),
-  );
+  const kapsoFetch = createLoggedFetch(logger, "kapso", overrides.kapsoFetch);
   const hubspotFetch = createLoggedFetch(
     logger,
     "hubspot",
-    overrides.hubspotFetch ?? ((input, init) => fetch(input, init)),
+    overrides.hubspotFetch,
   );
   const anthropicFetch = createLoggedFetch(
     logger,
     "anthropic",
-    overrides.anthropicFetch ?? ((input, init) => fetch(input, init)),
+    overrides.anthropicFetch,
   );
 
   function fakeOrFail<T>(fake: T, what: string, company: LoadedCompany): T {
