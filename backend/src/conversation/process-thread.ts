@@ -21,7 +21,10 @@ import type {
 } from "../engine/types.js";
 import { whatsappMediaKind } from "../features/knowledge/prepare-upload.js";
 import type { Thread } from "../generated/prisma/client.js";
-import type { Channel } from "../integrations/whatsapp/channel.js";
+import {
+  whatsappRecipientFor,
+  type Channel,
+} from "../integrations/whatsapp/channel.js";
 import { normalizeVisionMimeType } from "../integrations/whatsapp/kapso/kapso-channel.js";
 import type { LlmClient, LlmUsageRecord } from "../llm/types.js";
 import { crmRequest } from "./crm-sync.js";
@@ -271,7 +274,7 @@ async function sendPublicFiles(
       const mimeType = file.mimeType || stored.contentType;
       kind = whatsappMediaKind(mimeType, stored.data.length);
       ({ waMessageId } = await channel.sendMedia({
-        to: thread.waId,
+        ...whatsappRecipientFor(thread),
         kind,
         data: stored.data,
         mimeType,
@@ -455,7 +458,7 @@ async function runTurn(
     let bubbleError: string | null = null;
     try {
       ({ waMessageId } = await channel.sendText({
-        to: thread.waId,
+        ...whatsappRecipientFor(thread),
         body,
       }));
     } catch (error) {

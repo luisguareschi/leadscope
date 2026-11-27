@@ -116,7 +116,7 @@ export function createHubSpotCrm(options: HubSpotOptions): Crm {
     const properties: Record<string, string> = {
       ...summaryProperties(lead.summary),
     };
-    if (current && !current.phone) properties.phone = lead.phone;
+    if (current && !current.phone && lead.phone) properties.phone = lead.phone;
     if (current && !current.firstname && firstName(lead.name))
       properties.firstname = firstName(lead.name)!;
     if (current && !current.email && lead.email) properties.email = lead.email;
@@ -134,14 +134,19 @@ export function createHubSpotCrm(options: HubSpotOptions): Crm {
       if (lead.existingContactId)
         return update(lead.existingContactId, lead, null);
 
-      const existing = await findByPhone(lead.phone);
-      if (existing) return update(existing.id, lead, existing.properties);
+      if (lead.phone) {
+        const existing = await findByPhone(lead.phone);
+        if (existing) return update(existing.id, lead, existing.properties);
+      }
 
       const properties: Record<string, string> = {
-        phone: lead.phone,
         ...summaryProperties(lead.summary),
       };
-      const name = firstName(lead.name);
+      if (lead.phone) properties.phone = lead.phone;
+      const name =
+        firstName(lead.name) ??
+        (lead.username ? `@${lead.username.replace(/^@+/, "")}` : null) ??
+        (!lead.phone && lead.bsuid ? lead.bsuid : null);
       if (name) properties.firstname = name;
       if (lead.email) properties.email = lead.email;
       try {

@@ -9,7 +9,7 @@ export function LeadAvatar({
   thread,
   className,
 }: {
-  thread: Pick<Thread, "name" | "phone" | "source">;
+  thread: Pick<Thread, "name" | "phone" | "username" | "bsuid" | "source">;
   className?: string;
 }) {
   const form = thread.source === "form";
@@ -17,7 +17,13 @@ export function LeadAvatar({
     <span className={cn("relative inline-flex shrink-0", className)}>
       <Avatar className="size-full">
         <AvatarFallback className="text-[13px]">
-          {initials(thread.name ?? thread.phone.slice(-2))}
+          {initials(
+            thread.name ??
+              thread.username ??
+              thread.phone?.slice(-2) ??
+              thread.bsuid?.slice(-2) ??
+              "?",
+          )}
         </AvatarFallback>
       </Avatar>
       <span

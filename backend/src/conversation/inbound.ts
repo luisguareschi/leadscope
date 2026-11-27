@@ -104,8 +104,11 @@ async function recordOnce(
   if (!company) return { status: "unknown_company" };
   // Archived: the number is ignored, as if it belonged to no company. Nothing is stored.
   if (company.archivedAt) return { status: "archived_company" };
-  const phone = waIdToE164(message.from);
-  if (!phone) return { status: "invalid_phone" };
+  const phone = message.from ? waIdToE164(message.from) : null;
+  const waId = phone ? message.from : null;
+  const bsuid = message.bsuid?.trim() || null;
+  const username = message.username?.trim().replace(/^@+/, "") || null;
+  if (!phone && !bsuid) return { status: "invalid_phone" };
 
   // Avoid duplicate downloads if Meta/Kapso redelivered the same message.
   const duplicate = await ctx.db.message.findUnique({
@@ -119,37 +122,78 @@ async function recordOnce(
     message.type,
     message.body || storedImage?.mediaFileName || "",
   );
+  const threadSelect = {
+    id: true,
+    phone: true,
+    waId: true,
+    bsuid: true,
+    paused: true,
+    needsHuman: true,
+    crmSyncedAt: true,
+    crmPendingAction: true,
+  } as const;
   const recorded = await ctx.db.$transaction(async (tx) => {
-    const thread = await tx.thread.upsert({
-      where: { companyId_phone: { companyId: company.id, phone } },
-      create: {
-        companyId: company.id,
-        phone,
-        waId: message.from,
-        name: message.profileName,
-        lastInboundAt: message.sentAt,
-        lastMessageAt: message.sentAt,
-        lastMessagePreview: preview,
-        followUpCount: 0,
-        lastFollowUpAt: null,
-      },
-      update: {
-        waId: message.from,
-        ...(message.profileName ? { name: message.profileName } : {}),
-        lastInboundAt: message.sentAt,
-        lastMessageAt: message.sentAt,
-        lastMessagePreview: preview,
-        followUpCount: 0,
-        lastFollowUpAt: null,
-      },
-      select: {
-        id: true,
-        paused: true,
-        needsHuman: true,
-        crmSyncedAt: true,
-        crmPendingAction: true,
-      },
-    });
+    // Match by BSUID first, then by phone (Kapso/Meta recommendation). Reconcile missing
+    // identifiers when a lead sends both, without colliding with another existing thread.
+    const byBsuid = bsuid
+      ? await tx.thread.findUnique({
+          where: { companyId_bsuid: { companyId: company.id, bsuid } },
+          select: threadSelect,
+        })
+      : null;
+    const byPhone = phone
+      ? await tx.thread.findUnique({
+          where: { companyId_phone: { companyId: company.id, phone } },
+          select: threadSelect,
+        })
+      : null;
+
+    const existing = byBsuid ?? byPhone;
+    const thread = existing
+      ? await tx.thread.update({
+          where: { id: existing.id },
+          data: {
+            ...(phone &&
+            !existing.phone &&
+            (!byPhone || byPhone.id === existing.id)
+              ? { phone }
+              : {}),
+            ...(waId &&
+            (existing.phone === phone ||
+              (!existing.phone && (!byPhone || byPhone.id === existing.id)))
+              ? { waId }
+              : {}),
+            ...(bsuid &&
+            !existing.bsuid &&
+            (!byBsuid || byBsuid.id === existing.id)
+              ? { bsuid }
+              : {}),
+            ...(username ? { username } : {}),
+            ...(message.profileName ? { name: message.profileName } : {}),
+            lastInboundAt: message.sentAt,
+            lastMessageAt: message.sentAt,
+            lastMessagePreview: preview,
+            followUpCount: 0,
+            lastFollowUpAt: null,
+          },
+          select: threadSelect,
+        })
+      : await tx.thread.create({
+          data: {
+            companyId: company.id,
+            phone,
+            waId,
+            bsuid,
+            username,
+            name: message.profileName,
+            lastInboundAt: message.sentAt,
+            lastMessageAt: message.sentAt,
+            lastMessagePreview: preview,
+            followUpCount: 0,
+            lastFollowUpAt: null,
+          },
+          select: threadSelect,
+        });
     // Every lead goes to the CRM from their first message, even one who is disqualified later.
     // With HubSpot off nothing is queued; once it is on, a lead it never had is written on their
     // next message.

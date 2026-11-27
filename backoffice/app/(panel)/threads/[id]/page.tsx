@@ -28,9 +28,11 @@ import {
 import { ApiError } from "@/lib/api";
 import {
   formatDayLabel,
+  formatLeadContact,
   formatNumber,
   formatPhone,
   formatTime,
+  formatUsername,
 } from "@/lib/format";
 import { useMe, useThread } from "@/lib/queries";
 import type { Thread } from "@/lib/types";
@@ -65,6 +67,21 @@ function ReplyWindow({
 }
 
 type MobileView = "chat" | "lead";
+
+function headerSubtitle(thread: Thread): string {
+  const parts: string[] = [];
+  if (thread.phone) {
+    parts.push(formatPhone(thread.phone));
+    if (thread.username) parts.push(formatUsername(thread.username));
+  } else if (thread.name && thread.username) {
+    parts.push(formatUsername(thread.username), "Sin teléfono");
+  } else {
+    parts.push("Sin teléfono");
+    if (thread.username || thread.bsuid) parts.push("Usuario de WhatsApp");
+  }
+  if (thread.source === "form") parts.push("Formulario");
+  return parts.join(" · ");
+}
 
 /** The Lead tab's dot below lg: the panel has something to act on. */
 function attentionTone(thread: Thread | undefined): Tone | null {
@@ -133,7 +150,7 @@ export default function ThreadPage() {
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <h2 className="truncate font-heading text-lg leading-tight font-semibold tracking-tight lg:text-xl">
-                  {thread.name ?? formatPhone(thread.phone)}
+                  {thread.name ?? formatLeadContact(thread)}
                 </h2>
                 <span className="contents max-lg:hidden">
                   <StageBadge stage={thread.stage} />
@@ -142,8 +159,7 @@ export default function ThreadPage() {
                 </span>
               </div>
               <p className="truncate text-[13px] text-muted-foreground tabular-nums">
-                {formatPhone(thread.phone)}
-                {thread.source === "form" ? " · Formulario" : ""}
+                {headerSubtitle(thread)}
               </p>
             </div>
             <ThreadActions thread={thread} />

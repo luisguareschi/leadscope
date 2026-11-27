@@ -63,8 +63,8 @@ export function ThreadsSearch({
         <InputGroupInput
           ref={input}
           type="search"
-          placeholder="Buscar por nombre o teléfono"
-          aria-label="Buscar conversaciones por nombre o teléfono"
+          placeholder="Buscar por nombre, usuario o teléfono"
+          aria-label="Buscar conversaciones por nombre, usuario o teléfono"
           value={value}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {

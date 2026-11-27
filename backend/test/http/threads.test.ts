@@ -323,6 +323,40 @@ describe("threads", () => {
     expect(await db.message.count()).toBe(0);
   });
 
+  it("returns and searches BSUID-only threads by username or BSUID", async () => {
+    const bsuidThread = await db.thread.create({
+      data: {
+        companyId,
+        phone: null,
+        waId: null,
+        bsuid: "CO.1602439504987482",
+        username: "n.c__17",
+        lastMessageAt: new Date(),
+      },
+    });
+    await makeThread(companyId, "+59899000001", { name: "Ana" });
+
+    const byAtHandle = await request(app)
+      .get("/internal/threads?search=%40n.c__17")
+      .set(auth)
+      .expect(200);
+    expect(byAtHandle.body.threads).toHaveLength(1);
+    expect(byAtHandle.body.threads[0]).toMatchObject({
+      id: bsuidThread.id,
+      phone: null,
+      bsuid: "CO.1602439504987482",
+      username: "n.c__17",
+    });
+
+    const byBsuid = await request(app)
+      .get("/internal/threads?search=CO.160243")
+      .set(auth)
+      .expect(200);
+    expect(byBsuid.body.threads.map((t: { id: string }) => t.id)).toEqual([
+      bsuidThread.id,
+    ]);
+  });
+
   it("rejects bad input", async () => {
     await request(app)
       .get("/internal/threads?stage=bogus")

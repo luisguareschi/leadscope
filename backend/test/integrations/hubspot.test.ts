@@ -143,6 +143,53 @@ describe("HubSpot CRM", () => {
     });
   });
 
+  it("creates and updates a contact without a phone for a BSUID-only lead", async () => {
+    const { calls, fetchImpl } = fakeHubSpot([
+      { json: { id: "888" } },
+      { json: {} },
+    ]);
+    const crm = createHubSpotCrm({
+      accessToken: "pat",
+      transcriptProperty: "leadscope_resumen",
+      fetchImpl,
+    });
+    const bsuidLead = {
+      phone: null,
+      bsuid: "CO.1602439504987482",
+      username: "n.c__17",
+      name: null,
+      email: null,
+      existingContactId: null,
+      summary: "Resumen BSUID",
+    };
+    await expect(crm.upsertLead(bsuidLead)).resolves.toEqual({
+      contactId: "888",
+    });
+    expect(calls[0]).toEqual({
+      method: "POST",
+      path: "/crm/v3/objects/contacts",
+      body: {
+        properties: {
+          firstname: "@n.c__17",
+          leadscope_resumen: "Resumen BSUID",
+        },
+      },
+    });
+
+    await expect(
+      crm.upsertLead({
+        ...bsuidLead,
+        existingContactId: "888",
+        summary: "Resumen actualizado",
+      }),
+    ).resolves.toEqual({ contactId: "888" });
+    expect(calls[1]).toEqual({
+      method: "PATCH",
+      path: "/crm/v3/objects/contacts/888",
+      body: { properties: { leadscope_resumen: "Resumen actualizado" } },
+    });
+  });
+
   it("surfaces HubSpot errors", async () => {
     const { fetchImpl } = fakeHubSpot([
       {

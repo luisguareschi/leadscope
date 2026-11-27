@@ -88,6 +88,73 @@ describe("inbound messages", () => {
     expect(new Set(results.map((result) => result.threadId)).size).toBe(1);
     expect(await testDb().message.count()).toBe(2);
   });
+
+  it("stores and answers BSUID-only leads without phone collisions and reconciles phone later", async () => {
+    const first = await receive("Hola quiero info", {
+      from: null,
+      bsuid: "CO.1602439504987482",
+      username: "n.c__17",
+      profileName: null,
+    });
+    const second = await receive("Buenas tardes", {
+      from: null,
+      bsuid: "UY.9999999999999999",
+      username: "otro_user",
+      profileName: "Lucía",
+    });
+    expect(first.threadId).not.toBe(second.threadId);
+
+    ctx.llm.push({ reply: "¡Hola! ¿Qué propiedad estás buscando?" });
+    await expect(processThread(ctx, first.threadId)).resolves.toBe("replied");
+    expect(ctx.integrations.fakes.channel.sent).toMatchObject([
+      {
+        to: "CO.1602439504987482",
+        recipient: "CO.1602439504987482",
+        kind: "text",
+        body: "¡Hola! ¿Qué propiedad estás buscando?",
+      },
+    ]);
+
+    // Later the same BSUID lead also provides a phone number: reconciles into the same thread.
+    const reconciled = await receive("Te paso mi número", {
+      from: "573001234567",
+      bsuid: "CO.1602439504987482",
+      username: "n.c__17",
+      profileName: "Nicolás",
+    });
+    expect(reconciled.threadId).toBe(first.threadId);
+    const updated = await testDb().thread.findUniqueOrThrow({
+      where: { id: first.threadId },
+    });
+    expect(updated).toMatchObject({
+      phone: "+573001234567",
+      waId: "573001234567",
+      bsuid: "CO.1602439504987482",
+      username: "n.c__17",
+      name: "Nicolás",
+    });
+
+    // Legacy phone-only thread later receives a BSUID: reconciles without creating a second thread.
+    const legacy = await receive("Hola", {
+      from: "59899111222",
+      profileName: "Ana",
+    });
+    const linked = await receive("Sigo acá", {
+      from: "59899111222",
+      bsuid: "UY.1112223334445556",
+      username: "ana.uy",
+    });
+    expect(linked.threadId).toBe(legacy.threadId);
+    expect(
+      await testDb().thread.findUniqueOrThrow({
+        where: { id: legacy.threadId },
+      }),
+    ).toMatchObject({
+      phone: "+59899111222",
+      bsuid: "UY.1112223334445556",
+      username: "ana.uy",
+    });
+  });
 });
 
 describe("a bot turn", () => {

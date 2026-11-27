@@ -107,6 +107,23 @@ export function formatPhone(e164: string): string {
   return uruguay ? `+598 ${uruguay[1]} ${uruguay[2]} ${uruguay[3]}` : e164;
 }
 
+export function formatUsername(username: string): string {
+  const handle = username.trim().replace(/^@+/, "");
+  return handle ? `@${handle}` : "";
+}
+
+/** Primary contact identifier for a lead: formatted phone, `@username`, BSUID, or fallback. */
+export function formatLeadContact(thread: {
+  phone: string | null;
+  username?: string | null;
+  bsuid?: string | null;
+}): string {
+  if (thread.phone) return formatPhone(thread.phone);
+  if (thread.username) return formatUsername(thread.username);
+  if (thread.bsuid) return thread.bsuid;
+  return "Sin teléfono";
+}
+
 export function initials(value: string): string {
   const letters = value
     .replace(/@.*/, "")

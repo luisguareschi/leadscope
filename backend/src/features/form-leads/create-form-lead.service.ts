@@ -7,6 +7,7 @@ import type { AppContext } from "../../context.js";
 import { crmRequest } from "../../conversation/crm-sync.js";
 import { messagePreview } from "../../conversation/inbound.js";
 import { withThreadLease } from "../../conversation/thread-lease.js";
+import { whatsappRecipientFor } from "../../integrations/whatsapp/channel.js";
 import { safeEqual } from "../../lib/crypto.js";
 import { badRequest, HttpError, notFound } from "../../lib/http-error.js";
 import { e164ToWaId, toE164 } from "../../lib/phone.js";
@@ -130,7 +131,7 @@ export async function createFormLead(
 async function sendWelcome(
   ctx: AppContext,
   company: LoadedCompany,
-  thread: { id: string; waId: string },
+  thread: { id: string; waId: string | null; bsuid: string | null },
 ): Promise<FormLeadResult> {
   const leased = await withThreadLease(
     ctx,
@@ -155,7 +156,7 @@ async function sendWelcome(
         ({ waMessageId } = await ctx.integrations
           .channelFor(company)
           .sendTemplate({
-            to: thread.waId,
+            ...whatsappRecipientFor(thread),
             name: template.name,
             language: template.language,
           }));

@@ -3,8 +3,12 @@ export type InboundMessage = {
   /** Meta's Phone number ID of the business number that received the message. */
   phoneNumberId: string;
   waMessageId: string;
-  /** The lead's WhatsApp id: international digits, no plus sign. */
-  from: string;
+  /** The lead's WhatsApp id: international digits, no plus sign. Null for BSUID-only senders. */
+  from: string | null;
+  /** Meta Business-Scoped User ID (e.g. `CO.1602439504987482`), when provided by WhatsApp/Kapso. */
+  bsuid?: string | null;
+  /** WhatsApp username without leading `@` (e.g. `n.c__17`), when provided. */
+  username?: string | null;
   profileName: string | null;
   /** WhatsApp type. Quick-reply buttons and interactive replies count as text. */
   type: string;

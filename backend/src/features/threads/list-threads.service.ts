@@ -26,11 +26,16 @@ export type ListThreadsInput = {
 function searchWhere(search: string | undefined): Prisma.ThreadWhereInput {
   const term = search?.trim();
   if (!term) return {};
+  const handle = term.replace(/^@+/, "");
   // "099 777 002" (national, with the trunk 0) should find +59899777002.
   const digits = term.replace(/\D/g, "").replace(/^0+/, "");
   return {
     OR: [
       { name: { contains: term, mode: "insensitive" } },
+      ...(handle
+        ? [{ username: { contains: handle, mode: "insensitive" as const } }]
+        : []),
+      { bsuid: { contains: term, mode: "insensitive" } },
       ...(digits.length >= 3 ? [{ phone: { contains: digits } }] : []),
     ],
   };

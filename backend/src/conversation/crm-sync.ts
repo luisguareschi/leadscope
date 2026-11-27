@@ -121,6 +121,8 @@ export async function syncThreadToCrm(
         if (current.hubspotEnabled !== true) return null;
         return ctx.integrations.crmFor(company).upsertLead({
           phone: thread.phone,
+          bsuid: thread.bsuid,
+          username: thread.username,
           name: thread.name,
           email: thread.email,
           existingContactId: thread.crmContactId,

@@ -13,7 +13,7 @@ import { cn } from "cn";
 import { Panel, StatusPill, type Tone } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { formatDateTime, formatPhone } from "@/lib/format";
+import { formatDateTime, formatPhone, formatUsername } from "@/lib/format";
 import { parseSummaryBullets } from "@/lib/summary";
 import { needsHumanReasonLabel } from "@/lib/thread-status";
 import type { CrmStatus, LeadField, Thread } from "@/lib/types";
@@ -337,7 +337,19 @@ export function LeadDetails({
           <Detail label="Contacto preferido" value={thread.callTime} />
         </Group>
         <Group title="Contacto">
-          <Detail label="Teléfono" value={formatPhone(thread.phone)} />
+          <Detail
+            label="Teléfono"
+            value={thread.phone ? formatPhone(thread.phone) : "No compartido"}
+          />
+          {thread.username ? (
+            <Detail
+              label="Usuario de WhatsApp"
+              value={formatUsername(thread.username)}
+            />
+          ) : null}
+          {!thread.phone && thread.bsuid ? (
+            <Detail label="ID de WhatsApp (BSUID)" value={thread.bsuid} />
+          ) : null}
           {thread.email ? (
             <Detail label="Correo electrónico" value={thread.email} />
           ) : null}

@@ -4,7 +4,10 @@ import pino from "pino";
 const REDACTED_KEYS = [
   "phone",
   "waId",
+  "bsuid",
+  "username",
   "to",
+  "recipient",
   "from",
   "body",
   "text",

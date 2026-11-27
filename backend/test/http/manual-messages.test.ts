@@ -383,9 +383,65 @@ describe("after an advisor wrote", () => {
     ).toEqual(["Hola, te escribe Ana."]);
     await settle(ctx);
   });
+
+  it("sends manual messages to a BSUID-only thread using recipient", async () => {
+    const thread = await makeThread({
+      phone: null,
+      waId: null,
+      bsuid: "CO.1602439504987482",
+      username: "n.c__17",
+      name: null,
+    });
+    const response = await send(thread.id, {
+      body: "Hola, ¿en qué podemos ayudarte?",
+    }).expect(201);
+
+    expect(ctx.integrations.fakes.channel.sent).toMatchObject([
+      {
+        to: "CO.1602439504987482",
+        recipient: "CO.1602439504987482",
+        kind: "text",
+        body: "Hola, ¿en qué podemos ayudarte?",
+      },
+    ]);
+    expect(response.body.thread).toMatchObject({
+      phone: null,
+      bsuid: "CO.1602439504987482",
+      username: "n.c__17",
+      paused: true,
+    });
+  });
 });
 
 describe("the HubSpot transcript", () => {
+  it("shows username and BSUID when a thread has no phone number", () => {
+    const at = new Date("2026-11-27T09:39:11Z");
+    const text = buildCrmSummary({
+      thread: {
+        phone: null,
+        bsuid: "CO.1602439504987482",
+        username: "n.c__17",
+        name: null,
+        email: null,
+        state: "qualify",
+        stage: "qualifying",
+        collected: {},
+        summary: null,
+        callTime: null,
+        needsHuman: false,
+        needsHumanReason: null,
+      },
+      messages: [
+        { direction: "inbound", type: "text", body: "Hola", sentAt: at },
+      ],
+      config: parseCompanyConfig(baseConfig),
+      now: at,
+    });
+    expect(text).toContain("Teléfono: No compartido (usuario de WhatsApp)");
+    expect(text).toContain("Usuario de WhatsApp: @n.c__17");
+    expect(text).toContain("ID de WhatsApp (BSUID): CO.1602439504987482");
+  });
+
   it("labels an operator's message with their name, and an admin's with their email", () => {
     const at = new Date("2026-10-22T15:00:00Z");
     const text = buildCrmSummary({

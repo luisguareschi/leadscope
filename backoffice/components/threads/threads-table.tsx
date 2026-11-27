@@ -20,7 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatPhone, formatRelative, formatWaiting } from "@/lib/format";
+import {
+  formatPhone,
+  formatRelative,
+  formatUsername,
+  formatWaiting,
+} from "@/lib/format";
 import type { Thread } from "@/lib/types";
 import { AssigneePicker } from "./assignee-picker";
 import { LeadAvatar } from "./lead-avatar";
@@ -29,6 +34,19 @@ import { StagePicker } from "./stage-picker";
 import { BotBadge, ColumnHelp, WroteAgainBadge } from "./status-badge";
 
 const HEAD = "h-10 text-xs font-medium text-muted-foreground";
+
+function leadTitle(thread: Thread): string {
+  if (thread.name) return thread.name;
+  if (thread.username) return formatUsername(thread.username);
+  return "Sin nombre";
+}
+
+function leadSubtitle(thread: Thread): string {
+  if (thread.phone) return formatPhone(thread.phone);
+  if (thread.name && thread.username) return formatUsername(thread.username);
+  if (thread.username) return "Sin teléfono";
+  return thread.bsuid ?? "Sin teléfono";
+}
 
 export function ThreadsTable({
   threads,
@@ -113,7 +131,7 @@ function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
             data-row-link
             className="truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
           >
-            {thread.name ?? "Sin nombre"}
+            {leadTitle(thread)}
           </Link>
           <span
             className="ml-auto inline-flex shrink-0 items-center gap-1 pl-2 text-xs text-muted-foreground tabular-nums"
@@ -129,7 +147,7 @@ function ThreadRow({ thread, queue }: { thread: Thread; queue: boolean }) {
         </div>
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate text-xs text-muted-foreground tabular-nums">
-            {formatPhone(thread.phone)}
+            {leadSubtitle(thread)}
           </span>
           <WroteAgainBadge thread={thread} />
         </div>
@@ -258,12 +276,12 @@ function DesktopTable({
                           className="truncate text-sm font-medium outline-none hover:underline focus-visible:underline"
                           onClick={(event) => event.stopPropagation()}
                         >
-                          {thread.name ?? "Sin nombre"}
+                          {leadTitle(thread)}
                         </Link>
                         <WroteAgainBadge thread={thread} />
                       </div>
                       <span className="truncate text-xs text-muted-foreground tabular-nums">
-                        {formatPhone(thread.phone)}
+                        {leadSubtitle(thread)}
                       </span>
                     </div>
                   </div>

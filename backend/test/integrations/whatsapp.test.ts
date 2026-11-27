@@ -57,7 +57,7 @@ describe("parseKapsoWebhook", () => {
         },
       ],
       statuses: [],
-      withoutPhone: 0,
+      withoutSender: 0,
     });
   });
 
@@ -127,7 +127,7 @@ describe("parseKapsoWebhook", () => {
     ]);
   });
 
-  it("skips history sync, outbound echoes, passive messages, and BSUID-only senders", () => {
+  it("skips history sync, outbound echoes, passive messages, and senders with no phone or BSUID", () => {
     const skipped = [
       receivedEvent({
         kapso: { direction: "inbound", origin: "history_sync" },
@@ -140,15 +140,70 @@ describe("parseKapsoWebhook", () => {
     for (const event of skipped)
       expect(parseKapsoWebhook(RECEIVED, event).messages).toEqual([]);
 
-    const bsuid = receivedEvent({
+    const missingBoth = receivedEvent({ from: undefined });
+    missingBoth.conversation.phone_number = undefined as unknown as string;
+    expect(parseKapsoWebhook(RECEIVED, missingBoth)).toMatchObject({
+      messages: [],
+      withoutSender: 1,
+    });
+  });
+
+  it("parses BSUID-only inbound messages (with username) and empty-string phone fallbacks", () => {
+    const realBsuidPayload = {
+      message: {
+        id: "wamid.bsuid.1",
+        text: { body: "Hola quiero comprar una propiedad" },
+        type: "text",
+        timestamp: "1795772351",
+      },
+      conversation: {
+        id: "f598d2bc-79e7-4039-a1b2-07e919494d2a",
+        status: "active",
+        username: "n.c__17",
+        phone_number_id: "1471388102717570",
+        business_scoped_user_id: "CO.1602439504987482",
+      },
+      phone_number_id: "1471388102717570",
+      is_new_conversation: true,
+      type: RECEIVED,
+    };
+    expect(parseKapsoWebhook(RECEIVED, realBsuidPayload)).toEqual({
+      messages: [
+        {
+          phoneNumberId: "1471388102717570",
+          waMessageId: "wamid.bsuid.1",
+          from: null,
+          bsuid: "CO.1602439504987482",
+          username: "n.c__17",
+          profileName: null,
+          type: "text",
+          body: "Hola quiero comprar una propiedad",
+          sentAt: new Date(1795772351 * 1000),
+        },
+      ],
+      statuses: [],
+      withoutSender: 0,
+    });
+
+    const metaBsuid = receivedEvent({
       from: undefined,
       from_user_id: "US.13491208655302741918",
     });
-    bsuid.conversation.phone_number = undefined as unknown as string;
-    expect(parseKapsoWebhook(RECEIVED, bsuid)).toMatchObject({
-      messages: [],
-      withoutPhone: 1,
+    metaBsuid.conversation.phone_number = undefined as unknown as string;
+    expect(parseKapsoWebhook(RECEIVED, metaBsuid)).toMatchObject({
+      messages: [
+        {
+          from: null,
+          bsuid: "US.13491208655302741918",
+        },
+      ],
+      withoutSender: 0,
     });
+
+    const emptyFrom = receivedEvent({ from: "" });
+    expect(parseKapsoWebhook(RECEIVED, emptyFrom).messages[0]?.from).toBe(
+      "16315551181",
+    );
   });
 
   it("maps status events to receipts and ignores other events and junk", () => {
@@ -176,16 +231,16 @@ describe("parseKapsoWebhook", () => {
     ).toMatchObject([{ status: "failed" }]);
     expect(
       parseKapsoWebhook("whatsapp.conversation.created", outbound),
-    ).toEqual({ messages: [], statuses: [], withoutPhone: 0 });
+    ).toEqual({ messages: [], statuses: [], withoutSender: 0 });
     expect(parseKapsoWebhook(RECEIVED, "nonsense")).toEqual({
       messages: [],
       statuses: [],
-      withoutPhone: 0,
+      withoutSender: 0,
     });
     expect(parseKapsoWebhook(RECEIVED, { message: { nope: 1 } })).toEqual({
       messages: [],
       statuses: [],
-      withoutPhone: 0,
+      withoutSender: 0,
     });
   });
 
@@ -438,6 +493,55 @@ describe("Kapso channel", () => {
         filename: "brochure.pdf",
         caption: "Aquí tienes el brochure",
       },
+    });
+  });
+
+  it("uses recipient instead of to when targeting a BSUID", async () => {
+    const fetchImpl = mockFetch((url) =>
+      url.endsWith("/media")
+        ? Response.json({ id: "media-bsuid" })
+        : Response.json({ messages: [{ id: "wamid.bsuid.out" }] }),
+    );
+    const channel = channelWith(fetchImpl);
+
+    await channel.sendText({
+      recipient: "CO.1602439504987482",
+      body: "Hola",
+    });
+    expect(callOf(fetchImpl, 0).body).toEqual({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      recipient: "CO.1602439504987482",
+      type: "text",
+      text: { preview_url: false, body: "Hola" },
+    });
+
+    await channel.sendTemplate({
+      recipient: "CO.1602439504987482",
+      name: "bienvenida",
+      language: "es",
+    });
+    expect(callOf(fetchImpl, 1).body).toEqual({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      recipient: "CO.1602439504987482",
+      type: "template",
+      template: { name: "bienvenida", language: { code: "es" } },
+    });
+
+    await channel.sendMedia({
+      recipient: "CO.1602439504987482",
+      kind: "image",
+      data: Buffer.from([1, 2, 3]),
+      mimeType: "image/jpeg",
+      fileName: "foto.jpg",
+    });
+    expect(callOf(fetchImpl, 3).body).toEqual({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      recipient: "CO.1602439504987482",
+      type: "image",
+      image: { id: "media-bsuid" },
     });
   });
 
