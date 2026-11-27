@@ -35,6 +35,10 @@ const envSchema = z
     ANTHROPIC_API_KEY: optionalString,
     REPLY_DEBOUNCE_MS: z.coerce.number().int().min(0).default(3500),
     SENTRY_DSN: optionalString,
+    SENTRY_TRACES_SAMPLE_RATE: z.preprocess(
+      emptyToUndefined,
+      z.coerce.number().min(0).max(1).default(1),
+    ),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") return;

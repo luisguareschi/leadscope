@@ -1,5 +1,6 @@
 import { parseCompanyConfig } from "../companies/company-config.js";
 import type { AppContext } from "../context.js";
+import { reportError } from "../lib/monitoring.js";
 import { crmRequest, MAX_CRM_ATTEMPTS, syncWithCrmLease } from "./crm-sync.js";
 import { runFollowUpTurn } from "./follow-up.js";
 import { REPLY_WINDOW_MS } from "./reply-window.js";
@@ -219,6 +220,7 @@ export function startSweeper(ctx: AppContext): () => void {
       await sweepOnce(ctx);
     } catch (error) {
       ctx.logger.error({ err: error }, "sweep failed");
+      reportError(error, { job: "sweeper" });
     } finally {
       running = false;
     }
