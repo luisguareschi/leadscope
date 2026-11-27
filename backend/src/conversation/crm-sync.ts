@@ -2,6 +2,7 @@ import { loadCompany } from "../companies/load-company.js";
 import type { AppContext } from "../context.js";
 import type { CrmActionKind } from "../engine/types.js";
 import type { Prisma } from "../generated/prisma/client.js";
+import { reportError } from "../lib/monitoring.js";
 import { buildCrmSummary } from "./crm-summary.js";
 
 const MAX_BACKOFF_MS = 60 * 60 * 1000;
@@ -163,6 +164,14 @@ export async function syncThreadToCrm(
       { err: error, threadId, companyId: thread.companyId, attempts },
       "crm sync failed",
     );
+    if (attempts >= MAX_CRM_ATTEMPTS) {
+      reportError(error, {
+        job: "crm_sync",
+        companyId: thread.companyId,
+        threadId,
+        attempts,
+      });
+    }
     await ctx.db.thread.update({
       where: { id: threadId },
       data: {

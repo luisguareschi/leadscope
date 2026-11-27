@@ -1,4 +1,5 @@
-// Conversations are personal data (Ley 18.331): never log message text, phone numbers, or emails.
+// Conversations are personal data (Ley 18.331): never log or ship message text,
+// phone numbers, emails, or credentials.
 export const REDACTED_KEYS = [
   "phone",
   "waId",
@@ -15,4 +16,23 @@ export const REDACTED_KEYS = [
   "name",
   "reply",
   "authorization",
+  "cookie",
+  "set-cookie",
+  "x-api-key",
+  "apikey",
+  "token",
+  "accessToken",
+  "secret",
+  "password",
+  "sentByEmail",
+  "actorEmail",
+  "adminEmail",
+  "operatorEmail",
+  "summary",
+  "collected",
+  "callTime",
+  "caption",
+  "transcript",
+  "prompt",
+  "messages",
 ] as const;

@@ -25,15 +25,14 @@ export class CrmQueue {
       "task.crm",
       { "leadscope.thread_id": threadId },
       () => this.handler(threadId),
-    )
-      .catch((error: unknown) => {
+      (error) => {
         this.logger.error({ err: error, threadId }, "crm write failed");
         reportError(error, { job: "crm_queue", threadId });
-      })
-      .finally(() => {
-        this.running.delete(threadId);
-        if (this.rerun.delete(threadId)) this.schedule(threadId);
-      });
+      },
+    ).finally(() => {
+      this.running.delete(threadId);
+      if (this.rerun.delete(threadId)) this.schedule(threadId);
+    });
     this.running.set(threadId, task);
   }
 

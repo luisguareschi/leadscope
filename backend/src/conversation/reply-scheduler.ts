@@ -54,18 +54,17 @@ export class ReplyScheduler {
       "task.turn",
       { "leadscope.thread_id": threadId },
       () => this.handler(threadId),
-    )
-      .catch((error: unknown) => {
+      (error) => {
         this.options.logger.error(
           { err: error, threadId },
           "thread turn failed",
         );
         reportError(error, { job: "reply_scheduler", threadId });
-      })
-      .finally(() => {
-        this.running.delete(threadId);
-        if (this.rerun.delete(threadId)) this.run(threadId);
-      });
+      },
+    ).finally(() => {
+      this.running.delete(threadId);
+      if (this.rerun.delete(threadId)) this.run(threadId);
+    });
     this.running.set(threadId, task);
   }
 

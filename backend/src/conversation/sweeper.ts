@@ -1,6 +1,6 @@
 import { parseCompanyConfig } from "../companies/company-config.js";
 import type { AppContext } from "../context.js";
-import { reportError } from "../lib/monitoring.js";
+import { reportError, withBackgroundTrace } from "../lib/monitoring.js";
 import { crmRequest, MAX_CRM_ATTEMPTS, syncWithCrmLease } from "./crm-sync.js";
 import { runFollowUpTurn } from "./follow-up.js";
 import { REPLY_WINDOW_MS } from "./reply-window.js";
@@ -139,7 +139,15 @@ export async function sweepFollowUps(ctx: AppContext): Promise<number> {
       if (thread.messages[0]?.direction !== "outbound") continue;
       const ref = thread.lastFollowUpAt ?? thread.lastMessageAt;
       if (ref > delayCutoff) continue;
-      const outcome = await runFollowUpTurn(ctx, thread.id);
+      const outcome = await withBackgroundTrace(
+        "conversation.follow_up",
+        "task.follow_up",
+        {
+          "leadscope.thread_id": thread.id,
+          "leadscope.company_id": company.id,
+        },
+        () => runFollowUpTurn(ctx, thread.id),
+      );
       if (outcome === "sent") sent += 1;
     }
   }
@@ -198,7 +206,12 @@ export async function sweepOnce(ctx: AppContext): Promise<{
   });
   for (const { id } of dueCrm) {
     if (ctx.crm.isBusy(id)) continue;
-    await syncWithCrmLease(ctx, id);
+    await withBackgroundTrace(
+      "crm.sync",
+      "task.crm",
+      { "leadscope.thread_id": id },
+      () => syncWithCrmLease(ctx, id),
+    );
   }
 
   const followUpsSent = await sweepFollowUps(ctx);

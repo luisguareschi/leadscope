@@ -1,7 +1,8 @@
 import "dotenv/config";
 import { z } from "zod";
 
-const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
+const emptyToUndefined = (value: unknown) =>
+  typeof value === "string" && value.trim() === "" ? undefined : value;
 const optionalString = z.preprocess(emptyToUndefined, z.string().optional());
 const booleanFlag = z.preprocess(
   (value) =>
