@@ -1238,4 +1238,67 @@ describe("multi-bubble replies", () => {
       { kind: "text", body: "Te envío el brochure." },
     ]);
   });
+
+  it("keeps a pending inbound message last when it arrives mid-burst before later bubbles finish", async () => {
+    let now = new Date("2026-11-27T18:26:54.788Z");
+    ctx = createTestContext({
+      now: () => now,
+      sleep: async () => {
+        await receive("Busco 2 dormitorios", {
+          sentAt: new Date("2026-11-27T18:26:55.000Z"),
+        });
+        now = new Date("2026-11-27T18:26:57.485Z");
+      },
+    });
+
+    const { threadId } = await receive("Hola, qué proyectos tienen?", {
+      sentAt: new Date("2026-11-27T18:26:47.000Z"),
+    });
+    ctx.llm.push({
+      replies: [
+        "Hola Ana, soy Sofía.",
+        "Tenemos Altamira Tres Cruces y Altamira Libertad.",
+      ],
+    });
+    await expect(processThread(ctx, threadId)).resolves.toBe("replied");
+
+    now = new Date("2026-11-27T18:27:00.000Z");
+    ctx.llm.push({ reply: "Genial, ¿con qué presupuesto contás?" });
+    await expect(processThread(ctx, threadId)).resolves.toBe("replied");
+
+    expect(ctx.llm.calls[1]?.messages).toEqual([
+      { role: "user", content: "Hola, qué proyectos tienen?" },
+      {
+        role: "assistant",
+        content:
+          "Hola Ana, soy Sofía.\nTenemos Altamira Tres Cruces y Altamira Libertad.",
+      },
+      { role: "user", content: "Busco 2 dormitorios" },
+    ]);
+  });
+
+  it("keeps a pending inbound message last when its Meta timestamp precedes the prior outbound sentAt", async () => {
+    let now = new Date("2026-11-27T18:26:57.485Z");
+    ctx = createTestContext({ now: () => now });
+
+    const { threadId } = await receive("Hola", {
+      sentAt: new Date("2026-11-27T18:26:47.000Z"),
+    });
+    ctx.llm.push({ reply: "¡Hola! ¿Con qué presupuesto contás?" });
+    await expect(processThread(ctx, threadId)).resolves.toBe("replied");
+
+    // Meta webhook timestamps have whole-second precision (18:26:57.000 < 18:26:57.485).
+    await receive("150 mil", {
+      sentAt: new Date("2026-11-27T18:26:57.000Z"),
+    });
+    now = new Date("2026-11-27T18:27:00.000Z");
+    ctx.llm.push({ reply: "Perfecto, ¿conocés nuestros proyectos?" });
+    await expect(processThread(ctx, threadId)).resolves.toBe("replied");
+
+    expect(ctx.llm.calls[1]?.messages).toEqual([
+      { role: "user", content: "Hola" },
+      { role: "assistant", content: "¡Hola! ¿Con qué presupuesto contás?" },
+      { role: "user", content: "150 mil" },
+    ]);
+  });
 });
