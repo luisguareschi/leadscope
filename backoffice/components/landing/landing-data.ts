@@ -2,6 +2,13 @@
 export const WHATSAPP_DEMO_URL =
   "https://wa.me/34695403932?text=Hola%20Luis%2C%20quiero%20una%20demo%20de%20LeadScope%20para%20mi%20empresa";
 
+export const OWNER_CONTACT = {
+  name: "Luis Guareschi",
+  phoneDisplay: "+34 695 40 3932",
+  phoneHref: "tel:+34695403932",
+  linkedinUrl: "https://www.linkedin.com/in/luis-guareschi-29a68b1a0/",
+} as const;
+
 export type HeroScenarioId = "real_estate" | "logistics" | "b2b_services";
 
 export type HeroMessage =

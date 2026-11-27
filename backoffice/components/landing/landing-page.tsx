@@ -20,6 +20,7 @@ import {
   FAQ_ITEMS,
   FORBIDDEN_TOPIC_EXAMPLES,
   HERO_SCENARIOS,
+  OWNER_CONTACT,
   PRODUCT_TABS,
   WHATSAPP_DEMO_URL,
   type HeroMessage,
@@ -741,26 +742,39 @@ function FaqSection() {
 
 function LandingFooter() {
   const panel = usePanelLink();
+  const linkClass =
+    "rounded-md transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40";
   return (
     <footer className="border-t">
       <Container className="flex flex-col gap-4 pt-8 pb-[max(2rem,var(--safe-bottom))] text-[13px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <span className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight text-foreground">
-          <AppLogo className="size-5" />
-          LeadScope
-        </span>
-        <nav aria-label="Enlaces" className="flex items-center gap-6">
-          <Link
-            href={panel.href}
-            className="rounded-md transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
-          >
-            {panel.label}
-          </Link>
-          <a
-            {...EXTERNAL_LINK}
-            className="rounded-md transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
-          >
+        <div className="flex flex-col gap-1">
+          <span className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight text-foreground">
+            <AppLogo className="size-5" />
+            LeadScope
+          </span>
+          <span>Contacto · {OWNER_CONTACT.name}</span>
+        </div>
+        <nav
+          aria-label="Contacto y enlaces"
+          className="flex flex-wrap items-center gap-x-5 gap-y-2"
+        >
+          <a href={OWNER_CONTACT.phoneHref} className={linkClass}>
+            {OWNER_CONTACT.phoneDisplay}
+          </a>
+          <a {...EXTERNAL_LINK} className={linkClass}>
             WhatsApp
           </a>
+          <a
+            href={OWNER_CONTACT.linkedinUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={linkClass}
+          >
+            LinkedIn
+          </a>
+          <Link href={panel.href} className={linkClass}>
+            {panel.label}
+          </Link>
         </nav>
       </Container>
     </footer>
