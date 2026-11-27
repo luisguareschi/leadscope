@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "LeadScope",
     description: "Panel del asistente de WhatsApp",
     lang: "es",
-    start_url: "/",
+    start_url: "/threads",
     scope: "/",
     display: "standalone",
     background_color: "#f2f3f7",

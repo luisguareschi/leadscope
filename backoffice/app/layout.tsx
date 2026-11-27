@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "LeadScope",
-  description: "Panel del asistente de WhatsApp",
+  description: "Asistente de WhatsApp con IA para equipos de ventas",
   applicationName: "LeadScope",
   appleWebApp: {
     capable: true,

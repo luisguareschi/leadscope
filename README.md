@@ -31,7 +31,7 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
-Sign in at http://localhost:3000 as that email (development login, no password). The panel opens Empresas, and the list is empty. Create the company (for Altamira, name Altamira and identifier altamira) and enter the first operator's email. That writes the company, its slug, a starter config, and the operator, and invites the operator. With `AUTH_MODE=dev` the invitation is simulated in memory and no email is sent. It does not ask for API keys. The new row shows in the list.
+Sign in at http://localhost:3000/login as that email (development login, no password). The panel opens Empresas, and the list is empty. Create the company (for Altamira, name Altamira and identifier altamira) and enter the first operator's email. That writes the company, its slug, a starter config, and the operator, and invites the operator. With `AUTH_MODE=dev` the invitation is simulated in memory and no email is sent. It does not ask for API keys. The new row shows in the list.
 
 The menu on each row has Operadores (add and invite, resend the invitation, archive, restore, delete), Archivar / Restaurar, and Eliminar. Archiving is reversible. While a company is archived, its operators get an "empresa archivada" message instead of the panel, Entrar is replaced by Restaurar, and the bot ignores messages to its number. Archived companies are hidden until you turn on Mostrar archivadas. Eliminar is permanent. It asks you to type the company's identifier and removes the company and all its data. Archiving an operator blocks that login until it is restored. Deleting one also deletes its Supabase user, unless that email is on `PLATFORM_ADMIN_EMAILS`. Every one of these writes is recorded in `AdminAuditEntry`.
 

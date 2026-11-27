@@ -550,6 +550,8 @@ LLM: one module, `backend/src/llm/anthropic.ts`, takes the two system blocks and
 
 Client-side Next.js. Use the App Router for file-based routing and shadcn setup, but do not rely on SSR or Server Components for data. Pages are client components, and React Query talks to the Express backend. Supabase Auth runs in the browser (`@supabase/supabase-js`), and the access token is sent as `Authorization: Bearer …` on backend calls.
 
+The root `/` is a public landing page, not a panel page. Its `page.tsx` is a Server Component that only sets the page metadata (title, description, Open Graph) and renders the client landing from `components/landing/`. See [Landing page](#landing-page).
+
 Pages:
 
 1. **Login** (Supabase email + password, "forgot password"). No public signup. Invitation and reset emails land on `/auth/set-password`.
@@ -595,6 +597,16 @@ The panel sends only what an advisor writes in a thread's composer, from the com
 One shared backoffice serves all companies: one Vercel app, one URL. The operator's company comes from their login (`Operator.companyId`), and the backend filters every request by it. An operator of several companies switches between them in the panel (see [Several companies per login](#several-companies-per-login)). There is no per-company subdomain or branding in v1. A platform admin can list companies and create one without belonging to a company, and enter any of them through support access. Later options on the same app are a subdomain per client and per-company branding.
 
 React Query with polling (every 10 seconds on lists, 5 on an open conversation) is enough at this volume. No realtime subscription in v1.
+
+### Landing page
+
+Added on 27 Nov 2026. `/` used to redirect to Conversaciones. It is now a public page for prospective clients, in neutral Spanish with tú forms.
+
+- **Sections.** A fixed header starts transparent over the full-bleed cobalt hero and morphs into a centered floating pill past `y > 40`, with the logo, the Producto, Control, and Preguntas anchors, the theme button, Entrar or Ir al panel, and Pedir demo. The hero has the eyebrow pill, headline, two buttons (Pedir demo por WhatsApp and Ver cómo funciona), three trust checks, and a frosted-glass miniature LeadScope window that defaults to the Conversaciones table (with filter pills and real columns) and switches to three industry thread views (Inmobiliaria, Logística, Servicios B2B) showing WhatsApp bubbles next to a Lead panel. Producto and Control form a 3-row alternating 50/50 editorial + cobalt frosted-glass checkerboard (Agente IA, Conocimiento, Control y confianza), followed by a 3-column Métricas y HubSpot operational highlights strip. Preguntas frecuentes is a three-item accordion, followed by a dark closing banner and a short founder footer.
+- **Links.** Entrar goes to `/login`. Once signed in, the header and footer say Ir al panel and go to `/threads`. Every demo button opens a WhatsApp chat with Luis with a prefilled message (`WHATSAPP_DEMO_URL`), and the footer lists Luis's name, phone (`+34 695 40 3932`), WhatsApp, and LinkedIn (`OWNER_CONTACT`). The page shows no prices.
+- **Content.** The copy and the demo data live in `components/landing/landing-data.ts`, typed and apart from the layout in `landing-page.tsx`. The scenarios are illustrations and call no API.
+- **Look.** The hero uses a full-bleed cobalt atmospheric gradient with a subtle CSS grid and soft bottom transition into the page surface (white in light mode, `#03040b` in dark mode). The checkerboard pairs clean editorial halves with cobalt frosted-glass panels. The page uses the panel's theme tokens, so it follows light and dark mode and the theme button. The tabs and the accordion work from the keyboard, and smooth scrolling and header transitions respect reduced motion.
+- **PWA.** The manifest's `start_url` is `/threads`, so the installed app opens Conversaciones. iOS keeps the start URL from install time, so an installed app that still opens `/` is sent to `/threads`. A signed-out visitor to a panel page still goes to `/login`.
 
 ### Probar asistente
 
