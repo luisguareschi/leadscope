@@ -30,6 +30,15 @@ export function useIsIOS() {
   return React.useSyncExternalStore(subscribeNever, isIOS, () => false);
 }
 
+/** True when the panel runs as an installed PWA, on any platform. */
+export function useIsStandalone() {
+  return React.useSyncExternalStore(
+    subscribeStandalone,
+    isStandalone,
+    () => false,
+  );
+}
+
 /** True when the panel runs as an installed PWA (home-screen app) on iPhone or iPad. */
 export function useIsIOSPWA() {
   return React.useSyncExternalStore(
