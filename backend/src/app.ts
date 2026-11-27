@@ -30,15 +30,22 @@ export function createApp(ctx: AppContext): Express {
   app.use((req, res, next) => {
     const started = Date.now();
     res.on("finish", () => {
-      ctx.logger.info(
-        {
-          method: req.method,
-          path: req.originalUrl.split("?")[0],
-          status: res.statusCode,
-          ms: Date.now() - started,
-        },
-        "request",
-      );
+      const path = req.originalUrl.split("?")[0];
+      const fields = {
+        method: req.method,
+        path,
+        status: res.statusCode,
+        ms: Date.now() - started,
+      };
+      if (res.statusCode >= 500) {
+        ctx.logger.error(fields, "request");
+      } else if (res.statusCode >= 400) {
+        ctx.logger.warn(fields, "request");
+      } else if (path === "/health") {
+        ctx.logger.debug(fields, "request");
+      } else {
+        ctx.logger.info(fields, "request");
+      }
     });
     next();
   });

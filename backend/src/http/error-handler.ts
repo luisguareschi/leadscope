@@ -30,6 +30,19 @@ function bodyParserError(
 export function errorHandler(ctx: AppContext): ErrorRequestHandler {
   return (error, req, res, _next) => {
     if (error instanceof HttpError) {
+      if (error.status >= 500) {
+        ctx.logger.error(
+          {
+            err: error,
+            method: req.method,
+            path: req.originalUrl.split("?")[0],
+            status: error.status,
+            code: error.code,
+          },
+          "request error",
+        );
+        reportError(error);
+      }
       res.status(error.status).json({
         error: {
           code: error.code ?? "error",
@@ -68,7 +81,12 @@ export function errorHandler(ctx: AppContext): ErrorRequestHandler {
       return;
     }
     ctx.logger.error(
-      { err: error, method: req.method, path: req.path },
+      {
+        err: error,
+        method: req.method,
+        path: req.originalUrl.split("?")[0],
+        status: 500,
+      },
       "unhandled request error",
     );
     reportError(error);

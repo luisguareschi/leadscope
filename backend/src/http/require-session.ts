@@ -1,7 +1,8 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import { createRemoteJWKSet, errors, type JWTPayload } from "jose";
+import { createRemoteJWKSet, customFetch, errors, type JWTPayload } from "jose";
 import type { AppContext } from "../context.js";
 import { HttpError } from "../lib/http-error.js";
+import { createLoggedFetch } from "../lib/logged-fetch.js";
 import { isUniqueViolation } from "../lib/prisma.js";
 import { verifySupabaseAccessToken } from "./supabase-jwt.js";
 
@@ -114,7 +115,9 @@ function createSupabaseVerifier(ctx: AppContext) {
     ? `${SUPABASE_URL.replace(/\/$/, "")}/auth/v1`
     : undefined;
   const jwks = issuer
-    ? createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`))
+    ? createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`), {
+        [customFetch]: createLoggedFetch(ctx.logger, "supabase-jwks"),
+      })
     : null;
   const secret = SUPABASE_JWT_SECRET
     ? new TextEncoder().encode(SUPABASE_JWT_SECRET)

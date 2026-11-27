@@ -16,6 +16,7 @@ import {
 } from "../../src/integrations/registry.js";
 import type { InboundMessage } from "../../src/integrations/whatsapp/messages.js";
 import { parseEncryptionKey } from "../../src/lib/crypto.js";
+import type { Logger } from "../../src/lib/logger.js";
 import { createPrisma, type Db } from "../../src/lib/prisma.js";
 import { scriptedLlm, type ScriptedLlm } from "./scripted-llm.js";
 import {
@@ -141,19 +142,21 @@ export function createTestContext(
   options: {
     integrations?: Partial<Integrations>;
     authAdmin?: AuthAdmin;
+    logger?: Logger;
     now?: () => Date;
     sleep?: (ms: number) => Promise<void>;
     env?: Record<string, string>;
   } = {},
 ): TestContext {
   const env = testEnv(options.env);
+  const logger = options.logger ?? pino({ level: "silent" });
   const llm = scriptedLlm();
-  const base = createIntegrations(env, { llmFor: () => llm });
+  const base = createIntegrations(env, { llmFor: () => llm, logger });
   const ctx = createContext(env, {
     db: testDb(),
     integrations: { ...base, ...options.integrations },
     authAdmin: options.authAdmin,
-    logger: pino({ level: "silent" }),
+    logger,
     now: options.now,
     sleep: options.sleep ?? (async () => undefined),
   });
