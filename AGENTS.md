@@ -37,6 +37,7 @@ WhatsApp assistant for Altamira, a real-estate developer in Uruguay (not Altamir
   - **Chat & Probar asistente media preview:** clicking PDFs or images in a conversation bubble opens `MediaPreviewDialog` inline (matching Conocimiento's viewer, with iOS PDF fallback, open-in-new-tab, and download); `Probar asistente` `Enviaría:` file chips also open the preview dialog.
   - **Unified super-admin company switcher:** platform admins use the same company switcher across their own companies and all other active companies (labeled `Acceso de soporte` while in support access, with `Empresas` always visible in the nav), replacing the old sidebar footer `SupportBar` and mobile `← Empresas` pill.
 - On 27 Nov 2026 we added full WhatsApp Business-Scoped User ID (BSUID) and username support after a real Altamira lead arrived with `business_scoped_user_id` + `username` and no phone number (`migration 20261127120000_whatsapp_bsuid`): `Thread.phone` and `Thread.waId` are nullable, `Thread.bsuid` (unique per company) and `Thread.username` are stored, inbound lookup matches BSUID first then phone (reconciling both when available), outbound Kapso sends use `recipient` instead of `to` when `waId` is absent, HubSpot creates and updates phone-less contacts using `@username`/name, and the panel displays and searches by `@username`/BSUID.
+- Later on 27 Nov 2026 `/` became a public landing page in neutral Spanish for prospective clients, in place of the redirect to Conversaciones. Its demo buttons open a WhatsApp chat with Luis, and it shows no prices. The installed PWA now starts at `/threads`.
 
 **Product goal.** Luis owns LeadScope and licenses it to clients. Altamira (Uruguay, real estate) is the first client, and Paso Real Logistics is the second. The system is an industry-agnostic, multi-company product with one shared deployment, every row scoped by company, and company-specific behavior in config and instructions. There are no self-serve resale features yet (signup, billing, or a customer admin for their own company).
 
@@ -129,6 +130,8 @@ A turn that was running when a person changed the stage keeps its reply, collect
 ### 5. Small panel
 
 The panel has a thread list, a way to pause the assistant when a person takes over, and a composer to write to the lead from the thread view. The sidebar has Conversaciones, Métricas, Conocimiento, Probar asistente, and Configuración, plus Empresas for a platform admin (who also gets Métricas outside a company).
+
+**Landing.** `/` is a public page for prospective clients, in neutral Spanish with tú forms. It has a hero with a demo card for three industries, Producto tabs (Agente IA, Panel de equipo, Conocimiento, Métricas y HubSpot), Control y confianza, and Preguntas frecuentes with a closing banner. The header links to `/login` (Entrar), or to `/threads` (Ir al panel) once signed in. Every demo button opens a WhatsApp chat with Luis (`WHATSAPP_DEMO_URL` in `backoffice/components/landing/landing-data.ts`). It shows no prices and follows the panel's light and dark themes. An installed PWA that opens `/` goes straight to `/threads`.
 
 **Conversaciones.**
 
@@ -245,7 +248,7 @@ One repo holds two apps.
 - The look follows Revolut Business's admin dashboard and the Revolut web app (Nov 2026). Light mode is a soft grey canvas with white cards. Dark mode is Revolut's near-black canvas with navy-tinted cards. Buttons are ink/white pills, the accent is cobalt/periwinkle, body text is Inter, and headings are Geist.
 - The header has the page title and the account avatar menu, which holds the theme choice. The Conversaciones search (⌘K) sits at the top of that page only. The sign-in pages follow Revolut's SSO page.
 - Light and dark mode come from theme tokens in `app/globals.css`. The theme follows the system by default, can be switched from the account menu (and the theme button on the sign-in pages), and is remembered per browser.
-- The panel installs as a PWA through `app/manifest.ts`, the LeadScope icons, and `public/sw.js`. The service worker caches only an offline page in Spanish, never panel data, and has no push.
+- The panel installs as a PWA through `app/manifest.ts`, the LeadScope icons, and `public/sw.js`. The manifest's `start_url` is `/threads`, so the installed app opens Conversaciones and not the landing page. The service worker caches only an offline page in Spanish, never panel data, and has no push.
 - Panel copy is neutral Spanish with tú forms, not Uruguayan voseo.
 
 Supabase provides Postgres and Auth. Prisma owns the schema and all database access from the backend. Local development uses Postgres, with Docker Compose standing in for Supabase. Supabase and the app host are in us-east-1.
