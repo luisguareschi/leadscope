@@ -26,6 +26,7 @@ import {
   type Channel,
 } from "../integrations/whatsapp/channel.js";
 import { normalizeVisionMimeType } from "../integrations/whatsapp/kapso/kapso-channel.js";
+import { reportError } from "../lib/monitoring.js";
 import type { LlmClient, LlmUsageRecord } from "../llm/types.js";
 import { crmRequest } from "./crm-sync.js";
 import { messagePreview } from "./inbound.js";
@@ -78,6 +79,11 @@ function modelFailure(
 ): ModelCall {
   const reason = error instanceof Error ? error.message : String(error);
   ctx.logger.error({ err: error, ...log }, "model call failed");
+  reportError(error, {
+    job: "model_call",
+    companyId: log.companyId,
+    threadId: log.threadId,
+  });
   return {
     input: { kind: "model_failure", reason: reason.slice(0, 200) },
     usage: null,

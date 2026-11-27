@@ -1,4 +1,5 @@
 import type { Logger } from "../lib/logger.js";
+import { reportError, withBackgroundTrace } from "../lib/monitoring.js";
 
 /**
  * Runs CRM writes in the background, one at a time per thread, so neither the webhook nor a reply
@@ -19,14 +20,19 @@ export class CrmQueue {
       this.rerun.add(threadId);
       return;
     }
-    const task = this.handler(threadId)
-      .catch((error: unknown) =>
-        this.logger.error({ err: error, threadId }, "crm write failed"),
-      )
-      .finally(() => {
-        this.running.delete(threadId);
-        if (this.rerun.delete(threadId)) this.schedule(threadId);
-      });
+    const task = withBackgroundTrace(
+      "crm.sync",
+      "task.crm",
+      { "leadscope.thread_id": threadId },
+      () => this.handler(threadId),
+      (error) => {
+        this.logger.error({ err: error, threadId }, "crm write failed");
+        reportError(error, { job: "crm_queue", threadId });
+      },
+    ).finally(() => {
+      this.running.delete(threadId);
+      if (this.rerun.delete(threadId)) this.schedule(threadId);
+    });
     this.running.set(threadId, task);
   }
 

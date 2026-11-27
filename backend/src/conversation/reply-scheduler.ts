@@ -1,4 +1,5 @@
 import type { Logger } from "../lib/logger.js";
+import { reportError, withBackgroundTrace } from "../lib/monitoring.js";
 
 /**
  * Waits for a lead to stop typing, then runs one turn per thread at a time.
@@ -48,17 +49,22 @@ export class ReplyScheduler {
       this.rerun.add(threadId);
       return;
     }
-    const task = this.handler(threadId)
-      .catch((error: unknown) =>
+    const task = withBackgroundTrace(
+      "conversation.turn",
+      "task.turn",
+      { "leadscope.thread_id": threadId },
+      () => this.handler(threadId),
+      (error) => {
         this.options.logger.error(
           { err: error, threadId },
           "thread turn failed",
-        ),
-      )
-      .finally(() => {
-        this.running.delete(threadId);
-        if (this.rerun.delete(threadId)) this.run(threadId);
-      });
+        );
+        reportError(error, { job: "reply_scheduler", threadId });
+      },
+    ).finally(() => {
+      this.running.delete(threadId);
+      if (this.rerun.delete(threadId)) this.run(threadId);
+    });
     this.running.set(threadId, task);
   }
 

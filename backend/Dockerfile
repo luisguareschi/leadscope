@@ -21,4 +21,4 @@ COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 3001
 # Migrations need DIRECT_URL (Supabase's direct connection); the app uses the pooled DATABASE_URL.
-CMD ["sh", "-c", "npx prisma migrate deploy && exec node dist/index.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && exec node --import ./dist/instrument.js dist/index.js"]

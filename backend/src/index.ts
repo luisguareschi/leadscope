@@ -4,11 +4,19 @@ import { loadEnv } from "./config/env.js";
 import { startSweeper } from "./conversation/sweeper.js";
 import { createContext } from "./create-context.js";
 import { logger } from "./lib/logger.js";
-import { initMonitoring, reportError } from "./lib/monitoring.js";
+import { flushMonitoring, initMonitoring } from "./lib/monitoring.js";
 
 const env = loadEnv();
 logger.level = env.LOG_LEVEL;
-initMonitoring(env.SENTRY_DSN, env.NODE_ENV);
+initMonitoring({
+  dsn: env.SENTRY_DSN,
+  environment: env.NODE_ENV,
+  tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
+  release:
+    process.env.SENTRY_RELEASE?.trim() ||
+    process.env.RENDER_GIT_COMMIT?.trim() ||
+    undefined,
+});
 const ctx = createContext(env);
 const app = createApp(ctx);
 
@@ -32,7 +40,10 @@ const server = app.listen(env.PORT, () => {
 });
 const stopSweeper = startSweeper(ctx);
 
+let shuttingDown = false;
 async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
   logger.info({ signal }, "shutting down");
   stopSweeper();
   server.close();
@@ -43,6 +54,7 @@ async function shutdown(signal: string) {
     new Promise((resolve) => setTimeout(resolve, 20_000)),
   ]);
   await ctx.db.$disconnect();
+  await flushMonitoring();
   process.exit(0);
 }
 
@@ -50,5 +62,4 @@ process.on("SIGTERM", () => void shutdown("SIGTERM"));
 process.on("SIGINT", () => void shutdown("SIGINT"));
 process.on("unhandledRejection", (error) => {
   logger.error({ err: error }, "unhandled rejection");
-  reportError(error);
 });
