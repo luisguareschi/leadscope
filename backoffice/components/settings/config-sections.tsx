@@ -45,6 +45,7 @@ function TextRow({
   placeholder,
   narrow,
   compact,
+  disabled,
 }: {
   name: TextKey;
   label: ReactNode;
@@ -58,6 +59,7 @@ function TextRow({
   maxLength?: number;
   placeholder?: string;
   narrow?: boolean;
+  disabled?: boolean;
 }) {
   const { draft, errors, set } = useConfigEditor();
   const id = fieldId(name);
@@ -68,6 +70,7 @@ function TextRow({
     value,
     maxLength,
     placeholder,
+    disabled,
     spellCheck: mono ? false : undefined,
     "aria-invalid": error ? true : undefined,
   };
@@ -174,6 +177,7 @@ function useChoices() {
         value: option.value,
         label: option.legacy ? `${option.label} (anterior)` : option.label,
         detail: option.value,
+        supportsTemperature: option.supportsTemperature,
       })),
     };
   }, [options.data]);
@@ -565,6 +569,12 @@ export function ModelRow() {
 }
 
 function LimitsSection() {
+  const { draft, errors } = useConfigEditor();
+  const choices = useChoices();
+  const selectedModel = choices.models.find(
+    (option) => option.value === draft.model,
+  );
+  const temperatureUnsupported = selectedModel?.supportsTemperature === false;
   return (
     <Section
       title="Respuestas y límites"
@@ -574,8 +584,13 @@ function LimitsSection() {
         <TextRow
           name="temperature"
           label="Temperatura"
-          hint="De 0 a 1."
+          hint={
+            temperatureUnsupported
+              ? "Este modelo no admite temperatura personalizada; usa su configuración interna."
+              : "De 0 a 1."
+          }
           inputMode="decimal"
+          disabled={temperatureUnsupported && !errors.temperature}
           narrow
         />
         <TextRow

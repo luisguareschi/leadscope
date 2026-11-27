@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { parseCompanyConfig } from "../../src/companies/company-config.js";
 import { createAnthropicClient } from "../../src/llm/anthropic.js";
+import {
+  FALLBACK_CLAUDE_MODELS,
+  listClaudeModels,
+} from "../../src/llm/claude-models.js";
 import type { CompleteInput } from "../../src/llm/types.js";
 import { baseConfig } from "../support/harness.js";
 
@@ -384,5 +388,58 @@ describe("Anthropic client", () => {
       const body = JSON.parse(String(fetchImpl.mock.calls.at(-1)![1]?.body));
       expect(body.temperature).toBe(0.4);
     }
+  });
+
+  it("exposes supportsTemperature on fallback and listed Claude models", async () => {
+    const byId = new Map(
+      FALLBACK_CLAUDE_MODELS.map((m) => [m.value, m.supportsTemperature]),
+    );
+    expect(byId.get("claude-haiku-5-5")).toBe(false);
+    expect(byId.get("claude-sonnet-5-5")).toBe(false);
+    expect(byId.get("claude-opus-5-5")).toBe(false);
+    expect(byId.get("claude-fable-5-1")).toBe(false);
+    expect(byId.get("claude-opus-4-8")).toBe(false);
+    expect(byId.get("claude-haiku-4-5")).toBe(true);
+    expect(byId.get("claude-sonnet-4-6")).toBe(true);
+
+    const fetchImpl = vi.fn(async () =>
+      Response.json({
+        data: [
+          {
+            id: "claude-haiku-5-5",
+            display_name: "Claude Haiku 5.5",
+            created_at: "2026-11-01T00:00:00Z",
+            type: "model",
+          },
+          {
+            id: "claude-haiku-4-5-20251001",
+            display_name: "Claude Haiku 4.5",
+            created_at: "2025-10-01T00:00:00Z",
+            type: "model",
+          },
+        ],
+        has_more: false,
+        first_id: "claude-haiku-5-5",
+        last_id: "claude-haiku-4-5-20251001",
+      }),
+    );
+    const listed = await listClaudeModels(
+      "sk-test",
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(listed).toEqual([
+      {
+        value: "claude-haiku-5-5",
+        label: "Claude Haiku 5.5",
+        legacy: false,
+        supportsTemperature: false,
+      },
+      {
+        value: "claude-haiku-4-5-20251001",
+        label: "Claude Haiku 4.5",
+        legacy: true,
+        supportsTemperature: true,
+      },
+    ]);
   });
 });
