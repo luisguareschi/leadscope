@@ -1,6 +1,13 @@
 "use client";
 
-import { useRef, useState, type ReactElement, type ReactNode } from "react";
+import {
+  cloneElement,
+  useState,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
+import { SearchField } from "@onlymoein/liquidglass";
 import { toast } from "sonner";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { cn } from "cn";
@@ -15,14 +22,7 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from "@/components/ui/combobox";
-import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { LiquidSheet } from "@/components/ui/liquid-sheet";
 import { Spinner } from "@/components/ui/spinner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useChangeStage, useSettings } from "@/lib/queries";
@@ -46,8 +46,8 @@ function matches(
 const SEARCH_ABOVE = 6;
 
 /**
- * Below md, the pickers' list as a bottom sheet: big rows, one tap picks and closes. The search
- * field only shows for long lists, and nothing focuses it, so the keyboard stays down.
+ * Below md, the pickers' list as a native iOS 27 Liquid Glass bottom sheet: big rows, one tap
+ * picks and closes. The search field only shows for long lists.
  */
 export function PickerSheet<T>({
   title,
@@ -75,7 +75,15 @@ export function PickerSheet<T>({
   searchPlaceholder: string;
   emptyText: string;
   /** The trigger button; `children` is what it shows. */
-  trigger: ReactElement;
+  trigger: ReactElement<{
+    className?: string;
+    onClick?: (event: MouseEvent) => void;
+    "aria-label"?: string;
+    "aria-haspopup"?: "dialog";
+    "aria-expanded"?: boolean;
+    title?: string;
+    children?: ReactNode;
+  }>;
   triggerLabel: string;
   triggerTitle?: string;
   /** Optional pinned action below the list (e.g. "Ver todas en Empresas"). */
@@ -84,75 +92,74 @@ export function PickerSheet<T>({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const list = useRef<HTMLDivElement>(null);
-  const selected = useRef<HTMLButtonElement>(null);
   const searchable = options.length > SEARCH_ABOVE;
   const visible = query
     ? options.filter((option) => filter(option, query))
     : options;
 
-  return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        if (next) setQuery("");
-        setOpen(next);
-      }}
-    >
-      <SheetTrigger
-        aria-label={triggerLabel}
-        title={triggerTitle}
-        className="[&_svg:not([class*='size-'])]:size-4"
-        render={trigger}
-      >
+  const existingOnClick = trigger.props.onClick;
+  const triggerNode = cloneElement(trigger, {
+    "aria-label": triggerLabel,
+    "aria-haspopup": "dialog",
+    "aria-expanded": open,
+    title: triggerTitle,
+    className: cn(
+      "[&_svg:not([class*='size-'])]:size-4",
+      trigger.props.className,
+    ),
+    onClick: (event: MouseEvent) => {
+      existingOnClick?.(event);
+      if (event.defaultPrevented) return;
+      setQuery("");
+      setOpen(true);
+    },
+    children: (
+      <>
         {children}
         <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
-      </SheetTrigger>
-      <SheetContent
-        side="bottom"
-        className="gap-0 px-0 pt-0"
-        initialFocus={() => selected.current ?? list.current}
+      </>
+    ),
+  });
+
+  return (
+    <>
+      {triggerNode}
+      <LiquidSheet
+        open={open}
+        onOpenChange={(next) => {
+          if (next) setQuery("");
+          setOpen(next);
+        }}
+        title={title}
+        detents={searchable ? ["medium", "large"] : ["medium"]}
       >
-        <div
-          aria-hidden
-          className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30"
-        />
-        <SheetHeader className="px-4 pt-2.5 pb-2">
-          <SheetTitle className="text-base">{title}</SheetTitle>
-        </SheetHeader>
         {searchable ? (
-          <div className="px-4 pb-2">
-            <Input
-              type="search"
-              enterKeyHint="search"
+          <div className="shrink-0 px-4 pb-2.5">
+            <SearchField
+              variant="fill"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onValueChange={setQuery}
               placeholder={searchPlaceholder}
               aria-label={searchPlaceholder}
-              className="h-11 rounded-xl text-base"
+              className="ls-search-field w-full"
             />
           </div>
         ) : null}
-        <div
-          ref={list}
-          tabIndex={-1}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 outline-none"
-        >
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5">
           {visible.length === 0 ? (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">
               {emptyText}
             </p>
           ) : (
-            <ul className="flex flex-col gap-0.5">
+            <ul className="flex flex-col gap-0.5 pb-1">
               {visible.map((option) => {
                 const current = isSelected(option);
                 return (
                   <li key={getKey(option)}>
                     <button
-                      ref={current ? selected : undefined}
                       type="button"
                       aria-current={current ? "true" : undefined}
-                      className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[15px] outline-none select-none focus-visible:bg-accent active:bg-accent aria-[current=true]:font-medium [&_svg]:shrink-0"
+                      className="flex min-h-12 w-full items-center gap-3 rounded-2xl px-3.5 py-2 text-left text-[15px] transition-colors outline-none select-none hover:bg-foreground/[0.04] focus-visible:bg-accent active:bg-foreground/[0.08] aria-[current=true]:bg-primary/10 aria-[current=true]:font-semibold dark:hover:bg-white/[0.06] dark:active:bg-white/10 dark:aria-[current=true]:bg-white/10 [&_svg]:shrink-0"
                       onClick={() => {
                         onSelect(option);
                         setOpen(false);
@@ -170,12 +177,12 @@ export function PickerSheet<T>({
           )}
         </div>
         {footer ? (
-          <div className="shrink-0 border-t border-border/70 px-2 pt-2">
+          <div className="shrink-0 border-t border-border/70 px-2.5 pt-2">
             {footer(() => setOpen(false))}
           </div>
         ) : null}
-      </SheetContent>
-    </Sheet>
+      </LiquidSheet>
+    </>
   );
 }
 

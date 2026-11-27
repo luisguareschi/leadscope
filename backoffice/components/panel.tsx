@@ -71,7 +71,7 @@ export function Panel({
   return (
     <div
       className={cn(
-        "divide-y divide-border/70 overflow-hidden rounded-xl bg-card ring-1 ring-border/60 dark:ring-0",
+        "revolut-card divide-y divide-border/60 overflow-hidden rounded-[22px]",
         className,
       )}
     >
@@ -245,11 +245,11 @@ export function InlineCode({ children }: { children: ReactNode }) {
 
 const NOTICE: Record<"warning" | "error" | "neutral", string> = {
   warning:
-    "bg-card ring-border/60 dark:ring-0 **:data-[slot=notice-icon]:bg-primary/15 **:data-[slot=notice-icon]:text-primary",
+    "revolut-card **:data-[slot=notice-icon]:bg-primary/14 **:data-[slot=notice-icon]:text-primary",
   error:
-    "bg-card ring-destructive/30 dark:ring-destructive/25 **:data-[slot=notice-icon]:bg-destructive/15 **:data-[slot=notice-icon]:text-destructive",
+    "revolut-card ring-1 ring-destructive/30 dark:ring-destructive/30 **:data-[slot=notice-icon]:bg-destructive/15 **:data-[slot=notice-icon]:text-destructive",
   neutral:
-    "bg-card ring-border/60 dark:ring-0 **:data-[slot=notice-icon]:bg-muted **:data-[slot=notice-icon]:text-muted-foreground",
+    "revolut-card **:data-[slot=notice-icon]:bg-muted **:data-[slot=notice-icon]:text-muted-foreground",
 };
 
 /** A state the operator should act on: what happened, and the one action that fixes it. */
@@ -270,7 +270,7 @@ export function Notice({
     <div
       role={tone === "neutral" ? undefined : "alert"}
       className={cn(
-        "flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl p-4 ring-1",
+        "flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[22px] p-4",
         NOTICE[tone],
       )}
     >

@@ -18,9 +18,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { LiquidSegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsIOS } from "@/hooks/use-is-ios-pwa";
 import { formatBytes, formatNumber } from "@/lib/format";
 import { useFetchBlob, useKnowledgeFileText } from "@/lib/queries";
@@ -445,23 +445,35 @@ function FilePreviewBody({
       </DialogHeader>
 
       {hasTabs ? (
-        <Tabs
+        <LiquidSegmentedControl
+          aria-label="Modo de vista previa"
+          size="sm"
           value={activeTab}
           onValueChange={(value) => {
             if (value === "visual" || value === "text") setActiveTab(value);
           }}
-        >
-          <TabsList className="h-9">
-            <TabsTrigger value="visual" className="px-3 text-xs">
-              <EyeIcon className="size-3.5" />
-              Vista previa
-            </TabsTrigger>
-            <TabsTrigger value="text" className="px-3 text-xs">
-              <FileTextIcon className="size-3.5" />
-              Texto extraído
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+          className="w-fit min-w-64"
+          items={[
+            {
+              value: "visual",
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  <EyeIcon className="size-3.5" />
+                  Vista previa
+                </span>
+              ),
+            },
+            {
+              value: "text",
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  <FileTextIcon className="size-3.5" />
+                  Texto extraído
+                </span>
+              ),
+            },
+          ]}
+        />
       ) : null}
 
       {visualActive && visualKind ? (

@@ -242,7 +242,7 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="flex size-full flex-col bg-sidebar group-data-[variant=inset]:bg-transparent group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          className="flex size-full flex-col bg-sidebar group-data-[variant=inset]:bg-transparent group-data-[variant=floating]:glass-surface group-data-[variant=floating]:rounded-[26px] group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-foreground/7 dark:group-data-[variant=floating]:ring-white/12"
         >
           {children}
         </div>
@@ -307,7 +307,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
     <main
       data-slot="sidebar-inset"
       className={cn(
-        "relative flex w-full flex-1 flex-col bg-transparent md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
+        "relative flex w-full flex-1 flex-col bg-transparent md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=floating]:my-2",
         className,
       )}
       {...props}
@@ -475,8 +475,8 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  // Same pill colors as Configuración's section nav; keep the sidebar item size.
-  "peer/menu-button group/menu-button flex w-full items-center gap-3 overflow-hidden rounded-full p-2.5 text-left text-sm text-muted-foreground ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-2.5! hover:bg-card/70 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 active:bg-card/70 active:text-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-card/70 data-open:hover:text-foreground data-active:bg-card data-active:font-semibold data-active:text-foreground data-active:shadow-xs dark:hover:bg-white/5 dark:data-active:bg-white/8 dark:data-active:shadow-none data-active:[&>svg]:text-primary [&_svg]:size-5 [&>svg]:text-muted-foreground [&_svg]:shrink-0 [&>span:last-child]:truncate",
+  // Revolut + Liquid Glass pill nav items.
+  "peer/menu-button group/menu-button flex w-full items-center gap-3 overflow-hidden rounded-full p-2.5 text-left text-sm text-muted-foreground ring-sidebar-ring outline-hidden transition-[width,height,padding,background-color,color,box-shadow] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-2.5! hover:bg-foreground/5 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 active:bg-foreground/8 active:text-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-foreground/5 data-open:hover:text-foreground data-active:bg-white/95 data-active:font-semibold data-active:text-foreground data-active:shadow-[0_2px_8px_rgb(16_24_40/0.07),inset_0_1px_0_rgb(255_255_255/0.8)] dark:hover:bg-white/7 dark:data-active:bg-white/14 dark:data-active:shadow-[inset_0_1px_0_rgb(255_255_255/0.14)] data-active:[&>svg]:text-primary [&_svg]:size-5 [&>svg]:text-muted-foreground [&_svg]:shrink-0 [&>span:last-child]:truncate",
   {
     variants: {
       variant: {

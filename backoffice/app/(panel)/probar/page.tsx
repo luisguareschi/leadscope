@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Button as LiquidButton } from "@onlymoein/liquidglass";
 import { FlaskConicalIcon, InfoIcon, RotateCcwIcon } from "lucide-react";
 import { cn } from "cn";
 import { AssistantTestChat } from "@/components/assistant-test/assistant-test-chat";
@@ -9,8 +10,8 @@ import { AssistantTestLead } from "@/components/assistant-test/assistant-test-le
 import { useAssistantTest } from "@/components/assistant-test/assistant-test-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { LiquidSegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSettings } from "@/lib/queries";
 
 type MobileView = "chat" | "lead";
@@ -58,19 +59,20 @@ export default function AssistantTestPage() {
           Simula una conversación como si fueras un lead.
         </p>
         {chat.messages.length > 0 ? (
-          <Button
+          <LiquidButton
             type="button"
-            variant="outline"
-            size="sm"
+            variant="glass"
+            size="small"
+            icon={<RotateCcwIcon className="size-3.5" />}
+            className="!h-9 !px-3.5 !text-[13px] !font-semibold"
             onClick={() => {
               test.reset();
               setView("chat");
             }}
             disabled={test.pending}
           >
-            <RotateCcwIcon />
             Nueva conversación
-          </Button>
+          </LiquidButton>
         ) : null}
       </header>
 
@@ -112,16 +114,18 @@ export default function AssistantTestPage() {
         </div>
       ) : null}
 
-      <Tabs
-        value={view}
-        onValueChange={(value) => setView(value as MobileView)}
-        className="lg:hidden"
-      >
-        <TabsList className="w-full">
-          <TabsTrigger value="chat">Conversación</TabsTrigger>
-          <TabsTrigger value="lead">Lead</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="lg:hidden">
+        <LiquidSegmentedControl
+          aria-label="Vista de prueba"
+          value={view}
+          onValueChange={(value) => setView(value as MobileView)}
+          className="w-full"
+          items={[
+            { value: "chat", label: "Conversación" },
+            { value: "lead", label: "Lead" },
+          ]}
+        />
+      </div>
 
       {/* Below md the shell is exactly one screen, so the row takes what is left above the tab
           bar. From md a basis taller than any screen, so it always shrinks to the space left. */}

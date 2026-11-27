@@ -220,10 +220,10 @@ function Bubble({
     >
       <div
         className={cn(
-          "rounded-[20px] px-4 py-2.5 text-sm leading-relaxed",
+          "rounded-[22px] px-4 py-2.5 text-sm leading-relaxed",
           right
-            ? "bg-bubble text-bubble-foreground"
-            : "bg-card ring-1 ring-border/60 dark:bg-secondary dark:ring-0",
+            ? "bg-bubble text-bubble-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.2),0_2px_10px_rgb(73_79_223/0.22)]"
+            : "revolut-card",
           !continued && (right ? "rounded-tr-md" : "rounded-tl-md"),
           message.status === "failed" &&
             "ring-2 ring-destructive/60 dark:ring-2",
@@ -352,7 +352,7 @@ export function ChatTranscript({
             <Fragment key={message.id}>
               {showDay ? (
                 <div className="mt-5 mb-1 flex justify-center">
-                  <span className="rounded-full bg-card px-3 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border/60 dark:bg-secondary dark:ring-0">
+                  <span className="glass-surface rounded-full px-3.5 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border/60 dark:ring-white/10">
                     {day}
                   </span>
                 </div>

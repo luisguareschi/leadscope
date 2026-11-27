@@ -32,9 +32,9 @@ export function NavUser({
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={`Cuenta: ${shown}`}
-        className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+        className="rounded-full outline-none transition-transform active:scale-95 focus-visible:ring-3 focus-visible:ring-ring/40"
       >
-        <Avatar className="size-9">
+        <Avatar className="size-9 ring-2 ring-white/70 shadow-xs dark:ring-white/16">
           <AvatarFallback>{initials(shown)}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>

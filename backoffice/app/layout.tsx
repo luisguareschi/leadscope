@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
+import "@onlymoein/liquidglass/styles.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 import { ServiceWorker } from "@/components/service-worker";
@@ -25,8 +26,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f2f3f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#03040b" },
+    { media: "(prefers-color-scheme: light)", color: "#edf0f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#02040a" },
   ],
   // Draw under the notch and home indicator; the shell pads itself with the safe-area insets.
   viewportFit: "cover",

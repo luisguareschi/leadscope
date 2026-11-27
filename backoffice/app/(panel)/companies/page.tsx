@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { Button as LiquidButton } from "@onlymoein/liquidglass";
 import { PlusIcon, ShieldIcon } from "lucide-react";
 import { CompaniesTable } from "@/components/companies/companies-table";
 import { CreateCompanyDialog } from "@/components/companies/create-company-form";
 import { Panel, Section } from "@/components/panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import {
   Empty,
   EmptyDescription,
@@ -76,10 +76,15 @@ export default function CompaniesPage() {
                 Mostrar archivadas
               </Label>
             </div>
-            <Button onClick={() => setCreating(true)}>
-              <PlusIcon />
+            <LiquidButton
+              variant="filled"
+              size="regular"
+              icon={<PlusIcon className="size-4" />}
+              className="!h-9 !px-4 !text-sm !font-semibold"
+              onClick={() => setCreating(true)}
+            >
               Nueva empresa
-            </Button>
+            </LiquidButton>
           </>
         }
       >

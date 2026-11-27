@@ -45,52 +45,54 @@
   --color-status-ok: var(--status-ok);
   --color-status-warning: var(--status-warning);
   --color-status-info: var(--status-info);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) * 0.55);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.15);
+  --radius-2xl: calc(var(--radius) * 1.4);
+  --radius-3xl: calc(var(--radius) * 1.75);
+  --radius-4xl: calc(var(--radius) * 2.1);
 }
 
 /*
- * Revolut Business look. Light: a soft grey canvas with white cards. Dark: the app's near-black
- * canvas with navy-tinted surfaces. Main actions are ink/white pills; the periwinkle-cobalt
- * accent is for links, focus, toggles, the active nav icon, soft pills, and the team's bubbles.
+ * Revolut native iOS + iOS 27 Liquid Glass.
+ * Light: luminous cool iOS grouped canvas with an atmospheric cobalt/sky top aura so floating
+ * Liquid Glass bars and lenses refract light instead of reading as flat grey.
+ * Dark: Revolut OLED deep obsidian with a sapphire-indigo aurora wash and crisp elevated cards.
  */
 :root {
-  --background: #f2f3f7;
-  --foreground: #191c1f;
-  --card: #ffffff;
-  --card-foreground: #191c1f;
-  --popover: #ffffff;
-  --popover-foreground: #191c1f;
+  --background: #edf0f7;
+  --foreground: #12151c;
+  --card: rgb(255 255 255 / 0.94);
+  --card-foreground: #12151c;
+  --popover: rgb(255 255 255 / 0.86);
+  --popover-foreground: #12151c;
   --primary: #494fdf;
   --primary-foreground: #ffffff;
-  --secondary: #eceef3;
-  --secondary-foreground: #191c1f;
-  --muted: #f4f5f8;
-  --muted-foreground: #5f6470;
-  --accent: #eceef4;
-  --accent-foreground: #191c1f;
+  --secondary: rgb(228 232 243 / 0.82);
+  --secondary-foreground: #12151c;
+  --muted: #eef1f7;
+  --muted-foreground: #606776;
+  --accent: rgb(226 230 242 / 0.85);
+  --accent-foreground: #12151c;
   --destructive: #e23b4a;
-  --border: #e5e7ee;
-  --input: #eff1f5;
+  --border: rgb(18 21 28 / 0.08);
+  --input: #eff2f8;
   /*
-   * Text fields follow the surface they sit on. On the grey canvas they are white with an
-   * outline, since the grey fill vanishes against it; inside white surfaces (cards, dialogs,
-   * menus) they keep the grey fill with no outline. See the scoped rule below.
+   * Text fields follow the surface they sit on. On the canvas they are white with an
+   * outline; inside cards, dialogs, and menus they keep the subtle filled iOS style.
    */
-  --field: var(--card);
-  --field-border: #d3d7e0;
+  --field: #ffffff;
+  --field-border: rgb(18 21 28 / 0.12);
   --ring: #494fdf;
   --bubble: #494fdf;
   --bubble-foreground: #ffffff;
   --status-ok: #00b386;
   --status-warning: var(--primary);
-  --status-info: #0070b8;
-  --canvas-glow: rgb(73 79 223 / 0.06);
+  --status-info: #0075eb;
+  --canvas-glow-primary: rgb(73 79 223 / 0.14);
+  --canvas-glow-secondary: rgb(0 136 255 / 0.11);
+  --canvas-glow-bottom: rgb(73 79 223 / 0.05);
   /* Stage series, same order as STAGE_ORDER: Calificando, Por contactar, Contactado, Sin interés. */
   --chart-1: #8b96ff;
   --chart-2: var(--primary);
@@ -98,14 +100,14 @@
   --chart-4: var(--muted-foreground);
   --chart-5: var(--status-info);
   --chart-6: #a1a7b3;
-  --radius: 0.875rem;
-  --sidebar: #f2f3f7;
-  --sidebar-foreground: #191c1f;
+  --radius: 1.25rem;
+  --sidebar: transparent;
+  --sidebar-foreground: #12151c;
   --sidebar-primary: #494fdf;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgb(25 28 31 / 0.06);
-  --sidebar-accent-foreground: #191c1f;
-  --sidebar-border: #e5e7ee;
+  --sidebar-accent: rgb(18 21 28 / 0.06);
+  --sidebar-accent-foreground: #12151c;
+  --sidebar-border: rgb(18 21 28 / 0.08);
   --sidebar-ring: #494fdf;
   /* iPhone notch, home indicator and rounded corners (needs viewport-fit=cover). */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -115,6 +117,20 @@
   /* Extra top clearance for iOS standalone PWA's native status-bar progressive blur. */
   --pwa-top-offset: 0px;
   --header-safe-top: calc(var(--safe-top) + var(--pwa-top-offset));
+
+  /* @onlymoein/liquidglass palette calibration (light) */
+  --lg-fill: #494fdf;
+  --lg-tab-accent: #494fdf;
+  --lg-on: #00b386;
+  --lg-destructive: #e23b4a;
+  --lg-destructive-ink: #d42638;
+  --lg-menu-destructive: #d42638;
+  --lg-ring: rgb(73 79 223 / 0.45);
+  --lg-glass-tinted: rgb(245 247 253 / 0.92);
+  --lg-sheet-opaque: #ffffff;
+  --lg-surface: rgb(252 253 255 / 0.86);
+  --lg-surface-edge: rgb(18 21 28 / 0.08);
+  --lg-fill-subtle: rgb(118 124 148 / 0.14);
 }
 
 @supports (-webkit-touch-callout: none) {
@@ -126,32 +142,34 @@
 }
 
 .dark {
-  --background: #03040b;
-  --foreground: #f5f6fa;
-  --card: #12141f;
-  --card-foreground: #f5f6fa;
-  --popover: #1a1d2b;
-  --popover-foreground: #f5f6fa;
+  --background: #02040a;
+  --foreground: #f5f7fc;
+  --card: rgb(19 22 34 / 0.9);
+  --card-foreground: #f5f7fc;
+  --popover: rgb(22 26 40 / 0.86);
+  --popover-foreground: #f5f7fc;
   --primary: #6b7fff;
   --primary-foreground: #ffffff;
-  --secondary: #1d2030;
-  --secondary-foreground: #f5f6fa;
-  --muted: #181b28;
-  --muted-foreground: #969bad;
-  --accent: #22263a;
-  --accent-foreground: #f5f6fa;
+  --secondary: rgb(32 37 56 / 0.85);
+  --secondary-foreground: #f5f7fc;
+  --muted: #161a28;
+  --muted-foreground: #969cb0;
+  --accent: rgb(40 46 70 / 0.85);
+  --accent-foreground: #f5f7fc;
   --destructive: #ff5c69;
-  --border: rgb(255 255 255 / 0.07);
-  --input: #202334;
+  --border: rgb(255 255 255 / 0.08);
+  --input: #1d2133;
   --field: var(--input);
-  --field-border: transparent;
+  --field-border: rgb(255 255 255 / 0.06);
   --ring: #6b7fff;
   --bubble: #4f5ae8;
   --bubble-foreground: #ffffff;
   --status-ok: #2fd3a3;
   --status-warning: var(--primary);
   --status-info: #5cb8f5;
-  --canvas-glow: rgb(28 52 140 / 0.2);
+  --canvas-glow-primary: rgb(34 72 224 / 0.34);
+  --canvas-glow-secondary: rgb(94 106 255 / 0.2);
+  --canvas-glow-bottom: rgb(26 52 150 / 0.18);
   /* Stage series, same order as STAGE_ORDER. Calificando stays lighter than the solid primary. */
   --chart-1: #c5cbff;
   --chart-2: var(--primary);
@@ -159,21 +177,36 @@
   --chart-4: var(--muted-foreground);
   --chart-5: var(--status-info);
   --chart-6: #6f758a;
-  --sidebar: #03040b;
-  --sidebar-foreground: #f5f6fa;
+  --sidebar: transparent;
+  --sidebar-foreground: #f5f7fc;
   --sidebar-primary: #8c9bff;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #161928;
+  --sidebar-accent: rgb(255 255 255 / 0.09);
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgb(255 255 255 / 0.07);
+  --sidebar-border: rgb(255 255 255 / 0.09);
   --sidebar-ring: #6b7fff;
+
+  /* @onlymoein/liquidglass palette calibration (dark) */
+  --lg-fill: #6b7fff;
+  --lg-tab-accent: #8fa0ff;
+  --lg-on: #2fd3a3;
+  --lg-destructive: #ff5c69;
+  --lg-destructive-ink: #ff7a85;
+  --lg-menu-destructive: #ff6975;
+  --lg-ring: rgb(107 127 255 / 0.55);
+  --lg-glass-tinted: rgb(18 21 32 / 0.9);
+  --lg-sheet-opaque: #131622;
+  --lg-surface: rgb(24 28 42 / 0.84);
+  --lg-surface-edge: rgb(255 255 255 / 0.14);
+  --lg-fill-subtle: rgb(138 148 188 / 0.2);
+  --lg-thumb: rgb(255 255 255 / 0.22);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  /* Light mode: fields on a white surface keep the grey fill (see --field). */
+  /* Light mode: fields on a white surface keep the subtle grey fill (see --field). */
   html:not(.dark)
     :is(
       [data-slot="card"],
@@ -202,13 +235,119 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(
-      ellipse 80rem 36rem at 10% -20%,
-      var(--canvas-glow),
-      transparent 70%
-    );
+    background-image:
+      radial-gradient(
+        ellipse 72rem 34rem at 15% -12%,
+        var(--canvas-glow-primary),
+        transparent 68%
+      ),
+      radial-gradient(
+        ellipse 56rem 28rem at 88% -8%,
+        var(--canvas-glow-secondary),
+        transparent 64%
+      ),
+      radial-gradient(
+        ellipse 60rem 24rem at 50% 108%,
+        var(--canvas-glow-bottom),
+        transparent 65%
+      );
     background-attachment: fixed;
   }
+}
+
+/*
+ * Liquid Glass component refinements:
+ * - Scale the 8-blade iOS activity indicator proportionally to any Tailwind size-* class.
+ * - Allow SearchField and SegmentedControl to flex cleanly inside responsive layouts.
+ */
+.lg-spinner.ls-spinner {
+  container-type: size;
+  color: currentColor;
+}
+
+.lg-spinner.ls-spinner > i {
+  left: 43.75cqw;
+  width: 12.5cqw;
+  height: 30cqw;
+  border-radius: 6.25cqw;
+  transform-origin: 6.25cqw 50cqh;
+}
+
+.lg-input.ls-search-field {
+  max-width: none;
+  height: 44px;
+  font-size: 15px;
+}
+
+.lg-input.ls-search-field input {
+  font-size: 15px;
+}
+
+@media (max-width: 767px) {
+  .lg-input.ls-search-field input {
+    /* 16px prevents iOS Safari from zooming on focus. */
+    font-size: 16px;
+  }
+}
+
+.lg-segmented.ls-segmented {
+  height: 38px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.lg-segmented.ls-segmented[data-size="sm"] {
+  height: 34px;
+  font-size: 13px;
+}
+
+.lg-segmented.ls-segmented .lg-segmented-thumb {
+  border-radius: 999px;
+}
+
+.lg-segmented.ls-segmented .lg-segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.lg-segmented.ls-segmented .lg-segment[aria-checked="true"] {
+  font-weight: 600;
+}
+
+.lg-segmented.ls-segmented .lg-segment svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.lg-tab-bar.ls-mobile-tabs {
+  --lg-tab-height: 52px;
+  --lg-lens-grow-x: 16px;
+  --lg-lens-grow-y: 16px;
+  padding: 4px 7px;
+  max-width: calc(100vw - 1.5rem);
+}
+
+.lg-tab-bar.ls-mobile-tabs .lg-tab-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.lg-tab-bar.ls-mobile-tabs .lg-tab-icon > svg {
+  width: 21px;
+  height: 21px;
+}
+
+.lg-tab-bar.ls-mobile-tabs :is(.lg-tab-face, .lg-tab-copy) {
+  gap: 2px;
+  font-size: 10.5px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
 }
 
 /*
@@ -218,5 +357,36 @@
 @layer utilities {
   .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Frosted Liquid Glass surface for Base UI popups, sheets, and floating bars. */
+  .glass-surface {
+    background-color: var(--popover);
+    -webkit-backdrop-filter: blur(24px) saturate(1.7);
+    backdrop-filter: blur(24px) saturate(1.7);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.55),
+      0 12px 36px rgb(15 20 40 / 0.12);
+  }
+
+  .dark .glass-surface {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      0 16px 44px rgb(0 0 0 / 0.52);
+  }
+
+  /* Crisp Revolut native iOS card elevation over the atmospheric canvas. */
+  .revolut-card {
+    background-color: var(--card);
+    box-shadow:
+      0 1px 2px rgb(16 24 40 / 0.04),
+      0 0 0 1px rgb(18 21 28 / 0.055);
+  }
+
+  .dark .revolut-card {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.065),
+      0 1px 2px rgb(0 0 0 / 0.35),
+      0 0 0 1px rgb(255 255 255 / 0.075);
   }
 }

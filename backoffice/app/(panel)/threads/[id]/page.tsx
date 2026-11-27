@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeftIcon } from "lucide-react";
+import { Button as LiquidButton } from "@onlymoein/liquidglass";
+import { ChevronLeftIcon } from "lucide-react";
 import { cn } from "cn";
 import { Panel, StatusDot, StatusPill, type Tone } from "@/components/panel";
 import { ChatTranscript } from "@/components/threads/chat-transcript";
@@ -17,9 +17,8 @@ import {
 } from "@/components/threads/status-badge";
 import { ThreadActions } from "@/components/threads/thread-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { LiquidSegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -76,6 +75,7 @@ function attentionTone(thread: Thread | undefined): Tone | null {
 
 export default function ThreadPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const query = useThread(id);
   const me = useMe();
   const [view, setView] = useState<MobileView>("chat");
@@ -83,16 +83,14 @@ export default function ThreadPage() {
   const companyPaused = me.data?.company?.assistantPaused === true;
 
   const back = (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className="max-lg:-ml-1.5 max-lg:size-10"
+    <LiquidButton
+      type="button"
+      variant="glass"
+      icon={<ChevronLeftIcon className="size-5" />}
+      className="!size-9 !rounded-full max-lg:!size-10"
       aria-label="Volver a Conversaciones"
-      nativeButton={false}
-      render={<Link href="/threads" />}
-    >
-      <ArrowLeftIcon />
-    </Button>
+      onClick={() => router.push("/threads")}
+    />
   );
 
   if (query.isError) {
@@ -172,25 +170,32 @@ export default function ThreadPage() {
         )}
       </header>
 
-      <Tabs
-        value={view}
-        onValueChange={(value) => setView(value as MobileView)}
-        className="max-lg:px-3 lg:hidden"
-      >
-        <TabsList className="w-full">
-          <TabsTrigger value="chat">Conversación</TabsTrigger>
-          <TabsTrigger value="lead">
-            Lead
-            {attention ? (
-              <StatusDot
-                tone={attention}
-                aria-label="Requiere atención"
-                className="size-1.5"
-              />
-            ) : null}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="max-lg:px-3 lg:hidden">
+        <LiquidSegmentedControl
+          aria-label="Vista de conversación"
+          value={view}
+          onValueChange={(value) => setView(value as MobileView)}
+          className="w-full"
+          items={[
+            { value: "chat", label: "Conversación" },
+            {
+              value: "lead",
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  Lead
+                  {attention ? (
+                    <StatusDot
+                      tone={attention}
+                      aria-label="Requiere atención"
+                      className="size-1.5"
+                    />
+                  ) : null}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </div>
 
       {/*
         Below md the shell is exactly one screen, so the row takes what is left. From md the shell

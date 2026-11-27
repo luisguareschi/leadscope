@@ -33,6 +33,7 @@ export default function PanelLayout({
   const router = useRouter();
   const pathname = usePathname();
   const isThreadDetail = isThreadDetailPath(pathname);
+  const isSplitScroll = isThreadDetail || pathname.startsWith("/probar");
   const adminWithoutCompany =
     me.data?.platformAdmin === true && me.data.company == null;
   // Empresas is the admin home. Métricas is the other page they can open from there.
@@ -126,25 +127,36 @@ export default function PanelLayout({
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" />
+      <AppSidebar variant="floating" />
       <AssistantTestProvider>
-        {/* Below md the shell is exactly one screen: header, the page's own scroll, tab bar. */}
+        {/* Below md the shell is one viewport; scrolling pages flow behind the sticky header and floating Liquid Glass TabBar. */}
         <SidebarInset className="max-md:min-h-0 max-md:overflow-hidden">
-          {/* Below lg the thread page draws its own compact header. */}
-          <SiteHeader
-            className={isThreadDetail ? "max-lg:hidden" : undefined}
-          />
-          <div
-            className={cn(
-              "@container/main flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pt-2 max-md:min-h-0 md:gap-6 *:mx-auto *:w-full *:max-w-350",
-              // From md the inset has an outer margin (spacing * 4 in total) to leave room for.
-              isThreadDetail
-                ? "pb-0 md:max-h-[calc(100svh-var(--spacing)*4)] lg:max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] lg:pb-6"
-                : "pb-4 md:max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] md:pb-6",
-            )}
-          >
-            {children}
-          </div>
+          {isSplitScroll ? (
+            <>
+              {/* Below lg the thread page draws its own compact Liquid Glass header. */}
+              <SiteHeader
+                sticky={false}
+                className={isThreadDetail ? "max-lg:hidden" : undefined}
+              />
+              <div
+                className={cn(
+                  "@container/main flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pt-2 max-md:min-h-0 md:gap-6 *:mx-auto *:w-full *:max-w-350",
+                  isThreadDetail
+                    ? "pb-0 md:max-h-[calc(100svh-var(--spacing)*4)] lg:max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] lg:pb-6"
+                    : "max-md:pb-[calc(5.25rem+var(--safe-bottom))] md:max-h-[calc(100svh-var(--header-height)-var(--spacing)*4)] md:pb-6",
+                )}
+              >
+                {children}
+              </div>
+            </>
+          ) : (
+            <div className="@container/main flex flex-1 flex-col overflow-y-auto overscroll-contain max-md:min-h-0 md:max-h-[calc(100svh-var(--spacing)*4)]">
+              <SiteHeader sticky />
+              <div className="flex flex-1 flex-col gap-4 pt-2 pb-6 max-md:pb-[calc(5.75rem+var(--safe-bottom))] md:gap-6 *:mx-auto *:w-full *:max-w-350">
+                {children}
+              </div>
+            </div>
+          )}
           <MobileTabBar />
         </SidebarInset>
       </AssistantTestProvider>
