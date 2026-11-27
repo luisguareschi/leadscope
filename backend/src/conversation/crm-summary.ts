@@ -6,7 +6,9 @@ import type { LeadStage, ThreadState } from "../engine/types.js";
 import { senderLabel } from "../lib/operator-name.js";
 
 export type SummaryThread = {
-  phone: string;
+  phone: string | null;
+  bsuid?: string | null;
+  username?: string | null;
   name: string | null;
   email: string | null;
   state: ThreadState;
@@ -142,7 +144,15 @@ export function buildCrmSummary(input: {
         ? ` (la eligió ${thread.stageChangedByEmail} el ${stamp(thread.stageChangedAt, config, "full")})`
         : ""
     }`,
-    `Teléfono: ${thread.phone}`,
+    thread.phone
+      ? `Teléfono: ${thread.phone}`
+      : "Teléfono: No compartido (usuario de WhatsApp)",
+    thread.username
+      ? `Usuario de WhatsApp: @${thread.username.replace(/^@+/, "")}`
+      : null,
+    !thread.phone && thread.bsuid
+      ? `ID de WhatsApp (BSUID): ${thread.bsuid}`
+      : null,
     `Nombre en WhatsApp: ${thread.name ?? "—"}`,
     thread.email ? `Email: ${thread.email}` : null,
     `Contacto preferido: ${thread.callTime ?? "—"}`,

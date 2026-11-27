@@ -2,7 +2,10 @@ import { loadCompany } from "../companies/load-company.js";
 import type { AppContext } from "../context.js";
 import { capReply } from "../engine/guardrails.js";
 import { buildChatTurns } from "../engine/history.js";
-import type { Channel } from "../integrations/whatsapp/channel.js";
+import {
+  whatsappRecipientFor,
+  type Channel,
+} from "../integrations/whatsapp/channel.js";
 import { messagePreview } from "./inbound.js";
 import { callModel } from "./process-thread.js";
 import { REPLY_WINDOW_MS } from "./reply-window.js";
@@ -192,7 +195,7 @@ export async function runFollowUpTurn(
       let sendError: string | null = null;
       try {
         ({ waMessageId } = await channel.sendText({
-          to: thread.waId,
+          ...whatsappRecipientFor(thread),
           body: reply,
         }));
       } catch (error) {

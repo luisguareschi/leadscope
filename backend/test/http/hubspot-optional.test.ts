@@ -198,7 +198,7 @@ describe("turning HubSpot off during a write", () => {
         crmFor: () => ({
           kind: "fake",
           async upsertLead(lead) {
-            started.push(lead.phone);
+            started.push(lead.phone ?? lead.bsuid ?? "unknown");
             await blocked;
             return { contactId: "77" };
           },

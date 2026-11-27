@@ -170,10 +170,14 @@ enum CrmAction {
 model Thread {
   id                  String            @id @default(cuid())
   companyId           String
-  /// E.164, e.g. +59899123456. Matches form contacts and WhatsApp contacts.
-  phone               String
-  /// WhatsApp id (digits) used as the `to` of outbound messages.
-  waId                String
+  /// E.164, e.g. +59899123456. Matches form contacts and WhatsApp contacts. Null for BSUID-only leads.
+  phone               String?
+  /// WhatsApp id (digits) used as the `to` of outbound messages. Null for BSUID-only leads.
+  waId                String?
+  /// Meta Business-Scoped User ID (e.g. CO.1602439504987482) for WhatsApp privacy/username leads.
+  bsuid               String?
+  /// WhatsApp username without leading `@` (e.g. n.c__17), when provided by Meta/Kapso.
+  username            String?
   /// WhatsApp profile name, when Meta sends it.
   name                String?
   /// Only from a form payload. The assistant does not ask for email.
@@ -239,6 +243,7 @@ model Thread {
   llmUsages           LlmUsage[]
 
   @@unique([companyId, phone])
+  @@unique([companyId, bsuid])
   @@index([companyId, lastMessageAt])
   @@index([companyId, stage, handedOffAt])
   @@index([assignedToId])

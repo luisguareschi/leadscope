@@ -1,7 +1,20 @@
 import { randomUUID } from "node:crypto";
 
-export type SendMediaInput = {
-  to: string;
+/**
+ * Outbound recipient on WhatsApp: a phone number (`to`, international digits without `+`) or a
+ * Meta Business-Scoped User ID (`recipient`, e.g. `CO.1602439504987482`).
+ */
+export type WhatsAppRecipient =
+  { to: string; recipient?: undefined } | { recipient: string; to?: undefined };
+
+export type SendTextInput = WhatsAppRecipient & { body: string };
+
+export type SendTemplateInput = WhatsAppRecipient & {
+  name: string;
+  language: string;
+};
+
+export type SendMediaInput = WhatsAppRecipient & {
   kind: "image" | "document";
   data: Buffer;
   mimeType: string;
@@ -15,15 +28,8 @@ export type SendMediaInput = {
  */
 export type Channel = {
   readonly kind: "kapso" | "fake";
-  sendText(input: {
-    to: string;
-    body: string;
-  }): Promise<{ waMessageId: string }>;
-  sendTemplate(input: {
-    to: string;
-    name: string;
-    language: string;
-  }): Promise<{ waMessageId: string }>;
+  sendText(input: SendTextInput): Promise<{ waMessageId: string }>;
+  sendTemplate(input: SendTemplateInput): Promise<{ waMessageId: string }>;
   sendMedia(input: SendMediaInput): Promise<{ waMessageId: string }>;
   /** Marks the lead's message as read and shows "typing…" while the reply is prepared. Best effort. */
   markReadWithTyping(waMessageId: string): Promise<void>;
@@ -40,8 +46,24 @@ export class ChannelError extends Error {
   }
 }
 
+/** Picks `to` (phone) when available, otherwise `recipient` (BSUID). */
+export function whatsappRecipientFor(thread: {
+  waId: string | null;
+  bsuid?: string | null;
+}): WhatsAppRecipient {
+  if (thread.waId) return { to: thread.waId };
+  if (thread.bsuid) return { recipient: thread.bsuid };
+  throw new ChannelError(
+    "La conversación no tiene teléfono ni identificador de WhatsApp para responder.",
+    "missing_recipient",
+  );
+}
+
 export type SentFakeMessage = {
+  /** Phone `to` (or BSUID when sent by `recipient`). */
   to: string;
+  /** Set when sent to a BSUID via `recipient`. */
+  recipient?: string;
   kind: "text" | "template" | "image" | "document";
   body: string;
   fileName?: string;
@@ -56,25 +78,26 @@ export class FakeChannel implements Channel {
   readonly kind = "fake" as const;
   readonly sent: SentFakeMessage[] = [];
 
-  async sendText({ to, body }: { to: string; body: string }) {
+  async sendText(input: SendTextInput) {
     const waMessageId = `wamid.fake.${randomUUID()}`;
-    this.sent.push({ to, kind: "text", body, waMessageId, at: new Date() });
+    this.sent.push({
+      to: input.to ?? input.recipient,
+      ...(input.recipient ? { recipient: input.recipient } : {}),
+      kind: "text",
+      body: input.body,
+      waMessageId,
+      at: new Date(),
+    });
     return { waMessageId };
   }
 
-  async sendTemplate({
-    to,
-    name,
-  }: {
-    to: string;
-    name: string;
-    language: string;
-  }) {
+  async sendTemplate(input: SendTemplateInput) {
     const waMessageId = `wamid.fake.${randomUUID()}`;
     this.sent.push({
-      to,
+      to: input.to ?? input.recipient,
+      ...(input.recipient ? { recipient: input.recipient } : {}),
       kind: "template",
-      body: name,
+      body: input.name,
       waMessageId,
       at: new Date(),
     });
@@ -84,7 +107,8 @@ export class FakeChannel implements Channel {
   async sendMedia(input: SendMediaInput) {
     const waMessageId = `wamid.fake.${randomUUID()}`;
     this.sent.push({
-      to: input.to,
+      to: input.to ?? input.recipient,
+      ...(input.recipient ? { recipient: input.recipient } : {}),
       kind: input.kind,
       body: input.caption ?? "",
       fileName: input.fileName,

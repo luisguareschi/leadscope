@@ -53,7 +53,9 @@ export type Assignee = { id: string; email: string; me: boolean };
 
 export type Thread = {
   id: string;
-  phone: string;
+  phone: string | null;
+  bsuid: string | null;
+  username: string | null;
   name: string | null;
   email: string | null;
   source: "whatsapp" | "form";

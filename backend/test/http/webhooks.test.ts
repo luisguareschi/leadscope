@@ -135,7 +135,7 @@ describe("Kapso webhook", () => {
     ).toEqual(["¿Me lo escribís?"]);
   });
 
-  it("does not store history backfills, Business App echoes, or messages with no phone number", async () => {
+  it("does not store history backfills, Business App echoes, or messages with no phone or BSUID", async () => {
     await postWebhook(
       kapsoMessageReceived({
         phoneNumberId: "PNID",
@@ -150,11 +150,58 @@ describe("Kapso webhook", () => {
         message: { kapso: { direction: "outbound", origin: "business_app" } },
       }),
     ).expect(200);
-    const bsuidOnly = kapsoMessageReceived({ phoneNumberId: "PNID" });
-    delete (bsuidOnly.message as { from?: string }).from;
-    delete (bsuidOnly.conversation as { phone_number?: string }).phone_number;
-    await postWebhook(bsuidOnly).expect(200);
+    const noSender = kapsoMessageReceived({ phoneNumberId: "PNID" });
+    delete (noSender.message as { from?: string }).from;
+    delete (noSender.conversation as { phone_number?: string }).phone_number;
+    await postWebhook(noSender).expect(200);
     expect(await db.message.count()).toBe(0);
+  });
+
+  it("stores, answers, and syncs a BSUID-only Kapso webhook with no phone number", async () => {
+    await postWebhook({
+      message: {
+        id: "wamid.bsuid.webhook.1",
+        text: { body: "Hola quiero info" },
+        type: "text",
+        timestamp: String(Math.floor(Date.now() / 1000)),
+      },
+      conversation: {
+        id: "conv_bsuid_1",
+        status: "active",
+        username: "n.c__17",
+        phone_number_id: "PNID",
+        business_scoped_user_id: "CO.1602439504987482",
+      },
+      phone_number_id: "PNID",
+      is_new_conversation: true,
+      type: "whatsapp.message.received",
+    }).expect(200);
+
+    await settle(ctx);
+    const thread = await db.thread.findFirstOrThrow({
+      select: {
+        phone: true,
+        waId: true,
+        bsuid: true,
+        username: true,
+        crmContactId: true,
+      },
+    });
+    expect(thread).toMatchObject({
+      phone: null,
+      waId: null,
+      bsuid: "CO.1602439504987482",
+      username: "n.c__17",
+      crmContactId: "fake-contact-1",
+    });
+    expect(ctx.integrations.fakes.channel.sent).toMatchObject([
+      {
+        to: "CO.1602439504987482",
+        recipient: "CO.1602439504987482",
+        kind: "text",
+        body: "Respuesta de prueba.",
+      },
+    ]);
   });
 
   it("applies delivery receipts without moving a status backwards", async () => {

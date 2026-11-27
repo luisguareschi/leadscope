@@ -33,6 +33,8 @@ const messageSchema = z
     timestamp: z.string().optional(),
     type: z.string(),
     from: z.string().nullish(),
+    from_user_id: z.string().nullish(),
+    from_parent_user_id: z.string().nullish(),
     text: z.object({ body: z.string() }).optional(),
     button: z.object({ text: z.string() }).optional(),
     interactive: z
@@ -82,6 +84,9 @@ const messageSchema = z
         passive: z.boolean().optional(),
         phone_number: z.string().nullish(),
         phone_number_id: z.string().nullish(),
+        business_scoped_user_id: z.string().nullish(),
+        parent_business_scoped_user_id: z.string().nullish(),
+        username: z.string().nullish(),
         transcript: transcriptSchema,
         media_url: z.string().nullish(),
         media_data: z
@@ -106,6 +111,9 @@ const eventSchema = z
         contact_name: z.string().nullish(),
         phone_number: z.string().nullish(),
         phone_number_id: z.string().nullish(),
+        business_scoped_user_id: z.string().nullish(),
+        parent_business_scoped_user_id: z.string().nullish(),
+        username: z.string().nullish(),
       })
       .loose()
       .optional(),
@@ -237,18 +245,21 @@ function contentOf(message: KapsoMessage): {
   }
 }
 
+/** Extracts digits from a phone-like string; rejects strings with letters (e.g. BSUIDs like CO.123…). */
 const digitsOf = (value: string | null | undefined) =>
-  value ? value.replace(/\D/g, "") : "";
+  value && !/[a-zA-Z]/.test(value) ? value.replace(/\D/g, "") : "";
+
+const cleanText = (value: string | null | undefined): string | null =>
+  value?.trim() || null;
+
+const cleanUsername = (value: string | null | undefined): string | null =>
+  value?.trim().replace(/^@+/, "") || null;
 
 export type ParsedKapsoWebhook = {
   messages: InboundMessage[];
   statuses: StatusUpdate[];
-  /**
-   * Inbound messages that carry only a business-scoped user id and no phone number
-   * (https://docs.kapso.ai/docs/whatsapp/business-scoped-user-ids). Threads are keyed by phone,
-   * so these are not stored yet.
-   */
-  withoutPhone: number;
+  /** Inbound messages carrying neither a phone number nor a business-scoped user id. */
+  withoutSender: number;
 };
 
 export function parseKapsoWebhook(
@@ -258,7 +269,7 @@ export function parseKapsoWebhook(
   const result: ParsedKapsoWebhook = {
     messages: [],
     statuses: [],
-    withoutPhone: 0,
+    withoutSender: 0,
   };
   const batch = batchSchema.safeParse(payload);
   const items = batch.success ? batch.data.data : [payload];
@@ -292,11 +303,22 @@ export function parseKapsoWebhook(
     if (kapso?.passive) continue;
     if (kapso?.origin && IGNORED_ORIGINS.has(kapso.origin)) continue;
     if (IGNORED_TYPES.has(message.data.type)) continue;
-    const from = digitsOf(
-      message.data.from ?? kapso?.phone_number ?? conversation?.phone_number,
-    );
-    if (!from) {
-      result.withoutPhone += 1;
+    const from =
+      digitsOf(message.data.from) ||
+      digitsOf(kapso?.phone_number) ||
+      digitsOf(conversation?.phone_number) ||
+      null;
+    const bsuid =
+      cleanText(message.data.from_user_id) ??
+      cleanText(kapso?.business_scoped_user_id) ??
+      cleanText(conversation?.business_scoped_user_id) ??
+      cleanText(message.data.from_parent_user_id) ??
+      cleanText(kapso?.parent_business_scoped_user_id) ??
+      cleanText(conversation?.parent_business_scoped_user_id);
+    const username =
+      cleanUsername(conversation?.username) ?? cleanUsername(kapso?.username);
+    if (!from && !bsuid) {
+      result.withoutSender += 1;
       continue;
     }
     const { type, body, mediaUrl, mediaId, mediaMimeType, mediaFileName } =
@@ -306,6 +328,8 @@ export function parseKapsoWebhook(
       phoneNumberId,
       waMessageId: message.data.id,
       from,
+      ...(bsuid ? { bsuid } : {}),
+      ...(username ? { username } : {}),
       profileName: conversation?.contact_name || null,
       type,
       body: body.trim(),

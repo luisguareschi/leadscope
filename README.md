@@ -180,7 +180,7 @@ Steps for a new company:
 
 Inbound deliveries are verified with the company's secret (`X-Webhook-Signature`, hex HMAC-SHA256 of the raw body). Only events for the company's own phone number id are stored, and the 200 goes back after they are stored. Duplicates are dropped by WhatsApp message id. Outbound text, the welcome template, and read receipts go to `https://api.kapso.ai/meta/whatsapp/v24.0/{phone_number_id}/messages` with `X-API-Key`, and the body is Meta's Cloud API body. Kapso's API is the only provider that ships. A second one would implement `Channel` (`backend/src/integrations/whatsapp/channel.ts`) and its own webhook route.
 
-Two cases are not handled yet. Inbound messages that carry only a business-scoped user id and no phone number (Meta's username rollout) are logged and skipped, because threads are keyed by phone. Messages the team sends from the WhatsApp Business App (Coexistence) do not pause the bot. Messages sent from the thread view's composer do.
+Leads using WhatsApp Usernames / Business-Scoped User IDs (BSUID) without a phone number are supported end-to-end: threads match by BSUID first and then by phone (reconciling both when available), outbound replies target `recipient` instead of `to` via Kapso, HubSpot creates and updates the contact without requiring a phone, and the panel displays `@username` (or the BSUID). Messages the team sends from the WhatsApp Business App (Coexistence) do not pause the bot; messages sent from the thread view's composer do.
 
 ### Local testing without Kapso
 

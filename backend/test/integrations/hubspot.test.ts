@@ -143,6 +143,87 @@ describe("HubSpot CRM", () => {
     });
   });
 
+  it("creates and updates a contact without a phone for a BSUID-only lead, and backfills phone/name later", async () => {
+    const { calls, fetchImpl } = fakeHubSpot([
+      { json: { id: "888" } },
+      { json: {} },
+      {
+        json: {
+          id: "888",
+          properties: { firstname: "@n.c__17", email: null, phone: null },
+        },
+      },
+      { json: {} },
+    ]);
+    const crm = createHubSpotCrm({
+      accessToken: "pat",
+      transcriptProperty: "leadscope_resumen",
+      fetchImpl,
+    });
+    const bsuidLead = {
+      phone: null,
+      bsuid: "CO.1602439504987482",
+      username: "n.c__17",
+      name: "   ",
+      email: null,
+      existingContactId: null,
+      summary: "Resumen BSUID",
+    };
+    await expect(crm.upsertLead(bsuidLead)).resolves.toEqual({
+      contactId: "888",
+    });
+    expect(calls[0]).toEqual({
+      method: "POST",
+      path: "/crm/v3/objects/contacts",
+      body: {
+        properties: {
+          firstname: "@n.c__17",
+          leadscope_resumen: "Resumen BSUID",
+        },
+      },
+    });
+
+    await expect(
+      crm.upsertLead({
+        ...bsuidLead,
+        existingContactId: "888",
+        summary: "Resumen actualizado",
+      }),
+    ).resolves.toEqual({ contactId: "888" });
+    expect(calls[1]).toEqual({
+      method: "PATCH",
+      path: "/crm/v3/objects/contacts/888",
+      body: { properties: { leadscope_resumen: "Resumen actualizado" } },
+    });
+
+    // Later the lead shares their phone and profile name: HubSpot backfills empty phone and placeholder name.
+    await expect(
+      crm.upsertLead({
+        ...bsuidLead,
+        phone: "+573001234567",
+        name: "Nicolás Castro",
+        existingContactId: "888",
+        summary: "Resumen con teléfono",
+      }),
+    ).resolves.toEqual({ contactId: "888" });
+    expect(calls[2]).toEqual({
+      method: "GET",
+      path: "/crm/v3/objects/contacts/888?properties=firstname,email,phone",
+      body: undefined,
+    });
+    expect(calls[3]).toEqual({
+      method: "PATCH",
+      path: "/crm/v3/objects/contacts/888",
+      body: {
+        properties: {
+          phone: "+573001234567",
+          firstname: "Nicolás",
+          leadscope_resumen: "Resumen con teléfono",
+        },
+      },
+    });
+  });
+
   it("surfaces HubSpot errors", async () => {
     const { fetchImpl } = fakeHubSpot([
       {

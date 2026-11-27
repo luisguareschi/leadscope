@@ -93,6 +93,8 @@ export function toThreadDto(thread: ThreadRow) {
   return {
     id: thread.id,
     phone: thread.phone,
+    bsuid: thread.bsuid,
+    username: thread.username,
     name: thread.name,
     email: thread.email,
     source: thread.source,

@@ -5,6 +5,7 @@ import { messagePreview } from "../../conversation/inbound.js";
 import { isWithinReplyWindow } from "../../conversation/reply-window.js";
 import type { CompanyAccess } from "../../http/company-access.js";
 import { MissingIntegrationError } from "../../integrations/registry.js";
+import { whatsappRecipientFor } from "../../integrations/whatsapp/channel.js";
 import {
   badRequest,
   conflict,
@@ -174,9 +175,10 @@ export async function sendManualMessage(
   try {
     const company = loadCompany(thread.company, ctx.encryptionKey);
     const channel = ctx.integrations.channelFor(company);
+    const target = whatsappRecipientFor(thread);
     if (resolvedMedia) {
       ({ waMessageId } = await channel.sendMedia({
-        to: thread.waId,
+        ...target,
         kind: resolvedMedia.kind,
         data: resolvedMedia.data,
         mimeType: resolvedMedia.mimeType,
@@ -185,7 +187,7 @@ export async function sendManualMessage(
       }));
     } else {
       ({ waMessageId } = await channel.sendText({
-        to: thread.waId,
+        ...target,
         body: caption,
       }));
     }

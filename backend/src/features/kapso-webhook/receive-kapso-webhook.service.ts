@@ -64,14 +64,14 @@ export async function receiveKapsoWebhook(
     return { threadIds: [] };
   }
 
-  const { messages, statuses, withoutPhone } = parseKapsoWebhook(
+  const { messages, statuses, withoutSender } = parseKapsoWebhook(
     input.event,
     payload,
   );
-  if (withoutPhone > 0) {
+  if (withoutSender > 0) {
     ctx.logger.warn(
-      { companyId: company.id, count: withoutPhone },
-      "kapso inbound message with no phone number (BSUID only); not stored",
+      { companyId: company.id, count: withoutSender },
+      "kapso inbound message with no phone number or BSUID; not stored",
     );
   }
   const ownNumber = (phoneNumberId: string) => {

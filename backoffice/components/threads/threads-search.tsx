@@ -12,8 +12,8 @@ const noSubscription = () => () => {};
 const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform);
 
 /**
- * Conversaciones' search by name or phone (the `q` param): it filters as you type,
- * ⌘K / Ctrl+K focuses it, and Escape clears it.
+ * Conversaciones' search by name, username, BSUID, or phone (the `q` param): it filters as you
+ * type, ⌘K / Ctrl+K focuses it, and Escape clears it.
  */
 export function ThreadsSearch({
   search,
@@ -63,8 +63,8 @@ export function ThreadsSearch({
         <InputGroupInput
           ref={input}
           type="search"
-          placeholder="Buscar por nombre o teléfono"
-          aria-label="Buscar conversaciones por nombre o teléfono"
+          placeholder="Buscar por nombre, usuario o teléfono"
+          aria-label="Buscar conversaciones por nombre, usuario o teléfono"
           value={value}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {

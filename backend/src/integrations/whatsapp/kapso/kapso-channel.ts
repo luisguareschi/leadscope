@@ -1,5 +1,9 @@
 import type { SupportedImageMediaType } from "../../../engine/history.js";
-import { ChannelError, type Channel } from "../channel.js";
+import {
+  ChannelError,
+  type Channel,
+  type WhatsAppRecipient,
+} from "../channel.js";
 import {
   KAPSO_API_BASE_URL,
   KAPSO_WHATSAPP_API_VERSION,
@@ -228,34 +232,44 @@ export function createKapsoChannel(options: KapsoChannelOptions): Channel {
     return id;
   }
 
+  function targetFields(target: WhatsAppRecipient): Record<string, string> {
+    return target.to !== undefined
+      ? { to: target.to }
+      : { recipient: target.recipient };
+  }
+
   return {
     kind: "kapso",
-    async sendText({ to, body }) {
+    async sendText(input) {
       const json = await post({
         recipient_type: "individual",
-        to,
+        ...targetFields(input),
         type: "text",
-        text: { preview_url: false, body },
+        text: { preview_url: false, body: input.body },
       });
       return { waMessageId: messageIdOf(json) };
     },
-    async sendTemplate({ to, name, language }) {
+    async sendTemplate(input) {
       const json = await post({
         recipient_type: "individual",
-        to,
+        ...targetFields(input),
         type: "template",
-        template: { name, language: { code: language } },
+        template: { name: input.name, language: { code: input.language } },
       });
       return { waMessageId: messageIdOf(json) };
     },
-    async sendMedia({ to, kind, data, mimeType, fileName, caption }) {
-      const mediaId = await uploadMedia(data, mimeType, fileName);
-      const captionTrimmed = caption?.trim();
+    async sendMedia(input) {
+      const mediaId = await uploadMedia(
+        input.data,
+        input.mimeType,
+        input.fileName,
+      );
+      const captionTrimmed = input.caption?.trim();
       const payload =
-        kind === "image"
+        input.kind === "image"
           ? {
               recipient_type: "individual",
-              to,
+              ...targetFields(input),
               type: "image",
               image: {
                 id: mediaId,
@@ -264,11 +278,11 @@ export function createKapsoChannel(options: KapsoChannelOptions): Channel {
             }
           : {
               recipient_type: "individual",
-              to,
+              ...targetFields(input),
               type: "document",
               document: {
                 id: mediaId,
-                filename: fileName,
+                filename: input.fileName,
                 ...(captionTrimmed ? { caption: captionTrimmed } : {}),
               },
             };
