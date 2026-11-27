@@ -171,45 +171,67 @@ async function loadImageAttachment(
   }
 }
 
+type PendingMessage = {
+  id: string;
+  type: string;
+  body: string;
+  mediaPath: string | null;
+  mediaMimeType: string | null;
+  mediaFileName: string | null;
+};
+
 async function askModel(
   ctx: AppContext,
   company: LoadedCompany,
   thread: Thread,
-  pendingIds: Set<string>,
+  pending: PendingMessage[],
 ): Promise<ModelCall> {
   const { config } = company;
   try {
     // Inside the try: on WhatsApp a missing key is a model failure, so the bot stops and says so.
     const llm = ctx.integrations.llmFor(company);
-    const [{ system, documents, sendableFiles }, recent] = await Promise.all([
+    const pendingWindow = pending.slice(-config.llm.historyLimit);
+    const priorLimit = Math.max(
+      0,
+      config.llm.historyLimit - pendingWindow.length,
+    );
+    const [{ system, documents, sendableFiles }, prior] = await Promise.all([
       loadSystemPrompt(ctx, company),
-      ctx.db.message.findMany({
-        where: { threadId: thread.id },
-        orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
-        take: config.llm.historyLimit,
-        select: {
-          id: true,
-          direction: true,
-          type: true,
-          body: true,
-          sentByEmail: true,
-          mediaPath: true,
-          mediaMimeType: true,
-          mediaFileName: true,
-        },
-      }),
+      priorLimit > 0
+        ? ctx.db.message.findMany({
+            where: {
+              threadId: thread.id,
+              id: { notIn: pending.map((message) => message.id) },
+              OR: [{ direction: "outbound" }, { handledAt: { not: null } }],
+            },
+            orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
+            take: priorLimit,
+            select: {
+              direction: true,
+              type: true,
+              body: true,
+              sentByEmail: true,
+              mediaFileName: true,
+            },
+          })
+        : Promise.resolve([]),
     ]);
 
-    const ordered = recent.reverse();
+    const history: HistoryMessage[] = prior.reverse().map((msg) => ({
+      direction: msg.direction,
+      type: msg.type,
+      body: msg.body,
+      sentByEmail: msg.sentByEmail,
+      mediaFileName: msg.mediaFileName,
+      image: null,
+    }));
+
     let attachedImages = 0;
-    const history: HistoryMessage[] = [];
-    for (const msg of ordered) {
+    for (const msg of pendingWindow) {
       let image: ImageAttachment | null = null;
       if (
-        msg.direction === "inbound" &&
         msg.type === "image" &&
         msg.mediaPath &&
-        pendingIds.has(msg.id) &&
         attachedImages < MAX_IMAGES_PER_TURN
       ) {
         image = await loadImageAttachment(
@@ -220,10 +242,10 @@ async function askModel(
         if (image) attachedImages += 1;
       }
       history.push({
-        direction: msg.direction,
+        direction: "inbound",
         type: msg.type,
         body: msg.body,
-        sentByEmail: msg.sentByEmail,
+        sentByEmail: null,
         mediaFileName: msg.mediaFileName,
         image,
       });
@@ -333,20 +355,20 @@ async function runTurn(
   if (!thread) return "no_pending";
   const pending = await ctx.db.message.findMany({
     where: { threadId, direction: "inbound", handledAt: null },
-    orderBy: { sentAt: "asc" },
+    orderBy: [{ sentAt: "asc" }, { createdAt: "asc" }],
     select: {
       id: true,
       type: true,
       body: true,
       mediaPath: true,
       mediaMimeType: true,
+      mediaFileName: true,
       waMessageId: true,
       sentAt: true,
     },
   });
   if (pending.length === 0) return "no_pending";
   const pendingIds = pending.map((message) => message.id);
-  const pendingIdSet = new Set(pendingIds);
   const markHandled = () =>
     ctx.db.message.updateMany({
       where: { id: { in: pendingIds } },
@@ -406,7 +428,7 @@ async function runTurn(
         normalizeVisionMimeType(message.mediaMimeType) !== null),
   );
   const { input, usage } = hasUnderstandableInput
-    ? await askModel(ctx, company, thread, pendingIdSet)
+    ? await askModel(ctx, company, thread, pending)
     : { input: { kind: "non_text" } as TurnInput, usage: null };
   const decision: TurnDecision = decideTurn(thread, input, rulesFor(company));
 
